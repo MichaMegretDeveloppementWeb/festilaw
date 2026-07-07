@@ -1,0 +1,110 @@
+/* Marque (logo texte), partagee header + footer. */
+.brand {
+    display: inline-flex;
+    align-items: baseline;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 26px;
+    letter-spacing: -0.03em;
+    line-height: 1;
+}
+.brand__festi { color: var(--color-white); }
+.brand__law { color: var(--color-coral); }
+.brand__dot { color: var(--color-yellow); font-size: 30px; line-height: 0; margin-left: 1px; }
+
+/* En-tete (coquille, fond sombre, au-dessus du hero). */
+.site-header {
+    position: relative;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2, 16px);
+    padding: 28px var(--gutter);
+    background: var(--color-dark);
+}
+
+/* Nav desktop */
+.site-header__nav {
+    display: none;
+    align-items: center;
+    gap: clamp(18px, 1.9vw, 34px);
+}
+.site-header__link {
+    color: rgba(255, 255, 255, 0.78);
+    font-weight: 500;
+    font-size: 15px;
+}
+.site-header__link:hover { color: var(--color-white); }
+.site-header__link.is-active { color: var(--color-white); font-weight: 600; }
+
+.site-header__actions {
+    display: none;
+    align-items: center;
+    gap: 16px;
+}
+
+.lang-switch {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-weight: 600;
+    font-size: 13px;
+}
+.lang-switch a { color: rgba(255, 255, 255, 0.55); }
+.lang-switch a:hover { color: var(--color-white); }
+.lang-switch a.is-active { color: var(--color-white); }
+
+/* Burger mobile */
+.site-header__burger {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 12px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.12);
+    cursor: pointer;
+}
+.site-header__burger span {
+    display: block;
+    width: 22px;
+    height: 2.5px;
+    border-radius: 2px;
+    background: var(--color-white);
+}
+
+/* Menu mobile deroulant (affiche quand la case est cochee) */
+.site-header__mobile {
+    display: none;
+    position: fixed;
+    top: 80px;
+    right: var(--gutter);
+    z-index: 80;
+    width: min(300px, calc(100vw - 32px));
+    flex-direction: column;
+    gap: 2px;
+    padding: 20px;
+    border-radius: 18px;
+    background: var(--color-dark);
+    border: 1.5px solid rgba(255, 255, 255, 0.16);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+.site-header__mobile a:not(.btn) {
+    color: var(--color-white);
+    font-weight: 600;
+    font-size: 16px;
+    padding: 11px 12px;
+    border-radius: 10px;
+}
+.site-header__mobile a:not(.btn):hover { background: rgba(255, 255, 255, 0.08); }
+.site-header__mobile .btn { margin-top: 8px; }
+
+.site-header__toggle:checked ~ .site-header__mobile { display: flex; }
+
+/* Bascule desktop */
+@media (min-width: 1080px) {
+    .site-header__nav,
+    .site-header__actions { display: flex; }
+    .site-header__burger,
+    .site-header__mobile { display: none; }
+}

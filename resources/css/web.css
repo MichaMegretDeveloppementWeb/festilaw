@@ -1,0 +1,5 @@
+/* Manifeste CSS de l'espace public (web).
+   Chargé sur toutes les pages web via le layout. Agrège la base et la coquille (layout).
+   Chaque page charge en plus son propre resources/css/web/{page}/index.css. */
+@import './web/base/index.css';
+@import './web/layout/index.css';
