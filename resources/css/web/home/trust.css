@@ -1,1 +1,31 @@
-/* Section trust · a definir pour le nouveau design (voir 03-design). */
+.trust { background: var(--color-cream); padding: var(--section-y) var(--gutter); }
+.trust__inner { max-width: var(--max-width); margin: 0 auto; }
+
+.trust__head { text-align: center; margin: 0 auto clamp(38px, 4.5vw, 54px); }
+.trust__head .eyebrow { display: inline-block; margin-bottom: 16px; }
+.trust__title { font-size: clamp(30px, 4.2vw, 52px); }
+
+.trust__stats { display: grid; grid-template-columns: 1fr; gap: 18px; margin-bottom: 22px; }
+.trust__stat { background: var(--color-card); border: 1px solid var(--color-line); border-radius: var(--radius-lg); padding: 30px 28px; }
+.trust__stat-num { font-family: var(--font-display); font-size: 46px; line-height: 1; color: var(--color-coral); margin-bottom: 12px; }
+.trust__stat-icon { display: inline-flex; color: var(--color-coral); margin-bottom: 12px; }
+.trust__stat-label { color: var(--color-ink-soft); font-size: 15px; line-height: 1.55; }
+
+.trust__proof { display: grid; grid-template-columns: 1fr; gap: 22px; align-items: stretch; }
+.trust__quote { background: var(--color-blue); border-radius: var(--radius-lg); padding: 36px 34px; }
+.trust__stars { color: var(--color-salmon); letter-spacing: 2px; margin-bottom: 16px; font-size: 15px; }
+.trust__quote-text { color: var(--color-cream); font-size: clamp(18px, 2vw, 22px); line-height: 1.5; margin-bottom: 24px; }
+.trust__author { display: flex; align-items: center; gap: 14px; }
+.trust__avatar { display: inline-flex; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: 50%; background: var(--color-coral); color: #3a1210; font-weight: 700; font-size: 15px; flex-shrink: 0; }
+.trust__author-name { display: block; color: var(--color-cream); font-weight: 600; }
+.trust__author-role { display: block; color: var(--color-on-blue); font-size: 13.5px; }
+
+.trust__logos { background: var(--color-card); border: 1px solid var(--color-line); border-radius: var(--radius-lg); padding: 30px 30px; display: flex; flex-direction: column; justify-content: center; }
+.trust__logos-label { text-transform: uppercase; letter-spacing: 0.16em; font-size: 11.5px; font-weight: 600; color: var(--color-ink-soft); margin-bottom: 18px; }
+.trust__logos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.trust__logos-grid span { font-family: var(--font-display); font-size: 22px; color: var(--color-blue); text-align: center; padding: 10px; background: var(--color-cream); border-radius: var(--radius-sm); }
+
+@media (min-width: 760px) {
+    .trust__stats { grid-template-columns: repeat(3, 1fr); }
+    .trust__proof { grid-template-columns: 1.5fr 1fr; }
+}

@@ -1,1 +1,50 @@
-/* Typographie de base · a definir pour le nouveau design (voir 03-design). */
+/* Typographie de base · nouvelle charte. */
+body {
+    background: var(--color-cream);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-x: clip;
+}
+
+/* Grands titres : Poiret One (une seule graisse). */
+h1, h2 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    color: var(--color-blue);
+    line-height: 1.06;
+    letter-spacing: 0.01em;
+}
+
+/* Sous-titres (cartes, items) : Inter, plus lisible en petit. */
+h3, h4 {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    color: var(--color-blue);
+    line-height: 1.3;
+}
+
+p { color: var(--color-ink); }
+
+strong { font-weight: 600; }
+
+/* Sur-titre (kicker) repetitif : petites capitales espacees. */
+.eyebrow {
+    font-family: var(--font-sans);
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--color-coral);
+}
+
+/* Mot mis en avant : script (Satisfy), reserve aux accents. */
+.script {
+    font-family: var(--font-script);
+    font-weight: 400;
+    color: var(--color-coral);
+    letter-spacing: 0.01em;
+}

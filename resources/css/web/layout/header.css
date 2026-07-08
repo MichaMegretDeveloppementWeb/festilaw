@@ -1,1 +1,86 @@
-/* En-tete · a definir pour le nouveau design (voir 03-design). */
+/* Marque texte (script, esprit du logo) : utilisee au footer. */
+.brand {
+    font-family: var(--font-script);
+    font-size: 30px;
+    line-height: 1;
+    color: var(--color-cream);
+}
+
+/* Logo image, recadre en cercle (le JPG a un fond creme). */
+.brand-logo {
+    justify-self: center;
+    display: block;
+    width: clamp(88px, 10vw, 128px);
+    height: clamp(88px, 10vw, 128px);
+    border-radius: 50%;
+    overflow: hidden;
+    background: #ff7e6b;
+    box-shadow: 0 8px 22px rgba(6, 8, 30, 0.28);
+}
+.brand-logo img { width: 100%; height: 100%; object-fit: cover; transform: scale(1.06); }
+
+/* En-tete sobre, sur le bleu, logo centre. */
+.site-header {
+    position: relative;
+    z-index: 40;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 16px;
+    padding: 16px var(--gutter);
+    background: var(--color-blue);
+}
+
+.site-header__menu { display: none; align-items: center; gap: clamp(16px, 1.7vw, 30px); }
+.site-header__menu--left { justify-self: start; }
+.site-header__menu--right { justify-self: end; }
+
+.site-header__link { color: var(--color-on-blue); font-weight: 500; font-size: 15px; }
+.site-header__link:hover { color: var(--color-cream); }
+.site-header__link.is-active { color: var(--color-salmon); }
+
+.lang-switch { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; }
+.lang-switch a { color: rgba(239, 229, 208, 0.55); }
+.lang-switch a:hover { color: var(--color-cream); }
+.lang-switch a.is-active { color: var(--color-cream); }
+
+/* Burger mobile (colonne de droite) */
+.site-header__burger {
+    grid-column: 3;
+    justify-self: end;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 11px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+}
+.site-header__burger span { display: block; width: 22px; height: 2px; border-radius: 2px; background: var(--color-cream); }
+
+.site-header__mobile {
+    display: none;
+    position: fixed;
+    top: 100px;
+    right: var(--gutter);
+    z-index: 80;
+    width: min(300px, calc(100vw - 32px));
+    flex-direction: column;
+    gap: 2px;
+    padding: 18px;
+    border-radius: 16px;
+    background: var(--color-blue);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 20px 50px rgba(6, 8, 30, 0.45);
+}
+.site-header__mobile a:not(.btn) { color: var(--color-cream); font-weight: 500; font-size: 16px; padding: 11px 12px; border-radius: 8px; }
+.site-header__mobile a:not(.btn):hover { background: rgba(255, 255, 255, 0.08); }
+.site-header__mobile .btn { margin-top: 8px; }
+
+.site-header__toggle:checked ~ .site-header__mobile { display: flex; }
+
+@media (min-width: 1080px) {
+    .site-header__menu { display: flex; }
+    .site-header__burger,
+    .site-header__mobile { display: none; }
+}

@@ -1,7 +1,8 @@
 <section id="pricing" class="pricing">
     <div class="pricing__inner">
         <div class="pricing__head">
-            <h2 class="pricing__title">Simple, transparent pricing.</h2>
+            <span class="eyebrow">Pricing</span>
+            <h2 class="pricing__title">Simple, transparent pricing</h2>
         </div>
         <div class="pricing__grid">
             <div class="pricing__card">

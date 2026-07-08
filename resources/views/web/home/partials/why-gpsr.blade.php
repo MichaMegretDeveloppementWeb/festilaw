@@ -1,8 +1,8 @@
 <section id="gpsr" class="risks">
-    <div class="risks__ring"></div>
     <div class="risks__inner">
         <div class="risks__head">
-            <h2 class="risks__title">The GPSR is now <span class="risks__title-rot"><span class="mk risks__title-mk">mandatory.</span></span></h2>
+            <span class="eyebrow risks__eyebrow">Why it matters</span>
+            <h2 class="risks__title">The GPSR is now <span class="risks__title-em">mandatory</span></h2>
             <p class="risks__intro">Since December 2024, any seller based outside the EU (USA, Canada, Turkey and beyond) must appoint an EU Responsible Person to keep selling to European consumers.</p>
         </div>
 

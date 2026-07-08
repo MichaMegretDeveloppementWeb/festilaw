@@ -2,7 +2,7 @@
     <div class="site-footer__inner">
         <div class="site-footer__grid">
             <div class="site-footer__brandcol">
-                <a href="#top" class="brand"><span class="brand__festi">festi</span><span class="brand__law">law</span><span class="brand__dot">.</span></a>
+                <a href="{{ route('home') }}" class="brand">Festilaw</a>
                 <p class="site-footer__tagline">Your GPSR Responsible Person in the EU. Compliance built by entrepreneurs, for entrepreneurs.</p>
                 <a href="mailto:team@festilaw.com" class="site-footer__email">team@festilaw.com</a>
             </div>

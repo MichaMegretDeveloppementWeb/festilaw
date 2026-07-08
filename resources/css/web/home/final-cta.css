@@ -1,1 +1,12 @@
-/* Section final-cta · a definir pour le nouveau design (voir 03-design). */
+.final-cta { background: var(--color-cream); padding: clamp(48px, 6vw, 80px) var(--gutter) var(--section-y); }
+.final-cta__box {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    background: var(--color-blue);
+    border-radius: var(--radius-lg);
+    padding: clamp(56px, 7vw, 96px) clamp(24px, 5vw, 60px);
+    text-align: center;
+}
+.final-cta__title { color: var(--color-cream); text-transform: uppercase; font-size: clamp(30px, 4.4vw, 56px); letter-spacing: 0.02em; max-width: 620px; margin: 0 auto 16px; }
+.final-cta__text { color: var(--color-on-blue); font-size: clamp(16px, 1.8vw, 19px); margin-bottom: 34px; }
+.final-cta__actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }

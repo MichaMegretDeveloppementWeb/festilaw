@@ -1,1 +1,26 @@
-/* Pied de page · a definir pour le nouveau design (voir 03-design). */
+.site-footer { background: var(--color-blue); color: var(--color-on-blue); padding: clamp(48px, 6vw, 76px) var(--gutter) 30px; }
+.site-footer__inner { max-width: var(--max-width); margin: 0 auto; }
+
+.site-footer__grid { display: grid; grid-template-columns: 1fr; gap: 34px; }
+
+.site-footer__brandcol .brand { display: inline-block; margin-bottom: 14px; }
+.site-footer__tagline { color: var(--color-on-blue); font-size: 14.5px; line-height: 1.6; max-width: 300px; margin-bottom: 14px; }
+.site-footer__email { color: var(--color-salmon); font-weight: 600; }
+.site-footer__email:hover { color: var(--color-coral); }
+
+.site-footer__heading { color: var(--color-cream); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.14em; margin-bottom: 16px; }
+.site-footer__links { display: flex; flex-direction: column; gap: 10px; }
+.site-footer__links a { color: var(--color-on-blue); font-size: 14.5px; }
+.site-footer__links a:hover { color: var(--color-cream); }
+
+.site-footer__note { color: rgba(239, 229, 208, 0.6); font-size: 12.5px; line-height: 1.5; margin-top: 16px; max-width: 240px; }
+
+.lang-switch--footer a { color: rgba(239, 229, 208, 0.55); }
+.lang-switch--footer a:hover,
+.lang-switch--footer a.is-active { color: var(--color-cream); }
+
+.site-footer__copy { margin-top: clamp(36px, 5vw, 52px); padding-top: 24px; border-top: 1px solid rgba(255, 255, 255, 0.12); color: rgba(239, 229, 208, 0.5); font-size: 13px; }
+
+@media (min-width: 820px) {
+    .site-footer__grid { grid-template-columns: 2fr 1fr 1fr 1.4fr; gap: 40px; }
+}

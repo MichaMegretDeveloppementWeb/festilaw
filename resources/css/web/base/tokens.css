@@ -1,13 +1,29 @@
-/* Tokens de design · a definir depuis la nouvelle charte (voir 03-design).
-   A remplir : couleurs, typographie, espacements, largeurs, rayons, ombres, points de rupture. */
+/* Tokens de design · nouvelle charte Festilaw (sobre). Voir 03-design. */
 :root {
     /* Couleurs */
+    --color-blue: #0F1199;          /* bleu roi · fond hero + sections mises en avant */
+    --color-coral: #FE776A;         /* aplats, boutons, accents */
+    --color-salmon: #F08E80;        /* texte sur le bleu */
+    --color-cream: #FCF6E3;         /* fond des pages */
+    --color-card: #F4ECDB;          /* cartes et nuances */
+    --color-on-blue: #EFE5D0;       /* texte clair (beige) sur le bleu */
+    --color-ink: #0E1326;           /* texte des paragraphes (bleu-noir) */
+    --color-ink-soft: #4a5170;      /* texte secondaire */
+    --color-line: #e6dcc6;          /* filets/bordures sur le crème */
 
-    /* Typographie (familles, poids, echelle) */
+    /* Typographie */
+    --font-display: 'Poiret One', 'Century Gothic', sans-serif;   /* titres */
+    --font-script: 'Satisfy', cursive;                             /* accents */
+    --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; /* corps */
 
-    /* Espacements & largeurs */
+    /* Mise en page */
+    --gutter: clamp(20px, 5vw, 64px);
+    --max-width: 1180px;
+    --section-y: clamp(64px, 8vw, 120px);
 
     /* Rayons */
-
-    /* Ombres */
+    --radius-sm: 10px;
+    --radius: 16px;
+    --radius-lg: 26px;
+    --radius-pill: 999px;
 }

@@ -1,1 +1,53 @@
-/* Page contact · a definir pour le nouveau design (voir 03-design). */
+.contact { background: var(--color-cream); padding: var(--section-y) var(--gutter); }
+.contact__inner { max-width: 1080px; margin: 0 auto; display: grid; grid-template-columns: 1fr; gap: 40px; align-items: start; }
+
+.contact__eyebrow { display: inline-block; margin-bottom: 18px; }
+.contact__title { font-size: clamp(34px, 5vw, 56px); margin-bottom: 20px; }
+.contact__title-em { color: var(--color-coral); }
+.contact__lead { font-size: 17px; line-height: 1.6; color: var(--color-ink-soft); max-width: 440px; margin-bottom: 36px; }
+
+.contact__coords { display: flex; flex-direction: column; gap: 16px; }
+.contact__coord { display: flex; align-items: center; gap: 14px; }
+.contact__coord-icon { display: flex; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: 12px; background: var(--color-card); border: 1px solid var(--color-line); color: var(--color-coral); flex-shrink: 0; }
+.contact__coord--soon .contact__coord-icon { color: var(--color-ink-soft); }
+.contact__coord-body { display: flex; flex-direction: column; }
+.contact__coord-label { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-ink-soft); }
+.contact__coord-value { font-weight: 700; color: var(--color-blue); }
+.contact__coord--soon .contact__coord-value { color: var(--color-ink-soft); font-weight: 600; }
+
+.contact__card { background: var(--color-card); border: 1px solid var(--color-line); border-radius: var(--radius-lg); padding: clamp(28px, 4vw, 40px); }
+
+/* Formulaire (composant Livewire) */
+.contact-form__form { display: flex; flex-direction: column; gap: 18px; }
+.contact-form__field { display: flex; flex-direction: column; gap: 7px; }
+.contact-form__field label { font-weight: 600; font-size: 14px; color: var(--color-blue); }
+.contact-form__optional { font-weight: 400; color: var(--color-ink-soft); }
+.contact-form__field input,
+.contact-form__field textarea {
+    width: 100%;
+    padding: 13px 15px;
+    border: 1.5px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    background: var(--color-cream);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    color: var(--color-ink);
+    transition: border-color 0.15s ease;
+}
+.contact-form__field input::placeholder,
+.contact-form__field textarea::placeholder { color: #b3a892; }
+.contact-form__field input:focus,
+.contact-form__field textarea:focus { outline: none; border-color: var(--color-coral); }
+.contact-form__field textarea { resize: vertical; min-height: 120px; }
+.contact-form__error { font-size: 13px; color: #c0392b; font-weight: 600; }
+.contact-form__form .btn { margin-top: 6px; align-self: flex-start; }
+
+/* Etat succes */
+.contact-form__success { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 20px 0; }
+.contact-form__success-icon { display: flex; align-items: center; justify-content: center; width: 58px; height: 58px; border-radius: 50%; background: #1f9a63; margin-bottom: 18px; }
+.contact-form__success-title { font-size: 22px; color: var(--color-blue); margin-bottom: 8px; }
+.contact-form__success-text { font-size: 15px; color: var(--color-ink-soft); margin-bottom: 22px; }
+
+@media (min-width: 860px) {
+    .contact__inner { grid-template-columns: 1fr 1fr; gap: 56px; }
+}

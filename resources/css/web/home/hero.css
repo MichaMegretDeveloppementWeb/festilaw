@@ -1,1 +1,40 @@
-/* Section hero · a definir pour le nouveau design (voir 03-design). */
+.hero {
+    background: var(--color-blue);
+    padding: clamp(44px, 6vw, 84px) var(--gutter) clamp(72px, 10vw, 128px);
+    text-align: center;
+}
+.hero__inner { max-width: 840px; margin: 0 auto; }
+
+.hero__eyebrow { color: var(--color-salmon); display: inline-block; margin-bottom: 24px; }
+
+.hero__title {
+    font-size: clamp(42px, 7vw, 92px);
+    line-height: 1.02;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--color-cream);
+    /* Poiret One n'a qu'une graisse : on epaissit le trace pour plus de presence. */
+    -webkit-text-stroke: 0.9px currentColor;
+    margin-bottom: 26px;
+}
+.hero__title-em { color: var(--color-salmon); -webkit-text-stroke: 0.9px currentColor; }
+
+.hero__lead {
+    font-size: clamp(17px, 1.8vw, 20px);
+    line-height: 1.55;
+    color: var(--color-on-blue);
+    max-width: 620px;
+    margin: 0 auto 28px;
+}
+
+.hero__assurance {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--color-salmon);
+    font-weight: 500;
+    font-size: 15px;
+    margin-bottom: 40px;
+}
+
+.hero__actions { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }

@@ -1,1 +1,10 @@
-/* Section who-we-are · a definir pour le nouveau design (voir 03-design). */
+.who { background: var(--color-cream); padding: var(--section-y) var(--gutter); }
+.who__inner { max-width: 900px; margin: 0 auto; text-align: center; }
+.who__eyebrow { display: inline-block; margin-bottom: 24px; }
+.who__text {
+    font-size: clamp(23px, 2.6vw, 34px);
+    line-height: 1.4;
+    color: var(--color-ink);
+    letter-spacing: -0.01em;
+}
+.who__accent { font-size: 1.15em; }

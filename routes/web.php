@@ -5,11 +5,6 @@ use App\Http\Controllers\Web\Home\HomeController;
 use Illuminate\Support\Facades\Route;
 
 /*
- | Apercu de charte graphique (TEMPORAIRE, validation du nouveau design). A retirer ensuite.
- */
-Route::view('/style-preview', 'style-preview');
-
-/*
  | La racine redirige vers la meilleure locale (negociation navigateur, repli sur la 1re supportee).
  */
 Route::get('/', function () {

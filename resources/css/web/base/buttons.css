@@ -1,1 +1,31 @@
-/* Boutons · a definir pour le nouveau design (voir 03-design). */
+/* Boutons · nouvelle charte (sobre). */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 15px;
+    line-height: 1;
+    padding: 14px 26px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid transparent;
+    cursor: pointer;
+    transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+}
+
+.btn--sm { padding: 11px 20px; font-size: 14px; }
+.btn--lg { padding: 16px 32px; font-size: 16px; }
+
+/* Corail plein : action principale. */
+.btn--coral { background: var(--color-coral); color: #3a1210; }
+.btn--coral:hover { background: #ff8a7c; }
+
+/* Contour clair : sur fond bleu. */
+.btn--outline-light { background: transparent; color: var(--color-cream); border-color: rgba(252, 246, 227, 0.45); }
+.btn--outline-light:hover { border-color: var(--color-cream); background: rgba(252, 246, 227, 0.08); }
+
+/* Contour bleu : sur fond crème. */
+.btn--outline-dark { background: transparent; color: var(--color-blue); border-color: var(--color-blue); }
+.btn--outline-dark:hover { background: var(--color-blue); color: var(--color-cream); }

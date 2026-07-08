@@ -1,1 +1,39 @@
-/* Section pricing · a definir pour le nouveau design (voir 03-design). */
+.pricing { background: var(--color-cream); padding: var(--section-y) var(--gutter); }
+.pricing__inner { max-width: var(--max-width); margin: 0 auto; }
+
+.pricing__head { text-align: center; margin: 0 auto clamp(44px, 5vw, 60px); }
+.pricing__head .eyebrow { display: inline-block; margin-bottom: 16px; }
+.pricing__title { font-size: clamp(32px, 4.4vw, 54px); }
+
+.pricing__grid { display: grid; grid-template-columns: 1fr; gap: 22px; max-width: 940px; margin: 0 auto; }
+.pricing__card {
+    position: relative;
+    background: var(--color-card);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-lg);
+    padding: 38px 30px;
+    text-align: center;
+    display: flex; flex-direction: column;
+}
+.pricing__card--featured { background: var(--color-blue); border-color: var(--color-blue); }
+.pricing__badge {
+    position: absolute; top: -13px; left: 50%; transform: translateX(-50%);
+    background: var(--color-coral); color: #3a1210;
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+    padding: 5px 14px; border-radius: var(--radius-pill);
+}
+.pricing__name { font-size: 20px; margin-bottom: 6px; }
+.pricing__desc { color: var(--color-ink-soft); font-size: 14.5px; margin-bottom: 22px; }
+.pricing__amount { font-family: var(--font-display); font-size: 48px; color: var(--color-blue); line-height: 1; }
+.pricing__period { color: var(--color-ink-soft); font-size: 14px; margin-top: 8px; margin-bottom: 26px; }
+.pricing__cta { margin-top: auto; }
+
+.pricing__card--featured .pricing__name { color: var(--color-cream); }
+.pricing__card--featured .pricing__desc { color: var(--color-on-blue); }
+.pricing__card--featured .pricing__amount { color: var(--color-salmon); }
+.pricing__card--featured .pricing__period { color: var(--color-on-blue); }
+
+@media (min-width: 800px) {
+    .pricing__grid { grid-template-columns: repeat(3, 1fr); align-items: center; }
+    .pricing__card--featured { padding-top: 48px; padding-bottom: 48px; }
+}

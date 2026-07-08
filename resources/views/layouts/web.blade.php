@@ -34,7 +34,7 @@
 
     {{-- Polices : Bunny Fonts (alternative GDPR-friendly a Google Fonts) --}}
     <link rel="preconnect" href="https://fonts.bunny.net">
-    <link rel="stylesheet" href="https://fonts.bunny.net/css?family=hanken-grotesk:400,500,600,700|newsreader:400,400i,500,500i|schibsted-grotesk:500,600,700,800,900&display=swap">
+    <link rel="stylesheet" href="https://fonts.bunny.net/css?family=poiret-one:400|inter:400,500,600,700|satisfy:400&display=swap">
 
     @livewireStyles
 
@@ -52,7 +52,6 @@
     </main>
 
     <x-layout.web.footer />
-    <x-layout.web.sticky-cta />
 
     @vite('resources/js/app.js')
 
