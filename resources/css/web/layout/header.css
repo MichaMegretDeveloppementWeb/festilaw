@@ -8,6 +8,7 @@
 
 /* Logo image, recadre en cercle (le JPG a un fond creme). */
 .brand-logo {
+    grid-column: 2;
     justify-self: center;
     display: block;
     width: clamp(88px, 10vw, 128px);
