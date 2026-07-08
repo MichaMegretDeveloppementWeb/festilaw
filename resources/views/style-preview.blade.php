@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Festilaw · Aperçu de charte (nouveau design)</title>
+    <title>Festilaw · votre nouvelle identité visuelle</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=poiret-one:400|julius-sans-one:400|josefin-sans:300,400,600|lora:400,500,600,400i|pacifico:400|satisfy:400" rel="stylesheet">
     <style>
@@ -81,33 +81,33 @@
 <div class="wrap">
 
     <div class="doc-head">
-        <h1>Festilaw — aperçu de la nouvelle charte</h1>
-        <p>Compare les polices ci-dessous à la capture de la cliente et dis-moi lesquelles collent le mieux. Rien n'est encore figé : cette page sert uniquement à valider les couleurs et les polices avant de reconstruire le site.</p>
+        <h1>Festilaw · votre nouvelle identité visuelle</h1>
+        <p>Voici la direction que nous proposons pour votre site : les couleurs et les polices, dans l'esprit de votre logo et d'une image plus sobre, adaptée au sérieux du sujet. Rien n'est encore figé : cette page sert à valider l'ambiance ensemble avant de construire le site.</p>
     </div>
 
     {{-- PALETTE --}}
     <div class="section">
-        <div class="label">Palette</div>
+        <div class="label">Vos couleurs</div>
         <div class="swatches">
-            <div class="sw"><div class="chip" style="background:#0F1199"></div><div class="name">Bleu roi</div><div class="hex">#0F1199</div><div class="use">Fond hero + sections rappel</div></div>
+            <div class="sw"><div class="chip" style="background:#0F1199"></div><div class="name">Bleu roi</div><div class="hex">#0F1199</div><div class="use">Fond du hero et des sections mises en avant</div></div>
             <div class="sw"><div class="chip" style="background:#FE776A"></div><div class="name">Corail</div><div class="hex">#FE776A</div><div class="use">Aplats, boutons, logo</div></div>
             <div class="sw"><div class="chip" style="background:#F08E80"></div><div class="name">Saumon</div><div class="hex">#F08E80</div><div class="use">Texte sur le bleu</div></div>
             <div class="sw"><div class="chip" style="background:#FCF6E3"></div><div class="name">Crème</div><div class="hex">#FCF6E3</div><div class="use">Texte clair sur le bleu</div></div>
-            <div class="sw"><div class="chip" style="background:#EFE5D0"></div><div class="name">Beige</div><div class="hex">#EFE5D0</div><div class="use">Fond de page</div></div>
-            <div class="sw"><div class="chip" style="background:#F4ECDB"></div><div class="name">Beige clair</div><div class="hex">#F4ECDB</div><div class="use">Cartes / nuances</div></div>
-            <div class="sw"><div class="chip" style="background:#0E1326"></div><div class="name">Bleu-noir</div><div class="hex">#0E1326</div><div class="use">Paragraphes</div></div>
+            <div class="sw"><div class="chip" style="background:#EFE5D0"></div><div class="name">Beige</div><div class="hex">#EFE5D0</div><div class="use">Fond des pages</div></div>
+            <div class="sw"><div class="chip" style="background:#F4ECDB"></div><div class="name">Beige clair</div><div class="hex">#F4ECDB</div><div class="use">Cartes et nuances</div></div>
+            <div class="sw"><div class="chip" style="background:#0E1326"></div><div class="name">Bleu-noir</div><div class="hex">#0E1326</div><div class="use">Texte des paragraphes</div></div>
         </div>
     </div>
 
     {{-- TITRES --}}
     <div class="section">
-        <div class="label">Les titres — quelle police ? (à comparer à la capture)</div>
+        <div class="label">Les titres · quelques pistes de police</div>
         <div class="type-card">
-            <div class="fname">Poiret One <span class="reco">ma reco · la plus proche</span></div>
+            <div class="fname">Poiret One <span class="reco">recommandée</span></div>
             <div class="display-line f-poiret">Sell safely in Europe</div>
         </div>
         <div class="type-card">
-            <div class="fname">Josefin Sans (light)</div>
+            <div class="fname">Josefin Sans</div>
             <div class="display-line f-josefin">Sell safely in Europe</div>
         </div>
         <div class="type-card">
@@ -115,28 +115,28 @@
             <div class="display-line f-julius">Sell safely in Europe</div>
         </div>
         <div class="type-card on-blue">
-            <div class="fname">Poiret One, en saumon sur le bleu (mode hero)</div>
+            <div class="fname">La même, en saumon sur le bleu (ambiance hero)</div>
             <div class="display-line f-poiret">Your GPSR Responsible Person</div>
         </div>
     </div>
 
     {{-- ACCENT / SCRIPT --}}
     <div class="section">
-        <div class="label">Le texte « accent » — la police du logo (script)</div>
+        <div class="label">Les mots à mettre en avant · dans l'esprit de votre logo</div>
         <div class="type-card">
-            <div class="fname">Pacifico <span class="reco">ma reco · proche du logo</span></div>
+            <div class="fname">Pacifico <span class="reco">recommandée</span></div>
             <div class="script-line f-pacifico">Festilaw · from entrepreneurs, for entrepreneurs</div>
         </div>
         <div class="type-card">
             <div class="fname">Satisfy</div>
             <div class="script-line f-satisfy">Festilaw · from entrepreneurs, for entrepreneurs</div>
         </div>
-        <p class="hint">À réserver aux mots mis en avant (ni titre, ni paragraphe courant), comme le veut la cliente.</p>
+        <p class="hint">À réserver aux mots que vous souhaitez mettre en avant (ni titre, ni texte courant).</p>
     </div>
 
     {{-- PARAGRAPHE --}}
     <div class="section">
-        <div class="label">Le paragraphe — serif neutre (Lora)</div>
+        <div class="label">Les paragraphes · un serif sobre et lisible</div>
         <div class="body-sample">
             <p>The General Product Safety Regulation requires any seller based outside the European Union to appoint an EU Responsible Person before selling to European consumers. Festilaw provides that official representation, with real support from a dedicated team.</p>
             <p>Le règlement impose à tout vendeur établi hors de l'Union européenne de désigner un représentant. Un serif neutre reste lisible et sérieux sur de longs paragraphes.</p>
@@ -145,7 +145,7 @@
 
     {{-- APERCU COMPOSE --}}
     <div class="section">
-        <div class="label">Aperçu composé — les deux ambiances</div>
+        <div class="label">Aperçu · les deux ambiances</div>
         <div class="previews">
             <div class="card card-blue">
                 <div class="kick">Your GPSR Responsible Person</div>
