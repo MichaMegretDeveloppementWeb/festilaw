@@ -11,15 +11,15 @@
             --blue: #0F1199;
             --coral: #FE776A;
             --salmon: #F08E80;
-            --cream: #FCF6E3;
+            --cream: #FCF6E3;        /* fond des pages */
             --beige: #EFE5D0;        /* cartes et nuances */
-            --beige-light: #F4ECDB;  /* fond des pages */
+            --beige-light: #F4ECDB;  /* texte clair sur le bleu */
             --ink: #0E1326;
             --ink-soft: #3a4064;
             --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: var(--beige-light); color: var(--ink); font-family: var(--sans); line-height: 1.65; }
+        body { background: var(--cream); color: var(--ink); font-family: var(--sans); line-height: 1.65; }
         .wrap { max-width: 1120px; margin: 0 auto; padding: 40px 30px 90px; }
 
         .doc-head { border-bottom: 2px solid var(--blue); padding-bottom: 22px; margin-bottom: 44px; }
@@ -46,7 +46,7 @@
         .f-poiret { font-family: 'Poiret One', sans-serif; letter-spacing: 0.04em; }
 
         .on-blue { background: var(--blue); border-color: transparent; }
-        .on-blue .fname { color: rgba(252,246,227,0.65); }
+        .on-blue .fname { color: rgba(244,236,219,0.65); }
         .on-blue .display-line { color: var(--salmon); }
 
         /* Script */
@@ -63,8 +63,8 @@
         .card { border-radius: 20px; overflow: hidden; border: 1px solid rgba(14,19,38,0.12); }
         .card-blue { background: var(--blue); padding: 44px 40px; }
         .card-blue .kick { font-family: var(--sans); text-transform: uppercase; letter-spacing: 0.2em; font-size: 12px; font-weight: 600; color: var(--salmon); }
-        .card-blue h3 { font-family: 'Poiret One', sans-serif; text-transform: uppercase; color: var(--cream); font-size: 40px; line-height: 1.05; letter-spacing: 0.03em; margin: 14px 0 16px; }
-        .card-blue p { color: rgba(252,246,227,0.82); max-width: 34ch; }
+        .card-blue h3 { font-family: 'Poiret One', sans-serif; text-transform: uppercase; color: var(--beige-light); font-size: 40px; line-height: 1.05; letter-spacing: 0.03em; margin: 14px 0 16px; }
+        .card-blue p { color: rgba(244,236,219,0.82); max-width: 34ch; }
         .card-beige { background: var(--beige); padding: 44px 40px; }
         .card-beige h3 { font-family: 'Poiret One', sans-serif; text-transform: uppercase; color: var(--blue); font-size: 34px; line-height: 1.08; letter-spacing: 0.03em; margin-bottom: 14px; }
         .card-beige p { color: var(--ink); }
@@ -90,8 +90,8 @@
             <div class="sw"><div class="chip" style="background:#0F1199"></div><div class="name">Bleu roi</div><div class="hex">#0F1199</div><div class="use">Fond du hero et des sections mises en avant</div></div>
             <div class="sw"><div class="chip" style="background:#FE776A"></div><div class="name">Corail</div><div class="hex">#FE776A</div><div class="use">Aplats, boutons, logo</div></div>
             <div class="sw"><div class="chip" style="background:#F08E80"></div><div class="name">Saumon</div><div class="hex">#F08E80</div><div class="use">Texte sur le bleu</div></div>
-            <div class="sw"><div class="chip" style="background:#FCF6E3"></div><div class="name">Crème</div><div class="hex">#FCF6E3</div><div class="use">Texte clair sur le bleu</div></div>
-            <div class="sw"><div class="chip" style="background:#F4ECDB"></div><div class="name">Beige clair</div><div class="hex">#F4ECDB</div><div class="use">Fond des pages</div></div>
+            <div class="sw"><div class="chip" style="background:#FCF6E3"></div><div class="name">Crème</div><div class="hex">#FCF6E3</div><div class="use">Fond des pages</div></div>
+            <div class="sw"><div class="chip" style="background:#F4ECDB"></div><div class="name">Beige clair</div><div class="hex">#F4ECDB</div><div class="use">Texte clair sur le bleu</div></div>
             <div class="sw"><div class="chip" style="background:#EFE5D0"></div><div class="name">Beige</div><div class="hex">#EFE5D0</div><div class="use">Cartes et nuances</div></div>
             <div class="sw"><div class="chip" style="background:#0E1326"></div><div class="name">Bleu-noir</div><div class="hex">#0E1326</div><div class="use">Texte des paragraphes</div></div>
         </div>
