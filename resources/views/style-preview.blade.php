@@ -5,21 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Festilaw · votre nouvelle identité visuelle</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=poiret-one:400|julius-sans-one:400|josefin-sans:300,400,600|inter:400,500,600|pacifico:400|satisfy:400" rel="stylesheet">
+    <link href="https://fonts.bunny.net/css?family=poiret-one:400|inter:400,500,600|satisfy:400" rel="stylesheet">
     <style>
         :root {
             --blue: #0F1199;
             --coral: #FE776A;
             --salmon: #F08E80;
             --cream: #FCF6E3;
-            --beige: #EFE5D0;
-            --beige-light: #F4ECDB;
+            --beige: #EFE5D0;        /* cartes et nuances */
+            --beige-light: #F4ECDB;  /* fond des pages */
             --ink: #0E1326;
             --ink-soft: #3a4064;
             --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: var(--beige); color: var(--ink); font-family: var(--sans); line-height: 1.65; }
+        body { background: var(--beige-light); color: var(--ink); font-family: var(--sans); line-height: 1.65; }
         .wrap { max-width: 1120px; margin: 0 auto; padding: 40px 30px 90px; }
 
         .doc-head { border-bottom: 2px solid var(--blue); padding-bottom: 22px; margin-bottom: 44px; }
@@ -39,13 +39,11 @@
         .sw .hex { font-size: 12px; color: var(--ink-soft); font-family: ui-monospace, monospace; }
         .sw .use { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
 
-        /* Type candidates */
-        .type-card { background: var(--beige-light); border: 1px solid rgba(14,19,38,0.1); border-radius: 14px; padding: 22px 26px; margin-bottom: 16px; }
+        /* Polices retenues */
+        .type-card { background: var(--beige); border: 1px solid rgba(14,19,38,0.1); border-radius: 14px; padding: 22px 26px; margin-bottom: 16px; }
         .type-card .fname { font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--ink-soft); margin-bottom: 14px; }
         .display-line { color: var(--blue); text-transform: uppercase; line-height: 1.05; font-size: clamp(30px, 5vw, 58px); }
         .f-poiret { font-family: 'Poiret One', sans-serif; letter-spacing: 0.04em; }
-        .f-josefin { font-family: 'Josefin Sans', sans-serif; font-weight: 300; letter-spacing: 0.04em; }
-        .f-julius { font-family: 'Julius Sans One', sans-serif; letter-spacing: 0.06em; }
 
         .on-blue { background: var(--blue); border-color: transparent; }
         .on-blue .fname { color: rgba(252,246,227,0.65); }
@@ -53,7 +51,6 @@
 
         /* Script */
         .script-line { font-size: clamp(34px, 5vw, 56px); color: var(--coral); line-height: 1.2; }
-        .f-pacifico { font-family: 'Pacifico', cursive; }
         .f-satisfy { font-family: 'Satisfy', cursive; }
 
         /* Body sans-serif */
@@ -68,10 +65,10 @@
         .card-blue .kick { font-family: var(--sans); text-transform: uppercase; letter-spacing: 0.2em; font-size: 12px; font-weight: 600; color: var(--salmon); }
         .card-blue h3 { font-family: 'Poiret One', sans-serif; text-transform: uppercase; color: var(--cream); font-size: 40px; line-height: 1.05; letter-spacing: 0.03em; margin: 14px 0 16px; }
         .card-blue p { color: rgba(252,246,227,0.82); max-width: 34ch; }
-        .card-beige { background: var(--beige-light); padding: 44px 40px; }
+        .card-beige { background: var(--beige); padding: 44px 40px; }
         .card-beige h3 { font-family: 'Poiret One', sans-serif; text-transform: uppercase; color: var(--blue); font-size: 34px; line-height: 1.08; letter-spacing: 0.03em; margin-bottom: 14px; }
         .card-beige p { color: var(--ink); }
-        .accent { font-family: 'Pacifico', cursive; color: var(--coral); font-size: 1.15em; }
+        .accent { font-family: 'Satisfy', cursive; color: var(--coral); font-size: 1.25em; }
 
         .btn { display: inline-block; margin-top: 24px; font-family: var(--sans); font-weight: 600; font-size: 15px; padding: 13px 26px; border-radius: 10px; }
         .btn-coral { background: var(--coral); color: #3a1512; }
@@ -83,7 +80,7 @@
 
     <div class="doc-head">
         <h1>Festilaw · votre nouvelle identité visuelle</h1>
-        <p>Voici la direction que je vous propose pour votre site : les couleurs et les polices, dans l'esprit de votre logo et d'une image plus sobre, adaptée au sérieux du sujet. Rien n'est encore figé : cette page sert à valider l'ambiance avant de construire le site.</p>
+        <p>Voici l'identité retenue pour votre site : les couleurs et les polices que vous avez choisies, dans l'esprit de votre logo et d'une image sobre, adaptée au sérieux du sujet. Prochaine étape : construire le site avec cette base.</p>
     </div>
 
     {{-- PALETTE --}}
@@ -94,26 +91,18 @@
             <div class="sw"><div class="chip" style="background:#FE776A"></div><div class="name">Corail</div><div class="hex">#FE776A</div><div class="use">Aplats, boutons, logo</div></div>
             <div class="sw"><div class="chip" style="background:#F08E80"></div><div class="name">Saumon</div><div class="hex">#F08E80</div><div class="use">Texte sur le bleu</div></div>
             <div class="sw"><div class="chip" style="background:#FCF6E3"></div><div class="name">Crème</div><div class="hex">#FCF6E3</div><div class="use">Texte clair sur le bleu</div></div>
-            <div class="sw"><div class="chip" style="background:#EFE5D0"></div><div class="name">Beige</div><div class="hex">#EFE5D0</div><div class="use">Fond des pages</div></div>
-            <div class="sw"><div class="chip" style="background:#F4ECDB"></div><div class="name">Beige clair</div><div class="hex">#F4ECDB</div><div class="use">Cartes et nuances</div></div>
+            <div class="sw"><div class="chip" style="background:#F4ECDB"></div><div class="name">Beige clair</div><div class="hex">#F4ECDB</div><div class="use">Fond des pages</div></div>
+            <div class="sw"><div class="chip" style="background:#EFE5D0"></div><div class="name">Beige</div><div class="hex">#EFE5D0</div><div class="use">Cartes et nuances</div></div>
             <div class="sw"><div class="chip" style="background:#0E1326"></div><div class="name">Bleu-noir</div><div class="hex">#0E1326</div><div class="use">Texte des paragraphes</div></div>
         </div>
     </div>
 
     {{-- TITRES --}}
     <div class="section">
-        <div class="label">Les titres · quelques pistes de police</div>
+        <div class="label">Les titres · Poiret One</div>
         <div class="type-card">
-            <div class="fname">Poiret One <span class="reco">recommandée</span></div>
+            <div class="fname">Poiret One <span class="reco">votre choix</span></div>
             <div class="display-line f-poiret">Sell safely in Europe</div>
-        </div>
-        <div class="type-card">
-            <div class="fname">Josefin Sans</div>
-            <div class="display-line f-josefin">Sell safely in Europe</div>
-        </div>
-        <div class="type-card">
-            <div class="fname">Julius Sans One</div>
-            <div class="display-line f-julius">Sell safely in Europe</div>
         </div>
         <div class="type-card on-blue">
             <div class="fname">La même, en saumon sur le bleu (ambiance hero)</div>
@@ -123,13 +112,9 @@
 
     {{-- ACCENT / SCRIPT --}}
     <div class="section">
-        <div class="label">Les mots à mettre en avant · dans l'esprit de votre logo</div>
+        <div class="label">Les mots à mettre en avant · Satisfy</div>
         <div class="type-card">
-            <div class="fname">Pacifico <span class="reco">recommandée</span></div>
-            <div class="script-line f-pacifico">Festilaw · from entrepreneurs, for entrepreneurs</div>
-        </div>
-        <div class="type-card">
-            <div class="fname">Satisfy</div>
+            <div class="fname">Satisfy <span class="reco">votre choix</span></div>
             <div class="script-line f-satisfy">Festilaw · from entrepreneurs, for entrepreneurs</div>
         </div>
         <p class="hint">À réserver aux mots que vous souhaitez mettre en avant (ni titre, ni texte courant).</p>
@@ -137,7 +122,7 @@
 
     {{-- PARAGRAPHE --}}
     <div class="section">
-        <div class="label">Les paragraphes · un sans-serif sobre et lisible</div>
+        <div class="label">Les paragraphes · un sans-serif sobre et lisible (Inter)</div>
         <div class="body-sample">
             <p>The General Product Safety Regulation requires any seller based outside the European Union to appoint an EU Responsible Person before selling to European consumers. Festilaw provides that official representation, with real support from a dedicated team.</p>
             <p>Le règlement impose à tout vendeur établi hors de l'Union européenne de désigner un représentant. Un sans-serif neutre reste lisible et sérieux sur de longs paragraphes.</p>
