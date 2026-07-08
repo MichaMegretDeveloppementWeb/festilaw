@@ -1,47 +1,13 @@
-/* Design tokens (variables CSS), extraits du design Festilaw Home (03-design/source-festilaw-home.dc.html). */
+/* Tokens de design · a definir depuis la nouvelle charte (voir 03-design).
+   A remplir : couleurs, typographie, espacements, largeurs, rayons, ombres, points de rupture. */
 :root {
-    /* Couleurs de marque */
-    --color-cream: #FBEEDC;
-    --color-coral: #EC5A57;
-    --color-coral-soft: #F79184;
-    --color-crimson: #C90032;
-    --color-navy: #0B1E45;          /* darkBg par defaut (theme Navy) */
-    --color-navy-violet: #2E2A6E;   /* darkBg alternatif (theme Blue-violet) */
-    --color-navy-deep: #0A1023;     /* fond du bloc CTA final */
-    --color-yellow: #FFC83D;
-    --color-white: #ffffff;
+    /* Couleurs */
 
-    /* Fond sombre pilotable (hero, why-gpsr, footer, sticky-bar) */
-    --color-dark: var(--color-navy);
+    /* Typographie (familles, poids, echelle) */
 
-    /* Bleus secondaires (cartes services, accents) */
-    --color-blue-700: #15315f;
-    --color-blue-500: #2C5A86;
-    --color-blue-300: #5E90BC;
-    --color-blue-100: #8FA6C6;
-
-    /* Neutres / texte */
-    --color-ink-muted: #5C5344;
-    --color-ink-faint: #7d735f;
-    --color-border-sand: #E7D9BF;
-    --color-sand-chip: #F4E7D0;
-    --color-success: #1F9A63;
-
-    /* Typographies */
-    --font-sans: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-    --font-display: 'Schibsted Grotesk', var(--font-sans);
-    --font-serif: 'Newsreader', Georgia, 'Times New Roman', serif;
+    /* Espacements & largeurs */
 
     /* Rayons */
-    --radius-sm: 12px;
-    --radius: 16px;
-    --radius-lg: 26px;
-    --radius-xl: 34px;
 
-    /* Gabarit */
-    --max-width: 1300px;
-    --gutter: clamp(20px, 5vw, 68px);
-
-    /* Point de bascule responsive du design (nav wide vs compact) */
-    --bp-wide: 1080px;
+    /* Ombres */
 }

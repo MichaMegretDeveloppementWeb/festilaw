@@ -1,6 +1,6 @@
 {
   "resources/css/web.css": {
-    "file": "assets/web-P3rJs6iJ.css",
+    "file": "assets/web-R1ac07a2.css",
     "name": "web",
     "names": [
       "web.css"
@@ -9,7 +9,7 @@
     "isEntry": true
   },
   "resources/css/web/contact/index.css": {
-    "file": "assets/index-DHVXqKb1.css",
+    "file": "assets/index-x1XGuNl0.css",
     "name": "index",
     "names": [
       "index.css"
@@ -18,7 +18,7 @@
     "isEntry": true
   },
   "resources/css/web/home/index.css": {
-    "file": "assets/index-9xaBcxQy.css",
+    "file": "assets/index-EwIPZMYT.css",
     "name": "index",
     "names": [
       "index.css"
