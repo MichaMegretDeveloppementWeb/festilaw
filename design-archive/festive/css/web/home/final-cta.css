@@ -1,0 +1,30 @@
+.final-cta { background: var(--color-cream); padding: clamp(56px, 7vw, 96px) var(--gutter) clamp(70px, 8vw, 110px); }
+.final-cta__box {
+    position: relative; overflow: hidden; text-align: center;
+    max-width: 1160px; margin: 0 auto;
+    background: var(--color-navy-deep);
+    border-radius: 34px;
+    padding: clamp(64px, 7.5vw, 104px) clamp(24px, 5vw, 60px);
+}
+.final-cta__dots {
+    position: absolute; inset: 0;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1.3px, transparent 1.3px);
+    background-size: 26px 26px;
+}
+.final-cta__ring { position: absolute; border-radius: 50%; }
+.final-cta__ring--1 { top: -70px; left: -60px; width: 270px; height: 270px; border: 1.5px solid rgba(255, 255, 255, 0.06); }
+.final-cta__ring--2 { top: -24px; left: -14px; width: 180px; height: 180px; border: 1.5px solid rgba(255, 255, 255, 0.045); }
+.final-cta__ring--3 { bottom: -100px; right: -50px; width: 300px; height: 300px; border: 1.5px solid rgba(255, 255, 255, 0.06); }
+.final-cta__square { position: absolute; bottom: 12%; left: 15%; width: 82px; height: 82px; border: 1.5px solid rgba(255, 255, 255, 0.05); border-radius: 16px; transform: rotate(20deg); }
+
+.final-cta__doodle { position: absolute; }
+.final-cta__doodle--star { top: 11%; left: 5%; filter: drop-shadow(0 0 9px rgba(255, 200, 61, 0.55)); animation: floaty 5s ease-in-out infinite; }
+.final-cta__doodle--bolt { top: 14%; right: 5%; filter: drop-shadow(0 0 9px rgba(236, 90, 87, 0.55)); animation: floaty2 6s ease-in-out infinite; }
+.final-cta__doodle--heart { bottom: 18%; left: 13%; filter: drop-shadow(0 0 9px rgba(236, 90, 87, 0.5)); animation: floaty 7s ease-in-out infinite; }
+.final-cta__doodle--chat { bottom: 22%; right: 13%; filter: drop-shadow(0 0 9px rgba(143, 166, 198, 0.6)); animation: floaty2 5.6s ease-in-out infinite; }
+
+.final-cta__title { position: relative; font-family: var(--font-display); font-weight: 800; font-size: clamp(32px, 4.8vw, 62px); line-height: 0.98; letter-spacing: -0.03em; color: var(--color-white); max-width: 680px; margin: 0 auto 16px; }
+.final-cta__text { position: relative; font-size: clamp(16px, 1.7vw, 20px); color: rgba(255, 255, 255, 0.78); max-width: 480px; margin: 0 auto 34px; }
+.final-cta__actions { position: relative; display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.final-cta__btn { position: relative; font-size: 17px; box-shadow: 0 16px 38px rgba(236, 90, 87, 0.45); }
+.final-cta__talk { font-size: 17px; }

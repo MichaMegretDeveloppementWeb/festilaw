@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&family=Hanken+Grotesk:wght@400;500;600;700&family=Schibsted+Grotesk:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Hanken Grotesk',system-ui,sans-serif;color:#0B1E45;background:#FBEEDC;-webkit-font-smoothing:antialiased}
+  a{color:#EC5A57;text-decoration:none}
+  a:hover{color:#C90032}
+  ::selection{background:#FFC83D;color:#0B1E45}
+  .mk{padding:.04em .18em;border-radius:6px;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+  @keyframes floaty{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-11px) rotate(7deg)}}
+  @keyframes floaty2{0%,100%{transform:translateY(0)}50%{transform:translateY(9px)}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</helmet>
+<div style="width:100%;overflow-x:clip;font-family:'Hanken Grotesk',sans-serif;background:#FBEEDC">
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><filter id="handdrawn"><feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="7" result="noise"/><feDisplacementMap in="SourceGraphic" in2="noise" scale="1.5"/></filter></defs></svg>
+
+  <!-- ==================== HERO ==================== -->
+  <section id="top" style="position:relative;background:{{ darkBg }};overflow:hidden">
+    <header style="position:relative;z-index:40;display:flex;align-items:center;justify-content:space-between;padding:28px clamp(20px,5vw,68px)">
+      <a href="#top" style="display:flex;align-items:baseline;gap:0;font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:26px;letter-spacing:-.03em">
+        <span style="color:#fff">festi</span><span style="color:#EC5A57">law</span><span style="color:#FFC83D;font-size:30px;line-height:0;margin-left:1px">.</span>
+      </a>
+      <sc-if value="{{ wide }}" hint-placeholder-val="{{ true }}">
+        <nav style="display:flex;align-items:center;gap:clamp(18px,1.9vw,34px)">
+          <a href="#top" style="color:#fff;font-weight:600;font-size:15px">Home</a>
+          <a href="#gpsr" style="color:rgba(255,255,255,.78);font-weight:500;font-size:15px">Understand GPSR</a>
+          <a href="#services" style="color:rgba(255,255,255,.78);font-weight:500;font-size:15px">Our Services</a>
+          <a href="#pricing" style="color:rgba(255,255,255,.78);font-weight:500;font-size:15px">Pricing</a>
+          <a href="#footer" style="color:rgba(255,255,255,.78);font-weight:500;font-size:15px">Contact</a>
+        </nav>
+        <div style="display:flex;align-items:center;gap:16px">
+          <div style="display:flex;align-items:center;gap:9px;font-weight:600;font-size:13px;color:rgba(255,255,255,.55)">
+            <span style="color:#fff">EN</span><span style="cursor:pointer">FR</span><span style="cursor:pointer">ES</span>
+          </div>
+          <a href="#quiz" style="display:inline-flex;align-items:center;gap:8px;padding:13px 22px;border-radius:12px;background:#EC5A57;color:#fff;font-weight:700;font-size:14px" style-hover="background:#C90032">Get Compliant in 24h</a>
+        </div>
+      </sc-if>
+      <sc-if value="{{ compact }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ toggleMenu }}" aria-label="Menu" style="display:flex;flex-direction:column;gap:5px;background:rgba(255,255,255,.12);border:none;cursor:pointer;padding:12px;border-radius:12px">
+          <span style="width:22px;height:2.5px;background:#fff;border-radius:2px;display:block"></span>
+          <span style="width:22px;height:2.5px;background:#fff;border-radius:2px;display:block"></span>
+          <span style="width:22px;height:2.5px;background:#fff;border-radius:2px;display:block"></span>
+        </button>
+      </sc-if>
+    </header>
+
+    <div style="position:relative;z-index:5;max-width:1300px;margin:0 auto;padding:36px clamp(20px,5vw,68px) 96px;display:grid;grid-template-columns:1.06fr .94fr;gap:48px;align-items:center">
+      <div>
+        <div style="display:flex;align-items:center;gap:11px;margin-bottom:30px">
+          <span style="width:9px;height:9px;background:#FFC83D;display:inline-block;transform:rotate(45deg)"></span>
+          <span style="font-weight:700;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#FFC83D">Mandatory across the EU since Dec. 2024</span>
+        </div>
+        <h1 style="font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:clamp(48px,6.8vw,96px);line-height:1.12;letter-spacing:-.035em;color:#fff;margin-bottom:30px">
+          Sell safely in the
+          <span style="display:inline-block;transform:rotate(-1.5deg);margin-top:.12em"><span class="mk" style="background:#EC5A57;color:#0B1E45">European market.</span></span>
+        </h1>
+        <p style="font-size:clamp(18px,1.9vw,21px);line-height:1.55;color:rgba(255,255,255,.82);max-width:520px;margin-bottom:26px">
+          Festilaw is your GPSR Responsible Person. Real support from entrepreneurs, for entrepreneurs.
+        </p>
+        <div style="display:flex;align-items:center;gap:11px;margin-bottom:38px">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#FFC83D" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7.5 12 12 15 14"/></svg>
+          <span style="color:#FFC83D;font-weight:600;font-size:15px">Your official EU Responsible Person address, ready within 24 hours.</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:center">
+          <a href="#quiz" style="display:inline-flex;align-items:center;gap:10px;padding:18px 30px;border-radius:14px;background:#EC5A57;color:#fff;font-weight:700;font-size:16px;box-shadow:0 16px 36px rgba(201,0,50,.34)" style-hover="background:#C90032">
+            Get Compliant in 24h
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </a>
+          <a href="#gpsr" style="display:inline-flex;align-items:center;gap:9px;padding:18px 26px;border-radius:14px;background:transparent;border:1.6px solid rgba(255,255,255,.4);color:#fff;font-weight:600;font-size:16px" style-hover="background:rgba(255,255,255,.09)">Why it matters</a>
+        </div>
+      </div>
+
+      <!-- RIGHT VISUAL -->
+      <div style="position:relative;min-height:480px;display:flex;align-items:center;justify-content:center">
+        <div style="position:absolute;width:104%;height:96%;border:2px dashed rgba(255,255,255,.28);border-radius:48% 52% 55% 45% / 52% 46% 54% 48%;transform:rotate(8deg)"></div>
+        <div style="position:absolute;width:112%;height:98%;background:#EC5A57;border-radius:52% 48% 44% 56% / 48% 54% 46% 52%;left:-4%;top:2%"></div>
+        <div style="position:absolute;width:56px;height:56px;background:#FFC83D;border-radius:50%;top:8%;left:6%;z-index:1"></div>
+        <div style="position:relative;z-index:2;width:84%;aspect-ratio:1/1.16;border-radius:26px;overflow:hidden;transform:rotate(-2.5deg);border:4px solid #0B1E45;box-shadow:16px 16px 0 rgba(9,20,48,.55)">
+          <img src="https://images.unsplash.com/photo-1494412574643-ff11b0a5c1c3?auto=format&fit=crop&w=1100&q=80" alt="Container port" style="width:100%;height:100%;object-fit:cover;display:block">
+        </div>
+        <div style="position:absolute;z-index:3;bottom:5%;left:-3%;transform:rotate(-7deg);background:#FFC83D;border:3px solid #0B1E45;border-radius:16px;padding:12px 17px;box-shadow:5px 5px 0 #0B1E45">
+          <div style="font-family:'Schibsted Grotesk',sans-serif;font-weight:900;font-size:27px;color:#0B1E45;line-height:.95">24h</div>
+          <div style="font-size:11px;font-weight:600;color:#0B1E45;margin-top:1px">mandate ready</div>
+        </div>
+        <svg style="position:absolute;z-index:3;top:1%;right:4%;animation:floaty 6s ease-in-out infinite" width="42" height="42" viewBox="0 0 24 24" fill="#FFC83D"><path d="M12 0l2.2 8.9L23 12l-8.8 3.1L12 24l-2.2-8.9L1 12l8.8-3.1z"/></svg>
+        <svg style="position:absolute;z-index:3;top:46%;right:-5%;animation:floaty2 5s ease-in-out infinite" width="54" height="26" viewBox="0 0 60 26" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"><path d="M3 13Q12 2 21 13T39 13T57 13"/></svg>
+      </div>
+    </div>
+
+    <div style="position:absolute;left:0;right:0;bottom:-1px;line-height:0">
+      <svg viewBox="0 0 1440 120" preserveAspectRatio="none" style="width:100%;height:clamp(52px,7vw,116px);display:block"><path d="M0,70 C210,118 430,20 720,44 C1010,68 1230,124 1440,58 L1440,120 L0,120 Z" fill="#FBEEDC"/></svg>
+    </div>
+  </section>
+
+  <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;top:80px;right:clamp(16px,5vw,68px);z-index:80;width:min(300px,calc(100vw - 32px));background:{{ darkBg }};border:1.5px solid rgba(255,255,255,.16);border-radius:18px;padding:20px;box-shadow:0 20px 50px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:2px">
+      <a href="#top" onClick="{{ closeMenu }}" style="color:#fff;font-weight:600;font-size:16px;padding:11px 12px;border-radius:10px" style-hover="background:rgba(255,255,255,.08)">Home</a>
+      <a href="#gpsr" onClick="{{ closeMenu }}" style="color:#fff;font-weight:600;font-size:16px;padding:11px 12px;border-radius:10px" style-hover="background:rgba(255,255,255,.08)">Understand GPSR</a>
+      <a href="#services" onClick="{{ closeMenu }}" style="color:#fff;font-weight:600;font-size:16px;padding:11px 12px;border-radius:10px" style-hover="background:rgba(255,255,255,.08)">Our Services</a>
+      <a href="#pricing" onClick="{{ closeMenu }}" style="color:#fff;font-weight:600;font-size:16px;padding:11px 12px;border-radius:10px" style-hover="background:rgba(255,255,255,.08)">Pricing</a>
+      <a href="#footer" onClick="{{ closeMenu }}" style="color:#fff;font-weight:600;font-size:16px;padding:11px 12px;border-radius:10px" style-hover="background:rgba(255,255,255,.08)">Contact</a>
+      <a href="#quiz" onClick="{{ closeMenu }}" style="display:block;text-align:center;margin-top:8px;padding:13px;border-radius:12px;background:#EC5A57;color:#fff;font-weight:700;font-size:15px" style-hover="background:#C90032">Get Compliant in 24h</a>
+    </div>
+  </sc-if>
+
+  <!-- ==================== WHO WE ARE ==================== -->
+  <section style="background:#FBEEDC;padding:clamp(64px,8vw,104px) clamp(20px,5vw,68px)">
+    <div style="max-width:1040px;margin:0 auto">
+      <p style="font-family:'Newsreader',serif;font-weight:400;font-size:clamp(27px,3.9vw,48px);line-height:1.42;color:#0B1E45;text-align:center">
+        We know that ever-growing regulations make business feel
+        <span style="display:inline-block;transform:rotate(-1deg)"><span class="mk" style="background:#FFC83D;color:#0B1E45;font-style:italic">heavier</span></span>
+        and more complex every day.
+        <span style="display:inline-block;width:0.92em;height:0.92em;border-radius:50%;overflow:hidden;vertical-align:-0.13em;border:2px solid #0B1E45;margin:0 .1em"><img src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=200&q=80" style="width:100%;height:100%;object-fit:cover" alt=""></span>
+        Festilaw exists to support
+        <span style="display:inline-block;transform:rotate(-1deg)"><span class="mk" style="background:#EC5A57;color:#0B1E45;font-style:italic">fellow entrepreneurs</span></span>
+        <svg style="display:inline-block;vertical-align:-.08em;margin:0 .02em" width="34" height="34" viewBox="0 0 24 24" fill="#2E2A6E"><path d="M12 1l1.6 6.2L19 4.9l-3.1 4.9L21 12l-5.1 2.2L19 19l-5.4-2.3L12 23l-1.6-6.3L5 19l3.1-4.8L3 12l5.1-2.2L5 4.9l5.4 2.3z"/></svg>
+        , helping you sell safely in Europe with a partner who truly listens and stands by your side.
+      </p>
+    </div>
+  </section>
+
+  <!-- ==================== WHY GPSR MATTERS ==================== -->
+  <section id="gpsr" style="background:{{ darkBg }};padding:clamp(72px,9vw,120px) clamp(20px,5vw,68px);position:relative;overflow:hidden">
+    <div style="position:absolute;top:-90px;right:-70px;width:340px;height:340px;border:2px dashed rgba(201,0,50,.35);border-radius:50%"></div>
+    <div style="max-width:1240px;margin:0 auto;position:relative">
+      <div style="display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:end;margin-bottom:64px">
+        <div>
+          <h2 style="font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:clamp(36px,5vw,66px);line-height:.98;letter-spacing:-.03em;color:#fff">
+            The GPSR is now
+            <span style="display:inline-block;transform:rotate(-1.5deg)"><span class="mk" style="background:#C90032;color:#fff">mandatory.</span></span>
+          </h2>
+        </div>
+        <div>
+          <p style="font-size:clamp(16px,1.5vw,18.5px);line-height:1.65;color:rgba(255,255,255,.78)">
+            Since December 2024, any seller based outside the EU (USA, Canada, Turkey and beyond) must appoint an EU Responsible Person to keep selling to European consumers.
+          </p>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:2px solid rgba(255,255,255,.14)">
+        <div style="padding:34px 32px 8px 0;border-right:1px solid rgba(255,255,255,.1)">
+          <div style="margin-bottom:16px"><span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:900;font-size:58px;color:#C90032;line-height:.8">01</span></div>
+          <h3 style="font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:23px;color:#fff;margin-bottom:9px">Customs seizures</h3>
+          <p style="font-size:15px;line-height:1.55;color:rgba(255,255,255,.66)">Shipments without a valid Responsible Person can be held, returned or destroyed at the EU border.</p>
+        </div>
+        <div style="padding:34px 32px 8px 32px;border-right:1px solid rgba(255,255,255,.1)">
+          <div style="margin-bottom:16px"><span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:900;font-size:58px;color:#C90032;line-height:.8">02</span></div>
+          <h3 style="font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:23px;color:#fff;margin-bottom:9px">Heavy fines</h3>
+          <p style="font-size:15px;line-height:1.55;color:rgba(255,255,255,.66)">National authorities can impose significant penalties for trading without a compliant RP in place.</p>
+        </div>
+        <div style="padding:34px 0 8px 32px">
+          <div style="margin-bottom:16px"><span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:900;font-size:58px;color:#C90032;line-height:.8">03</span></div>
+          <h3 style="font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:23px;color:#fff;margin-bottom:9px">Marketplace removal</h3>
+          <p style="font-size:15px;line-height:1.55;color:rgba(255,255,255,.66)">Etsy, Amazon and Shopify already delist listings that lack a registered Responsible Person.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== WHY FESTILAW ==================== -->
+  <section style="background:#FBEEDC;padding:clamp(72px,9vw,120px) clamp(20px,5vw,68px);position:relative;overflow:hidden">
+    <svg style="position:absolute;top:-40px;left:-60px;width:70%;height:auto;z-index:0" viewBox="0 0 700 380" fill="none" stroke="#fff" stroke-width="52" stroke-linecap="round"><path d="M-30 90C160-70 320 250 470 90S760 160 690 360"/></svg>
+    <div style="max-width:1240px;margin:0 auto;position:relative;z-index:1">
+      <div style="max-width:680px;margin-bottom:56px">
+        <h2 style="font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:clamp(34px,4.8vw,60px);line-height:1;letter-spacing:-.03em;color:#0B1E45">Compliance that feels made for founders.</h2>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:30px;padding:8px 0 24px">
+        <div style="background:#EC5A57;border:2.5px solid #0B1E45;border-radius:28px;padding:36px 32px;min-height:300px;display:flex;flex-direction:column;transform:rotate(-1.5deg);box-shadow:13px 15px 0 #0B1E45">
+          <svg width="62" height="62" viewBox="0 0 48 48" fill="none" stroke="#0B1E45" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" style="filter:url(#handdrawn);margin-bottom:auto"><circle cx="21" cy="25" r="13" fill="#FBEEDC"/><path d="M27 20.5c-1.4-1.3-3.3-1.8-5.2-1.1-2.6 1-4.1 3.7-4.1 5.6s1.5 4.6 4.1 5.6c1.9.7 3.8.2 5.2-1.1"/><line x1="15.3" y1="23.2" x2="24.6" y2="23.2"/><line x1="15.3" y1="26.8" x2="23" y2="26.8"/><path d="M34 9.4l1.5 4.4 4.4 1.5-4.4 1.5L34 21.2l-1.5-4.4L28.1 15.3l4.4-1.5z" fill="#FFC83D" stroke="none"/></svg>
+          <h3 style="font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:25px;color:#0B1E45;margin:26px 0 10px;letter-spacing:-.02em">Fixed &amp; fair pricing</h3>
+          <p style="font-size:15px;line-height:1.55;color:#3a1614">No hidden per-SKU fees. One clear rate built for creators and growing brands.</p>
+        </div>
+        <div style="background:#FFC83D;border:2.5px solid #0B1E45;border-radius:28px;padding:36px 32px;min-height:300px;display:flex;flex-direction:column;transform:rotate(1.2deg);box-shadow:13px 15px 0 #EC5A57">
+          <svg width="62" height="62" viewBox="0 0 48 48" fill="none" stroke="#0B1E45" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" style="filter:url(#handdrawn);margin-bottom:auto"><circle cx="17.5" cy="22" r="5" fill="#FBEEDC"/><path d="M8.5 37c0-5 4-8.4 9-8.4 2.2 0 4.2.7 5.7 1.9"/><circle cx="31" cy="24" r="4.2" fill="#FBEEDC"/><path d="M27 37c0-4.3 2.9-6.9 6.2-6.9 2.4 0 4.5 1.4 5.5 3.8"/><path d="M33 9.6c1.7-1.6 4.5-.3 4.5 1.9 0 2.3-4.5 4.9-4.5 4.9s-4.5-2.6-4.5-4.9c0-2.2 2.8-3.5 4.5-1.9z" fill="#EC5A57" stroke="#EC5A57" stroke-width="1"/></svg>
+          <h3 style="font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:25px;color:#0B1E45;margin:26px 0 10px;letter-spacing:-.02em">Human expertise</h3>
+          <p style="font-size:15px;line-height:1.55;color:#4a3c10">A dedicated duo of experts by your side. Real people who reply, not a ticket queue.</p>
+        </div>
+        <div style="background:#0B1E45;border:2.5px solid #0B1E45;border-radius:28px;padding:36px 32px;min-height:300px;display:flex;flex-direction:column;transform:rotate(-1deg);box-shadow:13px 15px 0 #FFC83D">
+          <svg width="62" height="62" viewBox="0 0 48 48" fill="none" stroke="#FFC83D" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" style="filter:url(#handdrawn);margin-bottom:auto"><line x1="3" y1="17" x2="10" y2="17"/><line x1="1.5" y1="24" x2="9" y2="24"/><line x1="3" y1="31" x2="10" y2="31"/><circle cx="28" cy="24" r="13" fill="rgba(255,255,255,0.08)"/><path d="M28 16v8l5.5 3.2"/><circle cx="28" cy="24" r="1.7" fill="#EC5A57" stroke="none"/></svg>
+          <h3 style="font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:25px;color:#fff;margin:26px 0 10px;letter-spacing:-.02em">Fast turnaround</h3>
+          <p style="font-size:15px;line-height:1.55;color:rgba(255,255,255,.78)">Your official mandate and Responsible Person address, delivered within 24 hours.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== OUR SERVICES ==================== -->
+  <section id="services" style="background:#fff;padding:clamp(72px,9vw,120px) clamp(20px,5vw,68px)">
+    <div style="max-width:1280px;margin:0 auto">
+      <div style="margin-bottom:46px">
+        <h2 style="font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:clamp(32px,4.6vw,62px);line-height:1.16;letter-spacing:-.03em;color:#0B1E45;max-width:960px">
+          From compliance audit to 10-year archiving, <span class="mk" style="background:#EC5A57;color:#0B1E45;display:inline-block">we handle it all.</span>
+        </h2>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-bottom:22px">
+        <div style="border-radius:28px;background:linear-gradient(155deg,#0B1E45 0%,#15315f 100%);padding:36px 34px;display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;gap:9px;margin-bottom:16px">
+            <span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:900;font-size:15px;color:#FFC83D">01</span>
+            <span style="font-weight:600;font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:#8FA6C6">Legal Representation</span>
+          </div>
+          <h3 style="font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:clamp(23px,2.5vw,31px);line-height:1.08;letter-spacing:-.02em;color:#fff;margin-bottom:12px">We become your official EU Responsible Person of record.</h3>
+          <p style="font-size:15px;line-height:1.55;color:rgba(255,255,255,.72);margin-bottom:26px">Your named contact for authorities, listed on your products and documentation across the Union.</p>
+          <div style="margin-top:auto;border-radius:18px;overflow:hidden;height:210px"><img src="https://images.unsplash.com/photo-1494412574643-ff11b0a5c1c3?auto=format&fit=crop&w=1000&q=80" alt="Port" style="width:100%;height:100%;object-fit:cover;display:block"></div>
+        </div>
+        <div style="border-radius:28px;background:linear-gradient(155deg,#2C5A86 0%,#5E90BC 100%);padding:36px 34px;display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;gap:9px;margin-bottom:16px">
+            <span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:900;font-size:15px;color:#0B1E45">02</span>
+            <span style="font-weight:600;font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:#0B1E45">Compliance Audit</span>
+          </div>
+          <h3 style="font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:clamp(23px,2.5vw,31px);line-height:1.08;letter-spacing:-.02em;color:#fff;margin-bottom:12px">A clear review of where every product stands against GPSR.</h3>
+          <p style="font-size:15px;line-height:1.55;color:rgba(255,255,255,.85);margin-bottom:26px">We map your catalogue, flag the gaps and tell you exactly what to fix, in plain language.</p>
+          <div style="margin-top:auto;border-radius:18px;overflow:hidden;height:210px"><img src="https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=1000&q=80" alt="Cargo ship" style="width:100%;height:100%;object-fit:cover;display:block"></div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px">
+        <div style="border:1.5px solid #E7D9BF;border-radius:20px;padding:26px 24px;background:#FBEEDC">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#EC5A57" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:16px"><path d="M14 2.5H6.5a2 2 0 0 0-2 2v15a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V8z"/><polyline points="14 2.5 14 8 19.5 8"/></svg>
+          <h4 style="font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:17px;color:#0B1E45;margin-bottom:6px;letter-spacing:-.01em">Declaration of Conformity</h4>
+          <p style="font-size:13.5px;line-height:1.5;color:#5C5344">We draft the paperwork that proves your products comply.</p>
+        </div>
+        <div style="border:1.5px solid #E7D9BF;border-radius:20px;padding:26px 24px;background:#FBEEDC">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#EC5A57" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:16px"><rect x="4" y="4" width="16" height="16" rx="2.5"/><line x1="8" y1="9.5" x2="16" y2="9.5"/><line x1="8" y1="14" x2="13" y2="14"/></svg>
+          <h4 style="font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:17px;color:#0B1E45;margin-bottom:6px;letter-spacing:-.01em">Label Verification</h4>
+          <p style="font-size:13.5px;line-height:1.5;color:#5C5344">We confirm your labels carry every required EU marking.</p>
+        </div>
+        <div style="border:1.5px solid #E7D9BF;border-radius:20px;padding:26px 24px;background:#FBEEDC">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#EC5A57" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:16px"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+          <h4 style="font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:17px;color:#0B1E45;margin-bottom:6px;letter-spacing:-.01em">Inspection Support</h4>
+          <p style="font-size:13.5px;line-height:1.5;color:#5C5344">We stand with you if an authority ever comes knocking.</p>
+        </div>
+        <div style="border:1.5px solid #E7D9BF;border-radius:20px;padding:26px 24px;background:#FBEEDC">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#EC5A57" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:16px"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M9.5 14.5 12 12l2.5 2.5"/></svg>
+          <h4 style="font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:17px;color:#0B1E45;margin-bottom:6px;letter-spacing:-.01em">10-Year Archiving</h4>
+          <p style="font-size:13.5px;line-height:1.5;color:#5C5344">We securely retain your records for the full legal period.</p>
+        </div>
+      </div>
+      <div style="margin-top:32px"><a href="#quiz" style="display:inline-flex;align-items:center;gap:9px;color:#0B1E45;font-weight:700;font-size:16px;border-bottom:2px solid #EC5A57;padding-bottom:3px" style-hover="color:#C90032">See all services<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#EC5A57" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a></div>
+    </div>
+  </section>
+
+  <!-- ==================== QUIZ ==================== -->
+  <section id="quiz" style="background:radial-gradient(120% 90% at 10% 6%, #F79184 0%, rgba(247,145,132,0) 55%), radial-gradient(120% 110% at 94% 10%, #FFA268 0%, rgba(255,162,104,0) 52%), radial-gradient(140% 130% at 82% 112%, #A80E2C 0%, rgba(168,14,44,0) 58%), linear-gradient(152deg,#EC5A57 0%,#DA3F49 100%);padding:clamp(72px,9vw,124px) clamp(20px,5vw,68px) clamp(150px,16vw,220px);position:relative;overflow:hidden">
+    <div style="position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.1) 1.3px, transparent 1.3px);background-size:28px 28px;opacity:.45"></div>
+    <!-- floating wave doodles -->
+    <svg style="position:absolute;top:15%;left:6%;animation:floaty2 5.5s ease-in-out infinite" width="52" height="26" viewBox="0 0 60 26" fill="none" stroke="rgba(255,255,255,.42)" stroke-width="3" stroke-linecap="round"><path d="M3 13Q12 2 21 13T39 13T57 13"/></svg>
+    <svg style="position:absolute;top:26%;right:8%;animation:floaty 6.5s ease-in-out infinite" width="40" height="20" viewBox="0 0 60 26" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="3" stroke-linecap="round"><path d="M3 13Q12 2 21 13T39 13T57 13"/></svg>
+    <svg style="position:absolute;bottom:26%;left:9%;animation:floaty2 6s ease-in-out infinite" width="46" height="23" viewBox="0 0 60 26" fill="none" stroke="rgba(255,255,255,.34)" stroke-width="3" stroke-linecap="round"><path d="M3 13Q12 2 21 13T39 13T57 13"/></svg>
+    <svg style="position:absolute;top:20%;right:16%;animation:floaty 6s ease-in-out infinite" width="34" height="34" viewBox="0 0 24 24" fill="#FFC83D" opacity="0.9"><path d="M12 1l2.4 8L23 12l-8.6 3L12 23l-2.4-8L1 12l8.6-3z"/></svg>
+    <div style="position:absolute;top:24%;left:15%;width:16px;height:16px;background:#FFC83D;transform:rotate(45deg);opacity:.85"></div>
+    <!-- layered sea at the bottom -->
+    <svg viewBox="0 0 1440 240" preserveAspectRatio="none" style="position:absolute;left:0;right:0;bottom:0;width:100%;height:clamp(120px,16vw,220px);display:block">
+      <path d="M0,150 C240,90 420,190 720,140 C1020,92 1200,180 1440,120 L1440,240 L0,240 Z" fill="#D0353F"/>
+      <path d="M0,190 C260,140 460,220 720,175 C1000,128 1220,205 1440,160 L1440,240 L0,240 Z" fill="#B4142F"/>
+      <path d="M0,150 C240,90 420,190 720,140 C1020,92 1200,180 1440,120" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2.5" stroke-dasharray="3 13" stroke-linecap="round"/>
+    </svg>
+
+    <div style="max-width:720px;margin:0 auto;position:relative;text-align:center">
+      <div style="display:inline-flex;align-items:center;gap:9px;background:#0B1E45;color:#fff;font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;padding:8px 15px;border-radius:999px;margin-bottom:24px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FFC83D" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7.5 12 12 15 14"/></svg>
+        60-second eligibility check
+      </div>
+      <h2 style="font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:clamp(40px,5.2vw,72px);line-height:.98;letter-spacing:-.035em;color:#fff;margin-bottom:16px">Am I concerned by GPSR?</h2>
+      <p style="font-size:clamp(17px,1.6vw,20px);line-height:1.55;color:rgba(255,255,255,.92);max-width:480px;margin:0 auto 40px">Three quick questions, no email or signup. Follow the route and find out exactly where you stand.</p>
+
+      <div style="background:#fff;border:2.5px solid #0B1E45;border-radius:28px;padding:clamp(30px,4vw,48px);box-shadow:14px 14px 0 #0B1E45;text-align:left;min-height:392px;display:flex;flex-direction:column">
+
+        <!-- journey tracker -->
+        <div style="position:relative;margin-bottom:36px">
+          <div style="position:absolute;top:22px;left:14%;right:14%;height:0;border-top:2px dashed #E4D7BC"></div>
+          <div style="position:relative;display:flex;justify-content:space-between">
+            <sc-for list="{{ stops }}" as="s" hint-placeholder-count="3">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:10px;flex:1">
+                <div style="width:44px;height:44px;border-radius:50%;background:{{ s.circleBg }};border:2.5px solid #0B1E45;display:flex;align-items:center;justify-content:center;font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:16px;color:{{ s.numColor }}">{{ s.num }}</div>
+                <span style="font-weight:600;font-size:12.5px;letter-spacing:.03em;text-transform:uppercase;color:{{ s.labelColor }}">{{ s.label }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <sc-if value="{{ notDone }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;flex:1">
+            <span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:13px;color:#EC5A57;letter-spacing:.08em;margin-bottom:12px">QUESTION {{ qNum }} OF {{ total }}</span>
+            <h3 style="font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:clamp(23px,2.6vw,32px);line-height:1.14;letter-spacing:-.02em;color:#0B1E45;margin-bottom:28px;min-height:78px">{{ currentQuestion }}</h3>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:auto">
+              <button onClick="{{ yes }}" style="display:flex;align-items:center;gap:12px;padding:20px 22px;border-radius:16px;border:2.5px solid #0B1E45;cursor:pointer;background:#FBEEDC;color:#0B1E45;font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:18px" style-hover="background:#EC5A57;color:#fff;border-color:#EC5A57">
+                <span style="width:34px;height:34px;border-radius:50%;background:#EC5A57;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                Yes
+              </button>
+              <button onClick="{{ no }}" style="display:flex;align-items:center;gap:12px;padding:20px 22px;border-radius:16px;border:2.5px solid #0B1E45;cursor:pointer;background:#fff;color:#0B1E45;font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:18px" style-hover="background:#0B1E45;color:#fff">
+                <span style="width:34px;height:34px;border-radius:50%;border:2px solid #0B1E45;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0B1E45" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></span>
+                No
+              </button>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ done }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;align-items:center;text-align:center;flex:1;justify-content:center">
+            <div style="width:66px;height:66px;border-radius:50%;background:#1F9A63;border:2.5px solid #0B1E45;display:flex;align-items:center;justify-content:center;margin-bottom:20px;box-shadow:5px 5px 0 #0B1E45"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+            <h3 style="font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:clamp(25px,2.9vw,34px);line-height:1.06;letter-spacing:-.02em;color:#0B1E45;margin-bottom:12px">{{ resultTitle }}</h3>
+            <p style="font-size:16px;line-height:1.55;color:#5C5344;max-width:420px;margin:0 auto 28px">{{ resultText }}</p>
+            <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+              <a href="#pricing" style="display:inline-flex;align-items:center;gap:8px;padding:15px 28px;border-radius:13px;background:#EC5A57;color:#fff;font-weight:700;font-size:15px" style-hover="background:#C90032">See the plans<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+              <button onClick="{{ restart }}" style="padding:15px 24px;border-radius:13px;border:2px solid #0B1E45;background:#fff;color:#0B1E45;font-family:'Hanken Grotesk',sans-serif;font-weight:700;font-size:15px;cursor:pointer" style-hover="background:#FBEEDC">Start over</button>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== PRICING ==================== -->
+  <section id="pricing" style="background:#FBEEDC;padding:clamp(72px,9vw,120px) clamp(20px,5vw,68px)">
+    <div style="max-width:1160px;margin:0 auto">
+      <div style="text-align:center;max-width:640px;margin:0 auto 58px">
+        <h2 style="font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:clamp(34px,4.8vw,60px);line-height:1;letter-spacing:-.03em;color:#0B1E45">Simple, transparent pricing.</h2>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:22px;align-items:stretch">
+        <div style="background:#fff;border:2.5px solid #0B1E45;border-radius:26px;padding:36px 32px;display:flex;flex-direction:column">
+          <h3 style="font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:22px;color:#0B1E45;margin-bottom:6px;letter-spacing:-.02em">Creator Pack</h3>
+          <p style="font-size:14px;color:#5C5344;margin-bottom:24px">Small creators, up to 9 products.</p>
+          <div style="font-family:'Schibsted Grotesk',sans-serif;font-weight:900;font-size:48px;color:#0B1E45;line-height:1;letter-spacing:-.03em">€333</div>
+          <div style="font-size:14px;color:#5C5344;margin-bottom:26px">per year</div>
+          <a href="#quiz" style="display:block;text-align:center;padding:14px;border-radius:12px;border:2px solid #0B1E45;color:#0B1E45;font-weight:700;font-size:15px;margin-top:auto" style-hover="background:#0B1E45;color:#fff">Choose Creator</a>
+        </div>
+        <div style="background:#0B1E45;border:2.5px solid #0B1E45;border-radius:26px;padding:42px 32px;display:flex;flex-direction:column;position:relative;box-shadow:10px 10px 0 #EC5A57;transform:translateY(-12px)">
+          <span style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:#FFC83D;color:#0B1E45;font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:12px;letter-spacing:.04em;padding:6px 15px;border-radius:8px;text-transform:uppercase;white-space:nowrap">Most popular</span>
+          <h3 style="font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:22px;color:#fff;margin-bottom:6px;letter-spacing:-.02em">Pro Pack</h3>
+          <p style="font-size:14px;color:rgba(255,255,255,.72);margin-bottom:24px">Growing brands, 10 to 100 products.</p>
+          <div style="font-family:'Schibsted Grotesk',sans-serif;font-weight:900;font-size:48px;color:#fff;line-height:1;letter-spacing:-.03em">€1,200</div>
+          <div style="font-size:14px;color:rgba(255,255,255,.72);margin-bottom:26px">per year</div>
+          <a href="#quiz" style="display:block;text-align:center;padding:14px;border-radius:12px;background:#EC5A57;color:#fff;font-weight:700;font-size:15px;margin-top:auto" style-hover="background:#C90032">Get Compliant in 24h</a>
+        </div>
+        <div style="background:#fff;border:2.5px solid #0B1E45;border-radius:26px;padding:36px 32px;display:flex;flex-direction:column">
+          <h3 style="font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:22px;color:#0B1E45;margin-bottom:6px;letter-spacing:-.02em">Scale Pack</h3>
+          <p style="font-size:14px;color:#5C5344;margin-bottom:24px">100+ products, with full audit.</p>
+          <div style="font-family:'Schibsted Grotesk',sans-serif;font-weight:900;font-size:48px;color:#0B1E45;line-height:1;letter-spacing:-.03em">Custom</div>
+          <div style="font-size:14px;color:#5C5344;margin-bottom:26px">tailored quote</div>
+          <a href="#footer" style="display:block;text-align:center;padding:14px;border-radius:12px;border:2px solid #0B1E45;color:#0B1E45;font-weight:700;font-size:15px;margin-top:auto" style-hover="background:#0B1E45;color:#fff">Talk to us</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== TRUST ==================== -->
+  <section style="background:#fff;padding:clamp(72px,9vw,120px) clamp(20px,5vw,68px)">
+    <div style="max-width:1200px;margin:0 auto">
+      <div style="max-width:640px;margin-bottom:46px">
+        <h2 style="font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:clamp(32px,4.4vw,54px);line-height:1;letter-spacing:-.03em;color:#0B1E45">Built by entrepreneurs you can trust.</h2>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:minmax(154px,1fr);gap:16px;margin-bottom:44px">
+        <div style="grid-column:span 2;grid-row:span 2;border-radius:24px;overflow:hidden;background:#eee"><img src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=1000&q=80" alt="Entrepreneur shipping" style="width:100%;height:100%;object-fit:cover;display:block"></div>
+        <div style="grid-column:span 2;background:#EC5A57;border-radius:24px;padding:30px 32px;display:flex;flex-direction:column;justify-content:center">
+          <div style="font-family:'Schibsted Grotesk',sans-serif;font-weight:900;font-size:clamp(40px,4.6vw,60px);color:#fff;line-height:.86;letter-spacing:-.03em">24h</div>
+          <div style="font-size:15px;font-weight:600;color:#fff;margin-top:8px">to your official EU Responsible Person address.</div>
+        </div>
+        <div style="background:#FFC83D;border-radius:24px;padding:26px 28px;display:flex;flex-direction:column;justify-content:center">
+          <div style="font-family:'Schibsted Grotesk',sans-serif;font-weight:900;font-size:clamp(30px,3.6vw,46px);color:#0B1E45;line-height:.86;letter-spacing:-.03em">10 yrs</div>
+          <div style="font-size:13.5px;font-weight:600;color:#0B1E45;margin-top:8px">of records archived for you.</div>
+        </div>
+        <div style="border-radius:24px;overflow:hidden;background:#eee"><img src="https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=700&q=80" alt="Cargo ship" style="width:100%;height:100%;object-fit:cover;display:block"></div>
+        <div style="grid-column:span 2;background:#0B1E45;border-radius:24px;padding:28px 30px;display:flex;flex-direction:column;justify-content:center">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFC83D" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg><span style="color:#FFC83D;font-weight:700;font-size:13px;letter-spacing:.1em;text-transform:uppercase">EU Consumer Law Ready</span></div>
+          <div style="font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:clamp(18px,2vw,24px);line-height:1.22;letter-spacing:-.02em;color:#fff">Trained under the European Commission programme.</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1.35fr 1fr;gap:34px;align-items:center">
+        <div style="background:#FBEEDC;border:2.5px solid #0B1E45;border-radius:26px;padding:36px 38px;box-shadow:9px 9px 0 #FFC83D;transform:rotate(-1deg)">
+          <div style="display:flex;gap:3px;margin-bottom:16px"><span style="color:#FFC83D;font-size:22px">★</span><span style="color:#FFC83D;font-size:22px">★</span><span style="color:#FFC83D;font-size:22px">★</span><span style="color:#FFC83D;font-size:22px">★</span><span style="color:#FFC83D;font-size:22px">★</span></div>
+          <p style="font-family:'Newsreader',serif;font-style:italic;font-weight:500;font-size:clamp(21px,2.3vw,29px);line-height:1.4;color:#0B1E45;margin-bottom:22px">“We ship to the EU from Canada and had no clue how to handle GPSR. Festilaw set up our Responsible Person address within a day and answered every question like real people, not a form.”</p>
+          <div style="display:flex;align-items:center;gap:14px"><div style="width:46px;height:46px;border-radius:50%;background:#EC5A57;border:1.5px solid #0B1E45;display:flex;align-items:center;justify-content:center;font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:16px;color:#fff">MT</div><div><div style="font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:15px;color:#0B1E45">Maya Thornton</div><div style="font-size:13px;color:#7d735f">Founder, Wildthread Ceramics · Etsy</div></div></div>
+        </div>
+        <div>
+          <div style="font-family:monospace;font-size:11px;letter-spacing:.12em;color:#a49a86;margin-bottom:16px">TRUSTED BY SELLERS ON</div>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
+            <div style="height:58px;border-radius:14px;background:#F4E7D0;display:flex;align-items:center;justify-content:center;font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:18px;color:#0B1E45;opacity:.7;letter-spacing:-.02em">Etsy</div>
+            <div style="height:58px;border-radius:14px;background:#F4E7D0;display:flex;align-items:center;justify-content:center;font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:18px;color:#0B1E45;opacity:.7;letter-spacing:-.02em">Amazon</div>
+            <div style="height:58px;border-radius:14px;background:#F4E7D0;display:flex;align-items:center;justify-content:center;font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:18px;color:#0B1E45;opacity:.7;letter-spacing:-.02em">Shopify</div>
+            <div style="height:58px;border-radius:14px;background:#F4E7D0;display:flex;align-items:center;justify-content:center;font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:18px;color:#0B1E45;opacity:.7;letter-spacing:-.02em">eBay</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== FINAL CTA ==================== -->
+  <section style="background:#FBEEDC;padding:clamp(56px,7vw,96px) clamp(20px,5vw,68px) clamp(70px,8vw,110px)" data-comment-anchor="cfcc083182-section">
+    <div style="max-width:1160px;margin:0 auto;background:#0A1023;border-radius:34px;padding:clamp(64px,7.5vw,104px) clamp(24px,5vw,60px);position:relative;overflow:hidden;text-align:center">
+      <div style="position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.05) 1.3px, transparent 1.3px);background-size:26px 26px"></div>
+      <div style="position:absolute;top:-70px;left:-60px;width:270px;height:270px;border:1.5px solid rgba(255,255,255,.06);border-radius:50%"></div>
+      <div style="position:absolute;top:-24px;left:-14px;width:180px;height:180px;border:1.5px solid rgba(255,255,255,.045);border-radius:50%"></div>
+      <div style="position:absolute;bottom:-100px;right:-50px;width:300px;height:300px;border:1.5px solid rgba(255,255,255,.06);border-radius:50%"></div>
+      <div style="position:absolute;bottom:12%;left:15%;width:82px;height:82px;border:1.5px solid rgba(255,255,255,.05);border-radius:16px;transform:rotate(20deg)"></div>
+      <svg style="position:absolute;top:11%;left:5%;filter:drop-shadow(0 0 9px rgba(255,200,61,.55));animation:floaty 5s ease-in-out infinite" width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#FFC83D" stroke-width="1.7"><path d="M12 2l2.6 6.9L22 9.3l-6 4.4L18 21l-6-3.9L6 21l2-7.3-6-4.4 7.4-.4z"/></svg>
+      <svg style="position:absolute;top:14%;right:5%;filter:drop-shadow(0 0 9px rgba(236,90,87,.55));animation:floaty2 6s ease-in-out infinite" width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#EC5A57" stroke-width="1.7" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10"/></svg>
+      <svg style="position:absolute;bottom:18%;left:13%;filter:drop-shadow(0 0 9px rgba(236,90,87,.5));animation:floaty 7s ease-in-out infinite" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#EC5A57" stroke-width="1.7"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 1 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"/></svg>
+      <svg style="position:absolute;bottom:22%;right:13%;filter:drop-shadow(0 0 9px rgba(143,166,198,.6));animation:floaty2 5.6s ease-in-out infinite" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#8FA6C6" stroke-width="1.7"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></svg>
+      <svg style="position:absolute;top:54%;left:5%;filter:drop-shadow(0 0 8px rgba(255,200,61,.5));animation:floaty2 6.4s ease-in-out infinite" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#FFC83D" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.4"/></svg>
+      <h2 style="font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:clamp(32px,4.8vw,62px);line-height:.98;letter-spacing:-.03em;color:#fff;max-width:680px;margin:0 auto 16px;position:relative">Ready to secure your sales in Europe?</h2>
+      <p style="font-size:clamp(16px,1.7vw,20px);color:rgba(255,255,255,.78);max-width:480px;margin:0 auto 34px;position:relative">Get compliant in 24h with Festilaw.</p>
+      <a href="#pricing" style="display:inline-flex;align-items:center;gap:10px;padding:18px 34px;border-radius:14px;background:#EC5A57;color:#fff;font-weight:700;font-size:17px;box-shadow:0 16px 38px rgba(236,90,87,.45);position:relative" style-hover="background:#C90032">Get My Mandate Now<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+    </div>
+  </section>
+
+  <!-- ==================== FOOTER ==================== -->
+  <footer id="footer" style="background:{{ darkBg }};padding:clamp(56px,7vw,84px) clamp(20px,5vw,68px) 38px;color:#fff">
+    <div style="max-width:1240px;margin:0 auto">
+      <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:40px;padding-bottom:44px;border-bottom:1px solid rgba(255,255,255,.14)">
+        <div>
+          <div style="display:flex;align-items:baseline;gap:0;font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:25px;margin-bottom:16px;letter-spacing:-.03em"><span style="color:#fff">festi</span><span style="color:#EC5A57">law</span><span style="color:#FFC83D;margin-left:1px">.</span></div>
+          <p style="font-size:14.5px;line-height:1.6;color:rgba(255,255,255,.66);max-width:280px;margin-bottom:20px">Your GPSR Responsible Person in the EU. Compliance built by entrepreneurs, for entrepreneurs.</p>
+          <a href="mailto:team@festilaw.com" style="color:#FFC83D;font-weight:600;font-size:15px">team@festilaw.com</a>
+        </div>
+        <div>
+          <div style="font-weight:700;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:16px">Navigate</div>
+          <div style="display:flex;flex-direction:column;gap:11px"><a href="#top" style="color:rgba(255,255,255,.8);font-size:15px">Home</a><a href="#gpsr" style="color:rgba(255,255,255,.8);font-size:15px">Understand GPSR</a><a href="#services" style="color:rgba(255,255,255,.8);font-size:15px">Our Services</a><a href="#pricing" style="color:rgba(255,255,255,.8);font-size:15px">Pricing</a></div>
+        </div>
+        <div>
+          <div style="font-weight:700;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:16px">Legal</div>
+          <div style="display:flex;flex-direction:column;gap:11px"><a href="#footer" style="color:rgba(255,255,255,.8);font-size:15px">Legal notice</a><a href="#footer" style="color:rgba(255,255,255,.8);font-size:15px">Privacy policy</a><a href="#footer" style="color:rgba(255,255,255,.8);font-size:15px">Terms</a><a href="#footer" style="color:rgba(255,255,255,.8);font-size:15px">Excluded products</a></div>
+        </div>
+        <div>
+          <div style="font-weight:700;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:16px">Language</div>
+          <div style="display:flex;align-items:center;gap:14px;font-weight:600;font-size:14px;color:rgba(255,255,255,.55)"><span style="color:#fff">EN</span><span style="cursor:pointer">FR</span><span style="cursor:pointer">ES</span></div>
+          <p style="font-size:13px;line-height:1.55;color:rgba(255,255,255,.5);margin-top:20px">EU Consumer Law Ready, trained under the European Commission programme.</p>
+        </div>
+      </div>
+      <div style="padding-top:24px;font-size:13px;color:rgba(255,255,255,.45)">© 2026 Festilaw. All rights reserved.</div>
+    </div>
+  </footer>
+
+  <sc-if value="{{ barOpen }}" hint-placeholder-val="{{ true }}">
+    <div style="position:fixed;left:0;right:0;bottom:0;z-index:70;background:{{ darkBg }};border-top:2px solid #EC5A57;padding:14px clamp(16px,4vw,48px);display:flex;align-items:center;justify-content:center;gap:20px;box-shadow:0 -8px 30px rgba(0,0,0,.18)">
+      <span style="color:#fff;font-weight:600;font-size:15px">Ready to secure your sales in Europe? <span style="color:#FFC83D">Get compliant in 24h.</span></span>
+      <a href="#pricing" style="display:inline-flex;align-items:center;gap:8px;padding:11px 22px;border-radius:11px;background:#EC5A57;color:#fff;font-weight:700;font-size:14px;white-space:nowrap" style-hover="background:#C90032">Get My Mandate Now</a>
+      <button onClick="{{ closeBar }}" aria-label="Dismiss" style="background:transparent;border:none;cursor:pointer;color:rgba(255,255,255,.55);font-size:22px;line-height:1;padding:4px 8px">×</button>
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;100%&quot;,&quot;height&quot;:900},&quot;darkTone&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Navy&quot;,&quot;Blue-violet&quot;],&quot;default&quot;:&quot;Navy&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Theme&quot;},&quot;showStickyBar&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Theme&quot;}}">
+class Component extends DCLogic {
+  state = { step: 0, answers: [], done: false, barOpen: true, winW: 1440, menuOpen: false };
+
+  componentDidMount() {
+    this._onResize = () => this.setState({ winW: window.innerWidth });
+    this._onResize();
+    window.addEventListener('resize', this._onResize);
+  }
+  componentWillUnmount() { window.removeEventListener('resize', this._onResize); }
+
+  get questions() {
+    return [
+      "Is your business based outside the European Union?",
+      "Do you sell physical products to consumers in the EU?",
+      "Do you still need an appointed EU Responsible Person?"
+    ];
+  }
+
+  answer(val) {
+    const answers = [...this.state.answers, val];
+    if (answers.length >= this.questions.length) this.setState({ answers, done: true });
+    else this.setState({ answers, step: this.state.step + 1 });
+  }
+  restart() { this.setState({ step: 0, answers: [], done: false }); }
+
+  renderVals() {
+    const { step, answers, done, barOpen, winW, menuOpen } = this.state;
+    const total = this.questions.length;
+    const wide = winW >= 1080;
+    const concerned = answers[0] && answers[1];
+    const clearlyOut = answers[0] === false;
+    return {
+      step, done,
+      barOpen: barOpen && this.props.showStickyBar !== false,
+      notDone: !done,
+      qNum: step + 1,
+      total,
+      currentQuestion: this.questions[step],
+      dots: this.questions.map((_, i) => ({ bg: i <= step ? '#EC5A57' : '#EAD9B8' })),
+      stops: ['Location', 'Products', 'Coverage'].map((label, i) => {
+        const isDone = i < answers.length;
+        const isCurrent = i === step && !done;
+        return {
+          num: String(i + 1),
+          label,
+          circleBg: isDone ? '#EC5A57' : (isCurrent ? '#0B1E45' : '#fff'),
+          numColor: (isDone || isCurrent) ? '#fff' : '#B7AC95',
+          labelColor: (isDone || isCurrent) ? '#0B1E45' : '#B0A58F'
+        };
+      }),
+      yes: () => this.answer(true),
+      no: () => this.answer(false),
+      restart: () => this.restart(),
+      closeBar: () => this.setState({ barOpen: false }),
+      wide,
+      compact: !wide,
+      menuOpen,
+      toggleMenu: () => this.setState(s => ({ menuOpen: !s.menuOpen })),
+      closeMenu: () => this.setState({ menuOpen: false }),
+      darkBg: this.props.darkTone === 'Blue-violet' ? '#2E2A6E' : '#0B1E45',
+      resultTitle: concerned ? "Yes, GPSR applies to you." : (clearlyOut ? "You may already be covered." : "Let's confirm this together."),
+      resultText: concerned
+        ? "You need an EU Responsible Person. Festilaw can provide your official mandate within 24 hours."
+        : "Your situation deserves a closer look. Talk to our team and we will confirm your obligations in minutes.",
+      resultTint: concerned ? '#C90032' : '#EC5A57'
+    };
+  }
+}
+</script>
+</body>
+</html>

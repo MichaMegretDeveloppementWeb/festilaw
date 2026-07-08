@@ -1,0 +1,6 @@
+/* Fondation de l'espace web : tokens, reset, typographie, animations, boutons. */
+@import './tokens.css';
+@import './reset.css';
+@import './typography.css';
+@import './animations.css';
+@import './buttons.css';

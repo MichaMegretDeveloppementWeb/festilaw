@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script de déploiement — Winset
+# Script de déploiement · Festilaw
 # Usage:        ./deploy.sh
 # PHP custom :  PHP_BIN=/opt/alt/php85/usr/bin/php ./deploy.sh
 #
@@ -81,7 +81,7 @@ cleanup() {
 trap cleanup EXIT
 
 echo "============================================"
-echo "  Déploiement Winset"
+echo "  Déploiement Festilaw"
 echo "============================================"
 
 # 1. Vérifier le remote origin
