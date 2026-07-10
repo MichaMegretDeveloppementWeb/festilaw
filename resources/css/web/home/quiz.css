@@ -3,8 +3,7 @@
 
 .quiz__badge {
     display: inline-flex; align-items: center; gap: 8px;
-    background: rgba(252, 246, 227, 0.08);
-    border: 1px solid rgba(240, 142, 128, 0.4);
+    background: rgba(252, 246, 227, 0.1);
     color: var(--color-salmon);
     font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
     padding: 8px 15px; border-radius: var(--radius-pill); margin-bottom: 22px;

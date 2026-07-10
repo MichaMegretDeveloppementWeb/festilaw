@@ -2,7 +2,7 @@
     <div class="quiz__inner">
         <span class="quiz__badge">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7.5 12 12 15 14"/></svg>
-            60-second eligibility check
+            30-second eligibility check
         </span>
         <h2 class="quiz__title">Am I concerned by GPSR?</h2>
         <p class="quiz__lead">Three quick questions, no email or signup. Follow the route and find out exactly where you stand.</p>
