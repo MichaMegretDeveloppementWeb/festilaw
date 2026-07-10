@@ -29,12 +29,20 @@
 
 .hero__assurance {
     display: inline-flex;
+    flex-direction: column;
     align-items: center;
-    gap: 10px;
+    text-align: center;
+    gap: 8px;
     color: var(--color-salmon);
     font-weight: 500;
     font-size: 15px;
     margin-bottom: 40px;
+}
+.hero__assurance svg { flex-shrink: 0; }
+
+/* Sur ecran plus large, l'icone revient a cote du texte. */
+@media (min-width: 640px) {
+    .hero__assurance { flex-direction: row; gap: 10px; text-align: left; }
 }
 
 .hero__actions { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
