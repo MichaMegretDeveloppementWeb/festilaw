@@ -10,6 +10,7 @@ export default defineConfig({
                 'resources/css/web.css',
                 // Un point d'entree CSS par page (charge uniquement par la page concernee).
                 'resources/css/web/home/index.css',
+                'resources/css/web/understand-gpsr/index.css',
                 'resources/css/web/contact/index.css',
             ],
             refresh: true,

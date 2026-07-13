@@ -1,7 +1,7 @@
 <header class="site-header">
     <nav class="site-header__menu site-header__menu--left">
         <a href="{{ route('home') }}" @class(['site-header__link', 'is-active' => request()->routeIs('home')])>Home</a>
-        <a href="{{ route('home') }}#gpsr" class="site-header__link">Understand GPSR</a>
+        <a href="{{ route('understand-gpsr') }}" @class(['site-header__link', 'is-active' => request()->routeIs('understand-gpsr')])>Understand GPSR</a>
         <a href="{{ route('home') }}#services" class="site-header__link">Our Services</a>
     </nav>
 
@@ -23,7 +23,7 @@
     <input type="checkbox" id="site-nav-toggle" class="site-header__toggle" hidden>
     <div class="site-header__mobile">
         <a href="{{ route('home') }}">Home</a>
-        <a href="{{ route('home') }}#gpsr">Understand GPSR</a>
+        <a href="{{ route('understand-gpsr') }}">Understand GPSR</a>
         <a href="{{ route('home') }}#services">Our Services</a>
         <a href="{{ route('home') }}#pricing">Pricing</a>
         <a href="{{ route('contact') }}">Contact</a>

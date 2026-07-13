@@ -18,12 +18,21 @@
     "isEntry": true
   },
   "resources/css/web/home/index.css": {
-    "file": "assets/index-C5jjbcK9.css",
+    "file": "assets/index-Da3-PJdM.css",
     "name": "index",
     "names": [
       "index.css"
     ],
     "src": "resources/css/web/home/index.css",
+    "isEntry": true
+  },
+  "resources/css/web/understand-gpsr/index.css": {
+    "file": "assets/index-y40033bP.css",
+    "name": "index",
+    "names": [
+      "index.css"
+    ],
+    "src": "resources/css/web/understand-gpsr/index.css",
     "isEntry": true
   },
   "resources/js/app.js": {

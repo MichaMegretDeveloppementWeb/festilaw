@@ -1,13 +1,11 @@
-/* Point d'entree CSS de la page home : agrege les sections dans l'ordre d'apparition. */
+/* Point d'entree CSS de la page home : hero + final-cta (propres a la home)
+   et les sections partagees (dossier ../sections), dans l'ordre d'apparition. */
 @import './hero.css';
-@import './who-we-are.css';
-@import './why-gpsr.css';
-@import './why-festilaw.css';
-@import './services.css';
-@import './quiz.css';
-@import './pricing.css';
-@import './trust.css';
+@import '../sections/who-we-are.css';
+@import '../sections/why-festilaw.css';
+@import '../sections/quiz.css';
+@import '../sections/services.css';
+@import '../sections/pricing.css';
+@import '../sections/why-gpsr.css';
+@import '../sections/trust.css';
 @import './final-cta.css';
-
-/* Bloc de defs SVG (filtre hand-drawn), hors flux et invisible. */
-.svg-defs { position: absolute; width: 0; height: 0; }
