@@ -2,6 +2,7 @@
 @import '../sections/page-hero.css';
 @import '../sections/why-gpsr.css';
 @import '../sections/quiz.css';
+@import '../sections/faq.css';
 
 .gtabs { background: var(--color-cream); padding: var(--section-y) var(--gutter); }
 .gtabs__inner { max-width: 900px; margin: 0 auto; }

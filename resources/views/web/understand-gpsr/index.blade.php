@@ -8,12 +8,30 @@
         ['name' => 'Home', 'url' => route('home')],
         ['name' => 'Understand GPSR', 'url' => route('understand-gpsr')],
     ];
+    $faqItems = [
+        ['q' => 'What is the GPSR?', 'a' => 'The General Product Safety Regulation (Regulation (EU) 2023/988) is the EU law on consumer product safety. It has applied since 13 December 2024 and replaces the former General Product Safety Directive. It requires, among other things, that an economic operator established in the EU be responsible for products sold to EU consumers.'],
+        ['q' => 'Do I need a GPSR Responsible Person?', 'a' => 'If your business is established outside the EU and you sell products to consumers in the EU, including through marketplaces, then yes: EU law requires an economic operator established in the EU to be responsible for your products. Festilaw acts as that Responsible Person.'],
+        ['q' => 'What does a Responsible Person actually do?', 'a' => 'The Responsible Person keeps your declaration of conformity and technical documentation available for the authorities, cooperates with them, informs them of any risk, and helps take corrective action if needed. It is a legal role with real obligations, not just a mailbox.'],
+        ['q' => "Isn't an EU email address enough?", 'a' => 'No. You need an economic operator physically established in the EU with a verifiable EU address, not just a contact email.'],
+        ['q' => "What happens if I don't comply?", 'a' => 'Your products can be stopped or destroyed at EU customs, you may face national penalties, and marketplaces such as Amazon, Etsy and Shopify can remove your listings or suspend your EU sales.'],
+        ['q' => 'Does this apply to small sellers and Etsy shops?', 'a' => 'Yes. The trigger is selling to EU consumers, not your size or volume. Small creators and Etsy sellers are concerned as soon as they target the EU market.'],
+        ['q' => "Responsible Person or Authorised Representative, what's the difference?", 'a' => 'Both are EU-based intermediaries, but they rest on different legal bases: the Authorised Representative applies to CE-marked and harmonised products, while the GPSR Responsible Person covers general consumer products under the GPSR. Festilaw helps you determine and cover what you need.'],
+        ['q' => 'Which products does Festilaw not cover?', 'a' => 'We currently do not handle cosmetics, food and drinks, medical devices, chemicals, or tobacco. If your products fall into these categories, please get in touch.'],
+    ];
     $jsonLdNodes = [
         [
             '@type' => 'WebPage',
             'name' => 'Understand the GPSR',
             'url' => route('understand-gpsr'),
             'description' => 'What the EU General Product Safety Regulation (GPSR) is, its three core pillars, who it applies to, and which products need specialized services.',
+        ],
+        [
+            '@type' => 'FAQPage',
+            'mainEntity' => array_map(fn ($f) => [
+                '@type' => 'Question',
+                'name' => $f['q'],
+                'acceptedAnswer' => ['@type' => 'Answer', 'text' => $f['a']],
+            ], $faqItems),
         ],
     ];
 @endphp
@@ -90,6 +108,8 @@
             </div>
         </div>
     </section>
+
+    <x-web.faq :items="$faqItems" eyebrow="FAQ" title="GPSR questions, answered" />
 
     @include('web.sections.why-gpsr')
     @include('web.sections.quiz')
