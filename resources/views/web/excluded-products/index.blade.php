@@ -3,12 +3,28 @@
 @section('title', 'Excluded products · What Festilaw does not cover')
 @section('meta_description', 'Some product categories fall under separate EU frameworks and are outside Festilaw scope: cosmetics, food, tobacco, medical devices, chemicals and more.')
 
+@php
+    $breadcrumbs = [
+        ['name' => 'Home', 'url' => route('home')],
+        ['name' => 'Excluded products', 'url' => route('excluded-products')],
+    ];
+    $jsonLdNodes = [
+        [
+            '@type' => 'WebPage',
+            'name' => 'Excluded products',
+            'url' => route('excluded-products'),
+            'description' => 'Product categories outside Festilaw scope, governed by separate EU frameworks.',
+        ],
+    ];
+@endphp
+
 @push('styles')
     @vite('resources/css/web/excluded-products/index.css')
 @endpush
 
 @section('content')
     <section class="page-hero">
+        <x-web.breadcrumb :items="$breadcrumbs" />
         <div class="page-hero__inner">
             <span class="eyebrow page-hero__eyebrow">Excluded products</span>
             <h1 class="page-hero__title">Products we <span class="page-hero__title-em">don't cover</span></h1>

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\Web\About\AboutController;
 use App\Http\Controllers\Web\Contact\ContactController;
 use App\Http\Controllers\Web\ExcludedProducts\ExcludedProductsController;
@@ -15,6 +16,16 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return redirect('/'.request()->getPreferredLanguage(config('festilaw.supported_locales')));
 });
+
+/*
+ | Fichiers SEO non localises. Declares AVANT le groupe {locale} pour ne pas etre captes par le prefixe.
+ */
+Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
+Route::get('/robots.txt', function () {
+    $body = "User-agent: *\nDisallow:\n\nSitemap: ".url('/sitemap.xml')."\n";
+
+    return response($body, 200, ['Content-Type' => 'text/plain; charset=UTF-8']);
+})->name('robots');
 
 /*
  | Espace public, prefixe par la locale (ADR-003). Les futures pages localisees vont dans ce groupe.

@@ -3,12 +3,28 @@
 @section('title', 'Understand the GPSR · Festilaw')
 @section('meta_description', 'What the EU General Product Safety Regulation (GPSR) is, its three core pillars, who it applies to, and which products need specialized services.')
 
+@php
+    $breadcrumbs = [
+        ['name' => 'Home', 'url' => route('home')],
+        ['name' => 'Understand GPSR', 'url' => route('understand-gpsr')],
+    ];
+    $jsonLdNodes = [
+        [
+            '@type' => 'WebPage',
+            'name' => 'Understand the GPSR',
+            'url' => route('understand-gpsr'),
+            'description' => 'What the EU General Product Safety Regulation (GPSR) is, its three core pillars, who it applies to, and which products need specialized services.',
+        ],
+    ];
+@endphp
+
 @push('styles')
     @vite('resources/css/web/understand-gpsr/index.css')
 @endpush
 
 @section('content')
     <section class="page-hero">
+        <x-web.breadcrumb :items="$breadcrumbs" />
         <div class="page-hero__inner">
             <span class="eyebrow page-hero__eyebrow">Understand GPSR</span>
             <h1 class="page-hero__title">Understanding the <span class="page-hero__title-em">GPSR</span></h1>

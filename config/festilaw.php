@@ -11,6 +11,12 @@ return [
     'supported_locales' => ['en', 'fr', 'es'],
 
     /*
+     | Locales reellement publiees (traduites). Les autres sont servies mais passees en noindex
+     | et exclues du hreflang et du sitemap, jusqu'a ce que leurs traductions existent (Jalon i18n).
+     */
+    'published_locales' => ['en'],
+
+    /*
      | Libelles affiches dans le selecteur de langue.
      */
     'locale_labels' => [

@@ -3,6 +3,16 @@
 @section('title', 'Contact · Festilaw')
 @section('meta_description', 'Get in touch with Festilaw, your GPSR Responsible Person in the EU. From entrepreneurs, for entrepreneurs.')
 
+@php
+    $jsonLdNodes = [
+        [
+            '@type' => 'ContactPage',
+            'name' => 'Contact Festilaw',
+            'url' => route('contact'),
+        ],
+    ];
+@endphp
+
 @push('styles')
     @vite('resources/css/web/contact/index.css')
 @endpush

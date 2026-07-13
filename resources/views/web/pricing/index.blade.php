@@ -3,12 +3,32 @@
 @section('title', 'Pricing · Simple, fair, transparent GPSR compliance')
 @section('meta_description', 'Simple, fair and transparent GPSR pricing: one clear public rate with no hidden per-SKU fees. Creator, Pro and Scale plans.')
 
+@php
+    $breadcrumbs = [
+        ['name' => 'Home', 'url' => route('home')],
+        ['name' => 'Pricing', 'url' => route('pricing')],
+    ];
+    $jsonLdNodes = [
+        [
+            '@type' => 'Service',
+            'serviceType' => 'GPSR Responsible Person',
+            'provider' => ['@type' => 'Organization', 'name' => config('app.name')],
+            'areaServed' => 'EU',
+            'offers' => [
+                ['@type' => 'Offer', 'name' => 'Creator Pack', 'price' => '333', 'priceCurrency' => 'EUR'],
+                ['@type' => 'Offer', 'name' => 'Pro Pack', 'price' => '1200', 'priceCurrency' => 'EUR'],
+            ],
+        ],
+    ];
+@endphp
+
 @push('styles')
     @vite('resources/css/web/pricing/index.css')
 @endpush
 
 @section('content')
     <section class="page-hero">
+        <x-web.breadcrumb :items="$breadcrumbs" />
         <div class="page-hero__inner">
             <span class="eyebrow page-hero__eyebrow">Pricing</span>
             <h1 class="page-hero__title">One clear price, <span class="page-hero__title-em">no surprises</span></h1>

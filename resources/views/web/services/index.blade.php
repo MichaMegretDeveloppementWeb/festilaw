@@ -3,12 +3,30 @@
 @section('title', 'Our Services · Festilaw GPSR compliance')
 @section('meta_description', 'From compliance assessment to authority liaison and regulatory watch, Festilaw handles your full GPSR compliance as your EU Responsible Person.')
 
+@php
+    $breadcrumbs = [
+        ['name' => 'Home', 'url' => route('home')],
+        ['name' => 'Our Services', 'url' => route('services')],
+    ];
+    $jsonLdNodes = [
+        [
+            '@type' => 'Service',
+            'serviceType' => 'GPSR Responsible Person',
+            'name' => 'GPSR compliance services',
+            'provider' => ['@type' => 'Organization', 'name' => config('app.name')],
+            'areaServed' => 'EU',
+            'url' => route('services'),
+        ],
+    ];
+@endphp
+
 @push('styles')
     @vite('resources/css/web/services/index.css')
 @endpush
 
 @section('content')
     <section class="page-hero">
+        <x-web.breadcrumb :items="$breadcrumbs" />
         <div class="page-hero__inner">
             <span class="eyebrow page-hero__eyebrow">Our Services</span>
             <h1 class="page-hero__title">Your full GPSR service, <span class="page-hero__title-em">handled</span></h1>
