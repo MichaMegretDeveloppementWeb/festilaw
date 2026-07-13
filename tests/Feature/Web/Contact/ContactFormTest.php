@@ -11,7 +11,7 @@ use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
-it('creates a contact submission and queues a notification on valid input', function () {
+it('creates a contact submission and sends a notification on valid input', function () {
     Mail::fake();
 
     Livewire::test(ContactForm::class)
@@ -32,7 +32,7 @@ it('creates a contact submission and queues a notification on valid input', func
         ->and($submission->website_url)->toBe('https://wildthread.example')
         ->and($submission->reference)->not->toBeEmpty();
 
-    Mail::assertQueued(ContactSubmissionReceived::class, function (ContactSubmissionReceived $mail) {
+    Mail::assertSent(ContactSubmissionReceived::class, function (ContactSubmissionReceived $mail) {
         return $mail->hasTo(config('festilaw.notification_email'));
     });
 });

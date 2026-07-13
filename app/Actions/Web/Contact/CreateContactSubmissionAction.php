@@ -30,7 +30,7 @@ final class CreateContactSubmissionAction
             ]);
         });
 
-        // Effet de bord apres commit : notification a Festilaw (mise en file d'attente).
+        // Effet de bord apres commit : notification synchrone a Festilaw (pas de file/worker).
         Mail::to(config('festilaw.notification_email'))
             ->send(new ContactSubmissionReceived($submission));
 
