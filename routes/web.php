@@ -1,7 +1,11 @@
 <?php
 
+use App\Http\Controllers\Web\About\AboutController;
 use App\Http\Controllers\Web\Contact\ContactController;
+use App\Http\Controllers\Web\ExcludedProducts\ExcludedProductsController;
 use App\Http\Controllers\Web\Home\HomeController;
+use App\Http\Controllers\Web\Pricing\PricingController;
+use App\Http\Controllers\Web\Services\ServicesController;
 use App\Http\Controllers\Web\UnderstandGpsr\UnderstandGpsrController;
 use Illuminate\Support\Facades\Route;
 
@@ -18,6 +22,10 @@ Route::get('/', function () {
  */
 Route::prefix('{locale}')->middleware('setlocale')->group(function () {
     Route::get('/', HomeController::class)->name('home');
+    Route::get('/about', AboutController::class)->name('about');
     Route::get('/understand-gpsr', UnderstandGpsrController::class)->name('understand-gpsr');
+    Route::get('/services', ServicesController::class)->name('services');
+    Route::get('/pricing', PricingController::class)->name('pricing');
+    Route::get('/excluded-products', ExcludedProductsController::class)->name('excluded-products');
     Route::get('/contact', ContactController::class)->name('contact');
 });

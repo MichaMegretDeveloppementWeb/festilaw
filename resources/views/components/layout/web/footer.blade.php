@@ -11,9 +11,10 @@
                 <div class="site-footer__heading">Navigate</div>
                 <div class="site-footer__links">
                     <a href="{{ route('home') }}">Home</a>
+                    <a href="{{ route('about') }}">About</a>
                     <a href="{{ route('understand-gpsr') }}">Understand GPSR</a>
-                    <a href="{{ route('home') }}#services">Our Services</a>
-                    <a href="{{ route('home') }}#pricing">Pricing</a>
+                    <a href="{{ route('services') }}">Our Services</a>
+                    <a href="{{ route('pricing') }}">Pricing</a>
                     <a href="{{ route('contact') }}">Contact</a>
                 </div>
             </div>
@@ -24,7 +25,7 @@
                     <a href="#footer">Legal notice</a>
                     <a href="#footer">Privacy policy</a>
                     <a href="#footer">Terms</a>
-                    <a href="#footer">Excluded products</a>
+                    <a href="{{ route('excluded-products') }}">Excluded products</a>
                 </div>
             </div>
 

@@ -8,6 +8,15 @@
     "src": "resources/css/web.css",
     "isEntry": true
   },
+  "resources/css/web/about/index.css": {
+    "file": "assets/index-CCZVE6Dw.css",
+    "name": "index",
+    "names": [
+      "index.css"
+    ],
+    "src": "resources/css/web/about/index.css",
+    "isEntry": true
+  },
   "resources/css/web/contact/index.css": {
     "file": "assets/index-BOfSqkZn.css",
     "name": "index",
@@ -17,6 +26,15 @@
     "src": "resources/css/web/contact/index.css",
     "isEntry": true
   },
+  "resources/css/web/excluded-products/index.css": {
+    "file": "assets/index-B5kqAjsy.css",
+    "name": "index",
+    "names": [
+      "index.css"
+    ],
+    "src": "resources/css/web/excluded-products/index.css",
+    "isEntry": true
+  },
   "resources/css/web/home/index.css": {
     "file": "assets/index-Da3-PJdM.css",
     "name": "index",
@@ -24,6 +42,24 @@
       "index.css"
     ],
     "src": "resources/css/web/home/index.css",
+    "isEntry": true
+  },
+  "resources/css/web/pricing/index.css": {
+    "file": "assets/index-BryjHKe1.css",
+    "name": "index",
+    "names": [
+      "index.css"
+    ],
+    "src": "resources/css/web/pricing/index.css",
+    "isEntry": true
+  },
+  "resources/css/web/services/index.css": {
+    "file": "assets/index-da4O88z-.css",
+    "name": "index",
+    "names": [
+      "index.css"
+    ],
+    "src": "resources/css/web/services/index.css",
     "isEntry": true
   },
   "resources/css/web/understand-gpsr/index.css": {

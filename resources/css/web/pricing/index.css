@@ -1,0 +1,8 @@
+/* Page Pricing : en-tete partage + bloc pricing, puis blocs 2/4/6/7 (demande cliente) + cta. */
+@import '../sections/page-hero.css';
+@import '../sections/pricing.css';
+@import '../sections/why-festilaw.css';
+@import '../sections/services.css';
+@import '../sections/why-gpsr.css';
+@import '../sections/trust.css';
+@import '../sections/final-cta.css';

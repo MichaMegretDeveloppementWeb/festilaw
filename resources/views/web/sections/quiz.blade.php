@@ -48,7 +48,7 @@
                 <h3 class="quiz__result-title" x-text="resultTitle"></h3>
                 <p class="quiz__result-text" x-text="resultText"></p>
                 <div class="quiz__result-actions">
-                    <a x-show="concerned" href="#pricing" class="btn btn--coral btn--sm">See the plans</a>
+                    <a x-show="concerned" href="{{ route('pricing') }}" class="btn btn--coral btn--sm">See the plans</a>
                     <a x-show="!concerned" href="{{ route('contact') }}" class="btn btn--coral btn--sm">Contact us</a>
                     <button type="button" class="btn btn--outline-dark btn--sm" x-on:click="restart()">Start over</button>
                 </div>

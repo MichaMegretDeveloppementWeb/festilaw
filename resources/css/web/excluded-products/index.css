@@ -1,0 +1,18 @@
+/* Page Excluded products : en-tete partage + liste des categories exclues + cta. */
+@import '../sections/page-hero.css';
+@import '../sections/final-cta.css';
+
+.excluded { background: var(--color-cream); padding: var(--section-y) var(--gutter); }
+.excluded__inner { max-width: var(--max-width); margin: 0 auto; }
+.excluded__intro { max-width: 740px; margin: 0 auto clamp(36px, 5vw, 52px); text-align: center; color: var(--color-ink-soft); font-size: clamp(16px, 1.8vw, 19px); line-height: 1.6; }
+
+.excluded__grid { display: grid; grid-template-columns: 1fr; gap: 18px; }
+.excluded__item { background: var(--color-card); border: 1px solid var(--color-line); border-radius: var(--radius-lg); padding: 26px 26px; }
+.excluded__item-title { color: var(--color-blue); font-size: 18px; margin-bottom: 8px; }
+.excluded__item-text { color: var(--color-ink-soft); font-size: 15px; line-height: 1.6; }
+
+.excluded__note { text-align: center; margin-top: clamp(32px, 4vw, 44px); color: var(--color-ink); font-size: 16px; }
+.excluded__link { color: var(--color-coral); font-weight: 600; text-decoration: underline; }
+
+@media (min-width: 680px) { .excluded__grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1000px) { .excluded__grid { grid-template-columns: repeat(3, 1fr); } }

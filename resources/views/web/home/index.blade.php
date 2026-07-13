@@ -16,5 +16,5 @@
     @include('web.sections.pricing')
     @include('web.sections.why-gpsr')
     @include('web.sections.trust')
-    @include('web.home.partials.final-cta')
+    @include('web.sections.final-cta')
 @endsection

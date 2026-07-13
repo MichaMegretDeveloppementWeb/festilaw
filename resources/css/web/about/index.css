@@ -1,0 +1,6 @@
+/* Page About : en-tete partage + blocs who we are / why festilaw / trust + cta. */
+@import '../sections/page-hero.css';
+@import '../sections/who-we-are.css';
+@import '../sections/why-festilaw.css';
+@import '../sections/trust.css';
+@import '../sections/final-cta.css';
