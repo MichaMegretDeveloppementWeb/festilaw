@@ -6,13 +6,16 @@ namespace App\Models;
 
 use App\Enums\Submission\SubmissionStatus;
 use App\Enums\Submission\SubmissionType;
+use Database\Factories\SubmissionFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
 class Submission extends Model
 {
-    /** @use HasFactory<\Database\Factories\SubmissionFactory> */
+    /** @use HasFactory<SubmissionFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -53,5 +56,30 @@ class Submission extends Model
                 $submission->reference = (string) Str::uuid();
             }
         });
+    }
+
+    public function quizResult(): HasOne
+    {
+        return $this->hasOne(QuizResult::class);
+    }
+
+    public function contract(): HasOne
+    {
+        return $this->hasOne(Contract::class);
+    }
+
+    public function uploadedDocuments(): HasMany
+    {
+        return $this->hasMany(UploadedDocument::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    public function appointment(): HasOne
+    {
+        return $this->hasOne(Appointment::class);
     }
 }
