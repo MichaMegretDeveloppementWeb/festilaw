@@ -36,9 +36,12 @@
 .site-header__menu--left { justify-self: start; }
 .site-header__menu--right { justify-self: end; }
 
-.site-header__link { color: var(--color-on-blue); font-weight: 500; font-size: 15px; }
+.site-header__link { color: var(--color-on-blue); font-weight: 600; font-size: 16px; }
 .site-header__link:hover { color: var(--color-cream); }
 .site-header__link.is-active { color: var(--color-salmon); }
+
+/* CTA "Get compliant in 24h" : texte blanc pour le contraste sur le corail. */
+.site-header .btn--coral { color: #fff; }
 
 .lang-switch { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; }
 .lang-switch a { color: rgba(239, 229, 208, 0.55); }
@@ -74,7 +77,7 @@
     border: 1px solid rgba(255, 255, 255, 0.14);
     box-shadow: 0 20px 50px rgba(6, 8, 30, 0.45);
 }
-.site-header__mobile a:not(.btn) { color: var(--color-cream); font-weight: 500; font-size: 16px; padding: 11px 12px; border-radius: 8px; }
+.site-header__mobile a:not(.btn) { color: var(--color-cream); font-weight: 600; font-size: 16.5px; padding: 11px 12px; border-radius: 8px; }
 .site-header__mobile a:not(.btn):hover { background: rgba(255, 255, 255, 0.08); }
 .site-header__mobile .btn { margin-top: 8px; }
 

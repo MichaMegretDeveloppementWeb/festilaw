@@ -1,11 +1,11 @@
 <section id="quiz" class="quiz">
     <div class="quiz__inner">
         <span class="quiz__badge">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7.5 12 12 15 14"/></svg>
-            30-second eligibility check
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="2.5" x2="14" y2="2.5"/><line x1="12" y1="2.5" x2="12" y2="4.5"/><circle cx="12" cy="14" r="8"/><line x1="12" y1="14" x2="12" y2="9.5"/><line x1="17.5" y1="8.5" x2="19" y2="7"/></svg>
+            <span class="quiz__badge-num">30-second</span>
+            <span class="quiz__badge-label">eligibility check</span>
         </span>
         <h2 class="quiz__title">Am I concerned by GPSR?</h2>
-        <p class="quiz__lead">Three quick questions, no email or signup. Follow the route and find out exactly where you stand.</p>
 
         <div class="quiz__card" x-data="quiz">
             <div class="quiz__tracker">

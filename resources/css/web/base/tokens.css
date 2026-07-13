@@ -1,7 +1,7 @@
 /* Tokens de design · nouvelle charte Festilaw (sobre). Voir 03-design. */
 :root {
     /* Couleurs */
-    --color-blue: #0F1199;          /* bleu roi · fond hero + sections mises en avant */
+    --color-blue: #696bf2;          /* bleu validé cliente · fond hero + sections mises en avant */
     --color-coral: #FE776A;         /* aplats, boutons, accents */
     --color-salmon: #F08E80;        /* texte sur le bleu */
     --color-cream: #FCF6E3;         /* fond des pages */

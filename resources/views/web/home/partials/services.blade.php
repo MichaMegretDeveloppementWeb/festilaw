@@ -2,43 +2,40 @@
     <div class="services__inner">
         <div class="services__head">
             <span class="eyebrow">Our services</span>
-            <h2 class="services__title">From compliance audit to 10-year archiving, <span class="services__title-em">we handle it all</span></h2>
+            <h2 class="services__title">From legal representation to regulatory watch, <span class="services__title-em">we handle it all</span></h2>
         </div>
 
-        <div class="services__feature">
+        <div class="services__grid">
             <article class="services__card">
-                <div class="services__card-eyebrow"><span class="services__card-num">01</span><span class="services__card-label">Legal Representation</span></div>
-                <h3 class="services__card-title">We become your official EU Responsible Person of record.</h3>
-                <p class="services__card-text">Your named contact for authorities, listed on your products and documentation across the Union.</p>
+                <span class="services__num">01</span>
+                <h3 class="services__card-title">Legal Representation</h3>
+                <p class="services__card-text">We don't just host your name; we become your official legal liaison in Europe. We handle interactions with authorities directly to assist you and guide you through EU bureaucracy in case of need.</p>
             </article>
             <article class="services__card">
-                <div class="services__card-eyebrow"><span class="services__card-num">02</span><span class="services__card-label">Compliance Audit</span></div>
-                <h3 class="services__card-title">A clear review of where every product stands against GPSR.</h3>
-                <p class="services__card-text">We map your catalogue, flag the gaps and tell you exactly what to fix, in plain language.</p>
+                <span class="services__num">02</span>
+                <h3 class="services__card-title">Compliance Assessment</h3>
+                <p class="services__card-text">No more guesswork. We thoroughly assess your products to pinpoint the exact European directives that apply to your business, giving you a clear and compliant roadmap.</p>
             </article>
-        </div>
-
-        <div class="services__mini">
-            <div class="services__minicard">
-                <span class="services__minicard-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2.5H6.5a2 2 0 0 0-2 2v15a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V8z"/><polyline points="14 2.5 14 8 19.5 8"/></svg></span>
-                <h4 class="services__minicard-title">Declaration of Conformity</h4>
-                <p class="services__minicard-text">We draft the paperwork that proves your products comply.</p>
-            </div>
-            <div class="services__minicard">
-                <span class="services__minicard-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2.5"/><line x1="8" y1="9.5" x2="16" y2="9.5"/><line x1="8" y1="14" x2="13" y2="14"/></svg></span>
-                <h4 class="services__minicard-title">Label Verification</h4>
-                <p class="services__minicard-text">We confirm your labels carry every required EU marking.</p>
-            </div>
-            <div class="services__minicard">
-                <span class="services__minicard-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg></span>
-                <h4 class="services__minicard-title">Inspection Support</h4>
-                <p class="services__minicard-text">We stand with you if an authority ever comes knocking.</p>
-            </div>
-            <div class="services__minicard">
-                <span class="services__minicard-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M9.5 14.5 12 12l2.5 2.5"/></svg></span>
-                <h4 class="services__minicard-title">10-Year Archiving</h4>
-                <p class="services__minicard-text">We securely retain your records for the full legal period.</p>
-            </div>
+            <article class="services__card">
+                <span class="services__num">03</span>
+                <h3 class="services__card-title">Documentation &amp; Labeling Strategy</h3>
+                <p class="services__card-text">We advise you on exactly which documents and certificates are mandatory, while defining the precise markings, languages, and tracking data required on your packaging for full compliance.</p>
+            </article>
+            <article class="services__card">
+                <span class="services__num">04</span>
+                <h3 class="services__card-title">Authority Liaison</h3>
+                <p class="services__card-text">Whenever a customs officer or market authority contacts you or requests information, we step in as your official intermediary to manage the communication and ensure you are best prepared to achieve compliance.</p>
+            </article>
+            <article class="services__card">
+                <span class="services__num">05</span>
+                <h3 class="services__card-title">Safety Gate Monitoring</h3>
+                <p class="services__card-text">We regularly scan the EU Safety Gate portal to ensure your products have not been flagged or reported, giving you an early warning system to manage risks immediately.</p>
+            </article>
+            <article class="services__card">
+                <span class="services__num">06</span>
+                <h3 class="services__card-title">Regulatory Watch</h3>
+                <p class="services__card-text">We run dedicated compliance health checks several times a year to analyze if upcoming European regulations could impact your business, keeping you one step ahead.</p>
+            </article>
         </div>
 
         <div class="services__more">

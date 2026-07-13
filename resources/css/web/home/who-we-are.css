@@ -1,10 +1,23 @@
 .who { background: var(--color-cream); padding: var(--section-y) var(--gutter); }
-.who__inner { max-width: 900px; margin: 0 auto; text-align: center; }
-.who__eyebrow { display: inline-block; margin-bottom: 24px; }
+.who__inner { max-width: 880px; margin: 0 auto; text-align: center; }
+
+/* Logo repris dans la section (identite, demande cliente). */
+.who__logo {
+    display: inline-flex;
+    width: 84px; height: 84px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #ff7e6b;
+    margin-bottom: 22px;
+    box-shadow: 0 8px 22px rgba(6, 8, 30, 0.18);
+}
+.who__logo img { width: 100%; height: 100%; object-fit: cover; transform: scale(1.06); }
+
+.who__eyebrow { display: inline-block; margin-bottom: 22px; }
 .who__text {
-    font-size: clamp(23px, 2.6vw, 34px);
-    line-height: 1.4;
+    font-size: clamp(20px, 2.4vw, 30px);
+    line-height: 1.45;
     color: var(--color-ink);
     letter-spacing: -0.01em;
 }
-.who__accent { font-size: 1.15em; }
+.who__accent { font-size: 1.12em; }

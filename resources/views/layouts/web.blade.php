@@ -45,9 +45,6 @@
     @stack('styles')
 </head>
 <body>
-    {{-- OUTIL PROVISOIRE : selecteur du bleu (choix cliente). A retirer avec le composant une fois valide. --}}
-    <x-dev.blue-picker />
-
     <x-layout.web.header />
 
     <main>

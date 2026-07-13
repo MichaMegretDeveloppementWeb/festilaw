@@ -5,8 +5,6 @@
 }
 .hero__inner { max-width: 840px; margin: 0 auto; }
 
-.hero__eyebrow { color: var(--color-salmon); display: inline-block; margin-bottom: 24px; }
-
 .hero__title {
     font-size: clamp(42px, 7vw, 92px);
     line-height: 1.02;
@@ -15,9 +13,18 @@
     color: var(--color-cream);
     /* Poiret One n'a qu'une graisse : on epaissit le trace pour plus de presence. */
     -webkit-text-stroke: 0.9px currentColor;
-    margin-bottom: 26px;
+    margin-bottom: 14px;
 }
 .hero__title-em { color: var(--color-salmon); -webkit-text-stroke: 0.9px currentColor; }
+
+/* Sous-titre (taille moyenne) : la promesse produit sous le titre GPSR. */
+.hero__subtitle {
+    font-family: var(--font-display);
+    font-size: clamp(22px, 3.2vw, 40px);
+    line-height: 1.1;
+    color: var(--color-salmon);
+    margin-bottom: 22px;
+}
 
 .hero__lead {
     font-size: clamp(17px, 1.8vw, 20px);
@@ -46,3 +53,6 @@
 }
 
 .hero__actions { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
+
+/* CTA "Get compliant in 24h" : texte blanc pour le contraste sur le corail. */
+.hero .btn--coral { color: #fff; }

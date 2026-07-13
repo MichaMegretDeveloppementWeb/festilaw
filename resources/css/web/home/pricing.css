@@ -2,7 +2,7 @@
 .pricing__inner { max-width: var(--max-width); margin: 0 auto; }
 
 .pricing__head { text-align: center; margin: 0 auto clamp(44px, 5vw, 60px); }
-.pricing__head .eyebrow { display: inline-block; margin-bottom: 16px; }
+.pricing__head .eyebrow { display: inline-block; font-size: 15px; letter-spacing: 0.26em; margin-bottom: 18px; }
 .pricing__title { font-size: clamp(32px, 4.4vw, 54px); }
 
 .pricing__grid { display: grid; grid-template-columns: 1fr; gap: 22px; max-width: 940px; margin: 0 auto; }

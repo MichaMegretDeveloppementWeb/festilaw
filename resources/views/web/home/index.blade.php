@@ -13,11 +13,11 @@
 
     @include('web.home.partials.hero')
     @include('web.home.partials.who-we-are')
-    @include('web.home.partials.why-gpsr')
     @include('web.home.partials.why-festilaw')
-    @include('web.home.partials.services')
     @include('web.home.partials.quiz')
+    @include('web.home.partials.services')
     @include('web.home.partials.pricing')
+    @include('web.home.partials.why-gpsr')
     @include('web.home.partials.trust')
     @include('web.home.partials.final-cta')
 @endsection

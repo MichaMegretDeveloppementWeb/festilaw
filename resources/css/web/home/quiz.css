@@ -1,15 +1,17 @@
 .quiz { background: var(--color-blue); padding: var(--section-y) var(--gutter); }
 .quiz__inner { max-width: 720px; margin: 0 auto; text-align: center; }
 
+/* Badge "30-second" mis en avant + chronometre (demande cliente). */
 .quiz__badge {
-    display: inline-flex; align-items: center; gap: 8px;
-    background: rgba(252, 246, 227, 0.1);
+    display: inline-flex; align-items: baseline; gap: 10px;
     color: var(--color-salmon);
-    font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
-    padding: 8px 15px; border-radius: var(--radius-pill); margin-bottom: 22px;
+    margin-bottom: 22px;
 }
-.quiz__title { color: var(--color-cream); text-transform: uppercase; font-size: clamp(32px, 4.4vw, 54px); letter-spacing: 0.02em; margin-bottom: 14px; }
-.quiz__lead { color: var(--color-on-blue); font-size: 16px; line-height: 1.6; max-width: 480px; margin: 0 auto 40px; }
+.quiz__badge svg { width: 26px; height: 26px; align-self: center; }
+.quiz__badge-num { font-family: var(--font-sans); font-size: clamp(22px, 2.6vw, 30px); font-weight: 700; letter-spacing: 0.005em; }
+.quiz__badge-label { font-size: 13px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; }
+
+.quiz__title { color: var(--color-cream); text-transform: uppercase; font-size: clamp(32px, 4.4vw, 54px); letter-spacing: 0.02em; margin-bottom: 36px; }
 
 .quiz__card {
     text-align: left;
