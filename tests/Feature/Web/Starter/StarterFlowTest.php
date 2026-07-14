@@ -1,8 +1,8 @@
 <?php
 
+use App\Actions\Web\Payment\MarkPaymentSucceededAction;
 use App\Actions\Web\Starter\CreateStarterSubmissionAction;
 use App\Actions\Web\Starter\MarkContractSignedAction;
-use App\Actions\Web\Starter\MarkPaymentSucceededAction;
 use App\Actions\Web\Starter\StartContractSigningAction;
 use App\Actions\Web\Starter\StartStarterPaymentAction;
 use App\Actions\Web\Starter\StoreStarterDocumentAction;

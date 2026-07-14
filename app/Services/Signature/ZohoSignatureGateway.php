@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Services\Signature;
 
 use App\Contracts\Signature\SignatureGatewayInterface;
+use App\Data\Signature\SignatureWebhookEvent;
 use App\Data\Signature\SigningSessionData;
 use App\Exceptions\Signature\SignatureException;
 use App\Models\Contract;
+use Illuminate\Http\Request;
 
 /**
  * Adapter for Zoho Sign. Structure is in place; only the real HTTP integration remains,
@@ -34,6 +36,17 @@ final class ZohoSignatureGateway implements SignatureGatewayInterface
         // TODO: real Zoho Sign call — create a signing request from the contract's filled fields,
         // then return the request id + the hosted signing URL. Everything upstream already
         // consumes SigningSessionData, so no other layer changes when this is implemented.
+        throw SignatureException::providerNotConfigured('zoho');
+    }
+
+    public function parseWebhook(Request $request): SignatureWebhookEvent
+    {
+        if (empty($this->config['api_key'])) {
+            throw SignatureException::providerNotConfigured('zoho');
+        }
+
+        // TODO: verify the Zoho webhook, then map the completion event to a SignatureWebhookEvent
+        // (provider reference + signed document location).
         throw SignatureException::providerNotConfigured('zoho');
     }
 }

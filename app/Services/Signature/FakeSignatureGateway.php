@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Services\Signature;
 
 use App\Contracts\Signature\SignatureGatewayInterface;
+use App\Data\Signature\SignatureWebhookEvent;
 use App\Data\Signature\SigningSessionData;
 use App\Models\Contract;
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 /**
@@ -28,6 +30,16 @@ final class FakeSignatureGateway implements SignatureGatewayInterface
         return new SigningSessionData(
             providerReference: 'fake_'.Str::uuid()->toString(),
             signingUrl: (string) (config('signature.fake.signing_url') ?? url('/')),
+        );
+    }
+
+    public function parseWebhook(Request $request): SignatureWebhookEvent
+    {
+        // Dev: no signature to verify; read the reference (and optional outcome) from the payload.
+        return new SignatureWebhookEvent(
+            providerReference: (string) $request->input('provider_reference', ''),
+            signed: $request->boolean('signed', true),
+            signedFilePath: $request->input('signed_file_path'),
         );
     }
 }

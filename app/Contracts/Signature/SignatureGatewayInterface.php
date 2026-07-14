@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Contracts\Signature;
 
+use App\Data\Signature\SignatureWebhookEvent;
 use App\Data\Signature\SigningSessionData;
 use App\Models\Contract;
+use Illuminate\Http\Request;
 
 /**
  * A single electronic-signature provider is active at a time, selected by config
@@ -18,4 +20,7 @@ interface SignatureGatewayInterface
 
     /** Start a signing session for the given contract and return where the signer must go. */
     public function createSigningSession(Contract $contract): SigningSessionData;
+
+    /** Verify + parse an incoming provider webhook. Throws on an invalid/untrusted payload. */
+    public function parseWebhook(Request $request): SignatureWebhookEvent;
 }

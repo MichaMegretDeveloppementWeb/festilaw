@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Actions\Web\Starter;
+namespace App\Actions\Web\Payment;
 
 use App\Enums\Payment\PaymentStatus;
 use App\Enums\Submission\SubmissionStatus;
@@ -12,8 +12,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 
 /**
- * Records a successful payment (called by the Stripe webhook). Idempotent: a re-delivered
- * webhook is a no-op. Advances the submission to "paid" and notifies Festilaw synchronously.
+ * Records a successful payment (called by the Stripe webhook), whatever the parcours
+ * (STARTER subscription or SCALE audit). Idempotent: a re-delivered webhook is a no-op.
+ * Advances the submission to "paid" and notifies Festilaw synchronously.
  */
 final readonly class MarkPaymentSucceededAction
 {

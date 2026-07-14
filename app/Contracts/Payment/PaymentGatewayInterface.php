@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Contracts\Payment;
 
 use App\Data\Payment\CheckoutSessionData;
+use App\Data\Payment\PaymentWebhookEvent;
 use App\Models\Payment;
+use Illuminate\Http\Request;
 
 /**
  * Several payment providers can be active at the same time (the buyer chooses at checkout),
@@ -22,4 +24,7 @@ interface PaymentGatewayInterface
 
     /** Start a payment and return where to send the buyer. */
     public function createCheckout(Payment $payment): CheckoutSessionData;
+
+    /** Verify + parse an incoming provider webhook. Throws on an invalid/untrusted payload. */
+    public function parseWebhook(Request $request): PaymentWebhookEvent;
 }

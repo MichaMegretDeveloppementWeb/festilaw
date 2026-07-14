@@ -41,10 +41,18 @@ return [
     ],
 
     /*
-     | Parcours SCALE : paiement de l'audit (deduit du contrat final).
+     | Parcours PRO : redirection WhatsApp Business (numero fourni par la cliente, LV2).
+     */
+    'pro' => [
+        'whatsapp_url' => env('FESTILAW_WHATSAPP_URL'),
+    ],
+
+    /*
+     | Parcours SCALE : paiement de l'audit (deduit du contrat final) + agenda de reservation.
      */
     'scale' => [
         'audit_amount_cents' => (int) env('FESTILAW_SCALE_AUDIT_CENTS', 7500),
+        'calendar_url' => env('FESTILAW_SCALE_CALENDAR_URL', 'https://calendar.app.google/w8ZejYQLkZfgAo3F7'),
     ],
 
 ];

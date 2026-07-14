@@ -8,6 +8,8 @@ use App\Http\Controllers\Web\Home\HomeController;
 use App\Http\Controllers\Web\Pricing\PricingController;
 use App\Http\Controllers\Web\Services\ServicesController;
 use App\Http\Controllers\Web\UnderstandGpsr\UnderstandGpsrController;
+use App\Http\Controllers\Web\Webhook\PaymentWebhookController;
+use App\Http\Controllers\Web\Webhook\SignatureWebhookController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -26,6 +28,12 @@ Route::get('/robots.txt', function () {
 
     return response($body, 200, ['Content-Type' => 'text/plain; charset=UTF-8']);
 })->name('robots');
+
+/*
+ | Webhooks providers (Stripe/Zoho) : POST externes, hors CSRF (voir bootstrap/app.php), traites en synchrone.
+ */
+Route::post('/webhooks/payment/{provider}', PaymentWebhookController::class)->name('webhooks.payment');
+Route::post('/webhooks/signature', SignatureWebhookController::class)->name('webhooks.signature');
 
 /*
  | Espace public, prefixe par la locale (ADR-003). Les futures pages localisees vont dans ce groupe.
