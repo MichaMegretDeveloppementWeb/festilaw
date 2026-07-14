@@ -5,10 +5,15 @@ declare(strict_types=1);
 namespace App\Livewire\Web\Contact;
 
 use App\Actions\Web\Contact\CreateContactSubmissionAction;
+use App\Exceptions\BaseAppException;
+use App\Livewire\Concerns\HasSpamProtection;
+use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 
 class ContactForm extends Component
 {
+    use HasSpamProtection;
+
     public string $name = '';
 
     public string $email = '';
@@ -48,9 +53,26 @@ class ContactForm extends Component
 
     public function save(CreateContactSubmissionAction $action): void
     {
+        if ($this->looksLikeSpam()) {
+            $this->sent = true;
+
+            return;
+        }
+
+        if ($this->tooManyAttempts('contact')) {
+            return;
+        }
+
         $validated = $this->validate();
 
-        $action->execute($validated);
+        try {
+            $action->execute($validated);
+        } catch (BaseAppException $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            $this->addError('form', $e->getUserMessage());
+
+            return;
+        }
 
         $this->reset(['name', 'email', 'website_url', 'message']);
         $this->sent = true;

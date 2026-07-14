@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Signature;
 
 use App\Contracts\Signature\SignatureGatewayInterface;
-use App\Data\Signature\SignatureWebhookEvent;
+use App\Data\Signature\SignatureWebhookData;
 use App\Data\Signature\SigningSessionData;
 use App\Exceptions\Signature\SignatureException;
 use App\Models\Contract;
@@ -39,13 +39,13 @@ final class ZohoSignatureGateway implements SignatureGatewayInterface
         throw SignatureException::providerNotConfigured('zoho');
     }
 
-    public function parseWebhook(Request $request): SignatureWebhookEvent
+    public function parseWebhook(Request $request): SignatureWebhookData
     {
         if (empty($this->config['api_key'])) {
             throw SignatureException::providerNotConfigured('zoho');
         }
 
-        // TODO: verify the Zoho webhook, then map the completion event to a SignatureWebhookEvent
+        // TODO: verify the Zoho webhook, then map the completion event to a SignatureWebhookData
         // (provider reference + signed document location).
         throw SignatureException::providerNotConfigured('zoho');
     }

@@ -48,3 +48,6 @@ strong { font-weight: 600; }
     color: var(--color-coral);
     letter-spacing: 0.01em;
 }
+
+/* Honeypot anti-spam : hors ecran, invisible aux humains, rempli par les bots. */
+.hp-field { position: absolute; left: -9999px; top: -9999px; width: 1px; height: 1px; overflow: hidden; }

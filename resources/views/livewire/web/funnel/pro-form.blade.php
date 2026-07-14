@@ -10,6 +10,13 @@
         </div>
     @else
         <form wire:submit="submit" class="funnel-form" novalidate>
+            @error('form') <div class="funnel-form__error">{{ $message }}</div> @enderror
+
+            <div class="hp-field" aria-hidden="true">
+                <label for="pf-hp">Leave this field empty</label>
+                <input type="text" id="pf-hp" wire:model="hp" tabindex="-1" autocomplete="off">
+            </div>
+
             <div class="funnel-form__row funnel-form__row--two">
                 <div class="funnel-form__field">
                     <label for="pf-company">Company</label>

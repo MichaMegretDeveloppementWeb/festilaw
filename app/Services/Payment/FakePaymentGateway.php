@@ -6,7 +6,7 @@ namespace App\Services\Payment;
 
 use App\Contracts\Payment\PaymentGatewayInterface;
 use App\Data\Payment\CheckoutSessionData;
-use App\Data\Payment\PaymentWebhookEvent;
+use App\Data\Payment\PaymentWebhookData;
 use App\Models\Payment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -36,10 +36,10 @@ final class FakePaymentGateway implements PaymentGatewayInterface
         );
     }
 
-    public function parseWebhook(Request $request): PaymentWebhookEvent
+    public function parseWebhook(Request $request): PaymentWebhookData
     {
         // Dev: no signature to verify; read the reference (and optional outcome) from the payload.
-        return new PaymentWebhookEvent(
+        return new PaymentWebhookData(
             providerReference: (string) $request->input('provider_reference', ''),
             paid: $request->boolean('paid', true),
         );

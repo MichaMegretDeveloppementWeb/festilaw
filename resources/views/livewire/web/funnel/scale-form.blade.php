@@ -5,11 +5,18 @@
                 <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
             <h3 class="funnel-success__title">Audit requested.</h3>
-            <p class="funnel-success__text">We'll email you the secure link to pay your &euro;75 audit fee and book your consultation. The fee is deducted from your final contract.</p>
+            <p class="funnel-success__text">We've received your request and will be in touch shortly with the next steps and the &euro;75 audit payment (deducted from your final contract).</p>
             <a href="{{ route('home') }}" class="btn btn--outline-dark btn--sm">Back to home</a>
         </div>
     @else
         <form wire:submit="submit" class="funnel-form" novalidate>
+            @error('form') <div class="funnel-form__error">{{ $message }}</div> @enderror
+
+            <div class="hp-field" aria-hidden="true">
+                <label for="scf-hp">Leave this field empty</label>
+                <input type="text" id="scf-hp" wire:model="hp" tabindex="-1" autocomplete="off">
+            </div>
+
             <div class="funnel-form__row funnel-form__row--two">
                 <div class="funnel-form__field">
                     <label for="scf-company">Company</label>

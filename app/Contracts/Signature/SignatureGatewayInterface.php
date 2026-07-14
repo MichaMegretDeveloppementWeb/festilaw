@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Contracts\Signature;
 
-use App\Data\Signature\SignatureWebhookEvent;
+use App\Data\Signature\SignatureWebhookData;
 use App\Data\Signature\SigningSessionData;
 use App\Models\Contract;
 use Illuminate\Http\Request;
@@ -22,5 +22,5 @@ interface SignatureGatewayInterface
     public function createSigningSession(Contract $contract): SigningSessionData;
 
     /** Verify + parse an incoming provider webhook. Throws on an invalid/untrusted payload. */
-    public function parseWebhook(Request $request): SignatureWebhookEvent;
+    public function parseWebhook(Request $request): SignatureWebhookData;
 }

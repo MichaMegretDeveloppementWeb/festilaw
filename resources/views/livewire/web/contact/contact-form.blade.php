@@ -10,6 +10,13 @@
         </div>
     @else
         <form wire:submit="save" class="contact-form__form" novalidate>
+            @error('form') <div class="contact-form__error">{{ $message }}</div> @enderror
+
+            <div class="hp-field" aria-hidden="true">
+                <label for="cf-hp">Leave this field empty</label>
+                <input type="text" id="cf-hp" wire:model="hp" tabindex="-1" autocomplete="off">
+            </div>
+
             <div class="contact-form__field">
                 <label for="cf-name">Name</label>
                 <input type="text" id="cf-name" wire:model="name" autocomplete="name" placeholder="Your name">

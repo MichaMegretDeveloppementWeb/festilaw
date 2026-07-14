@@ -1,4 +1,4 @@
-<p>{{ $reason }}</p>
+<p>{{ $reason->subject() }}</p>
 
 <ul>
     <li>Reference: {{ $submission->reference }}</li>

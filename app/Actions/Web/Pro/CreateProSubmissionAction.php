@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Actions\Web\Pro;
 
+use App\Enums\Notification\FunnelNotificationReason;
 use App\Enums\Submission\SubmissionStatus;
 use App\Enums\Submission\SubmissionType;
 use App\Mail\FunnelNotification;
 use App\Models\Submission;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 
 /**
@@ -22,7 +22,8 @@ final readonly class CreateProSubmissionAction
     /** @param  ProData  $data */
     public function execute(array $data): Submission
     {
-        $submission = DB::transaction(fn (): Submission => Submission::create([
+        // Ecriture unique : pas de transaction (cf. architecture-couches, pragmatisme).
+        $submission = Submission::create([
             'type' => SubmissionType::Pro,
             'status' => SubmissionStatus::New,
             'locale' => app()->getLocale(),
@@ -33,10 +34,10 @@ final readonly class CreateProSubmissionAction
             'phone' => $data['phone'] ?? null,
             'eu_sales_countries' => $data['eu_sales_countries'] ?? null,
             'product_types' => $data['product_types'] ?? null,
-        ]));
+        ]);
 
         Mail::to(config('festilaw.notification_email'))
-            ->send(new FunnelNotification($submission, 'New Pro Pack enquiry'));
+            ->send(new FunnelNotification($submission, FunnelNotificationReason::ProEnquiry));
 
         return $submission;
     }

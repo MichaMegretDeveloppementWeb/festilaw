@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Web\Starter;
 
 use App\Enums\Contract\SignatureStatus;
+use App\Enums\Notification\FunnelNotificationReason;
 use App\Enums\Submission\SubmissionStatus;
 use App\Enums\Submission\SubmissionType;
 use App\Mail\FunnelNotification;
@@ -22,6 +23,7 @@ final readonly class CreateStarterSubmissionAction
     /** @param  StarterData  $data */
     public function execute(array $data): Submission
     {
+        // Deux ecritures (submission + contract) => transaction justifiee.
         $submission = DB::transaction(function () use ($data): Submission {
             $submission = Submission::create([
                 'type' => SubmissionType::Starter,
@@ -46,7 +48,7 @@ final readonly class CreateStarterSubmissionAction
 
         // Notification synchrone a Festilaw, apres commit (pas de file/worker).
         Mail::to(config('festilaw.notification_email'))
-            ->send(new FunnelNotification($submission, 'New Creator Pack submission'));
+            ->send(new FunnelNotification($submission, FunnelNotificationReason::CreatorSubmission));
 
         return $submission;
     }

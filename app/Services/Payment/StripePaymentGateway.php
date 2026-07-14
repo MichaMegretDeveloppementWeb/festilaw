@@ -6,7 +6,7 @@ namespace App\Services\Payment;
 
 use App\Contracts\Payment\PaymentGatewayInterface;
 use App\Data\Payment\CheckoutSessionData;
-use App\Data\Payment\PaymentWebhookEvent;
+use App\Data\Payment\PaymentWebhookData;
 use App\Exceptions\Payment\PaymentException;
 use App\Models\Payment;
 use Illuminate\Http\Request;
@@ -44,14 +44,14 @@ final class StripePaymentGateway implements PaymentGatewayInterface
         throw PaymentException::providerNotConfigured('stripe');
     }
 
-    public function parseWebhook(Request $request): PaymentWebhookEvent
+    public function parseWebhook(Request $request): PaymentWebhookData
     {
         if (empty($this->config['webhook_secret'])) {
             throw PaymentException::providerNotConfigured('stripe');
         }
 
         // TODO: verify the Stripe-Signature header with the webhook secret, then map
-        // checkout.session.completed / payment_intent.succeeded to a PaymentWebhookEvent.
+        // checkout.session.completed / payment_intent.succeeded to a PaymentWebhookData.
         throw PaymentException::providerNotConfigured('stripe');
     }
 }

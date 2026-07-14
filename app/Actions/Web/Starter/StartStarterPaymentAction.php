@@ -8,11 +8,9 @@ use App\Data\Payment\CheckoutSessionData;
 use App\Enums\Payment\PaymentStatus;
 use App\Enums\Payment\PaymentType;
 use App\Exceptions\Starter\StarterException;
-use App\Models\Payment;
 use App\Models\Submission;
 use App\Services\Payment\PaymentGatewayRegistry;
 use App\Services\Web\Starter\StarterDossierResolver;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Starts the STARTER subscription payment. Guards on the dossier being complete (invariant metier
@@ -28,7 +26,8 @@ final readonly class StartStarterPaymentAction
 
     public function execute(Submission $submission, string $providerKey): CheckoutSessionData
     {
-        $submission->loadMissing(['contract', 'uploadedDocuments']);
+        // load() (pas loadMissing) : force le rafraichissement des relations, meme si deja chargees.
+        $submission->load(['contract', 'uploadedDocuments']);
 
         if (! $this->resolver->resolve($submission)->isComplete) {
             throw StarterException::dossierIncomplete($submission->id);
@@ -36,16 +35,19 @@ final readonly class StartStarterPaymentAction
 
         $gateway = $this->gateways->get($providerKey);
 
-        $payment = DB::transaction(fn (): Payment => $submission->payments()->create([
+        // Ecriture unique : pas de transaction (cf. architecture-couches, pragmatisme).
+        $payment = $submission->payments()->create([
             'type' => PaymentType::StarterSubscription,
             'amount_cents' => (int) config('festilaw.starter.amount_cents'),
             'currency' => 'EUR',
             'provider' => $gateway->key(),
             'status' => PaymentStatus::Pending,
-        ]));
+        ]);
 
+        // La reference provider est stockee apres l'appel externe. En cas d'echec de cet update
+        // (rare), le paiement reste Pending et est reconcilie manuellement au back-office ; l'integration
+        // Stripe reelle passera aussi notre payment id en metadata pour un rapprochement robuste.
         $session = $gateway->createCheckout($payment);
-
         $payment->update(['provider_reference' => $session->providerReference]);
 
         return $session;

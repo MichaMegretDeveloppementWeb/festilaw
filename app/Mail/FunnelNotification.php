@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Mail;
 
+use App\Enums\Notification\FunnelNotificationReason;
 use App\Models\Submission;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -12,7 +13,7 @@ use Illuminate\Queue\SerializesModels;
 
 /**
  * Generic funnel notification to Festilaw (submission created, payment received...).
- * Sent synchronously from the Action after commit (no queue/worker).
+ * Sent synchronously from the Action after commit (no queue/worker). The reason is a typed enum.
  */
 final class FunnelNotification extends Mailable
 {
@@ -20,13 +21,13 @@ final class FunnelNotification extends Mailable
 
     public function __construct(
         public Submission $submission,
-        public string $reason,
+        public FunnelNotificationReason $reason,
     ) {}
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: $this->reason.' — '.($this->submission->company_name ?? $this->submission->email),
+            subject: $this->reason->subject().' — '.($this->submission->company_name ?? $this->submission->email),
         );
     }
 

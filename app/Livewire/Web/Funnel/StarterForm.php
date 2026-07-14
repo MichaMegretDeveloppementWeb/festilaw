@@ -5,10 +5,15 @@ declare(strict_types=1);
 namespace App\Livewire\Web\Funnel;
 
 use App\Actions\Web\Starter\CreateStarterSubmissionAction;
+use App\Exceptions\BaseAppException;
+use App\Livewire\Concerns\HasSpamProtection;
+use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 
 class StarterForm extends Component
 {
+    use HasSpamProtection;
+
     public string $company_name = '';
 
     public string $company_registration_number = '';
@@ -50,16 +55,33 @@ class StarterForm extends Component
 
     public function submit(CreateStarterSubmissionAction $action): void
     {
-        $data = $this->validate();
+        if ($this->looksLikeSpam()) {
+            $this->sent = true;
 
-        $action->execute([
-            'company_name' => $data['company_name'],
-            'company_registration_number' => $data['company_registration_number'] ?: null,
-            'first_name' => $data['first_name'],
-            'last_name' => $data['last_name'] ?: null,
-            'email' => $data['email'],
-            'website_url' => $data['website_url'] ?: null,
-        ]);
+            return;
+        }
+
+        if ($this->tooManyAttempts('funnel-starter')) {
+            return;
+        }
+
+        $this->validate();
+
+        try {
+            $action->execute([
+                'company_name' => $this->company_name,
+                'company_registration_number' => $this->company_registration_number ?: null,
+                'first_name' => $this->first_name,
+                'last_name' => $this->last_name ?: null,
+                'email' => $this->email,
+                'website_url' => $this->website_url ?: null,
+            ]);
+        } catch (BaseAppException $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            $this->addError('form', $e->getUserMessage());
+
+            return;
+        }
 
         $this->reset([
             'company_name', 'company_registration_number', 'first_name', 'last_name', 'email', 'website_url',

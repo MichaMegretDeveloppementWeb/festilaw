@@ -33,7 +33,8 @@ final readonly class StoreStarterDocumentAction
                 'uploaded_at' => now(),
             ]);
 
-            $submission->loadMissing(['contract', 'uploadedDocuments']);
+            // load() (pas loadMissing) : rafraichit meme si les relations sont deja chargees.
+            $submission->load(['contract', 'uploadedDocuments']);
 
             if ($this->resolver->resolve($submission)->isComplete) {
                 $submission->update(['status' => SubmissionStatus::AwaitingPayment]);

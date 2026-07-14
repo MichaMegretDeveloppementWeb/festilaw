@@ -5,67 +5,52 @@ declare(strict_types=1);
 namespace App\Livewire\Web\Funnel;
 
 use App\Actions\Web\Pro\CreateProSubmissionAction;
+use App\Exceptions\BaseAppException;
+use App\Livewire\Concerns\HasSpamProtection;
+use App\Livewire\Web\Funnel\Concerns\HasFunnelContactFields;
+use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 
 class ProForm extends Component
 {
-    public string $company_name = '';
-
-    public string $email = '';
-
-    public string $first_name = '';
-
-    public string $website_url = '';
-
-    public string $product_types = '';
+    use HasFunnelContactFields;
+    use HasSpamProtection;
 
     public bool $sent = false;
 
-    /** @return array<string, array<int, string>> */
-    protected function rules(): array
+    public function submit(CreateProSubmissionAction $action): void
     {
-        return [
-            'company_name' => ['required', 'string', 'max:180'],
-            'email' => ['required', 'email', 'max:180'],
-            'first_name' => ['nullable', 'string', 'max:120'],
-            'website_url' => ['nullable', 'url', 'max:200'],
-            'product_types' => ['nullable', 'string', 'max:200'],
-        ];
-    }
+        if ($this->looksLikeSpam()) {
+            $this->sent = true; // on fait comme si, sans rien creer
 
-    /** @return array<string, string> */
-    protected function messages(): array
-    {
-        return [
-            'company_name.required' => 'Please tell us your company name.',
-            'email.required' => 'We need your email to reply.',
-            'email.email' => 'This email address looks invalid.',
-            'website_url.url' => 'Please enter a valid URL (including https://).',
-        ];
-    }
+            return;
+        }
 
-    public function submit(CreateProSubmissionAction $action): mixed
-    {
-        $data = $this->validate();
+        if ($this->tooManyAttempts('funnel-pro')) {
+            return;
+        }
 
-        $action->execute([
-            'company_name' => $data['company_name'],
-            'email' => $data['email'],
-            'first_name' => $data['first_name'] ?: null,
-            'website_url' => $data['website_url'] ?: null,
-            'product_types' => $data['product_types'] ?: null,
-        ]);
+        $this->validate();
+
+        try {
+            $action->execute($this->funnelData());
+        } catch (BaseAppException $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            $this->addError('form', $e->getUserMessage());
+
+            return;
+        }
 
         // WhatsApp fourni par la cliente (LV2). En attendant, on affiche un etat de succes.
         $whatsapp = config('festilaw.pro.whatsapp_url');
         if (is_string($whatsapp) && $whatsapp !== '') {
-            return $this->redirect($whatsapp);
+            $this->redirect($whatsapp);
+
+            return;
         }
 
-        $this->reset(['company_name', 'email', 'first_name', 'website_url', 'product_types']);
+        $this->resetContactFields();
         $this->sent = true;
-
-        return null;
     }
 
     public function render()

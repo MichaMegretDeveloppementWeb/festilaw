@@ -7,10 +7,8 @@ namespace App\Actions\Web\Scale;
 use App\Data\Payment\CheckoutSessionData;
 use App\Enums\Payment\PaymentStatus;
 use App\Enums\Payment\PaymentType;
-use App\Models\Payment;
 use App\Models\Submission;
 use App\Services\Payment\PaymentGatewayRegistry;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Starts the SCALE audit payment (75 EUR, deducted from the final contract). No dossier gate:
@@ -24,16 +22,16 @@ final readonly class StartScaleAuditPaymentAction
     {
         $gateway = $this->gateways->get($providerKey);
 
-        $payment = DB::transaction(fn (): Payment => $submission->payments()->create([
+        // Ecriture unique : pas de transaction.
+        $payment = $submission->payments()->create([
             'type' => PaymentType::ScaleAudit,
             'amount_cents' => (int) config('festilaw.scale.audit_amount_cents'),
             'currency' => 'EUR',
             'provider' => $gateway->key(),
             'status' => PaymentStatus::Pending,
-        ]));
+        ]);
 
         $session = $gateway->createCheckout($payment);
-
         $payment->update(['provider_reference' => $session->providerReference]);
 
         return $session;

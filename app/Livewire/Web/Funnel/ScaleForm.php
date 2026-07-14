@@ -5,58 +5,43 @@ declare(strict_types=1);
 namespace App\Livewire\Web\Funnel;
 
 use App\Actions\Web\Scale\CreateScaleSubmissionAction;
+use App\Exceptions\BaseAppException;
+use App\Livewire\Concerns\HasSpamProtection;
+use App\Livewire\Web\Funnel\Concerns\HasFunnelContactFields;
+use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 
 class ScaleForm extends Component
 {
-    public string $company_name = '';
-
-    public string $email = '';
-
-    public string $first_name = '';
-
-    public string $website_url = '';
-
-    public string $product_types = '';
+    use HasFunnelContactFields;
+    use HasSpamProtection;
 
     public bool $sent = false;
 
-    /** @return array<string, array<int, string>> */
-    protected function rules(): array
-    {
-        return [
-            'company_name' => ['required', 'string', 'max:180'],
-            'email' => ['required', 'email', 'max:180'],
-            'first_name' => ['nullable', 'string', 'max:120'],
-            'website_url' => ['nullable', 'url', 'max:200'],
-            'product_types' => ['nullable', 'string', 'max:200'],
-        ];
-    }
-
-    /** @return array<string, string> */
-    protected function messages(): array
-    {
-        return [
-            'company_name.required' => 'Please tell us your company name.',
-            'email.required' => 'We need your email to continue.',
-            'email.email' => 'This email address looks invalid.',
-            'website_url.url' => 'Please enter a valid URL (including https://).',
-        ];
-    }
-
     public function submit(CreateScaleSubmissionAction $action): void
     {
-        $data = $this->validate();
+        if ($this->looksLikeSpam()) {
+            $this->sent = true;
 
-        $action->execute([
-            'company_name' => $data['company_name'],
-            'email' => $data['email'],
-            'first_name' => $data['first_name'] ?: null,
-            'website_url' => $data['website_url'] ?: null,
-            'product_types' => $data['product_types'] ?: null,
-        ]);
+            return;
+        }
 
-        $this->reset(['company_name', 'email', 'first_name', 'website_url', 'product_types']);
+        if ($this->tooManyAttempts('funnel-scale')) {
+            return;
+        }
+
+        $this->validate();
+
+        try {
+            $action->execute($this->funnelData());
+        } catch (BaseAppException $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            $this->addError('form', $e->getUserMessage());
+
+            return;
+        }
+
+        $this->resetContactFields();
         $this->sent = true;
     }
 

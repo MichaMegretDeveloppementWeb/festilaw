@@ -61,3 +61,19 @@ it('acknowledges a webhook for an unknown reference without failing', function (
     postJson('/webhooks/payment/fake', ['provider_reference' => 'does-not-exist'])
         ->assertNoContent();
 });
+
+it('returns 400 when the targeted payment provider is not enabled', function () {
+    config()->set('payment.enabled', ['fake']); // stripe absent
+
+    postJson('/webhooks/payment/stripe', ['provider_reference' => 'x'])
+        ->assertStatus(400);
+});
+
+it('returns 400 when the payment webhook cannot be verified', function () {
+    // Stripe active mais sans secret de webhook : la verification echoue.
+    config()->set('payment.enabled', ['stripe']);
+    config()->set('payment.drivers.stripe.webhook_secret', null);
+
+    postJson('/webhooks/payment/stripe', ['provider_reference' => 'x'])
+        ->assertStatus(400);
+});
