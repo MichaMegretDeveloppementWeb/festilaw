@@ -12,6 +12,7 @@ use App\Mail\FunnelNotification;
 use App\Models\Submission;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 /**
  * Opens a STARTER (Creator Pack) file: creates the submission and its (unsigned) contract shell.
@@ -36,6 +37,9 @@ final readonly class CreateStarterSubmissionAction
                 'last_name' => $data['last_name'] ?? null,
                 'email' => $data['email'],
                 'phone' => $data['phone'] ?? null,
+                // Lien de reprise (capability URL) : le dossier se poursuit sans compte a creer.
+                'resume_token' => Str::random(48),
+                'resume_expires_at' => now()->addDays((int) config('festilaw.starter.resume_ttl_days', 30)),
             ]);
 
             $submission->contract()->create([

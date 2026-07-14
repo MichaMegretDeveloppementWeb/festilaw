@@ -38,6 +38,8 @@ return [
     'starter' => [
         'amount_cents' => (int) env('FESTILAW_STARTER_AMOUNT_CENTS', 33300),
         'required_documents' => ['turnover_proof', 'technical_documentation'],
+        // Duree de validite du lien de reprise du dossier (jours).
+        'resume_ttl_days' => (int) env('FESTILAW_STARTER_RESUME_TTL_DAYS', 30),
     ],
 
     /*

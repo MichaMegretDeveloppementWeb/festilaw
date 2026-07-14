@@ -8,6 +8,9 @@ use App\Http\Controllers\Web\Funnel\GetStartedController;
 use App\Http\Controllers\Web\Funnel\ProController;
 use App\Http\Controllers\Web\Funnel\ScaleController;
 use App\Http\Controllers\Web\Funnel\StarterController;
+use App\Http\Controllers\Web\Funnel\StarterDevPayController;
+use App\Http\Controllers\Web\Funnel\StarterDevSignController;
+use App\Http\Controllers\Web\Funnel\StarterJourneyController;
 use App\Http\Controllers\Web\Home\HomeController;
 use App\Http\Controllers\Web\Pricing\PricingController;
 use App\Http\Controllers\Web\Services\ServicesController;
@@ -57,8 +60,16 @@ Route::prefix('{locale}')->middleware('setlocale')->group(function () {
      */
     Route::prefix('get-started')->name('get-started.')->group(function () {
         Route::get('/', GetStartedController::class)->name('index');
-        Route::get('/starter', StarterController::class)->name('starter');
         Route::get('/pro', ProController::class)->name('pro');
         Route::get('/scale', ScaleController::class)->name('scale');
+
+        // Parcours STARTER : page d'ouverture, puis dossier resumable via son token ({dossier}).
+        Route::get('/starter', StarterController::class)->name('starter');
+        Route::get('/starter/{dossier}', StarterJourneyController::class)->name('starter.journey');
+
+        // Completion des providers Fake (dev/local uniquement, bloquee en production) : ces routes
+        // rejouent ce que ferait le webhook du vrai provider, puis renvoient au dossier.
+        Route::get('/starter/{dossier}/dev/sign', StarterDevSignController::class)->name('starter.dev-sign');
+        Route::get('/starter/{dossier}/dev/pay', StarterDevPayController::class)->name('starter.dev-pay');
     });
 });

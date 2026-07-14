@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Enums\Submission\SubmissionStatus;
 use App\Enums\Submission\SubmissionType;
 use Database\Factories\SubmissionFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -55,6 +56,19 @@ class Submission extends Model
             if (empty($submission->reference)) {
                 $submission->reference = (string) Str::uuid();
             }
+        });
+    }
+
+    /**
+     * Dossiers dont le lien de reprise (magic link) est encore valide : jamais expire,
+     * ou expiration dans le futur. Filtre partage par le parcours STARTER et le back-office.
+     *
+     * @param  Builder<Submission>  $query
+     */
+    public function scopeResumable(Builder $query): void
+    {
+        $query->where(function (Builder $inner): void {
+            $inner->whereNull('resume_expires_at')->orWhere('resume_expires_at', '>', now());
         });
     }
 

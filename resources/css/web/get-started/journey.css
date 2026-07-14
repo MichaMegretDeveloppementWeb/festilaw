@@ -1,0 +1,50 @@
+/* Parcours STARTER (dossier) : en-tete + coquille partagee + etapes (signer / documents / paiement). */
+@import '../sections/page-hero.css';
+@import '../sections/funnel.css';
+
+.journey { display: flex; flex-direction: column; gap: 26px; }
+
+/* Bandeau flash (retour de signature / paiement). */
+.journey-flash { padding: 12px 16px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; }
+.journey-flash--ok { background: #e7f4ec; color: #1f7a4d; border: 1px solid #b9e0c9; }
+.journey-error { margin-bottom: 4px; }
+
+/* Indicateur d'etapes. */
+.journey-progress { display: flex; align-items: center; gap: 8px; list-style: none; padding: 0; margin: 0; }
+.journey-progress__step { display: flex; align-items: center; gap: 9px; flex: 1; color: var(--color-ink-soft); }
+.journey-progress__num {
+    display: flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; flex: none; border-radius: 50%;
+    border: 1.5px solid var(--color-line); background: var(--color-card);
+    font-size: 14px; font-weight: 700; color: var(--color-ink-soft);
+}
+.journey-progress__label { font-size: 13.5px; font-weight: 600; }
+.journey-progress__step.is-current .journey-progress__num { border-color: var(--color-coral); background: var(--color-coral); color: #fff; }
+.journey-progress__step.is-current .journey-progress__label { color: var(--color-blue); }
+.journey-progress__step.is-done .journey-progress__num { border-color: #1f9a63; background: #1f9a63; color: #fff; }
+.journey-progress__step.is-done .journey-progress__label { color: var(--color-ink); }
+
+/* Panneau de l'etape courante. */
+.journey-panel { display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
+.journey-panel__title { font-size: 21px; color: var(--color-blue); }
+.journey-panel__text { font-size: 15px; line-height: 1.6; color: var(--color-ink-soft); }
+.journey-note { font-size: 14px; padding: 10px 14px; border-radius: var(--radius-sm); }
+.journey-note--warn { background: #fdf0e6; color: #a84f18; border: 1px solid #f2d3ba; }
+
+/* Documents requis. */
+.journey-docs { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 16px; width: 100%; }
+.journey-doc { border: 1px solid var(--color-line); border-radius: var(--radius); padding: 18px; background: var(--color-cream); }
+.journey-doc.is-done { border-color: #b9e0c9; background: #f3faf5; }
+.journey-doc__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.journey-doc__name { font-weight: 700; font-size: 15px; color: var(--color-blue); }
+.journey-doc__status { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #1f7a4d; }
+.journey-doc__hint { font-size: 13.5px; line-height: 1.55; color: var(--color-ink-soft); margin: 6px 0 0; }
+.journey-doc__upload { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 14px; }
+.journey-doc__upload input[type="file"] { font-size: 13.5px; color: var(--color-ink); max-width: 100%; }
+
+/* Montant du paiement. */
+.journey-amount { display: flex; align-items: baseline; gap: 8px; }
+.journey-amount__value { font-family: var(--font-display); font-size: 40px; line-height: 1; color: var(--color-coral); }
+.journey-amount__period { font-size: 14px; color: var(--color-ink-soft); }
+.journey-methods { display: flex; flex-direction: column; gap: 10px; }
+.journey-method { display: flex; align-items: center; gap: 10px; font-size: 15px; color: var(--color-ink); }

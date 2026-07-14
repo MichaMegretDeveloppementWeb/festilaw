@@ -25,12 +25,29 @@ final class FakeSignatureGateway implements SignatureGatewayInterface
 
     public function createSigningSession(Contract $contract): SigningSessionData
     {
-        // The signing URL points back into the app so a developer can complete signing locally.
-        // It is wired to the dev-completion route when the STARTER funnel is built.
         return new SigningSessionData(
             providerReference: 'fake_'.Str::uuid()->toString(),
-            signingUrl: (string) (config('signature.fake.signing_url') ?? url('/')),
+            signingUrl: $this->devSigningUrl($contract),
         );
+    }
+
+    /**
+     * The Fake stands in for the provider's hosted signing page: it sends the signer to the local
+     * dev-completion route for their dossier. An explicit env override wins; a token-less dossier
+     * falls back to the home page.
+     */
+    private function devSigningUrl(Contract $contract): string
+    {
+        $configured = config('signature.fake.signing_url');
+        if (is_string($configured) && $configured !== '') {
+            return $configured;
+        }
+
+        $token = $contract->submission?->resume_token;
+
+        return $token !== null
+            ? route('get-started.starter.dev-sign', ['locale' => app()->getLocale(), 'dossier' => $token])
+            : url('/');
     }
 
     public function parseWebhook(Request $request): SignatureWebhookData

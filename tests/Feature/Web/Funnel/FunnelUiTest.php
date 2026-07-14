@@ -51,18 +51,20 @@ it('redirects PRO to WhatsApp when it is configured', function () {
     expect(Submission::where('type', SubmissionType::Pro)->count())->toBe(1);
 });
 
-it('opens a STARTER file from the form', function () {
+it('opens a STARTER file and redirects into the journey', function () {
     Mail::fake();
 
-    Livewire::test(StarterForm::class)
+    $component = Livewire::test(StarterForm::class)
         ->set('company_name', 'Wildthread')
         ->set('first_name', 'Maya')
         ->set('email', 'maya@example.com')
         ->call('submit')
-        ->assertHasNoErrors()
-        ->assertSet('sent', true);
+        ->assertHasNoErrors();
 
-    expect(Submission::where('type', SubmissionType::Starter)->count())->toBe(1);
+    $submission = Submission::where('type', SubmissionType::Starter)->sole();
+
+    expect($submission->resume_token)->not->toBeNull();
+    $component->assertRedirect(route('get-started.starter.journey', ['locale' => 'en', 'dossier' => $submission->resume_token]));
 });
 
 it('requests a SCALE audit from the form', function () {

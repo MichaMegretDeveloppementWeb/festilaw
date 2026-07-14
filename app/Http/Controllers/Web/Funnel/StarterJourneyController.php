@@ -1,0 +1,25 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Controllers\Web\Funnel;
+
+use App\Enums\Submission\SubmissionType;
+use App\Http\Controllers\Controller;
+use App\Models\Submission;
+use Illuminate\View\View;
+
+/**
+ * Renders the STARTER dossier journey. The submission is resolved (from its unguessable, expiring
+ * resume token) by the {dossier} route binding; the current step is derived server-side from the
+ * submission status.
+ */
+final class StarterJourneyController extends Controller
+{
+    public function __invoke(string $locale, Submission $dossier): View
+    {
+        abort_unless($dossier->type === SubmissionType::Starter, 404);
+
+        return view('web.get-started.journey', ['submission' => $dossier]);
+    }
+}

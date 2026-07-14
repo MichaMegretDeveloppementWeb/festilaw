@@ -68,7 +68,7 @@ class StarterForm extends Component
         $this->validate();
 
         try {
-            $action->execute([
+            $submission = $action->execute([
                 'company_name' => $this->company_name,
                 'company_registration_number' => $this->company_registration_number ?: null,
                 'first_name' => $this->first_name,
@@ -83,10 +83,11 @@ class StarterForm extends Component
             return;
         }
 
-        $this->reset([
-            'company_name', 'company_registration_number', 'first_name', 'last_name', 'email', 'website_url',
-        ]);
-        $this->sent = true;
+        // Le dossier est ouvert : on enchaine directement sur le parcours (signer -> televerser -> payer).
+        $this->redirectRoute('get-started.starter.journey', [
+            'locale' => app()->getLocale(),
+            'dossier' => $submission->resume_token,
+        ], navigate: true);
     }
 
     public function render()

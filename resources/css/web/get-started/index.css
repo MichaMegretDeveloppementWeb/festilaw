@@ -1,5 +1,6 @@
-/* Tunnel de souscription : en-tete partage + hub de choix + formulaires de parcours. */
+/* Tunnel de souscription : en-tete partage + hub de choix + coquille de formulaire. */
 @import '../sections/page-hero.css';
+@import '../sections/funnel.css';
 
 /* Hub : 3 cartes de parcours. */
 .paths { background: var(--color-cream); padding: var(--section-y) var(--gutter); }
@@ -21,39 +22,6 @@
 .path-card--featured .path-card__period,
 .path-card--featured .path-card__desc { color: var(--color-on-blue); }
 
-/* Parcours : conteneur du formulaire. */
-.funnel { background: var(--color-cream); padding: var(--section-y) var(--gutter); }
-.funnel__inner { max-width: 640px; margin: 0 auto; }
-.funnel__card { background: var(--color-card); border: 1px solid var(--color-line); border-radius: var(--radius-lg); padding: clamp(28px, 4vw, 44px); }
-
-/* Formulaire de parcours (composant Livewire). */
-.funnel-form { display: flex; flex-direction: column; gap: 18px; }
-.funnel-form__row { display: grid; grid-template-columns: 1fr; gap: 18px; }
-.funnel-form__field { display: flex; flex-direction: column; gap: 7px; }
-.funnel-form__field label { font-weight: 600; font-size: 14px; color: var(--color-blue); }
-.funnel-form__optional { font-weight: 400; color: var(--color-ink-soft); }
-.funnel-form__field input,
-.funnel-form__field textarea {
-    width: 100%; padding: 13px 15px;
-    border: 1.5px solid var(--color-line); border-radius: var(--radius-sm);
-    background: var(--color-cream); font-family: var(--font-sans); font-size: 15px; color: var(--color-ink);
-    transition: border-color 0.15s ease;
-}
-.funnel-form__field input::placeholder,
-.funnel-form__field textarea::placeholder { color: #b3a892; }
-.funnel-form__field input:focus,
-.funnel-form__field textarea:focus { outline: none; border-color: var(--color-coral); }
-.funnel-form__field textarea { resize: vertical; min-height: 96px; }
-.funnel-form__error { font-size: 13px; color: #c0392b; font-weight: 600; }
-.funnel-form .btn { margin-top: 6px; align-self: flex-start; }
-
-/* Etat succes. */
-.funnel-success { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 12px 0; }
-.funnel-success__icon { display: flex; align-items: center; justify-content: center; width: 58px; height: 58px; border-radius: 50%; background: #1f9a63; margin-bottom: 18px; }
-.funnel-success__title { font-size: 22px; color: var(--color-blue); margin-bottom: 8px; }
-.funnel-success__text { font-size: 15px; line-height: 1.6; color: var(--color-ink-soft); max-width: 420px; margin-bottom: 22px; }
-
 @media (min-width: 760px) {
     .paths__grid { grid-template-columns: repeat(3, 1fr); align-items: stretch; }
-    .funnel-form__row--two { grid-template-columns: 1fr 1fr; }
 }
