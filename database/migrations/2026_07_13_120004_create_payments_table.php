@@ -24,6 +24,8 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index('status', 'payments_status_idx');
+            // Lookup du webhook de paiement : WHERE provider = ? AND provider_reference = ?
+            $table->index(['provider', 'provider_reference'], 'payments_provider_reference_idx');
         });
     }
 

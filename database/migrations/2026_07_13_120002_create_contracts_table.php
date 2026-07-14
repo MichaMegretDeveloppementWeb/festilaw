@@ -22,6 +22,9 @@ return new class extends Migration
             $table->string('signed_file_path')->nullable(); // disque prive, hors webroot
             $table->timestamp('signed_at')->nullable();
             $table->timestamps();
+
+            // Lookup du webhook de signature : WHERE signature_provider_reference = ?
+            $table->index('signature_provider_reference', 'contracts_signature_provider_reference_idx');
         });
     }
 
