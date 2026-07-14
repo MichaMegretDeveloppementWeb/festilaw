@@ -10,8 +10,7 @@
                 <p class="pricing__desc">Small creators, up to 9 products.</p>
                 <div class="pricing__amount">&euro;333</div>
                 <div class="pricing__period">per year</div>
-                {{-- href="#" provisoire : a remplacer par route('get-started.starter') quand le tunnel existera --}}
-                <a href="#" class="btn btn--outline-dark pricing__cta">Choose Creator</a>
+                <a href="{{ route('get-started.starter') }}" class="btn btn--outline-dark pricing__cta">Choose Creator</a>
             </div>
             <div class="pricing__card pricing__card--featured">
                 <span class="pricing__badge">Most popular</span>
@@ -19,8 +18,7 @@
                 <p class="pricing__desc">Growing brands, 10 to 100 products.</p>
                 <div class="pricing__amount">&euro;1,200</div>
                 <div class="pricing__period">per year</div>
-                {{-- href="#" provisoire : a remplacer par route('get-started.pro') quand le tunnel existera --}}
-                <a href="#" class="btn btn--coral pricing__cta">Choose Pro</a>
+                <a href="{{ route('get-started.pro') }}" class="btn btn--coral pricing__cta">Choose Pro</a>
             </div>
             <div class="pricing__card">
                 <h3 class="pricing__name">Scale Pack</h3>

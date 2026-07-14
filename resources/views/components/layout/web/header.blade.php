@@ -14,7 +14,7 @@
         <a href="{{ route('pricing') }}" @class(['site-header__link', 'is-active' => request()->routeIs('pricing')])>Pricing</a>
         <a href="{{ route('contact') }}" @class(['site-header__link', 'is-active' => request()->routeIs('contact')])>Contact</a>
         <x-layout.web.lang-switch />
-        <a href="{{ route('pricing') }}" class="btn btn--coral btn--sm">Get compliant in 24h</a>
+        <a href="{{ route('get-started.index') }}" class="btn btn--coral btn--sm">Get compliant in 24h</a>
     </div>
 
     {{-- Menu mobile : bascule CSS pure --}}
@@ -29,6 +29,6 @@
         <a href="{{ route('services') }}">Our Services</a>
         <a href="{{ route('pricing') }}">Pricing</a>
         <a href="{{ route('contact') }}">Contact</a>
-        <a href="{{ route('pricing') }}" class="btn btn--coral">Get compliant in 24h</a>
+        <a href="{{ route('get-started.index') }}" class="btn btn--coral">Get compliant in 24h</a>
     </div>
 </header>

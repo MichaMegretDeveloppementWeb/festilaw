@@ -15,6 +15,7 @@ export default defineConfig({
                 'resources/css/web/services/index.css',
                 'resources/css/web/pricing/index.css',
                 'resources/css/web/excluded-products/index.css',
+                'resources/css/web/get-started/index.css',
                 'resources/css/web/contact/index.css',
             ],
             refresh: true,

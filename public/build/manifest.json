@@ -35,6 +35,15 @@
     "src": "resources/css/web/excluded-products/index.css",
     "isEntry": true
   },
+  "resources/css/web/get-started/index.css": {
+    "file": "assets/index-De6xAmIZ.css",
+    "name": "index",
+    "names": [
+      "index.css"
+    ],
+    "src": "resources/css/web/get-started/index.css",
+    "isEntry": true
+  },
   "resources/css/web/home/index.css": {
     "file": "assets/index-Da3-PJdM.css",
     "name": "index",

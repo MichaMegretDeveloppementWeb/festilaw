@@ -4,6 +4,10 @@ use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\Web\About\AboutController;
 use App\Http\Controllers\Web\Contact\ContactController;
 use App\Http\Controllers\Web\ExcludedProducts\ExcludedProductsController;
+use App\Http\Controllers\Web\Funnel\GetStartedController;
+use App\Http\Controllers\Web\Funnel\ProController;
+use App\Http\Controllers\Web\Funnel\ScaleController;
+use App\Http\Controllers\Web\Funnel\StarterController;
 use App\Http\Controllers\Web\Home\HomeController;
 use App\Http\Controllers\Web\Pricing\PricingController;
 use App\Http\Controllers\Web\Services\ServicesController;
@@ -47,4 +51,14 @@ Route::prefix('{locale}')->middleware('setlocale')->group(function () {
     Route::get('/pricing', PricingController::class)->name('pricing');
     Route::get('/excluded-products', ExcludedProductsController::class)->name('excluded-products');
     Route::get('/contact', ContactController::class)->name('contact');
+
+    /*
+     | Tunnel de souscription (noindex). Chaque page rend un composant Livewire du parcours.
+     */
+    Route::prefix('get-started')->name('get-started.')->group(function () {
+        Route::get('/', GetStartedController::class)->name('index');
+        Route::get('/starter', StarterController::class)->name('starter');
+        Route::get('/pro', ProController::class)->name('pro');
+        Route::get('/scale', ScaleController::class)->name('scale');
+    });
 });

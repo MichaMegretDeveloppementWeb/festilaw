@@ -1,0 +1,84 @@
+<?php
+
+use App\Enums\Submission\SubmissionType;
+use App\Livewire\Web\Funnel\ProForm;
+use App\Livewire\Web\Funnel\ScaleForm;
+use App\Livewire\Web\Funnel\StarterForm;
+use App\Models\Submission;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
+use Livewire\Livewire;
+
+use function Pest\Laravel\get;
+
+uses(RefreshDatabase::class);
+
+it('serves the get-started hub and the three parcours pages (noindex)', function () {
+    get(route('get-started.index', ['locale' => 'en']))
+        ->assertOk()
+        ->assertSee('Choose your')
+        ->assertSee('noindex, nofollow', false);
+
+    get(route('get-started.starter', ['locale' => 'en']))->assertOk()->assertSeeLivewire(StarterForm::class);
+    get(route('get-started.pro', ['locale' => 'en']))->assertOk()->assertSeeLivewire(ProForm::class);
+    get(route('get-started.scale', ['locale' => 'en']))->assertOk()->assertSeeLivewire(ScaleForm::class);
+});
+
+it('creates a PRO submission and shows success when WhatsApp is not configured', function () {
+    Mail::fake();
+    config()->set('festilaw.pro.whatsapp_url', null);
+
+    Livewire::test(ProForm::class)
+        ->set('company_name', 'Acme Goods')
+        ->set('email', 'acme@example.com')
+        ->call('submit')
+        ->assertHasNoErrors()
+        ->assertSet('sent', true);
+
+    expect(Submission::where('type', SubmissionType::Pro)->count())->toBe(1);
+});
+
+it('redirects PRO to WhatsApp when it is configured', function () {
+    Mail::fake();
+    config()->set('festilaw.pro.whatsapp_url', 'https://wa.me/33123456789');
+
+    Livewire::test(ProForm::class)
+        ->set('company_name', 'Acme Goods')
+        ->set('email', 'acme@example.com')
+        ->call('submit')
+        ->assertRedirect('https://wa.me/33123456789');
+
+    expect(Submission::where('type', SubmissionType::Pro)->count())->toBe(1);
+});
+
+it('opens a STARTER file from the form', function () {
+    Mail::fake();
+
+    Livewire::test(StarterForm::class)
+        ->set('company_name', 'Wildthread')
+        ->set('first_name', 'Maya')
+        ->set('email', 'maya@example.com')
+        ->call('submit')
+        ->assertHasNoErrors()
+        ->assertSet('sent', true);
+
+    expect(Submission::where('type', SubmissionType::Starter)->count())->toBe(1);
+});
+
+it('requests a SCALE audit from the form', function () {
+    Mail::fake();
+
+    Livewire::test(ScaleForm::class)
+        ->set('company_name', 'Bigco')
+        ->set('email', 'bigco@example.com')
+        ->call('submit')
+        ->assertHasNoErrors()
+        ->assertSet('sent', true);
+
+    expect(Submission::where('type', SubmissionType::Scale)->count())->toBe(1);
+});
+
+it('validates the required fields on the funnel forms', function () {
+    Livewire::test(ProForm::class)->call('submit')->assertHasErrors(['company_name', 'email']);
+    Livewire::test(StarterForm::class)->call('submit')->assertHasErrors(['company_name', 'first_name', 'email']);
+});

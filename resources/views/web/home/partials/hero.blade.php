@@ -8,7 +8,7 @@
             <span>Your official EU Responsible Person address, ready within 24 hours.</span>
         </div>
         <div class="hero__actions">
-            <a href="{{ route('pricing') }}" class="btn btn--coral btn--lg">Get compliant in 24h</a>
+            <a href="{{ route('get-started.index') }}" class="btn btn--coral btn--lg">Get compliant in 24h</a>
             <a href="{{ route('home') }}#quiz" class="btn btn--outline-light btn--lg">Am I eligible? Take the quiz</a>
         </div>
     </div>
