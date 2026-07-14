@@ -1,8 +1,12 @@
 <div class="journey">
-    @if (session('starter_status') === 'signed')
-        <div class="journey-flash journey-flash--ok">Mandate signed. Next: upload your documents.</div>
-    @elseif (session('starter_status') === 'paid')
-        <div class="journey-flash journey-flash--ok">Payment received. Your file is complete.</div>
+    @php
+        $flash = session('starter_status');
+    @endphp
+    @if ($flash === 'signed' || $flash === 'paid')
+        <div class="journey-flash">
+            <svg class="journey-flash__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <span>{{ $flash === 'signed' ? 'Mandate signed. Next: upload your documents.' : 'Payment received. Your file is complete.' }}</span>
+        </div>
     @endif
 
     @error('journey') <div class="funnel-form__error journey-error">{{ $message }}</div> @enderror
@@ -43,33 +47,56 @@
     @elseif ($step === 'documents')
         <div class="journey-panel">
             <h2 class="journey-panel__title">Upload your documents</h2>
-            <p class="journey-panel__text">We need the following to finalise your file. Accepted formats: PDF or image, up to 10&nbsp;MB each.</p>
-            <ul class="journey-docs">
+            <p class="journey-panel__text">Drop your files below or click to browse. PDF, JPG, PNG or WEBP, up to 10&nbsp;MB each. Nothing is saved until you continue.</p>
+
+            <div class="dropzones">
                 @foreach ($requiredDocuments as $doc)
-                    @php $present = in_array($doc->value, $presentTypes, true); @endphp
-                    <li @class(['journey-doc', 'is-done' => $present])>
-                        <div class="journey-doc__head">
-                            <span class="journey-doc__name">{{ $doc->label() }}</span>
-                            @if ($present)
-                                <span class="journey-doc__status">Uploaded</span>
-                            @endif
-                        </div>
-                        <p class="journey-doc__hint">{{ $doc->hint() }}</p>
-                        @unless ($present)
-                            <div class="journey-doc__upload">
-                                <input type="file" wire:model="documents.{{ $doc->value }}" accept=".pdf,.jpg,.jpeg,.png">
-                                <button type="button" class="btn btn--outline-dark btn--sm"
-                                        wire:click="uploadDocument('{{ $doc->value }}')"
-                                        wire:loading.attr="disabled" wire:target="uploadDocument('{{ $doc->value }}')">
-                                    <span wire:loading.remove wire:target="uploadDocument('{{ $doc->value }}')">Upload</span>
-                                    <span wire:loading wire:target="uploadDocument('{{ $doc->value }}')">Uploading&hellip;</span>
-                                </button>
+                    @php $file = $deposits[$doc->value] ?? null; @endphp
+                    <div @class(['dropzone-field', 'is-invalid' => $errors->has("documents.{$doc->value}")])>
+                        <div class="dropzone-field__label">{{ $doc->label() }}</div>
+                        <p class="dropzone-field__hint">{{ $doc->hint() }}</p>
+
+                        @if ($file)
+                            <div class="dropzone-file">
+                                <svg class="dropzone-file__icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                <div class="dropzone-file__meta">
+                                    <span class="dropzone-file__name">{{ $file['name'] }}</span>
+                                    @if ($file['size'] !== null)
+                                        <span class="dropzone-file__size">{{ number_format($file['size'] / 1024, 0) }} KB</span>
+                                    @endif
+                                </div>
+                                <button type="button" class="dropzone-file__remove" wire:click="removeDocument('{{ $doc->value }}')" aria-label="Remove {{ $doc->label() }}">&times;</button>
                             </div>
-                            @error("documents.{$doc->value}") <span class="funnel-form__error">{{ $message }}</span> @enderror
-                        @endunless
-                    </li>
+                        @else
+                            <div class="dropzone"
+                                 x-data="{ over: false }"
+                                 @dragover.prevent="over = true"
+                                 @dragleave.prevent="over = false"
+                                 @drop.prevent="over = false; $refs.input.files = $event.dataTransfer.files; $refs.input.dispatchEvent(new Event('change'))"
+                                 @click="$refs.input.click()"
+                                 :class="{ 'is-over': over }"
+                                 wire:loading.class="is-busy" wire:target="documents.{{ $doc->value }}">
+                                <input type="file" x-ref="input" class="dropzone__input" wire:model="documents.{{ $doc->value }}" accept="{{ $acceptAttr }}">
+                                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                <span class="dropzone__text" wire:loading.remove wire:target="documents.{{ $doc->value }}"><strong>Drag &amp; drop</strong> or <span class="dropzone__browse">browse</span></span>
+                                <span class="dropzone__hint" wire:loading.remove wire:target="documents.{{ $doc->value }}">PDF, JPG, PNG or WEBP &middot; up to 10&nbsp;MB</span>
+                                <span class="dropzone__uploading" wire:loading wire:target="documents.{{ $doc->value }}">Uploading&hellip;</span>
+                            </div>
+                        @endif
+
+                        @error("documents.{$doc->value}")
+                            <p class="dropzone-field__error">{{ $message }}</p>
+                        @enderror
+                    </div>
                 @endforeach
-            </ul>
+            </div>
+
+            @error('documents_submit') <div class="funnel-form__error journey-error">{{ $message }}</div> @enderror
+
+            <button type="button" class="btn btn--coral" wire:click="submitDocuments" wire:loading.attr="disabled" wire:target="submitDocuments">
+                <span wire:loading.remove wire:target="submitDocuments">Continue to payment</span>
+                <span wire:loading wire:target="submitDocuments">Saving&hellip;</span>
+            </button>
         </div>
 
     @elseif ($step === 'payment')

@@ -55,13 +55,11 @@ it('walks the STARTER journey end-to-end through the UI and the fake dev routes'
         ->assertRedirect(route('get-started.starter.journey', ['locale' => 'en', 'dossier' => $token]));
     expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingDocuments);
 
-    // Step 2 - upload both required documents; the dossier then becomes awaiting payment.
+    // Step 2 - drop both required documents and submit in one go; the dossier then becomes awaiting payment.
     $component = Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
         ->set('documents.turnover_proof', UploadedFile::fake()->create('turnover.pdf', 120, 'application/pdf'))
-        ->call('uploadDocument', 'turnover_proof')
-        ->assertHasNoErrors()
         ->set('documents.technical_documentation', UploadedFile::fake()->create('tech.pdf', 120, 'application/pdf'))
-        ->call('uploadDocument', 'technical_documentation')
+        ->call('submitDocuments')
         ->assertHasNoErrors();
 
     $submission->refresh();
@@ -89,19 +87,37 @@ it('walks the STARTER journey end-to-end through the UI and the fake dev routes'
         ->assertSee('Your Creator Pack is active.');
 });
 
-it('rejects an oversized document upload', function () {
+it('rejects an oversized document on submit', function () {
     Storage::fake('local');
     $submission = openStarterDossier();
     $submission->update(['status' => SubmissionStatus::AwaitingDocuments]);
     $submission->contract->update(['signature_status' => SignatureStatus::Signed]);
 
-    // 11 MB : passe la limite globale Livewire (12 MB) mais depasse notre regle max:10240 (10 MB).
+    // Les deux documents sont deposes (presence OK) mais l'un depasse notre regle max:10240 (10 MB).
     Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
         ->set('documents.turnover_proof', UploadedFile::fake()->create('too-big.pdf', 11000, 'application/pdf'))
-        ->call('uploadDocument', 'turnover_proof')
+        ->set('documents.technical_documentation', UploadedFile::fake()->create('ok.pdf', 100, 'application/pdf'))
+        ->call('submitDocuments')
         ->assertHasErrors(['documents.turnover_proof']);
 
     expect($submission->fresh()->uploadedDocuments)->toHaveCount(0);
+});
+
+it('shows an error when a required document is missing on submit', function () {
+    Storage::fake('local');
+    $submission = openStarterDossier();
+    $submission->update(['status' => SubmissionStatus::AwaitingDocuments]);
+    $submission->contract->update(['signature_status' => SignatureStatus::Signed]);
+
+    // Un seul des deux documents requis : l'erreur s'affiche SOUS le document manquant, pas en global.
+    Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
+        ->set('documents.turnover_proof', UploadedFile::fake()->create('turnover.pdf', 100, 'application/pdf'))
+        ->call('submitDocuments')
+        ->assertHasErrors('documents.technical_documentation')
+        ->assertHasNoErrors('documents.turnover_proof');
+
+    expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingDocuments)
+        ->and($submission->fresh()->uploadedDocuments)->toHaveCount(0);
 });
 
 it('returns 404 for an expired resume token', function () {

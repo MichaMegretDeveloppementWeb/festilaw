@@ -6,7 +6,7 @@ namespace App\Livewire\Web\Funnel;
 
 use App\Actions\Web\Starter\StartContractSigningAction;
 use App\Actions\Web\Starter\StartStarterPaymentAction;
-use App\Actions\Web\Starter\StoreStarterDocumentAction;
+use App\Actions\Web\Starter\SubmitStarterDocumentsAction;
 use App\Enums\Contract\SignatureStatus;
 use App\Enums\Document\DocumentType;
 use App\Enums\Submission\SubmissionStatus;
@@ -14,7 +14,6 @@ use App\Exceptions\BaseAppException;
 use App\Livewire\Concerns\HandlesUnexpectedErrors;
 use App\Models\Submission;
 use App\Services\Payment\PaymentGatewayRegistry;
-use App\Services\Web\Starter\StarterDossierResolver;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Livewire\Component;
@@ -24,9 +23,10 @@ use Throwable;
 
 /**
  * Multi-step STARTER dossier, driven by the submission status (source of truth): sign the mandate,
- * upload the required documents, pay. Signing and payment redirect out to the provider (Fake by
- * default) and come back to this same screen. Nothing is stored in the component beyond the current
- * upload; the step is always recomputed from the database.
+ * drop the required documents, pay. Signing and payment redirect out to the provider (Fake by
+ * default) and come back to this same screen. Documents are staged in the component (drag & drop)
+ * and only persisted when the visitor confirms with a single action; the step is always recomputed
+ * from the database.
  */
 class StarterJourney extends Component
 {
@@ -35,7 +35,7 @@ class StarterJourney extends Component
 
     public Submission $submission;
 
-    /** @var array<string, TemporaryUploadedFile|null> Pending uploads keyed by document type value. */
+    /** @var array<string, TemporaryUploadedFile|null> Staged uploads keyed by document type value. */
     public array $documents = [];
 
     public string $paymentProvider = '';
@@ -72,31 +72,59 @@ class StarterJourney extends Component
         return $this->redirect($session->signingUrl);
     }
 
-    public function uploadDocument(string $type, StoreStarterDocumentAction $storeStarterDocument): void
+    /** Removes a staged (not yet persisted) document before submitting. */
+    public function removeDocument(string $type): void
     {
-        if ($this->step() !== 'documents' || ! $this->isRequiredMissingType($type)) {
+        unset($this->documents[$type]);
+    }
+
+    /** Validates every required document is staged + valid, then persists them all and advances. */
+    public function submitDocuments(SubmitStarterDocumentsAction $submitStarterDocuments): void
+    {
+        if ($this->step() !== 'documents') {
             return;
         }
 
-        $this->validate(
-            ["documents.{$type}" => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240']],
-            ["documents.{$type}.required" => 'Please choose a file.', "documents.{$type}.*" => 'Please upload a PDF or image under 10 MB.'],
-        );
+        $required = $this->requiredDocumentTypes();
+        $deposited = array_filter($this->documents);
+
+        // Presence : erreur SOUS chaque document manquant (pas de message global au-dessus).
+        $hasMissing = false;
+        foreach ($required as $t) {
+            if (! isset($deposited[$t->value])) {
+                $this->addError("documents.{$t->value}", 'This document is required.');
+                $hasMissing = true;
+            }
+        }
+        if ($hasMissing) {
+            return;
+        }
+
+        // Forme : chaque fichier depose (erreur affichee sous le document concerne).
+        $mimes = implode(',', $this->documentMimes());
+        $rules = [];
+        $messages = [];
+        foreach ($required as $t) {
+            $rules["documents.{$t->value}"] = ['required', 'file', "mimes:{$mimes}", 'max:10240'];
+            $messages["documents.{$t->value}.mimes"] = 'Accepted formats: PDF, JPG, PNG or WEBP.';
+            $messages["documents.{$t->value}.max"] = 'This file is too large (10 MB maximum).';
+        }
+        $this->validate($rules, $messages);
 
         try {
-            $storeStarterDocument->execute($this->submission, DocumentType::from($type), $this->documents[$type]);
+            $submitStarterDocuments->execute($this->submission, $deposited);
         } catch (BaseAppException $e) {
             Log::error($e->getMessage(), ['exception' => $e]);
-            $this->addError('journey', $e->getUserMessage());
+            $this->addError('documents_submit', $e->getUserMessage());
 
             return;
         } catch (Throwable $e) {
-            $this->reportUnexpectedError($e, 'journey', 'STARTER document upload');
+            $this->reportUnexpectedError($e, 'documents_submit', 'STARTER documents submit');
 
             return;
         }
 
-        unset($this->documents[$type]);
+        $this->reset('documents');
         $this->submission->refresh();
     }
 
@@ -146,31 +174,53 @@ class StarterJourney extends Component
         );
     }
 
-    private function isRequiredMissingType(string $type): bool
+    /**
+     * Allowed upload extensions, single source of truth for the validation rule, the input's accept
+     * attribute and the on-screen hint.
+     *
+     * @return list<string>
+     */
+    private function documentMimes(): array
     {
-        $required = array_map(static fn (DocumentType $t): string => $t->value, $this->requiredDocumentTypes());
-        if (! in_array($type, $required, true)) {
-            return false;
+        return ['pdf', 'jpg', 'jpeg', 'png', 'webp'];
+    }
+
+    /**
+     * Display metadata for staged files (name + size), read defensively so a metadata hiccup on the
+     * temporary file never breaks the render.
+     *
+     * @return array<string, array{name: string, size: int|null}>
+     */
+    private function stagedDocuments(): array
+    {
+        $meta = [];
+        foreach ($this->documents as $type => $file) {
+            if (! $file instanceof TemporaryUploadedFile) {
+                continue;
+            }
+
+            try {
+                $size = $file->getSize();
+            } catch (Throwable) {
+                $size = null;
+            }
+
+            $meta[$type] = ['name' => $file->getClientOriginalName(), 'size' => $size];
         }
 
-        $present = $this->submission->uploadedDocuments->map(static fn ($d): string => $d->type->value)->all();
-
-        return ! in_array($type, $present, true);
+        return $meta;
     }
 
     public function render(): View
     {
-        $this->submission->load(['contract', 'uploadedDocuments']);
-
-        $dossier = app(StarterDossierResolver::class)->resolve($this->submission);
-        $presentTypes = $this->submission->uploadedDocuments->map(static fn ($d): string => $d->type->value)->all();
+        $this->submission->loadMissing('contract');
 
         return view('livewire.web.funnel.starter-journey', [
             'step' => $this->step(),
             'contractDeclined' => $this->submission->contract?->signature_status === SignatureStatus::Declined,
-            'dossier' => $dossier,
             'requiredDocuments' => $this->requiredDocumentTypes(),
-            'presentTypes' => $presentTypes,
+            'deposits' => $this->stagedDocuments(),
+            'acceptAttr' => '.'.implode(',.', $this->documentMimes()),
             'amountCents' => (int) config('festilaw.starter.amount_cents'),
         ]);
     }

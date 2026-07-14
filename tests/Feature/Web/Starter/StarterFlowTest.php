@@ -5,10 +5,9 @@ use App\Actions\Web\Starter\CreateStarterSubmissionAction;
 use App\Actions\Web\Starter\MarkContractSignedAction;
 use App\Actions\Web\Starter\StartContractSigningAction;
 use App\Actions\Web\Starter\StartStarterPaymentAction;
-use App\Actions\Web\Starter\StoreStarterDocumentAction;
+use App\Actions\Web\Starter\SubmitStarterDocumentsAction;
 use App\Data\Payment\CheckoutSessionData;
 use App\Data\Signature\SigningSessionData;
-use App\Enums\Document\DocumentType;
 use App\Enums\Payment\PaymentStatus;
 use App\Enums\Payment\PaymentType;
 use App\Enums\Submission\SubmissionStatus;
@@ -63,16 +62,13 @@ it('walks the STARTER happy path end-to-end with the fake providers', function (
     );
     expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingDocuments);
 
-    // 4. Upload the required documents -> dossier complete -> awaiting payment.
+    // 4. Submit the required documents in one go -> dossier complete -> awaiting payment.
     Storage::fake('local');
-    foreach ([DocumentType::TurnoverProof, DocumentType::TechnicalDocumentation] as $type) {
-        app(StoreStarterDocumentAction::class)->execute(
-            $submission->fresh(),
-            $type,
-            // createWithContent (pas create) : contenu reel, donc taille lue > 0 sur le fichier stocke.
-            UploadedFile::fake()->createWithContent("{$type->value}.pdf", str_repeat('PDF-CONTENT ', 200)),
-        );
-    }
+    app(SubmitStarterDocumentsAction::class)->execute($submission->fresh(), [
+        // createWithContent (pas create) : contenu reel, donc taille lue > 0 sur le fichier stocke.
+        'turnover_proof' => UploadedFile::fake()->createWithContent('turnover.pdf', str_repeat('PDF-CONTENT ', 200)),
+        'technical_documentation' => UploadedFile::fake()->createWithContent('tech.pdf', str_repeat('PDF-CONTENT ', 200)),
+    ]);
     expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingPayment);
 
     // Les fichiers sont bien stockes sur le disque prive, avec leurs metadonnees.
@@ -132,11 +128,10 @@ it('converts a filesystem failure into a typed exception (never a raw error)', f
     $factory->shouldReceive('disk')->andReturn($disk);
     app()->instance(FilesystemFactory::class, $factory);
 
-    expect(fn () => app(StoreStarterDocumentAction::class)->execute(
-        $submission,
-        DocumentType::TurnoverProof,
-        UploadedFile::fake()->create('turnover.pdf', 100, 'application/pdf'),
-    ))->toThrow(StarterException::class);
+    expect(fn () => app(SubmitStarterDocumentsAction::class)->execute($submission, [
+        'turnover_proof' => UploadedFile::fake()->create('turnover.pdf', 100, 'application/pdf'),
+        'technical_documentation' => UploadedFile::fake()->create('tech.pdf', 100, 'application/pdf'),
+    ]))->toThrow(StarterException::class);
 });
 
 it('reports missing documents through the resolver', function () {

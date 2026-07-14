@@ -35,7 +35,7 @@
 .funnel-summary__scope { font-size: 13.5px; color: var(--color-ink-soft); }
 .funnel-summary__list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
 .funnel-summary__list li { display: flex; align-items: flex-start; gap: 10px; font-size: 14.5px; line-height: 1.45; color: var(--color-ink); }
-.funnel-summary__list svg { flex: none; margin-top: 1px; color: #1f9a63; }
+.funnel-summary__list svg { flex: none; margin-top: 1px; color: var(--color-coral); }
 .funnel-summary__trust { display: flex; flex-direction: column; gap: 10px; padding-top: 22px; border-top: 1px solid color-mix(in srgb, var(--color-blue) 16%, transparent); }
 .funnel-summary__trust span { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600; color: var(--color-ink-soft); }
 .funnel-summary__trust svg { flex: none; color: var(--color-blue); }
@@ -65,7 +65,7 @@
 
 /* --- Etat succes --- */
 .funnel-success { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 12px 0; }
-.funnel-success__icon { display: flex; align-items: center; justify-content: center; width: 58px; height: 58px; border-radius: 50%; background: #1f9a63; margin-bottom: 18px; }
+.funnel-success__icon { display: flex; align-items: center; justify-content: center; width: 58px; height: 58px; border-radius: 50%; background: var(--color-coral); margin-bottom: 18px; }
 .funnel-success__title { font-size: 22px; color: var(--color-blue); margin-bottom: 8px; }
 .funnel-success__text { font-size: 15px; line-height: 1.6; color: var(--color-ink-soft); max-width: 420px; margin-bottom: 22px; }
 

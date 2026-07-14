@@ -3,9 +3,15 @@
 
 .journey { display: flex; flex-direction: column; gap: 26px; }
 
-/* Bandeau flash (retour de signature / paiement). */
-.journey-flash { padding: 12px 16px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; }
-.journey-flash--ok { background: #e7f4ec; color: #1f7a4d; border: 1px solid #b9e0c9; }
+/* Bandeau flash (retour de signature / paiement) : en accord avec la palette (bleu doux + accent corail). */
+.journey-flash {
+    display: flex; align-items: center; gap: 10px;
+    padding: 13px 16px; border-radius: var(--radius-sm);
+    font-size: 14px; font-weight: 600; color: var(--color-blue);
+    background: color-mix(in srgb, var(--color-blue) 8%, var(--color-cream));
+    border: 1px solid color-mix(in srgb, var(--color-blue) 20%, transparent);
+}
+.journey-flash__icon { flex: none; color: var(--color-coral); }
 .journey-error { margin-bottom: 4px; }
 
 /* Indicateur d'etapes. */
@@ -30,16 +36,39 @@
 .journey-note { font-size: 14px; padding: 10px 14px; border-radius: var(--radius-sm); }
 .journey-note--warn { background: #fdf0e6; color: #a84f18; border: 1px solid #f2d3ba; }
 
-/* Documents requis. */
-.journey-docs { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 16px; width: 100%; }
-.journey-doc { border: 1px solid var(--color-line); border-radius: var(--radius); padding: 18px; background: var(--color-cream); }
-.journey-doc.is-done { border-color: #b9e0c9; background: #f3faf5; }
-.journey-doc__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.journey-doc__name { font-weight: 700; font-size: 15px; color: var(--color-blue); }
-.journey-doc__status { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #1f7a4d; }
-.journey-doc__hint { font-size: 13.5px; line-height: 1.55; color: var(--color-ink-soft); margin: 6px 0 0; }
-.journey-doc__upload { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 14px; }
-.journey-doc__upload input[type="file"] { font-size: 13.5px; color: var(--color-ink); max-width: 100%; }
+/* Documents requis : une zone de depot (drag & drop + clic) par document. */
+.dropzones { display: flex; flex-direction: column; gap: 20px; width: 100%; }
+.dropzone-field__label { font-weight: 700; font-size: 15px; color: var(--color-blue); }
+.dropzone-field__hint { font-size: 13px; line-height: 1.55; color: var(--color-ink-soft); margin: 4px 0 10px; }
+
+.dropzone {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+    padding: 26px 18px; text-align: center;
+    border: 2px dashed var(--color-line); border-radius: var(--radius);
+    background: var(--color-cream); cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+.dropzone:hover { border-color: var(--color-coral); }
+.dropzone.is-over { border-color: var(--color-coral); background: color-mix(in srgb, var(--color-coral) 8%, var(--color-cream)); }
+.dropzone.is-busy { opacity: 0.6; pointer-events: none; }
+.dropzone__input { display: none; }
+.dropzone > svg { color: var(--color-coral); }
+.dropzone__text { font-size: 14.5px; color: var(--color-ink); }
+.dropzone__browse { color: var(--color-coral); text-decoration: underline; }
+.dropzone__hint { font-size: 12.5px; color: var(--color-ink-soft); }
+.dropzone__uploading { font-size: 13.5px; font-weight: 600; color: var(--color-blue); }
+.dropzone-field__error { font-size: 13px; font-weight: 600; color: #c0392b; margin: 8px 0 0; }
+.dropzone-field.is-invalid .dropzone,
+.dropzone-field.is-invalid .dropzone-file { border-color: #c0392b; }
+
+/* Fichier depose : carte avec icone, nom, taille, retrait (surface bleutee, accent corail). */
+.dropzone-file { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: var(--radius); border: 1px solid color-mix(in srgb, var(--color-blue) 20%, var(--color-line)); background: color-mix(in srgb, var(--color-blue) 5%, var(--color-cream)); }
+.dropzone-file__icon { flex: none; color: var(--color-coral); }
+.dropzone-file__meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.dropzone-file__name { font-weight: 600; font-size: 14.5px; color: var(--color-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dropzone-file__size { font-size: 12.5px; color: var(--color-ink-soft); }
+.dropzone-file__remove { flex: none; border: none; background: none; cursor: pointer; color: var(--color-ink-soft); font-size: 20px; line-height: 1; padding: 2px 6px; border-radius: var(--radius-sm); }
+.dropzone-file__remove:hover { color: #c0392b; background: rgba(192, 57, 43, 0.08); }
 
 /* Montant du paiement. */
 .journey-amount { display: flex; align-items: baseline; gap: 8px; }

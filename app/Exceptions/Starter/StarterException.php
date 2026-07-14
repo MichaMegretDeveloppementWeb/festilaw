@@ -29,8 +29,19 @@ final class StarterException extends BaseAppException
     {
         return new self(
             technicalMessage: "Failed to store STARTER document [{$documentType}] for submission [{$submissionId}].",
-            userMessage: 'We could not save your document. Please try again with a PDF or image under 10 MB.',
+            userMessage: 'We could not save your documents. Please try again with a PDF or image under 10 MB.',
             previous: $previous,
+        );
+    }
+
+    /** @param  list<string>  $missingTypes */
+    public static function documentsMissing(int $submissionId, array $missingTypes): self
+    {
+        $list = implode(', ', $missingTypes);
+
+        return new self(
+            technicalMessage: "STARTER submission [{$submissionId}] is missing required documents: [{$list}].",
+            userMessage: 'Please add every required document before continuing.',
         );
     }
 }
