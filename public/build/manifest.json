@@ -1,6 +1,6 @@
 {
   "resources/css/web.css": {
-    "file": "assets/web-B2WSgSqj.css",
+    "file": "assets/web-DJ1YeDIs.css",
     "name": "web",
     "names": [
       "web.css"
@@ -36,7 +36,7 @@
     "isEntry": true
   },
   "resources/css/web/get-started/index.css": {
-    "file": "assets/index-De6xAmIZ.css",
+    "file": "assets/index-BKiVXLvq.css",
     "name": "index",
     "names": [
       "index.css"
@@ -44,8 +44,17 @@
     "src": "resources/css/web/get-started/index.css",
     "isEntry": true
   },
+  "resources/css/web/get-started/journey.css": {
+    "file": "assets/journey-DmY7BRCi.css",
+    "name": "journey",
+    "names": [
+      "journey.css"
+    ],
+    "src": "resources/css/web/get-started/journey.css",
+    "isEntry": true
+  },
   "resources/css/web/home/index.css": {
-    "file": "assets/index-Da3-PJdM.css",
+    "file": "assets/index-P7GCauUq.css",
     "name": "index",
     "names": [
       "index.css"

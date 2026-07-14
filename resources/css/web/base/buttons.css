@@ -18,8 +18,8 @@
 .btn--sm { padding: 11px 20px; font-size: 14px; }
 .btn--lg { padding: 16px 32px; font-size: 16px; }
 
-/* Corail plein : action principale. */
-.btn--coral { background: var(--color-coral); color: #3a1210; }
+/* Corail plein : action principale. Texte blanc (choix cliente) sur tous les fonds corail. */
+.btn--coral { background: var(--color-coral); color: #fff; }
 .btn--coral:hover { background: #ff8a7c; }
 
 /* Contour clair : sur fond bleu. */

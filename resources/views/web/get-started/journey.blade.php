@@ -13,18 +13,32 @@
 @endpush
 
 @section('content')
-    <section class="page-hero">
-        <div class="page-hero__inner">
-            <span class="eyebrow page-hero__eyebrow">Creator Pack</span>
-            <h1 class="page-hero__title">Your <span class="page-hero__title-em">compliance file</span></h1>
-            <p class="page-hero__lead">Three steps to your EU Responsible Person: sign your mandate, upload your documents, and pay securely.</p>
-        </div>
-    </section>
-
     <section class="funnel">
-        <div class="funnel__inner">
+        <div class="funnel__inner funnel__inner--split">
             <div class="funnel__card">
-                <livewire:web.funnel.starter-journey :submission="$submission" />
+                <header class="funnel__head">
+                    <span class="eyebrow">Creator Pack</span>
+                    <h1 class="funnel__title">Your <span class="funnel__title-em">compliance file</span></h1>
+                    <p class="funnel__intro">Three steps to your EU Responsible Person: sign your mandate, upload your documents, and pay securely.</p>
+                </header>
+
+                <div class="funnel__body">
+                    <div class="funnel__form-col">
+                        <livewire:web.funnel.starter-journey :submission="$submission" />
+                    </div>
+
+                    <x-funnel.summary
+                        plan="Creator Pack"
+                        price="€333 / year"
+                        scope="up to 9 products"
+                        :included="[
+                            'Your official EU Responsible Person address',
+                            'Set up and live within 24 hours',
+                            'Sign your mandate 100% online',
+                            'Real human support, from entrepreneurs',
+                        ]"
+                        note="Your documents are stored privately and never shared with third parties." />
+                </div>
             </div>
         </div>
     </section>

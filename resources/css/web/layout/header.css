@@ -40,9 +40,6 @@
 .site-header__link:hover { color: var(--color-cream); }
 .site-header__link.is-active { color: var(--color-salmon); }
 
-/* CTA "Get compliant in 24h" : texte blanc pour le contraste sur le corail. */
-.site-header .btn--coral { color: #fff; }
-
 .lang-switch { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; }
 .lang-switch a { color: rgba(239, 229, 208, 0.55); }
 .lang-switch a:hover { color: var(--color-cream); }

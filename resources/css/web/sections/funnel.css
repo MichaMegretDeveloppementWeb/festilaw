@@ -1,37 +1,79 @@
-/* Coquille partagee des parcours de souscription : conteneur, carte, formulaire, etat succes. */
+/* Coquille partagee des parcours de souscription : layout "checkout" a deux colonnes
+   (formulaire + recapitulatif/reassurance), formulaire aere, etat succes. */
 
+/* --- Section + conteneur --- */
 .funnel { background: var(--color-cream); padding: var(--section-y) var(--gutter); }
 .funnel__inner { max-width: 640px; margin: 0 auto; }
-.funnel__card { background: var(--color-card); border: 1px solid var(--color-line); border-radius: var(--radius-lg); padding: clamp(28px, 4vw, 44px); }
+.funnel__inner--split { max-width: 1060px; }
 
-/* Formulaire de parcours (composant Livewire). */
-.funnel-form { display: flex; flex-direction: column; gap: 18px; }
-.funnel-form__row { display: grid; grid-template-columns: 1fr; gap: 18px; }
-.funnel-form__field { display: flex; flex-direction: column; gap: 7px; }
+/* --- Carte --- */
+.funnel__card { background: var(--color-card); border: 1px solid var(--color-line); border-radius: var(--radius-lg); overflow: hidden; }
+
+/* En-tete pleine largeur de la carte. */
+.funnel__head { padding: clamp(30px, 4vw, 44px) clamp(26px, 4vw, 44px) clamp(22px, 3vw, 32px); }
+.funnel__head .eyebrow { display: inline-block; }
+.funnel__title { font-family: var(--font-display); font-size: clamp(27px, 3.4vw, 38px); line-height: 1.06; color: var(--color-blue); margin-top: 12px; }
+.funnel__title-em { color: var(--color-coral); }
+.funnel__intro { font-size: 15px; line-height: 1.65; color: var(--color-ink-soft); margin-top: 12px; max-width: 54ch; }
+
+/* Corps : formulaire | recapitulatif. */
+.funnel__body { display: grid; grid-template-columns: 1fr; }
+.funnel__form-col { padding: clamp(26px, 4vw, 44px); }
+.funnel__reassure { display: flex; align-items: flex-start; gap: 9px; margin-top: 18px; font-size: 13px; line-height: 1.5; color: var(--color-ink-soft); }
+.funnel__reassure svg { flex: none; margin-top: 1px; color: var(--color-blue); }
+
+/* --- Recapitulatif / reassurance --- */
+.funnel-summary {
+    padding: clamp(26px, 4vw, 40px);
+    background: color-mix(in srgb, var(--color-blue) 8%, var(--color-cream));
+    border-top: 1px solid var(--color-line);
+    display: flex; flex-direction: column; gap: 24px;
+}
+.funnel-summary__plan { display: flex; flex-direction: column; gap: 4px; }
+.funnel-summary__name { font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: var(--color-blue); }
+.funnel-summary__price { font-family: var(--font-display); font-size: 34px; line-height: 1; color: var(--color-coral); }
+.funnel-summary__scope { font-size: 13.5px; color: var(--color-ink-soft); }
+.funnel-summary__list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
+.funnel-summary__list li { display: flex; align-items: flex-start; gap: 10px; font-size: 14.5px; line-height: 1.45; color: var(--color-ink); }
+.funnel-summary__list svg { flex: none; margin-top: 1px; color: #1f9a63; }
+.funnel-summary__trust { display: flex; flex-direction: column; gap: 10px; padding-top: 22px; border-top: 1px solid color-mix(in srgb, var(--color-blue) 16%, transparent); }
+.funnel-summary__trust span { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600; color: var(--color-ink-soft); }
+.funnel-summary__trust svg { flex: none; color: var(--color-blue); }
+.funnel-summary__note { font-size: 12.5px; line-height: 1.55; color: var(--color-ink-soft); }
+
+/* --- Formulaire de parcours (composant Livewire) --- */
+.funnel-form { display: flex; flex-direction: column; gap: 22px; }
+.funnel-form__row { display: grid; grid-template-columns: 1fr; gap: 22px; }
+.funnel-form__field { display: flex; flex-direction: column; gap: 8px; }
 .funnel-form__field label { font-weight: 600; font-size: 14px; color: var(--color-blue); }
 .funnel-form__optional { font-weight: 400; color: var(--color-ink-soft); }
 .funnel-form__field input,
 .funnel-form__field textarea {
-    width: 100%; padding: 13px 15px;
+    width: 100%; padding: 14px 16px;
     border: 1.5px solid var(--color-line); border-radius: var(--radius-sm);
-    background: var(--color-cream); font-family: var(--font-sans); font-size: 15px; color: var(--color-ink);
-    transition: border-color 0.15s ease;
+    background: var(--color-cream); font-family: var(--font-sans); font-size: 15.5px; color: var(--color-ink);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .funnel-form__field input::placeholder,
 .funnel-form__field textarea::placeholder { color: #b3a892; }
 .funnel-form__field input:focus,
-.funnel-form__field textarea:focus { outline: none; border-color: var(--color-coral); }
-.funnel-form__field textarea { resize: vertical; min-height: 96px; }
+.funnel-form__field textarea:focus { outline: none; border-color: var(--color-coral); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-coral) 18%, transparent); }
+.funnel-form__field textarea { resize: vertical; min-height: 104px; }
 .funnel-form__error { font-size: 13px; color: #c0392b; font-weight: 600; }
-.funnel-form .btn { margin-top: 6px; align-self: flex-start; }
+/* CTA affirme : pleine largeur de la colonne formulaire. */
+.funnel-form .btn { margin-top: 8px; align-self: stretch; padding-top: 15px; padding-bottom: 15px; }
 
-/* Etat succes. */
+/* --- Etat succes --- */
 .funnel-success { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 12px 0; }
 .funnel-success__icon { display: flex; align-items: center; justify-content: center; width: 58px; height: 58px; border-radius: 50%; background: #1f9a63; margin-bottom: 18px; }
 .funnel-success__title { font-size: 22px; color: var(--color-blue); margin-bottom: 8px; }
 .funnel-success__text { font-size: 15px; line-height: 1.6; color: var(--color-ink-soft); max-width: 420px; margin-bottom: 22px; }
 
-@media (min-width: 760px) {
+/* --- Responsive --- */
+@media (min-width: 880px) {
+    .funnel__body { grid-template-columns: 1.5fr 1fr; }
+    .funnel-summary { border-top: 0; border-left: 1px solid var(--color-line); }
+
     /* Deux colonnes alignees ligne par ligne via subgrid (etiquette / champ / erreur) : une
        etiquette sur 2 lignes (ex. traduction FR) ne desaligne plus le champ voisin, et l'etiquette
        courte reste calee juste au-dessus de son champ. */
@@ -39,7 +81,7 @@
         grid-template-columns: 1fr 1fr;
         grid-template-rows: auto auto auto;
         column-gap: 18px;
-        row-gap: 7px;
+        row-gap: 8px;
     }
     .funnel-form__row--two .funnel-form__field {
         display: grid;
@@ -47,4 +89,9 @@
         grid-row: span 3;
     }
     .funnel-form__row--two .funnel-form__field label { align-self: end; }
+}
+
+/* Recapitulatif au-dessus du formulaire sur mobile (contexte avant la saisie). */
+@media (max-width: 879px) {
+    .funnel-summary { order: -1; }
 }

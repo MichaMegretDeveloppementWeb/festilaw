@@ -53,6 +53,3 @@
 }
 
 .hero__actions { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
-
-/* CTA "Get compliant in 24h" : texte blanc pour le contraste sur le corail. */
-.hero .btn--coral { color: #fff; }

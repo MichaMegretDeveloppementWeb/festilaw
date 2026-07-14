@@ -1,5 +1,4 @@
-/* Parcours STARTER (dossier) : en-tete + coquille partagee + etapes (signer / documents / paiement). */
-@import '../sections/page-hero.css';
+/* Parcours STARTER (dossier) : coquille partagee (checkout) + etapes (signer / documents / paiement). */
 @import '../sections/funnel.css';
 
 .journey { display: flex; flex-direction: column; gap: 26px; }
