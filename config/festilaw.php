@@ -31,4 +31,20 @@ return [
      */
     'notification_email' => env('FESTILAW_NOTIFICATION_EMAIL', 'team@festilaw.com'),
 
+    /*
+     | Parcours STARTER (Creator Pack). Montant en centimes ; liste des pieces obligatoires
+     | pour qu'un dossier soit "complet" (a confirmer avec la cliente, QO-5/D1).
+     */
+    'starter' => [
+        'amount_cents' => (int) env('FESTILAW_STARTER_AMOUNT_CENTS', 33300),
+        'required_documents' => ['turnover_proof', 'technical_documentation'],
+    ],
+
+    /*
+     | Parcours SCALE : paiement de l'audit (deduit du contrat final).
+     */
+    'scale' => [
+        'audit_amount_cents' => (int) env('FESTILAW_SCALE_AUDIT_CENTS', 7500),
+    ],
+
 ];
