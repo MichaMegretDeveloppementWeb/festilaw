@@ -12,6 +12,7 @@ use App\Models\Contract;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * Receives the signature provider webhook (Zoho...), verifies + parses it via the active gateway,
@@ -32,12 +33,19 @@ final class SignatureWebhookController extends Controller
             return response()->noContent(400);
         }
 
-        $contract = Contract::query()
-            ->where('signature_provider_reference', $event->providerReference)
-            ->first();
+        try {
+            $contract = Contract::query()
+                ->where('signature_provider_reference', $event->providerReference)
+                ->first();
 
-        if ($contract !== null && $event->signed) {
-            $markContractSigned->execute($contract, $event->signedFilePath, $event->providerReference);
+            if ($contract !== null && $event->signed) {
+                $markContractSigned->execute($contract, $event->signedFilePath, $event->providerReference);
+            }
+        } catch (Throwable $e) {
+            // Erreur inattendue cote traitement : on trace et on repond 500 pour que le provider reessaie.
+            Log::error('Signature webhook processing failed.', ['exception' => $e]);
+
+            return response()->noContent(500);
         }
 
         return response()->noContent();

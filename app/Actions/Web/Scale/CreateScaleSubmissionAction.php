@@ -9,7 +9,7 @@ use App\Enums\Submission\SubmissionStatus;
 use App\Enums\Submission\SubmissionType;
 use App\Mail\FunnelNotification;
 use App\Models\Submission;
-use Illuminate\Support\Facades\Mail;
+use App\Services\Notification\TeamNotifier;
 
 /**
  * SCALE parcours: opens the file before paying the audit fee.
@@ -18,6 +18,8 @@ use Illuminate\Support\Facades\Mail;
  */
 final readonly class CreateScaleSubmissionAction
 {
+    public function __construct(private TeamNotifier $teamNotifier) {}
+
     /** @param  ScaleData  $data */
     public function execute(array $data): Submission
     {
@@ -35,8 +37,7 @@ final readonly class CreateScaleSubmissionAction
             'product_types' => $data['product_types'] ?? null,
         ]);
 
-        Mail::to(config('festilaw.notification_email'))
-            ->send(new FunnelNotification($submission, FunnelNotificationReason::ScaleAuditRequest));
+        $this->teamNotifier->notify(new FunnelNotification($submission, FunnelNotificationReason::ScaleAuditRequest));
 
         return $submission;
     }

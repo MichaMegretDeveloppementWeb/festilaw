@@ -12,6 +12,7 @@ use App\Services\Payment\PaymentGatewayRegistry;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * Receives a payment provider webhook (Stripe...), verifies + parses it via the matching gateway,
@@ -34,13 +35,20 @@ final class PaymentWebhookController extends Controller
             return response()->noContent(400);
         }
 
-        $payment = Payment::query()
-            ->where('provider', $provider)
-            ->where('provider_reference', $event->providerReference)
-            ->first();
+        try {
+            $payment = Payment::query()
+                ->where('provider', $provider)
+                ->where('provider_reference', $event->providerReference)
+                ->first();
 
-        if ($payment !== null && $event->paid) {
-            $markPaymentSucceeded->execute($payment, $event->providerReference);
+            if ($payment !== null && $event->paid) {
+                $markPaymentSucceeded->execute($payment, $event->providerReference);
+            }
+        } catch (Throwable $e) {
+            // Erreur inattendue cote traitement : on trace et on repond 500 pour que le provider reessaie.
+            Log::error('Payment webhook processing failed.', ['exception' => $e, 'provider' => $provider]);
+
+            return response()->noContent(500);
         }
 
         return response()->noContent();

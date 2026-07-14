@@ -6,12 +6,15 @@ namespace App\Livewire\Web\Contact;
 
 use App\Actions\Web\Contact\CreateContactSubmissionAction;
 use App\Exceptions\BaseAppException;
+use App\Livewire\Concerns\HandlesUnexpectedErrors;
 use App\Livewire\Concerns\HasSpamProtection;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
+use Throwable;
 
 class ContactForm extends Component
 {
+    use HandlesUnexpectedErrors;
     use HasSpamProtection;
 
     public string $name = '';
@@ -70,6 +73,10 @@ class ContactForm extends Component
         } catch (BaseAppException $e) {
             Log::error($e->getMessage(), ['exception' => $e]);
             $this->addError('form', $e->getUserMessage());
+
+            return;
+        } catch (Throwable $e) {
+            $this->reportUnexpectedError($e, 'form', 'Contact form submit');
 
             return;
         }

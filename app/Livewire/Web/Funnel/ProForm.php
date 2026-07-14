@@ -6,13 +6,16 @@ namespace App\Livewire\Web\Funnel;
 
 use App\Actions\Web\Pro\CreateProSubmissionAction;
 use App\Exceptions\BaseAppException;
+use App\Livewire\Concerns\HandlesUnexpectedErrors;
 use App\Livewire\Concerns\HasSpamProtection;
 use App\Livewire\Web\Funnel\Concerns\HasFunnelContactFields;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
+use Throwable;
 
 class ProForm extends Component
 {
+    use HandlesUnexpectedErrors;
     use HasFunnelContactFields;
     use HasSpamProtection;
 
@@ -37,6 +40,10 @@ class ProForm extends Component
         } catch (BaseAppException $e) {
             Log::error($e->getMessage(), ['exception' => $e]);
             $this->addError('form', $e->getUserMessage());
+
+            return;
+        } catch (Throwable $e) {
+            $this->reportUnexpectedError($e, 'form', 'PRO enquiry submit');
 
             return;
         }

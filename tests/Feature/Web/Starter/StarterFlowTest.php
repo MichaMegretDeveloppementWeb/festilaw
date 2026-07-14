@@ -8,6 +8,7 @@ use App\Actions\Web\Starter\StartStarterPaymentAction;
 use App\Actions\Web\Starter\StoreStarterDocumentAction;
 use App\Data\Payment\CheckoutSessionData;
 use App\Data\Signature\SigningSessionData;
+use App\Enums\Document\DocumentType;
 use App\Enums\Payment\PaymentStatus;
 use App\Enums\Payment\PaymentType;
 use App\Enums\Submission\SubmissionStatus;
@@ -17,8 +18,12 @@ use App\Mail\FunnelNotification;
 use App\Models\Contract;
 use App\Models\Submission;
 use App\Services\Web\Starter\StarterDossierResolver;
+use Illuminate\Contracts\Filesystem\Factory as FilesystemFactory;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
 
@@ -59,16 +64,24 @@ it('walks the STARTER happy path end-to-end with the fake providers', function (
     expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingDocuments);
 
     // 4. Upload the required documents -> dossier complete -> awaiting payment.
-    foreach (['turnover_proof', 'technical_documentation'] as $type) {
-        app(StoreStarterDocumentAction::class)->execute($submission->fresh(), [
-            'type' => $type,
-            'file_path' => "private/docs/{$type}.pdf",
-            'original_filename' => "{$type}.pdf",
-            'mime_type' => 'application/pdf',
-            'size_bytes' => 2048,
-        ]);
+    Storage::fake('local');
+    foreach ([DocumentType::TurnoverProof, DocumentType::TechnicalDocumentation] as $type) {
+        app(StoreStarterDocumentAction::class)->execute(
+            $submission->fresh(),
+            $type,
+            // createWithContent (pas create) : contenu reel, donc taille lue > 0 sur le fichier stocke.
+            UploadedFile::fake()->createWithContent("{$type->value}.pdf", str_repeat('PDF-CONTENT ', 200)),
+        );
     }
     expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingPayment);
+
+    // Les fichiers sont bien stockes sur le disque prive, avec leurs metadonnees.
+    $stored = $submission->fresh()->uploadedDocuments;
+    expect($stored)->toHaveCount(2);
+    foreach ($stored as $document) {
+        Storage::disk('local')->assertExists($document->file_path);
+        expect($document->size_bytes)->toBeGreaterThan(0);
+    }
 
     // 5. Start the payment (fake) -> pending payment + checkout session.
     $checkout = app(StartStarterPaymentAction::class)->execute($submission->fresh(), 'fake');
@@ -105,6 +118,25 @@ it('is idempotent when a payment webhook is redelivered', function () {
     // Already succeeded: no change, no second notification.
     expect($payment->fresh()->provider_reference)->not->toBe('other_ref');
     Mail::assertNothingSent();
+});
+
+it('converts a filesystem failure into a typed exception (never a raw error)', function () {
+    $submission = Submission::factory()->starter()->create();
+    Contract::factory()->for($submission)->signed()->create();
+
+    // Le stockage echoue (putFileAs renvoie false) : l'Action doit lever une StarterException typee,
+    // pas laisser fuir une erreur Flysystem/IO non geree.
+    $disk = Mockery::mock(Filesystem::class);
+    $disk->shouldReceive('putFileAs')->andReturn(false);
+    $factory = Mockery::mock(FilesystemFactory::class);
+    $factory->shouldReceive('disk')->andReturn($disk);
+    app()->instance(FilesystemFactory::class, $factory);
+
+    expect(fn () => app(StoreStarterDocumentAction::class)->execute(
+        $submission,
+        DocumentType::TurnoverProof,
+        UploadedFile::fake()->create('turnover.pdf', 100, 'application/pdf'),
+    ))->toThrow(StarterException::class);
 });
 
 it('reports missing documents through the resolver', function () {

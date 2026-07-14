@@ -6,12 +6,15 @@ namespace App\Livewire\Web\Funnel;
 
 use App\Actions\Web\Starter\CreateStarterSubmissionAction;
 use App\Exceptions\BaseAppException;
+use App\Livewire\Concerns\HandlesUnexpectedErrors;
 use App\Livewire\Concerns\HasSpamProtection;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
+use Throwable;
 
 class StarterForm extends Component
 {
+    use HandlesUnexpectedErrors;
     use HasSpamProtection;
 
     public string $company_name = '';
@@ -79,6 +82,10 @@ class StarterForm extends Component
         } catch (BaseAppException $e) {
             Log::error($e->getMessage(), ['exception' => $e]);
             $this->addError('form', $e->getUserMessage());
+
+            return;
+        } catch (Throwable $e) {
+            $this->reportUnexpectedError($e, 'form', 'STARTER file open submit');
 
             return;
         }

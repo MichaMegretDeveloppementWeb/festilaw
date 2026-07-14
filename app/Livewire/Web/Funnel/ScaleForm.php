@@ -6,13 +6,16 @@ namespace App\Livewire\Web\Funnel;
 
 use App\Actions\Web\Scale\CreateScaleSubmissionAction;
 use App\Exceptions\BaseAppException;
+use App\Livewire\Concerns\HandlesUnexpectedErrors;
 use App\Livewire\Concerns\HasSpamProtection;
 use App\Livewire\Web\Funnel\Concerns\HasFunnelContactFields;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
+use Throwable;
 
 class ScaleForm extends Component
 {
+    use HandlesUnexpectedErrors;
     use HasFunnelContactFields;
     use HasSpamProtection;
 
@@ -37,6 +40,10 @@ class ScaleForm extends Component
         } catch (BaseAppException $e) {
             Log::error($e->getMessage(), ['exception' => $e]);
             $this->addError('form', $e->getUserMessage());
+
+            return;
+        } catch (Throwable $e) {
+            $this->reportUnexpectedError($e, 'form', 'SCALE audit request submit');
 
             return;
         }

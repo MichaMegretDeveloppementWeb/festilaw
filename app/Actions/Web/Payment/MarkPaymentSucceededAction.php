@@ -9,8 +9,8 @@ use App\Enums\Payment\PaymentStatus;
 use App\Enums\Submission\SubmissionStatus;
 use App\Mail\FunnelNotification;
 use App\Models\Payment;
+use App\Services\Notification\TeamNotifier;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
 
 /**
  * Records a successful payment (called by the Stripe webhook), whatever the parcours
@@ -19,6 +19,8 @@ use Illuminate\Support\Facades\Mail;
  */
 final readonly class MarkPaymentSucceededAction
 {
+    public function __construct(private TeamNotifier $teamNotifier) {}
+
     public function execute(Payment $payment, ?string $providerReference = null): Payment
     {
         $processed = DB::transaction(function () use ($payment, $providerReference): bool {
@@ -44,9 +46,9 @@ final readonly class MarkPaymentSucceededAction
         $payment->refresh();
 
         if ($processed) {
-            // Notification synchrone a Festilaw, apres commit (une seule fois).
-            Mail::to(config('festilaw.notification_email'))
-                ->send(new FunnelNotification($payment->submission, FunnelNotificationReason::PaymentReceived));
+            // Notification synchrone a Festilaw, apres commit (une seule fois) ; un echec est logue
+            // sans casser la confirmation (important pour le webhook, qui doit repondre 200).
+            $this->teamNotifier->notify(new FunnelNotification($payment->submission, FunnelNotificationReason::PaymentReceived));
         }
 
         return $payment;

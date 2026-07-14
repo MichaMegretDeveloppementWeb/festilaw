@@ -9,7 +9,7 @@ use App\Enums\Submission\SubmissionStatus;
 use App\Enums\Submission\SubmissionType;
 use App\Mail\FunnelNotification;
 use App\Models\Submission;
-use Illuminate\Support\Facades\Mail;
+use App\Services\Notification\TeamNotifier;
 
 /**
  * PRO parcours: records the enquiry, then the UI redirects the visitor to WhatsApp Business.
@@ -19,6 +19,8 @@ use Illuminate\Support\Facades\Mail;
  */
 final readonly class CreateProSubmissionAction
 {
+    public function __construct(private TeamNotifier $teamNotifier) {}
+
     /** @param  ProData  $data */
     public function execute(array $data): Submission
     {
@@ -36,8 +38,7 @@ final readonly class CreateProSubmissionAction
             'product_types' => $data['product_types'] ?? null,
         ]);
 
-        Mail::to(config('festilaw.notification_email'))
-            ->send(new FunnelNotification($submission, FunnelNotificationReason::ProEnquiry));
+        $this->teamNotifier->notify(new FunnelNotification($submission, FunnelNotificationReason::ProEnquiry));
 
         return $submission;
     }

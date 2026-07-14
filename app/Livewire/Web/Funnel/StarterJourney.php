@@ -11,6 +11,7 @@ use App\Enums\Contract\SignatureStatus;
 use App\Enums\Document\DocumentType;
 use App\Enums\Submission\SubmissionStatus;
 use App\Exceptions\BaseAppException;
+use App\Livewire\Concerns\HandlesUnexpectedErrors;
 use App\Models\Submission;
 use App\Services\Payment\PaymentGatewayRegistry;
 use App\Services\Web\Starter\StarterDossierResolver;
@@ -19,6 +20,7 @@ use Illuminate\View\View;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
+use Throwable;
 
 /**
  * Multi-step STARTER dossier, driven by the submission status (source of truth): sign the mandate,
@@ -28,6 +30,7 @@ use Livewire\WithFileUploads;
  */
 class StarterJourney extends Component
 {
+    use HandlesUnexpectedErrors;
     use WithFileUploads;
 
     public Submission $submission;
@@ -60,6 +63,10 @@ class StarterJourney extends Component
             $this->addError('journey', $e->getUserMessage());
 
             return null;
+        } catch (Throwable $e) {
+            $this->reportUnexpectedError($e, 'journey', 'STARTER contract signing');
+
+            return null;
         }
 
         return $this->redirect($session->signingUrl);
@@ -76,21 +83,15 @@ class StarterJourney extends Component
             ["documents.{$type}.required" => 'Please choose a file.', "documents.{$type}.*" => 'Please upload a PDF or image under 10 MB.'],
         );
 
-        /** @var TemporaryUploadedFile $file */
-        $file = $this->documents[$type];
-        $path = $file->store("starter-documents/{$this->submission->reference}", 'local');
-
         try {
-            $storeStarterDocument->execute($this->submission, [
-                'type' => $type,
-                'file_path' => (string) $path,
-                'original_filename' => $file->getClientOriginalName(),
-                'mime_type' => (string) $file->getMimeType(),
-                'size_bytes' => (int) $file->getSize(),
-            ]);
+            $storeStarterDocument->execute($this->submission, DocumentType::from($type), $this->documents[$type]);
         } catch (BaseAppException $e) {
             Log::error($e->getMessage(), ['exception' => $e]);
             $this->addError('journey', $e->getUserMessage());
+
+            return;
+        } catch (Throwable $e) {
+            $this->reportUnexpectedError($e, 'journey', 'STARTER document upload');
 
             return;
         }
@@ -110,6 +111,10 @@ class StarterJourney extends Component
         } catch (BaseAppException $e) {
             Log::error($e->getMessage(), ['exception' => $e]);
             $this->addError('journey', $e->getUserMessage());
+
+            return null;
+        } catch (Throwable $e) {
+            $this->reportUnexpectedError($e, 'journey', 'STARTER payment start');
 
             return null;
         }

@@ -8,13 +8,15 @@ use App\Enums\Submission\SubmissionStatus;
 use App\Enums\Submission\SubmissionType;
 use App\Mail\ContactSubmissionReceived;
 use App\Models\Submission;
-use Illuminate\Support\Facades\Mail;
+use App\Services\Notification\TeamNotifier;
 
 /**
  * @phpstan-type ContactData array{name: string, email: string, website_url?: string|null, message: string}
  */
 final readonly class CreateContactSubmissionAction
 {
+    public function __construct(private TeamNotifier $teamNotifier) {}
+
     /** @param  ContactData  $data */
     public function execute(array $data): Submission
     {
@@ -29,9 +31,9 @@ final readonly class CreateContactSubmissionAction
             'message' => $data['message'],
         ]);
 
-        // Notification synchrone a Festilaw, apres commit (pas de file/worker).
-        Mail::to(config('festilaw.notification_email'))
-            ->send(new ContactSubmissionReceived($submission));
+        // Notification synchrone a Festilaw, apres commit (pas de file/worker) ; un echec est logue
+        // sans casser l'envoi du message.
+        $this->teamNotifier->notify(new ContactSubmissionReceived($submission));
 
         return $submission;
     }

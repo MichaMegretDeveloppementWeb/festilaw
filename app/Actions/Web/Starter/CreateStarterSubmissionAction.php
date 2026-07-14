@@ -10,8 +10,8 @@ use App\Enums\Submission\SubmissionStatus;
 use App\Enums\Submission\SubmissionType;
 use App\Mail\FunnelNotification;
 use App\Models\Submission;
+use App\Services\Notification\TeamNotifier;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 /**
@@ -21,6 +21,8 @@ use Illuminate\Support\Str;
  */
 final readonly class CreateStarterSubmissionAction
 {
+    public function __construct(private TeamNotifier $teamNotifier) {}
+
     /** @param  StarterData  $data */
     public function execute(array $data): Submission
     {
@@ -50,9 +52,9 @@ final readonly class CreateStarterSubmissionAction
             return $submission;
         });
 
-        // Notification synchrone a Festilaw, apres commit (pas de file/worker).
-        Mail::to(config('festilaw.notification_email'))
-            ->send(new FunnelNotification($submission, FunnelNotificationReason::CreatorSubmission));
+        // Notification synchrone a Festilaw, apres commit (pas de file/worker) ; un echec est logue
+        // sans casser le parcours.
+        $this->teamNotifier->notify(new FunnelNotification($submission, FunnelNotificationReason::CreatorSubmission));
 
         return $submission;
     }
