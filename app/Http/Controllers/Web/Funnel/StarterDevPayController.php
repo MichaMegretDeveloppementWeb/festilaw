@@ -29,8 +29,7 @@ final class StarterDevPayController extends Controller
 
         $markPaymentSucceeded->execute($payment, $payment->provider_reference);
 
-        return redirect()
-            ->route('get-started.starter.journey', ['locale' => app()->getLocale(), 'dossier' => $dossier->resume_token])
-            ->with('starter_status', 'paid');
+        // Paye : direction l'espace client "mon dossier".
+        return redirect()->route('my-file', ['locale' => app()->getLocale(), 'dossier' => $dossier->resume_token]);
     }
 }

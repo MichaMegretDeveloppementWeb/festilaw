@@ -12,7 +12,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Support\Str;
 
 class Submission extends Model
 {
@@ -54,9 +53,28 @@ class Submission extends Model
     {
         static::creating(function (Submission $submission): void {
             if (empty($submission->reference)) {
-                $submission->reference = (string) Str::uuid();
+                $submission->reference = static::generateReference();
             }
         });
+    }
+
+    /**
+     * A human-friendly, collision-checked reference, e.g. "FL-7K2Q-9RT4". Uppercase, no ambiguous
+     * characters (no I/L/O/U/0/1), grouped for readability. ~30^8 combinations, plus a uniqueness check.
+     */
+    public static function generateReference(): string
+    {
+        $alphabet = 'ABCDEFGHJKMNPQRSTVWXYZ23456789';
+
+        do {
+            $body = '';
+            for ($i = 0; $i < 8; $i++) {
+                $body .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+            }
+            $reference = 'FL-'.substr($body, 0, 4).'-'.substr($body, 4, 4);
+        } while (static::query()->where('reference', $reference)->exists());
+
+        return $reference;
     }
 
     /**

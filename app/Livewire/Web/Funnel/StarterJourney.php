@@ -310,7 +310,7 @@ class StarterJourney extends Component
      * then advances + flashes the success banner. Bounded by MAX_PAYMENT_POLLS · past that, the UI shows
      * the "we'll email you" fallback. Lets asynchronous methods settle without ever blocking the buyer.
      */
-    public function pollPayment(PaymentGatewayRegistry $gateways, MarkPaymentSucceededAction $markPaymentSucceeded): void
+    public function pollPayment(PaymentGatewayRegistry $gateways, MarkPaymentSucceededAction $markPaymentSucceeded): mixed
     {
         $this->paymentChecks++;
 
@@ -320,6 +320,16 @@ class StarterJourney extends Component
             // Best effort : un echec de poll n'affiche rien, le webhook reste la source de verite.
             Log::error('STARTER payment poll failed.', ['exception' => $e]);
         }
+
+        // Paiement confirme : on quitte le parcours pour l'espace client "mon dossier".
+        if ($this->step() === 'done') {
+            return $this->redirect(route('my-file', [
+                'locale' => app()->getLocale(),
+                'dossier' => $this->submission->resume_token,
+            ]));
+        }
+
+        return null;
     }
 
     /**
@@ -413,7 +423,7 @@ class StarterJourney extends Component
 
     public function render(): View
     {
-        $this->submission->loadMissing(['contract', 'uploadedDocuments']);
+        $this->submission->loadMissing('contract');
 
         return view('livewire.web.funnel.starter-journey', [
             'step' => $this->step(),
@@ -425,9 +435,6 @@ class StarterJourney extends Component
             'deposits' => $this->stagedDocuments(),
             'acceptAttr' => '.'.implode(',.', $this->documentMimes()),
             'amountCents' => (int) config('festilaw.starter.amount_cents'),
-            // Espace "mon dossier" (etape terminee).
-            'mandateAvailable' => (string) ($this->submission->contract?->signed_file_path ?? '') !== '',
-            'dossierDocuments' => $this->submission->uploadedDocuments,
         ]);
     }
 }

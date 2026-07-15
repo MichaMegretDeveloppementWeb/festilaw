@@ -1,6 +1,8 @@
 <?php
 
 use App\Enums\Contract\SignatureStatus;
+use App\Enums\Payment\PaymentStatus;
+use App\Enums\Payment\PaymentType;
 use App\Enums\Submission\SubmissionStatus;
 use App\Models\Submission;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -10,7 +12,7 @@ use function Pest\Laravel\get;
 
 uses(RefreshDatabase::class);
 
-/** A paid ("active") dossier with a signed mandate and one uploaded document. */
+/** A paid ("active") dossier with a signed mandate, one document and a succeeded payment. */
 function activeStarterDossier(): Submission
 {
     $submission = Submission::factory()->starter()->create([
@@ -32,19 +34,48 @@ function activeStarterDossier(): Submission
         'size_bytes' => 1000,
         'uploaded_at' => now(),
     ]);
+    $submission->payments()->create([
+        'type' => PaymentType::StarterSubscription,
+        'amount_cents' => 33300,
+        'currency' => 'EUR',
+        'provider' => 'stripe',
+        'provider_reference' => 'cs_1',
+        'status' => PaymentStatus::Succeeded,
+        'paid_at' => now(),
+    ]);
 
     return $submission->fresh();
 }
 
-it('shows the my-file space with downloads on a paid dossier', function () {
-    activeStarterDossier();
+it('shows the my-file space with reference, renewal date and downloads', function () {
+    $submission = activeStarterDossier();
 
-    get(route('get-started.starter.journey', ['locale' => 'en', 'dossier' => 'mydossier']))
+    get(route('my-file', ['locale' => 'en', 'dossier' => 'mydossier']))
         ->assertOk()
-        ->assertSee('Your Creator Pack is active.')
+        ->assertSee('Creator Pack')
+        ->assertSee($submission->reference)
+        ->assertSee('Next renewal')
+        ->assertSee(now()->addYear()->isoFormat('D MMMM YYYY'))
         ->assertSee('Your documents')
         ->assertSee('Signed Responsible Person mandate')
         ->assertSee('Download');
+});
+
+it('sends a paid dossier from the journey to its my-file space', function () {
+    activeStarterDossier();
+
+    get(route('get-started.starter.journey', ['locale' => 'en', 'dossier' => 'mydossier']))
+        ->assertRedirect(route('my-file', ['locale' => 'en', 'dossier' => 'mydossier']));
+});
+
+it('sends an unpaid dossier from my-file back to the journey', function () {
+    $submission = Submission::factory()->starter()->create([
+        'status' => SubmissionStatus::AwaitingPayment,
+        'resume_token' => 'unpaid',
+    ]);
+
+    get(route('my-file', ['locale' => 'en', 'dossier' => 'unpaid']))
+        ->assertRedirect(route('get-started.starter.journey', ['locale' => 'en', 'dossier' => 'unpaid']));
 });
 
 it('downloads the signed mandate for the dossier', function () {

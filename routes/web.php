@@ -11,6 +11,7 @@ use App\Http\Controllers\Web\Funnel\StarterController;
 use App\Http\Controllers\Web\Funnel\StarterDevPayController;
 use App\Http\Controllers\Web\Funnel\StarterDevSignController;
 use App\Http\Controllers\Web\Funnel\StarterDocumentDownloadController;
+use App\Http\Controllers\Web\Funnel\StarterDossierController;
 use App\Http\Controllers\Web\Funnel\StarterJourneyController;
 use App\Http\Controllers\Web\Funnel\StarterMandateDownloadController;
 use App\Http\Controllers\Web\Home\HomeController;
@@ -78,4 +79,9 @@ Route::prefix('{locale}')->middleware('setlocale')->group(function () {
         Route::get('/starter/{dossier}/dev/sign', StarterDevSignController::class)->name('starter.dev-sign');
         Route::get('/starter/{dossier}/dev/pay', StarterDevPayController::class)->name('starter.dev-pay');
     });
+
+    // Espace client "mon dossier" (dossier actif/paye), separe du parcours. Acces par magic link.
+    // /my-file : saisie de l'email -> envoi du lien. /my-file/{dossier} : le dossier lui-meme.
+    Route::view('/my-file', 'web.find-my-file')->name('find-my-file');
+    Route::get('/my-file/{dossier}', StarterDossierController::class)->name('my-file');
 });

@@ -28,6 +28,11 @@ final class StarterPaymentConfirmed extends Mailable
 
     public function content(): Content
     {
-        return new Content(view: 'emails.starter-payment-confirmed');
+        return new Content(view: 'emails.starter-payment-confirmed', with: [
+            'fileUrl' => route('my-file', [
+                'locale' => $this->submission->locale ?: config('app.locale'),
+                'dossier' => $this->submission->resume_token,
+            ]),
+        ]);
     }
 }

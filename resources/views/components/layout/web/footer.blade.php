@@ -16,6 +16,7 @@
                     <a href="{{ route('services') }}">Our Services</a>
                     <a href="{{ route('pricing') }}">Pricing</a>
                     <a href="{{ route('contact') }}">Contact</a>
+                    <a href="{{ route('find-my-file') }}">Access my file</a>
                 </div>
             </div>
 
