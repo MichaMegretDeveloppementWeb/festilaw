@@ -29,7 +29,7 @@ final class StarterDevPayController extends Controller
 
         $markPaymentSucceeded->execute($payment, $payment->provider_reference);
 
-        // Paye : direction l'espace client "mon dossier".
-        return redirect()->route('my-file', ['locale' => app()->getLocale(), 'dossier' => $dossier->resume_token]);
+        // Paye : direction l'espace client "mon projet".
+        return redirect()->route('my-project', ['locale' => app()->getLocale(), 'dossier' => $dossier->resume_token]);
     }
 }

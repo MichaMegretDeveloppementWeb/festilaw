@@ -16,8 +16,8 @@ beforeEach(function () {
     Mail::fake();
 });
 
-it('renders the access-my-file page', function () {
-    get(route('find-my-file', ['locale' => 'en']))
+it('renders the access-my-project page', function () {
+    get(route('find-my-project', ['locale' => 'en']))
         ->assertOk()
         ->assertSee('Access')
         ->assertSeeLivewire(AccessFileForm::class);

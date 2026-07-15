@@ -16,7 +16,7 @@
                     <a href="{{ route('services') }}">{{ __('Our Services') }}</a>
                     <a href="{{ route('pricing') }}">{{ __('Pricing') }}</a>
                     <a href="{{ route('contact') }}">{{ __('Contact') }}</a>
-                    <a href="{{ route('find-my-file') }}">{{ __('Access my file') }}</a>
+                    <a href="{{ route('find-my-project') }}">{{ __('Access my project') }}</a>
                 </div>
             </div>
 

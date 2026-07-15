@@ -11,9 +11,9 @@ use App\Http\Controllers\Web\Funnel\StarterController;
 use App\Http\Controllers\Web\Funnel\StarterDevPayController;
 use App\Http\Controllers\Web\Funnel\StarterDevSignController;
 use App\Http\Controllers\Web\Funnel\StarterDocumentDownloadController;
-use App\Http\Controllers\Web\Funnel\StarterDossierController;
 use App\Http\Controllers\Web\Funnel\StarterJourneyController;
 use App\Http\Controllers\Web\Funnel\StarterMandateDownloadController;
+use App\Http\Controllers\Web\Funnel\StarterProjectController;
 use App\Http\Controllers\Web\Home\HomeController;
 use App\Http\Controllers\Web\Pricing\PricingController;
 use App\Http\Controllers\Web\Services\ServicesController;
@@ -80,8 +80,8 @@ Route::prefix('{locale}')->middleware('setlocale')->group(function () {
         Route::get('/starter/{dossier}/dev/pay', StarterDevPayController::class)->name('starter.dev-pay');
     });
 
-    // Espace client "mon dossier" (dossier actif/paye), separe du parcours. Acces par magic link.
-    // /my-file : saisie de l'email -> envoi du lien. /my-file/{dossier} : le dossier lui-meme.
-    Route::view('/my-file', 'web.find-my-file')->name('find-my-file');
-    Route::get('/my-file/{dossier}', StarterDossierController::class)->name('my-file');
+    // Espace client "mon projet" (le hub du dossier a tout stade), separe du parcours. Magic link.
+    // /my-project : saisie de l'email -> envoi du lien. /my-project/{dossier} : le projet lui-meme.
+    Route::view('/my-project', 'web.find-my-project')->name('find-my-project');
+    Route::get('/my-project/{dossier}', StarterProjectController::class)->name('my-project');
 });

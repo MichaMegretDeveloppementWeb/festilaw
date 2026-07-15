@@ -47,35 +47,39 @@ function activeStarterDossier(): Submission
     return $submission->fresh();
 }
 
-it('shows the my-file space with reference, renewal date and downloads', function () {
+it('shows the active my-project space with reference, renewal date and downloads', function () {
     $submission = activeStarterDossier();
 
-    get(route('my-file', ['locale' => 'en', 'dossier' => 'mydossier']))
+    get(route('my-project', ['locale' => 'en', 'dossier' => 'mydossier']))
         ->assertOk()
-        ->assertSee('Creator Pack')
+        ->assertSee('Active')
         ->assertSee($submission->reference)
         ->assertSee('Next renewal')
         ->assertSee(now()->addYear()->isoFormat('D MMMM YYYY'))
         ->assertSee('Your documents')
         ->assertSee('Signed Responsible Person mandate')
-        ->assertSee('Download');
+        ->assertSee('Download')
+        ->assertDontSee('Resume my project'); // rien a reprendre : c'est actif
 });
 
-it('sends a paid dossier from the journey to its my-file space', function () {
+it('sends a paid dossier from the journey to its my-project space', function () {
     activeStarterDossier();
 
     get(route('get-started.starter.journey', ['locale' => 'en', 'dossier' => 'mydossier']))
-        ->assertRedirect(route('my-file', ['locale' => 'en', 'dossier' => 'mydossier']));
+        ->assertRedirect(route('my-project', ['locale' => 'en', 'dossier' => 'mydossier']));
 });
 
-it('sends an unpaid dossier from my-file back to the journey', function () {
-    $submission = Submission::factory()->starter()->create([
+it('shows an in-progress project as a status page with a resume link, not a redirect', function () {
+    Submission::factory()->starter()->create([
         'status' => SubmissionStatus::AwaitingPayment,
-        'resume_token' => 'unpaid',
+        'resume_token' => 'inprogress',
     ]);
 
-    get(route('my-file', ['locale' => 'en', 'dossier' => 'unpaid']))
-        ->assertRedirect(route('get-started.starter.journey', ['locale' => 'en', 'dossier' => 'unpaid']));
+    get(route('my-project', ['locale' => 'en', 'dossier' => 'inprogress']))
+        ->assertOk()
+        ->assertSee('In progress')
+        ->assertSee('Resume my project')
+        ->assertSee(route('get-started.starter.journey', ['locale' => 'en', 'dossier' => 'inprogress']), false);
 });
 
 it('downloads the signed mandate for the dossier', function () {

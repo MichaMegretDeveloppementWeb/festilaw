@@ -82,27 +82,37 @@
 .journey-processing__spinner { flex: none; width: 22px; height: 22px; border-radius: 50%; border: 3px solid color-mix(in srgb, var(--color-coral) 25%, transparent); border-top-color: var(--color-coral); animation: journey-spin 0.8s linear infinite; }
 @keyframes journey-spin { to { transform: rotate(360deg); } }
 
-/* Espace client "mon dossier" : page dediee (sans aside), acces par magic link. */
-.my-file { padding: 56px 24px 80px; }
-.my-file__inner { max-width: 620px; margin: 0 auto; }
-.my-file__head { text-align: center; margin-bottom: 26px; }
-.my-file__title { font-family: var(--font-display); font-size: 34px; line-height: 1.1; color: var(--color-ink); margin: 8px 0 10px; }
-.my-file__title-em { color: var(--color-blue); }
-.my-file__intro { color: var(--color-ink-soft); font-size: 15px; max-width: 470px; margin: 0 auto; line-height: 1.5; }
-.my-file__card { position: relative; padding: 28px; border-radius: var(--radius); border: 1px solid var(--color-line); background: #fff; }
-.my-file__badge { position: absolute; top: 24px; right: 26px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: #fff; background: var(--color-coral); padding: 4px 11px; border-radius: 999px; }
-.my-file__meta { margin: 0 0 24px; padding: 0; }
-.my-file__meta-row { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 11px 0; border-bottom: 1px solid var(--color-line); }
-.my-file__meta-row:first-child { padding-top: 0; }
-.my-file__meta-row:last-child { border-bottom: none; padding-bottom: 0; }
-.my-file__meta dt { color: var(--color-ink-soft); font-size: 14px; }
-.my-file__meta dd { margin: 0; font-weight: 600; font-size: 14.5px; color: var(--color-ink); text-align: right; }
-.my-file__pending { font-weight: 500 !important; color: var(--color-ink-soft) !important; }
-.my-file__heading { font-size: 13px; letter-spacing: 1px; text-transform: uppercase; color: var(--color-ink-soft); margin: 0 0 12px; }
-.my-file__support { text-align: center; margin-top: 22px; color: var(--color-ink-soft); font-size: 14px; }
-.my-file__support a { color: var(--color-blue); }
+/* Espace client "mon projet" : hub du dossier (a tout stade), page dediee sans aside. */
+.my-project { padding: 56px 24px 80px; }
+.my-project__inner { max-width: 620px; margin: 0 auto; }
+.my-project__head { text-align: center; margin-bottom: 26px; }
+.my-project__title { font-family: var(--font-display); font-size: 34px; line-height: 1.1; color: var(--color-ink); margin: 8px 0 10px; }
+.my-project__title-em { color: var(--color-blue); }
+.my-project__intro { color: var(--color-ink-soft); font-size: 15px; max-width: 470px; margin: 0 auto; line-height: 1.5; }
+.my-project__card { padding: 26px 28px; border-radius: var(--radius); border: 1px solid var(--color-line); background: #fff; }
+.my-project__statusbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding-bottom: 18px; margin-bottom: 20px; border-bottom: 1px solid var(--color-line); }
+.my-project__badge { flex: none; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: #fff; padding: 4px 11px; border-radius: 999px; }
+.my-project__badge.is-active { background: var(--color-coral); }
+.my-project__badge.is-progress { background: var(--color-blue); }
+.my-project__badge.is-cancelled { background: var(--color-ink-soft); }
+.my-project__ref { font-size: 13.5px; color: var(--color-ink-soft); }
+.project-steps { list-style: none; margin: 0 0 22px; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.project-step { display: flex; align-items: center; gap: 12px; font-size: 15px; color: var(--color-ink-soft); }
+.project-step__mark { flex: none; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--color-line); display: flex; align-items: center; justify-content: center; color: #fff; }
+.project-step.is-done { color: var(--color-ink); font-weight: 600; }
+.project-step.is-done .project-step__mark { background: var(--color-coral); border-color: var(--color-coral); }
+.my-project__resume-text, .my-project__note { color: var(--color-ink-soft); font-size: 14.5px; margin: 0 0 14px; }
+.my-project__meta { margin: 0 0 22px; padding: 0; }
+.my-project__meta-row { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 11px 0; border-bottom: 1px solid var(--color-line); }
+.my-project__meta-row:last-child { border-bottom: none; padding-bottom: 0; }
+.my-project__meta dt { color: var(--color-ink-soft); font-size: 14px; }
+.my-project__meta dd { margin: 0; font-weight: 600; font-size: 14.5px; color: var(--color-ink); text-align: right; }
+.my-project__pending { font-weight: 500 !important; color: var(--color-ink-soft) !important; }
+.my-project__heading { font-size: 13px; letter-spacing: 1px; text-transform: uppercase; color: var(--color-ink-soft); margin: 18px 0 12px; }
+.my-project__support { text-align: center; margin-top: 22px; color: var(--color-ink-soft); font-size: 14px; }
+.my-project__support a { color: var(--color-blue); }
 
-/* Liste de fichiers a telecharger (mon dossier). */
+/* Liste de fichiers a telecharger (mon projet). */
 .dossier__files { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .dossier__file { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--radius-sm); border: 1px solid var(--color-line); background: var(--color-cream); }
 .dossier__file-icon { flex: none; color: var(--color-coral); }

@@ -23,7 +23,7 @@ final class StarterJourneyController extends Controller
         abort_unless($dossier->type === SubmissionType::Starter, 404);
 
         if (in_array($dossier->status, [SubmissionStatus::Paid, SubmissionStatus::Completed], true)) {
-            return redirect()->route('my-file', ['locale' => $locale, 'dossier' => $dossier->resume_token]);
+            return redirect()->route('my-project', ['locale' => $locale, 'dossier' => $dossier->resume_token]);
         }
 
         return view('web.get-started.journey', ['submission' => $dossier]);

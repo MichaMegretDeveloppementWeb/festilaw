@@ -119,13 +119,13 @@ it('walks the STARTER journey end-to-end through the UI and the fake dev routes'
 
     // The dev-pay route stands in for the provider webhook: payment succeeded -> paid, land on my file.
     get(route('get-started.starter.dev-pay', ['locale' => 'en', 'dossier' => $token]))
-        ->assertRedirect(route('my-file', ['locale' => 'en', 'dossier' => $token]));
+        ->assertRedirect(route('my-project', ['locale' => 'en', 'dossier' => $token]));
     expect($submission->fresh()->status)->toBe(SubmissionStatus::Paid);
 
     // The paid dossier now lives in its "my file" space (the journey redirects there).
     get(route('get-started.starter.journey', ['locale' => 'en', 'dossier' => $token]))
-        ->assertRedirect(route('my-file', ['locale' => 'en', 'dossier' => $token]));
-    get(route('my-file', ['locale' => 'en', 'dossier' => $token]))
+        ->assertRedirect(route('my-project', ['locale' => 'en', 'dossier' => $token]));
+    get(route('my-project', ['locale' => 'en', 'dossier' => $token]))
         ->assertOk()
         ->assertSee('Your documents');
 });
@@ -207,7 +207,7 @@ function dossierAwaitingStripePayment(): Submission
     return $submission->fresh();
 }
 
-it('auto-confirms the payment on return and redirects to the my-file space', function () {
+it('auto-confirms the payment on return and redirects to the my-project space', function () {
     config()->set('payment.enabled', ['stripe']);
     config()->set('payment.drivers.stripe', ['secret_key' => 'sk_test_x', 'webhook_secret' => 'whsec_x']);
     Http::fake(['*/v1/checkout/sessions/*' => Http::response(['id' => 'cs_1', 'payment_status' => 'paid'])]);
@@ -216,7 +216,7 @@ it('auto-confirms the payment on return and redirects to the my-file space', fun
 
     Livewire::test(StarterJourney::class, ['submission' => $submission])
         ->call('pollPayment')
-        ->assertRedirect(route('my-file', ['locale' => 'en', 'dossier' => $submission->resume_token]));
+        ->assertRedirect(route('my-project', ['locale' => 'en', 'dossier' => $submission->resume_token]));
 
     expect($submission->fresh()->status)->toBe(SubmissionStatus::Paid);
 });

@@ -35,7 +35,7 @@ final class StarterResumeLink extends Mailable
         return new Content(
             view: 'emails.starter-resume-link',
             with: [
-                'resumeUrl' => route($this->isActive() ? 'my-file' : 'get-started.starter.journey', [
+                'resumeUrl' => route('my-project', [
                     'locale' => $this->submission->locale ?: config('app.locale'),
                     'dossier' => $this->submission->resume_token,
                 ]),

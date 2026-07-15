@@ -321,9 +321,9 @@ class StarterJourney extends Component
             Log::error('STARTER payment poll failed.', ['exception' => $e]);
         }
 
-        // Paiement confirme : on quitte le parcours pour l'espace client "mon dossier".
+        // Paiement confirme : on quitte le parcours pour l'espace client "mon projet".
         if ($this->step() === 'done') {
-            return $this->redirect(route('my-file', [
+            return $this->redirect(route('my-project', [
                 'locale' => app()->getLocale(),
                 'dossier' => $this->submission->resume_token,
             ]));
