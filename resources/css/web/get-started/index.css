@@ -1,27 +1,36 @@
-/* Tunnel de souscription : en-tete partage + hub de choix + coquille de formulaire. */
+/* Tunnel de souscription : en-tete partage + entree de parcours + coquille de formulaire. */
 @import '../sections/page-hero.css';
 @import '../sections/funnel.css';
 
-/* Hub : 3 cartes de parcours. */
-.paths { background: var(--color-cream); padding: var(--section-y) var(--gutter); }
-.paths__grid { max-width: var(--max-width); margin: 0 auto; display: grid; grid-template-columns: 1fr; gap: 22px; }
-.path-card {
-    display: flex; flex-direction: column;
-    background: var(--color-card); border: 1px solid var(--color-line);
-    border-radius: var(--radius-lg); padding: clamp(28px, 4vw, 40px);
-}
-.path-card--featured { background: var(--color-blue); border-color: var(--color-blue); }
-.path-card__badge { align-self: flex-start; background: var(--color-coral); color: #3a1210; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; padding: 5px 13px; border-radius: var(--radius-pill); margin-bottom: 16px; }
-.path-card__name { font-size: 22px; color: var(--color-blue); margin-bottom: 6px; }
-.path-card__price { font-family: var(--font-display); font-size: 34px; color: var(--color-coral); line-height: 1; margin-bottom: 4px; }
-.path-card__period { font-size: 13.5px; color: var(--color-ink-soft); margin-bottom: 16px; }
-.path-card__desc { font-size: 15px; line-height: 1.6; color: var(--color-ink-soft); margin-bottom: 24px; }
-.path-card__cta { margin-top: auto; align-self: flex-start; }
-.path-card--featured .path-card__name { color: var(--color-cream); }
-.path-card--featured .path-card__price { color: var(--color-salmon); }
-.path-card--featured .path-card__period,
-.path-card--featured .path-card__desc { color: var(--color-on-blue); }
+/* Entree de parcours : "comment ca marche" + choix du plan sous forme de chemins a demarrer.
+   Volontairement DISTINCT de la grille de prix de /pricing (on ne doit pas confondre les deux). */
+.start { background: var(--color-cream); padding: var(--section-y) var(--gutter) calc(var(--section-y) + 12px); }
+.start__inner { max-width: 720px; margin: 0 auto; }
 
-@media (min-width: 760px) {
-    .paths__grid { grid-template-columns: repeat(3, 1fr); align-items: stretch; }
+/* Les 3 etapes du parcours. */
+.start-steps { list-style: none; margin: 0 0 40px; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.start-step { display: flex; align-items: center; gap: 14px; }
+.start-step__num { flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--color-blue); color: #fff; font-weight: 700; font-size: 15px; display: flex; align-items: center; justify-content: center; }
+.start-step__label { font-size: 15.5px; font-weight: 600; color: var(--color-ink); }
+
+/* Les plans comme des "chemins" a demarrer : rangees larges, orientees action. */
+.start-heading { font-size: 13px; letter-spacing: 1px; text-transform: uppercase; color: var(--color-ink-soft); margin: 0 0 14px; }
+.start-paths { display: flex; flex-direction: column; gap: 14px; }
+.start-path { position: relative; display: flex; align-items: center; gap: 20px; padding: 22px 24px; background: var(--color-card); border: 1px solid var(--color-line); border-radius: var(--radius-lg); text-decoration: none; transition: border-color 0.15s ease, transform 0.15s ease; }
+.start-path:hover { border-color: var(--color-coral); transform: translateY(-1px); }
+.start-path--featured { border-color: var(--color-blue); box-shadow: inset 0 0 0 1px var(--color-blue); }
+.start-path__badge { position: absolute; top: -10px; left: 24px; background: var(--color-coral); color: #3a1210; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; padding: 4px 11px; border-radius: var(--radius-pill); }
+.start-path__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.start-path__name { font-size: 19px; font-weight: 700; color: var(--color-blue); }
+.start-path__who { font-size: 14px; color: var(--color-ink-soft); }
+.start-path__price { flex: none; font-family: var(--font-display); font-size: 26px; color: var(--color-coral); line-height: 1; white-space: nowrap; }
+.start-path__per { font-size: 13px; color: var(--color-ink-soft); }
+.start-path__go { flex: none; display: inline-flex; align-items: center; gap: 7px; font-size: 14.5px; font-weight: 700; color: var(--color-ink); }
+.start-path__go svg { transition: transform 0.15s ease; }
+.start-path:hover .start-path__go svg { transform: translateX(3px); }
+.start__reassure { text-align: center; margin-top: 26px; color: var(--color-ink-soft); font-size: 14px; }
+
+@media (max-width: 620px) {
+    .start-path { flex-wrap: wrap; gap: 8px 18px; }
+    .start-path__body { flex-basis: 100%; }
 }

@@ -9,40 +9,70 @@
 @endpush
 
 @section('content')
-    <section class="page-hero">
+    <section class="page-hero page-hero--tight">
         <div class="page-hero__inner">
             <span class="eyebrow page-hero__eyebrow">{{ __('Get started') }}</span>
             <h1 class="page-hero__title">{!! __('Choose your :path', ['path' => '<span class="page-hero__title-em">'.e(__('path')).'</span>']) !!}</h1>
-            <p class="page-hero__lead">{{ __('Pick the plan that fits your catalogue. Not sure yet? Take the 30-second eligibility check on the home page or get in touch.') }}</p>
+            <p class="page-hero__lead">{{ __('Pick where you fit and start now. Your EU Responsible Person is three simple steps away.') }}</p>
         </div>
     </section>
 
-    <section class="paths">
-        <div class="paths__grid">
-            <article class="path-card">
-                <h2 class="path-card__name">{{ __('Creator Pack') }}</h2>
-                <div class="path-card__price">{{ __('€333') }}</div>
-                <div class="path-card__period">{{ __('per year · up to 9 products') }}</div>
-                <p class="path-card__desc">{{ __('Sign your mandate online, upload your documents, and get your official EU Responsible Person address within 24 hours.') }}</p>
-                <a href="{{ route('get-started.starter') }}" class="btn btn--outline-dark path-card__cta">{{ __('Choose Creator') }}</a>
-            </article>
+    <section class="start">
+        <div class="start__inner">
+            {{-- Le parcours en 3 etapes : on signale d'emblee qu'on demarre un process. --}}
+            <ol class="start-steps">
+                <li class="start-step">
+                    <span class="start-step__num">1</span>
+                    <span class="start-step__label">{{ __('Choose your plan') }}</span>
+                </li>
+                <li class="start-step">
+                    <span class="start-step__num">2</span>
+                    <span class="start-step__label">{{ __('Sign your mandate & upload your documents') }}</span>
+                </li>
+                <li class="start-step">
+                    <span class="start-step__num">3</span>
+                    <span class="start-step__label">{{ __('Get your EU Responsible Person within 24 h') }}</span>
+                </li>
+            </ol>
 
-            <article class="path-card path-card--featured">
-                <span class="path-card__badge">{{ __('Most popular') }}</span>
-                <h2 class="path-card__name">{{ __('Pro Pack') }}</h2>
-                <div class="path-card__price">{{ __('€1,200') }}</div>
-                <div class="path-card__period">{{ __('per year · 10 to 100 products') }}</div>
-                <p class="path-card__desc">{{ __('A dedicated setup for growing brands. Tell us about your catalogue and we\'ll guide you personally.') }}</p>
-                <a href="{{ route('get-started.pro') }}" class="btn btn--coral path-card__cta">{{ __('Choose Pro') }}</a>
-            </article>
+            <h2 class="start-heading">{{ __('Pick your starting point') }}</h2>
+            <div class="start-paths">
+                <a href="{{ route('get-started.starter') }}" class="start-path">
+                    <span class="start-path__body">
+                        <span class="start-path__name">{{ __('Creator Pack') }}</span>
+                        <span class="start-path__who">{{ __('Small creators · up to 9 products') }}</span>
+                    </span>
+                    <span class="start-path__price">€333<span class="start-path__per">/{{ __('year') }}</span></span>
+                    <span class="start-path__go">{{ __('Start') }}
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                    </span>
+                </a>
 
-            <article class="path-card">
-                <h2 class="path-card__name">{{ __('Scale Pack') }}</h2>
-                <div class="path-card__price">{{ __('Custom') }}</div>
-                <div class="path-card__period">{{ __('100+ products · with full audit') }}</div>
-                <p class="path-card__desc">{{ __('Start with a paid compliance audit (deducted from your final contract), then book a consultation with our experts.') }}</p>
-                <a href="{{ route('get-started.scale') }}" class="btn btn--outline-dark path-card__cta">{{ __('Start with an audit') }}</a>
-            </article>
+                <a href="{{ route('get-started.pro') }}" class="start-path start-path--featured">
+                    <span class="start-path__badge">{{ __('Most popular') }}</span>
+                    <span class="start-path__body">
+                        <span class="start-path__name">{{ __('Pro Pack') }}</span>
+                        <span class="start-path__who">{{ __('Growing brands · 10 to 100 products') }}</span>
+                    </span>
+                    <span class="start-path__price">€1,200<span class="start-path__per">/{{ __('year') }}</span></span>
+                    <span class="start-path__go">{{ __('Start') }}
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                    </span>
+                </a>
+
+                <a href="{{ route('get-started.scale') }}" class="start-path">
+                    <span class="start-path__body">
+                        <span class="start-path__name">{{ __('Scale Pack') }}</span>
+                        <span class="start-path__who">{{ __('100+ products · starts with a full audit') }}</span>
+                    </span>
+                    <span class="start-path__price">{{ __('Custom') }}</span>
+                    <span class="start-path__go">{{ __('Start') }}
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                    </span>
+                </a>
+            </div>
+
+            <p class="start__reassure">{{ __('No account needed · secure payment · GDPR-compliant.') }}</p>
         </div>
     </section>
 @endsection
