@@ -5,7 +5,11 @@
                 <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><polyline points="22 6 12 13 2 6"/></svg>
             </div>
             <h3 class="funnel-success__title">Check your inbox</h3>
-            <p class="funnel-success__text">You already have an application in progress. We've just emailed your secure link to <strong>{{ $email }}</strong> so you can pick up right where you left off.</p>
+            @if ($resentActive)
+                <p class="funnel-success__text">You already have an active Creator Pack subscription. We've emailed your secure link to <strong>{{ $email }}</strong> to view your file and download your documents.</p>
+            @else
+                <p class="funnel-success__text">You already have an application in progress. We've just emailed your secure link to <strong>{{ $email }}</strong> so you can pick up right where you left off.</p>
+            @endif
             <a href="{{ route('home') }}" class="btn btn--outline-dark btn--sm">Back to home</a>
         </div>
     @elseif ($sent)

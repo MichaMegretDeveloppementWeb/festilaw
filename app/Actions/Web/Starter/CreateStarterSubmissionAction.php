@@ -34,6 +34,12 @@ final readonly class CreateStarterSubmissionAction
         SubmissionStatus::AwaitingPayment,
     ];
 
+    /** Statuts d'une souscription active (deja payee). */
+    private const ACTIVE_STATUSES = [
+        SubmissionStatus::Paid,
+        SubmissionStatus::Completed,
+    ];
+
     public function __construct(
         private TeamNotifier $teamNotifier,
         private SendStarterResumeLinkAction $sendResumeLink,
@@ -42,10 +48,19 @@ final readonly class CreateStarterSubmissionAction
     /** @param  StarterData  $data */
     public function execute(array $data): StarterSubmissionOutcome
     {
-        $existing = $this->existingOpenDossier($data['email']);
+        // 1. Deja client actif (souscription payee) : on le renvoie vers SON dossier, jamais vers une
+        // nouvelle demarche ni un ancien dossier inacheve.
+        $active = $this->latestDossierIn($data['email'], self::ACTIVE_STATUSES);
+        if ($active !== null) {
+            $this->sendResumeLink->execute($active);
+
+            return new StarterSubmissionOutcome($active, isNew: false, isActive: true);
+        }
+
+        // 2. Dossier en cours : on renvoie le lien pour reprendre le plus avance, sans creer de doublon
+        // et sans faire entrer directement (le token vaut acces).
+        $existing = $this->latestOpenDossier($data['email']);
         if ($existing !== null) {
-            // Meme email, dossier deja en cours : on renvoie le lien de reprise, sans creer de doublon
-            // et sans faire entrer directement (le token vaut acces).
             $this->sendResumeLink->execute($existing);
 
             return new StarterSubmissionOutcome($existing, isNew: false);
@@ -85,14 +100,28 @@ final readonly class CreateStarterSubmissionAction
         return new StarterSubmissionOutcome($submission, isNew: true);
     }
 
-    /** The visitor's still-resumable, unfinished STARTER dossier for this email, if any. */
-    private function existingOpenDossier(string $email): ?Submission
+    /** The visitor's latest still-resumable STARTER dossier for this email in the given statuses. */
+    private function latestDossierIn(string $email, array $statuses): ?Submission
+    {
+        return Submission::query()
+            ->where('type', SubmissionType::Starter)
+            ->where('email', $email)
+            ->whereIn('status', $statuses)
+            ->resumable()
+            ->latest()
+            ->first();
+    }
+
+    /** The visitor's unfinished dossier for this email, most advanced first (closest to done). */
+    private function latestOpenDossier(string $email): ?Submission
     {
         return Submission::query()
             ->where('type', SubmissionType::Starter)
             ->where('email', $email)
             ->whereIn('status', self::OPEN_STATUSES)
             ->resumable()
+            // Le plus avance d'abord (portable SQLite + MySQL, contrairement a FIELD()).
+            ->orderByRaw("CASE status WHEN 'awaiting_payment' THEN 0 WHEN 'awaiting_documents' THEN 1 ELSE 2 END")
             ->latest()
             ->first();
     }

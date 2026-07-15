@@ -413,7 +413,7 @@ class StarterJourney extends Component
 
     public function render(): View
     {
-        $this->submission->loadMissing('contract');
+        $this->submission->loadMissing(['contract', 'uploadedDocuments']);
 
         return view('livewire.web.funnel.starter-journey', [
             'step' => $this->step(),
@@ -425,6 +425,9 @@ class StarterJourney extends Component
             'deposits' => $this->stagedDocuments(),
             'acceptAttr' => '.'.implode(',.', $this->documentMimes()),
             'amountCents' => (int) config('festilaw.starter.amount_cents'),
+            // Espace "mon dossier" (etape terminee).
+            'mandateAvailable' => (string) ($this->submission->contract?->signed_file_path ?? '') !== '',
+            'dossierDocuments' => $this->submission->uploadedDocuments,
         ]);
     }
 }

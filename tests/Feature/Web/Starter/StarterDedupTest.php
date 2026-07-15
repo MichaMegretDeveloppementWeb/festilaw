@@ -45,16 +45,22 @@ it('does not open a second dossier for the same email and re-sends the link inst
     Mail::assertSent(StarterResumeLink::class, fn (StarterResumeLink $m) => $m->hasTo('maya@example.com'));
 });
 
-it('allows a new dossier when the previous one for this email is already finished', function () {
+it('directs an already-active customer to their file instead of a new dossier', function () {
     Submission::factory()->starter()->create([
         'email' => 'maya@example.com',
         'status' => SubmissionStatus::Paid,
-        'resume_expires_at' => now()->addDays(30),
+        'resume_expires_at' => null,
     ]);
 
-    submitStarterForm('maya@example.com')->assertHasNoErrors();
+    submitStarterForm('maya@example.com')
+        ->assertHasNoErrors()
+        ->assertSet('resent', true)
+        ->assertSet('resentActive', true)
+        ->assertNoRedirect();
 
-    expect(Submission::where('type', SubmissionType::Starter)->count())->toBe(2);
+    // Aucun nouveau dossier : on renvoie le lien de son dossier actif.
+    expect(Submission::where('type', SubmissionType::Starter)->count())->toBe(1);
+    Mail::assertSent(StarterResumeLink::class, fn (StarterResumeLink $m) => $m->hasTo('maya@example.com'));
 });
 
 it('allows a new dossier when the open one for this email has expired', function () {

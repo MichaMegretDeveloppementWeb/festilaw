@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Mail;
 
+use App\Enums\Submission\SubmissionStatus;
 use App\Models\Submission;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -24,7 +25,9 @@ final class StarterResumeLink extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Continue your Festilaw application');
+        return new Envelope(subject: $this->isActive()
+            ? 'Your Festilaw Creator Pack'
+            : 'Continue your Festilaw application');
     }
 
     public function content(): Content
@@ -37,7 +40,14 @@ final class StarterResumeLink extends Mailable
                     'dossier' => $this->submission->resume_token,
                 ]),
                 'ttlDays' => (int) config('festilaw.starter.resume_ttl_days', 30),
+                'isActive' => $this->isActive(),
             ],
         );
+    }
+
+    /** The dossier is an already-active (paid) subscription rather than an unfinished application. */
+    private function isActive(): bool
+    {
+        return in_array($this->submission->status, [SubmissionStatus::Paid, SubmissionStatus::Completed], true);
     }
 }

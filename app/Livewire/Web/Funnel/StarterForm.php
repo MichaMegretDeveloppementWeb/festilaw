@@ -31,8 +31,11 @@ class StarterForm extends Component
 
     public bool $sent = false;
 
-    /** True when the email already had an open dossier : we re-sent the resume link instead. */
+    /** True when the email already had a dossier (open or active) : we re-sent its link instead. */
     public bool $resent = false;
+
+    /** True when that existing dossier is an already-active (paid) subscription. */
+    public bool $resentActive = false;
 
     /** @return array<string, array<int, string>> */
     protected function rules(): array
@@ -93,10 +96,11 @@ class StarterForm extends Component
             return;
         }
 
-        // Un dossier existait deja pour cet email : on a renvoye le lien de reprise par email. On ne
-        // redirige pas dans le dossier (le token vaut acces : un simple email ne doit pas y donner acces).
+        // Un dossier existait deja pour cet email : on a renvoye son lien par email. On ne redirige pas
+        // dans le dossier (le token vaut acces : un simple email ne doit pas y donner acces).
         if (! $outcome->isNew) {
             $this->resent = true;
+            $this->resentActive = $outcome->isActive;
 
             return;
         }

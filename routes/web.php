@@ -10,7 +10,9 @@ use App\Http\Controllers\Web\Funnel\ScaleController;
 use App\Http\Controllers\Web\Funnel\StarterController;
 use App\Http\Controllers\Web\Funnel\StarterDevPayController;
 use App\Http\Controllers\Web\Funnel\StarterDevSignController;
+use App\Http\Controllers\Web\Funnel\StarterDocumentDownloadController;
 use App\Http\Controllers\Web\Funnel\StarterJourneyController;
+use App\Http\Controllers\Web\Funnel\StarterMandateDownloadController;
 use App\Http\Controllers\Web\Home\HomeController;
 use App\Http\Controllers\Web\Pricing\PricingController;
 use App\Http\Controllers\Web\Services\ServicesController;
@@ -66,6 +68,10 @@ Route::prefix('{locale}')->middleware('setlocale')->group(function () {
         // Parcours STARTER : page d'ouverture, puis dossier resumable via son token ({dossier}).
         Route::get('/starter', StarterController::class)->name('starter');
         Route::get('/starter/{dossier}', StarterJourneyController::class)->name('starter.journey');
+
+        // Espace "mon dossier" : telechargement du mandat signe et des documents (portes par le token).
+        Route::get('/starter/{dossier}/mandate', StarterMandateDownloadController::class)->name('starter.mandate');
+        Route::get('/starter/{dossier}/document/{document}', StarterDocumentDownloadController::class)->name('starter.document');
 
         // Completion des providers Fake (dev/local uniquement, bloquee en production) : ces routes
         // rejouent ce que ferait le webhook du vrai provider, puis renvoient au dossier.

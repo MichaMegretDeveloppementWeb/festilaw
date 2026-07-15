@@ -43,7 +43,11 @@ final readonly class MarkPaymentSucceededAction
                 return false;
             }
 
-            $payment->submission()->update(['status' => SubmissionStatus::Paid]);
+            // Le dossier devient l'espace "mon dossier" du client : son lien de reprise ne doit plus expirer.
+            $payment->submission()->update([
+                'status' => SubmissionStatus::Paid,
+                'resume_expires_at' => null,
+            ]);
 
             return true;
         });
