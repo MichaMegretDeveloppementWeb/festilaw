@@ -35,10 +35,10 @@ trait HasFunnelContactFields
     protected function messages(): array
     {
         return [
-            'company_name.required' => 'Please tell us your company name.',
-            'email.required' => 'We need your email to continue.',
-            'email.email' => 'This email address looks invalid.',
-            'website_url.url' => 'Please enter a valid URL (including https://).',
+            'company_name.required' => __('Please tell us your company name.'),
+            'email.required' => __('We need your email to continue.'),
+            'email.email' => __('This email address looks invalid.'),
+            'website_url.url' => __('Please enter a valid URL (including https://).'),
         ];
     }
 

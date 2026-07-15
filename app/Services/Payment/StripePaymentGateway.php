@@ -37,7 +37,7 @@ final class StripePaymentGateway implements PaymentGatewayInterface
 
     public function label(): string
     {
-        return 'Card';
+        return __('Card');
     }
 
     public function createCheckout(Payment $payment): CheckoutSessionData

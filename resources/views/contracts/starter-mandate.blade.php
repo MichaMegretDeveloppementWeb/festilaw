@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ app()->getLocale() }}">
 <head>
     <meta charset="utf-8">
     <style>
@@ -20,58 +20,51 @@
     </style>
 </head>
 <body>
-    <div class="eyebrow">Festilaw &middot; GPSR Responsible Person</div>
-    <h1>Mandate — EU Responsible Person (GPSR)</h1>
-    <div class="meta">Reference: {{ $submission->reference }} &middot; Date: {{ $date }}</div>
+    <div class="eyebrow">{{ __('Festilaw · GPSR Responsible Person') }}</div>
+    <h1>{{ __('Mandate · EU Responsible Person (GPSR)') }}</h1>
+    <div class="meta">{{ __('Reference') }}: {{ $submission->reference }} · {{ __('Date') }}: {{ $date }}</div>
 
     <p class="clause">
-        This mandate is entered into between <strong>Festilaw</strong> (the "Responsible Person") and the
-        undersigned economic operator (the "Manufacturer"), for the purposes of Regulation (EU) 2023/988
-        on general product safety (GPSR).
+        {!! __('This mandate is entered into between :festilaw (the "Responsible Person") and the undersigned economic operator (the "Manufacturer"), for the purposes of Regulation (EU) 2023/988 on general product safety (GPSR).', ['festilaw' => '<strong>Festilaw</strong>']) !!}
     </p>
 
-    <h2>The Manufacturer</h2>
+    <h2>{{ __('The Manufacturer') }}</h2>
     <table class="party">
-        <tr><td class="label">Company</td><td><strong>{{ $submission->company_name ?: '—' }}</strong></td></tr>
-        <tr><td class="label">Registration number</td><td>{{ $submission->company_registration_number ?: '—' }}</td></tr>
-        <tr><td class="label">Represented by</td><td>{{ trim(($submission->first_name ?? '').' '.($submission->last_name ?? '')) ?: '—' }}</td></tr>
-        <tr><td class="label">Email</td><td>{{ $submission->email }}</td></tr>
-        <tr><td class="label">Store / website</td><td>{{ $submission->website_url ?: '—' }}</td></tr>
+        <tr><td class="label">{{ __('Company') }}</td><td><strong>{{ $submission->company_name ?: '-' }}</strong></td></tr>
+        <tr><td class="label">{{ __('Registration number') }}</td><td>{{ $submission->company_registration_number ?: '-' }}</td></tr>
+        <tr><td class="label">{{ __('Represented by') }}</td><td>{{ trim(($submission->first_name ?? '').' '.($submission->last_name ?? '')) ?: '-' }}</td></tr>
+        <tr><td class="label">{{ __('Email') }}</td><td>{{ $submission->email }}</td></tr>
+        <tr><td class="label">{{ __('Store / website') }}</td><td>{{ $submission->website_url ?: '-' }}</td></tr>
     </table>
 
-    <h2>1. Purpose</h2>
+    <h2>{{ __('1. Purpose') }}</h2>
     <p class="clause">
-        The Manufacturer appoints Festilaw as its EU Responsible Person under Article 16 GPSR. Festilaw agrees
-        to act as the point of contact within the European Union for the products placed on the market by the
-        Manufacturer.
+        {{ __('The Manufacturer appoints Festilaw as its EU Responsible Person under Article 16 GPSR. Festilaw agrees to act as the point of contact within the European Union for the products placed on the market by the Manufacturer.') }}
     </p>
 
-    <h2>2. Duties of the Responsible Person</h2>
+    <h2>{{ __('2. Duties of the Responsible Person') }}</h2>
     <p class="clause">
-        Festilaw shall keep the declaration of conformity and technical documentation at the disposal of market
-        surveillance authorities, cooperate with those authorities, and inform them of any product presenting a risk.
+        {{ __('Festilaw shall keep the declaration of conformity and technical documentation at the disposal of market surveillance authorities, cooperate with those authorities, and inform them of any product presenting a risk.') }}
     </p>
 
-    <h2>3. Duties of the Manufacturer</h2>
+    <h2>{{ __('3. Duties of the Manufacturer') }}</h2>
     <p class="clause">
-        The Manufacturer shall provide accurate product information and documentation, keep it up to date, and
-        display Festilaw's contact details on the products or their packaging as required by the GPSR.
+        {{ __('The Manufacturer shall provide accurate product information and documentation, keep it up to date, and display Festilaw\'s contact details on the products or their packaging as required by the GPSR.') }}
     </p>
 
-    <h2>4. Term</h2>
+    <h2>{{ __('4. Term') }}</h2>
     <p class="clause">
-        This mandate takes effect on the date of signature and remains valid for the subscription period, renewable
-        by agreement between the parties.
+        {{ __('This mandate takes effect on the date of signature and remains valid for the subscription period, renewable by agreement between the parties.') }}
     </p>
 
     <div class="sign-zone">
-        <p><strong>Signed by the Manufacturer</strong></p>
+        <p><strong>{{ __('Signed by the Manufacturer') }}</strong></p>
         <table class="party">
-            <tr><td class="label">Name</td><td>{{ trim(($submission->first_name ?? '').' '.($submission->last_name ?? '')) ?: $submission->company_name }}</td></tr>
-            <tr><td class="label">Date</td><td>{{ $date }}</td></tr>
+            <tr><td class="label">{{ __('Name') }}</td><td>{{ trim(($submission->first_name ?? '').' '.($submission->last_name ?? '')) ?: $submission->company_name }}</td></tr>
+            <tr><td class="label">{{ __('Date') }}</td><td>{{ $date }}</td></tr>
         </table>
-        <p class="sign-line muted">The Manufacturer's electronic signature is captured on the signature page that follows, then bound to this document.</p>
-        <p class="muted">Electronic signature via Festilaw's signing partner. This document is sealed on completion; any alteration invalidates the seal.</p>
+        <p class="sign-line muted">{{ __('The Manufacturer\'s electronic signature is captured on the signature page that follows, then bound to this document.') }}</p>
+        <p class="muted">{{ __('Electronic signature via Festilaw\'s signing partner. This document is sealed on completion; any alteration invalidates the seal.') }}</p>
     </div>
 </body>
 </html>

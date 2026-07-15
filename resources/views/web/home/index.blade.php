@@ -1,7 +1,7 @@
 @extends('layouts.web')
 
-@section('title', 'Festilaw · Your GPSR Responsible Person')
-@section('meta_description', 'Sell safely in the European market. Festilaw is your GPSR Responsible Person, with dedicated support from entrepreneurs for entrepreneurs.')
+@section('title', __('Festilaw · Your GPSR Responsible Person'))
+@section('meta_description', __('Sell safely in the European market. Festilaw is your GPSR Responsible Person, with dedicated support from entrepreneurs for entrepreneurs.'))
 
 @push('styles')
     @vite('resources/css/web/home/index.css')

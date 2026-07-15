@@ -26,7 +26,7 @@ trait HasSpamProtection
         $throttleKey = $key.':'.request()->ip();
 
         if (RateLimiter::tooManyAttempts($throttleKey, $maxAttempts)) {
-            $this->addError('form', 'Too many attempts. Please wait a minute and try again.');
+            $this->addError('form', __('Too many attempts. Please wait a minute and try again.'));
 
             return true;
         }

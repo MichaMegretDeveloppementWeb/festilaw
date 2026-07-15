@@ -1,6 +1,6 @@
 @props(['items' => []])
 {{-- items : [['name' => 'Home', 'url' => '...'], ...]. Le dernier element = page courante. --}}
-<nav class="breadcrumb" aria-label="Breadcrumb">
+<nav class="breadcrumb" aria-label="{{ __('Breadcrumb') }}">
     <ol class="breadcrumb__list">
         @foreach ($items as $item)
             <li class="breadcrumb__item">

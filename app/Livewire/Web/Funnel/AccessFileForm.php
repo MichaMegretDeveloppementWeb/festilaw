@@ -38,8 +38,8 @@ class AccessFileForm extends Component
     protected function messages(): array
     {
         return [
-            'email.required' => 'Please enter your email address.',
-            'email.email' => 'This email address looks invalid.',
+            'email.required' => __('Please enter your email address.'),
+            'email.email' => __('This email address looks invalid.'),
         ];
     }
 

@@ -94,11 +94,11 @@ class StarterJourney extends Component
     {
         try {
             if (! $this->tryConfirmSignature($signatureGateway, $markContractSigned) && $this->step() === 'sign') {
-                $this->addError('journey', 'Your signature has not been recorded yet. If you have just signed, wait a few seconds and check again.');
+                $this->addError('journey', __('Your signature has not been recorded yet. If you have just signed, wait a few seconds and check again.'));
             }
         } catch (BaseAppException $e) {
             Log::error($e->getMessage(), ['exception' => $e]);
-            $this->addError('journey', $e->getUserMessage());
+            $this->addError('journey', __($e->getUserMessage()));
         } catch (Throwable $e) {
             $this->reportUnexpectedError($e, 'journey', 'STARTER signature confirmation');
         }
@@ -168,7 +168,7 @@ class StarterJourney extends Component
             $session = $startContractSigning->execute($this->submission);
         } catch (BaseAppException $e) {
             Log::error($e->getMessage(), ['exception' => $e]);
-            $this->addError('journey', $e->getUserMessage());
+            $this->addError('journey', __($e->getUserMessage()));
 
             return null;
         } catch (Throwable $e) {
@@ -220,7 +220,7 @@ class StarterJourney extends Component
         $hasMissing = false;
         foreach ($required as $t) {
             if (! isset($deposited[$t->value])) {
-                $this->addError("documents.{$t->value}", 'This document is required.');
+                $this->addError("documents.{$t->value}", __('This document is required.'));
                 $hasMissing = true;
             }
         }
@@ -234,8 +234,8 @@ class StarterJourney extends Component
         $messages = [];
         foreach ($required as $t) {
             $rules["documents.{$t->value}"] = ['required', 'file', "mimes:{$mimes}", 'max:10240'];
-            $messages["documents.{$t->value}.mimes"] = 'Accepted formats: PDF, JPG, PNG or WEBP.';
-            $messages["documents.{$t->value}.max"] = 'This file is too large (10 MB maximum).';
+            $messages["documents.{$t->value}.mimes"] = __('Accepted formats: PDF, JPG, PNG or WEBP.');
+            $messages["documents.{$t->value}.max"] = __('This file is too large (10 MB maximum).');
         }
         $this->validate($rules, $messages);
 
@@ -243,7 +243,7 @@ class StarterJourney extends Component
             $submitStarterDocuments->execute($this->submission, $deposited);
         } catch (BaseAppException $e) {
             Log::error($e->getMessage(), ['exception' => $e]);
-            $this->addError('documents_submit', $e->getUserMessage());
+            $this->addError('documents_submit', __($e->getUserMessage()));
 
             return;
         } catch (Throwable $e) {
@@ -273,7 +273,7 @@ class StarterJourney extends Component
             $checkout = $startStarterPayment->execute($this->submission, $this->paymentProvider);
         } catch (BaseAppException $e) {
             Log::error($e->getMessage(), ['exception' => $e]);
-            $this->addError('journey', $e->getUserMessage());
+            $this->addError('journey', __($e->getUserMessage()));
 
             return null;
         } catch (Throwable $e) {

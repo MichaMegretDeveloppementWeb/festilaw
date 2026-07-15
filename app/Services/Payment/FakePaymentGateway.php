@@ -27,7 +27,7 @@ final class FakePaymentGateway implements PaymentGatewayInterface
 
     public function label(): string
     {
-        return 'Test payment (dev)';
+        return __('Test payment (dev)');
     }
 
     public function createCheckout(Payment $payment): CheckoutSessionData

@@ -27,7 +27,7 @@ final class FunnelNotification extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: $this->reason->subject().' — '.($this->submission->company_name ?? $this->submission->email),
+            subject: $this->reason->subject().' · '.($this->submission->company_name ?? $this->submission->email),
         );
     }
 

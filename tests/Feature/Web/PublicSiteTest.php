@@ -14,7 +14,7 @@ dataset('indexable_pages', [
     'understand-gpsr' => ['understand-gpsr', 'Understanding the'],
     'services' => ['services', 'GPSR service'],
     'pricing' => ['pricing', 'no surprises'],
-    'excluded-products' => ['excluded-products', "don't cover"],
+    'excluded-products' => ['excluded-products', 'Products we'],
     'contact' => ['contact', 'compliance'],
 ]);
 

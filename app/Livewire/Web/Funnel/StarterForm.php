@@ -54,11 +54,11 @@ class StarterForm extends Component
     protected function messages(): array
     {
         return [
-            'company_name.required' => 'Please tell us your company name.',
-            'first_name.required' => 'Please tell us your first name.',
-            'email.required' => 'We need your email to continue.',
-            'email.email' => 'This email address looks invalid.',
-            'website_url.url' => 'Please enter a valid URL (including https://).',
+            'company_name.required' => __('Please tell us your company name.'),
+            'first_name.required' => __('Please tell us your first name.'),
+            'email.required' => __('We need your email to continue.'),
+            'email.email' => __('This email address looks invalid.'),
+            'website_url.url' => __('Please enter a valid URL (including https://).'),
         ];
     }
 
@@ -87,7 +87,7 @@ class StarterForm extends Component
             ]);
         } catch (BaseAppException $e) {
             Log::error($e->getMessage(), ['exception' => $e]);
-            $this->addError('form', $e->getUserMessage());
+            $this->addError('form', __($e->getUserMessage()));
 
             return;
         } catch (Throwable $e) {

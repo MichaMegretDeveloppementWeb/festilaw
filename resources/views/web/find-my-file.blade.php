@@ -1,6 +1,6 @@
 @extends('layouts.web')
 
-@section('title', 'Access my file · Festilaw')
+@section('title', __('Access my file · Festilaw'))
 @section('robots', 'noindex, nofollow')
 
 @push('styles')
@@ -11,9 +11,9 @@
     <section class="my-file">
         <div class="my-file__inner">
             <header class="my-file__head">
-                <span class="eyebrow">Your file</span>
-                <h1 class="my-file__title">Access <span class="my-file__title-em">my file</span></h1>
-                <p class="my-file__intro">Enter your email and we'll send you a secure link to your Festilaw file · no account, no password.</p>
+                <span class="eyebrow">{{ __('Your file') }}</span>
+                <h1 class="my-file__title">{!! __('Access :file', ['file' => '<span class="my-file__title-em">'.e(__('my file')).'</span>']) !!}</h1>
+                <p class="my-file__intro">{{ __('Enter your email and we\'ll send you a secure link to your Festilaw file · no account, no password.') }}</p>
             </header>
 
             <div class="my-file__card">

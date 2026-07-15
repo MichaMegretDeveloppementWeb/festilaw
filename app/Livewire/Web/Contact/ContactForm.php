@@ -46,11 +46,11 @@ class ContactForm extends Component
     protected function messages(): array
     {
         return [
-            'name.required' => 'Please tell us your name.',
-            'email.required' => 'We need your email to reply.',
-            'email.email' => 'This email address looks invalid.',
-            'website_url.url' => 'Please enter a valid URL (including https://).',
-            'message.required' => 'Please write your message.',
+            'name.required' => __('Please tell us your name.'),
+            'email.required' => __('We need your email to reply.'),
+            'email.email' => __('This email address looks invalid.'),
+            'website_url.url' => __('Please enter a valid URL (including https://).'),
+            'message.required' => __('Please write your message.'),
         ];
     }
 
@@ -72,7 +72,7 @@ class ContactForm extends Component
             $action->execute($validated);
         } catch (BaseAppException $e) {
             Log::error($e->getMessage(), ['exception' => $e]);
-            $this->addError('form', $e->getUserMessage());
+            $this->addError('form', __($e->getUserMessage()));
 
             return;
         } catch (Throwable $e) {

@@ -23,7 +23,7 @@ final class StarterPaymentConfirmed extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Your Festilaw Creator Pack is active');
+        return new Envelope(subject: __('Your Festilaw Creator Pack is active'));
     }
 
     public function content(): Content

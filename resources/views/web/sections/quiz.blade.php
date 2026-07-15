@@ -2,39 +2,39 @@
     <div class="quiz__inner">
         <span class="quiz__badge">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="2.5" x2="14" y2="2.5"/><line x1="12" y1="2.5" x2="12" y2="4.5"/><circle cx="12" cy="14" r="8"/><line x1="12" y1="14" x2="12" y2="9.5"/><line x1="17.5" y1="8.5" x2="19" y2="7"/></svg>
-            <span class="quiz__badge-num">30-second</span>
-            <span class="quiz__badge-label">eligibility check</span>
+            <span class="quiz__badge-num">{{ __('30-second') }}</span>
+            <span class="quiz__badge-label">{{ __('eligibility check') }}</span>
         </span>
-        <h2 class="quiz__title">Am I concerned by GPSR?</h2>
+        <h2 class="quiz__title">{{ __('Am I concerned by GPSR?') }}</h2>
 
         <div class="quiz__card" x-data="quiz">
             <div class="quiz__tracker">
                 <div class="quiz__tracker-line"></div>
                 <div class="quiz__stops">
                     <div class="quiz__stop is-current" :class="{ 'is-current': step === 0 && !done, 'is-done': answers.length > 0 }">
-                        <div class="quiz__stop-circle">1</div><span class="quiz__stop-label">Location</span>
+                        <div class="quiz__stop-circle">1</div><span class="quiz__stop-label">{{ __('Location') }}</span>
                     </div>
                     <div class="quiz__stop" :class="{ 'is-current': step === 1 && !done, 'is-done': answers.length > 1 }">
-                        <div class="quiz__stop-circle">2</div><span class="quiz__stop-label">Market</span>
+                        <div class="quiz__stop-circle">2</div><span class="quiz__stop-label">{{ __('Market') }}</span>
                     </div>
                     <div class="quiz__stop" :class="{ 'is-current': step === 2 && !done, 'is-done': answers.length > 2 }">
-                        <div class="quiz__stop-circle">3</div><span class="quiz__stop-label">Products</span>
+                        <div class="quiz__stop-circle">3</div><span class="quiz__stop-label">{{ __('Products') }}</span>
                     </div>
                 </div>
             </div>
 
             {{-- Question courante --}}
             <div class="quiz__q" x-show="!done">
-                <span class="quiz__q-count">QUESTION <span x-text="step + 1">1</span> OF <span x-text="questions.length">3</span></span>
-                <h3 class="quiz__q-text" x-text="questions[step]">Is your company based outside the European Union?</h3>
+                <span class="quiz__q-count">{{ __('QUESTION') }} <span x-text="step + 1">1</span> {{ __('OF') }} <span x-text="questions.length">3</span></span>
+                <h3 class="quiz__q-text" x-text="questions[step]">{{ __('Is your company based outside the European Union?') }}</h3>
                 <div class="quiz__answers">
                     <button type="button" class="quiz__answer quiz__answer--yes" x-on:click="answer(true)">
                         <span class="quiz__answer-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-                        Yes
+                        {{ __('Yes') }}
                     </button>
                     <button type="button" class="quiz__answer quiz__answer--no" x-on:click="answer(false)">
                         <span class="quiz__answer-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></span>
-                        No
+                        {{ __('No') }}
                     </button>
                 </div>
             </div>
@@ -48,9 +48,9 @@
                 <h3 class="quiz__result-title" x-text="resultTitle"></h3>
                 <p class="quiz__result-text" x-text="resultText"></p>
                 <div class="quiz__result-actions">
-                    <a x-show="concerned" href="{{ route('pricing') }}" class="btn btn--coral btn--sm">See the plans</a>
-                    <a x-show="!concerned" href="{{ route('contact') }}" class="btn btn--coral btn--sm">Contact us</a>
-                    <button type="button" class="btn btn--outline-dark btn--sm" x-on:click="restart()">Start over</button>
+                    <a x-show="concerned" href="{{ route('pricing') }}" class="btn btn--coral btn--sm">{{ __('See the plans') }}</a>
+                    <a x-show="!concerned" href="{{ route('contact') }}" class="btn btn--coral btn--sm">{{ __('Contact us') }}</a>
+                    <button type="button" class="btn btn--outline-dark btn--sm" x-on:click="restart()">{{ __('Start over') }}</button>
                 </div>
             </div>
         </div>
@@ -65,11 +65,11 @@
             answers: [],
             done: false,
             questions: [
-                'Is your company based outside the European Union?',
-                'Do you sell products to consumers in the European Union?',
-                'Do you sell any of these: cosmetics, food & drinks, tobacco, medical devices, or chemicals?',
+                @js(__('Is your company based outside the European Union?')),
+                @js(__('Do you sell products to consumers in the European Union?')),
+                @js(__('Do you sell any of these: cosmetics, food & drinks, tobacco, medical devices, or chemicals?')),
             ],
-            stops: ['Location', 'Market', 'Products'],
+            stops: [@js(__('Location')), @js(__('Market')), @js(__('Products'))],
             answer(value) {
                 this.answers.push(value);
                 if (this.answers.length >= this.questions.length) {
@@ -93,21 +93,21 @@
             },
             get resultTitle() {
                 if (this.concerned) {
-                    return 'Yes, GPSR applies to you.';
+                    return @js(__('Yes, GPSR applies to you.'));
                 }
                 if (this.excluded) {
-                    return 'This is outside what we cover.';
+                    return @js(__('This is outside what we cover.'));
                 }
-                return "You're likely not concerned.";
+                return @js(__('You\'re likely not concerned.'));
             },
             get resultText() {
                 if (this.concerned) {
-                    return 'You must have a GPSR Responsible Person. Festilaw can provide your official mandate within 24 hours.';
+                    return @js(__('You must have a GPSR Responsible Person. Festilaw can provide your official mandate within 24 hours.'));
                 }
                 if (this.excluded) {
-                    return "The categories you sell (cosmetics, food & drinks, tobacco, medical devices, chemicals) aren't covered by Festilaw. If you have any doubts, get in touch.";
+                    return @js(__('The categories you sell (cosmetics, food & drinks, tobacco, medical devices, chemicals) aren\'t covered by Festilaw. If you have any doubts, get in touch.'));
                 }
-                return 'Based on your answers, you are likely not affected by GPSR through our services. If you have any doubts, please contact us.';
+                return @js(__('Based on your answers, you are likely not affected by GPSR through our services. If you have any doubts, please contact us.'));
             },
         }));
     });

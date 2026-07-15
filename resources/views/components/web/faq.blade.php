@@ -1,4 +1,4 @@
-@props(['items' => [], 'eyebrow' => 'FAQ', 'title' => 'Frequently asked questions'])
+@props(['items' => [], 'eyebrow' => 'FAQ', 'title' => __('Frequently asked questions')])
 {{-- items : [['q' => '...', 'a' => '...'], ...]. Accordeon natif <details> (accessible, sans JS). --}}
 <section class="faq">
     <div class="faq__inner">

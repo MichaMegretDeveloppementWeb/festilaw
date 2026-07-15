@@ -1,13 +1,13 @@
 @extends('layouts.web')
 
-@section('title', 'Contact · Festilaw')
-@section('meta_description', 'Get in touch with Festilaw, your GPSR Responsible Person in the EU. From entrepreneurs, for entrepreneurs.')
+@section('title', __('Contact · Festilaw'))
+@section('meta_description', __('Get in touch with Festilaw, your GPSR Responsible Person in the EU. From entrepreneurs, for entrepreneurs.'))
 
 @php
     $jsonLdNodes = [
         [
             '@type' => 'ContactPage',
-            'name' => 'Contact Festilaw',
+            'name' => __('Contact Festilaw'),
             'url' => route('contact'),
         ],
     ];
@@ -21,9 +21,9 @@
     <section class="contact">
         <div class="contact__inner">
             <div class="contact__intro">
-                <span class="eyebrow contact__eyebrow">Contact</span>
-                <h1 class="contact__title">Let's talk about your <span class="contact__title-em">compliance</span></h1>
-                <p class="contact__lead">A dedicated duo of experts, from entrepreneurs to entrepreneurs. Tell us about your situation and we'll get back to you quickly.</p>
+                <span class="eyebrow contact__eyebrow">{{ __('Contact') }}</span>
+                <h1 class="contact__title">{{ __('Let\'s talk about your') }} <span class="contact__title-em">{{ __('compliance') }}</span></h1>
+                <p class="contact__lead">{{ __('A dedicated duo of experts, from entrepreneurs to entrepreneurs. Tell us about your situation and we\'ll get back to you quickly.') }}</p>
 
                 <div class="contact__coords">
                     <a href="mailto:team@festilaw.com" class="contact__coord">
@@ -31,7 +31,7 @@
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
                         </span>
                         <span class="contact__coord-body">
-                            <span class="contact__coord-label">Email us</span>
+                            <span class="contact__coord-label">{{ __('Email us') }}</span>
                             <span class="contact__coord-value">team@festilaw.com</span>
                         </span>
                     </a>
@@ -41,7 +41,7 @@
                         </span>
                         <span class="contact__coord-body">
                             <span class="contact__coord-label">WhatsApp</span>
-                            <span class="contact__coord-value">Coming soon</span>
+                            <span class="contact__coord-value">{{ __('Coming soon') }}</span>
                         </span>
                     </div>
                 </div>

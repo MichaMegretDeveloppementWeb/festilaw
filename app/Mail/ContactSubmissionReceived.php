@@ -21,7 +21,7 @@ class ContactSubmissionReceived extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'New contact request from '.$this->submission->first_name,
+            subject: __('New contact request from :name', ['name' => (string) $this->submission->first_name]),
             replyTo: [new Address($this->submission->email, (string) $this->submission->first_name)],
         );
     }

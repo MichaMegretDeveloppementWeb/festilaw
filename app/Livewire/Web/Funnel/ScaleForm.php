@@ -39,7 +39,7 @@ class ScaleForm extends Component
             $action->execute($this->funnelData());
         } catch (BaseAppException $e) {
             Log::error($e->getMessage(), ['exception' => $e]);
-            $this->addError('form', $e->getUserMessage());
+            $this->addError('form', __($e->getUserMessage()));
 
             return;
         } catch (Throwable $e) {

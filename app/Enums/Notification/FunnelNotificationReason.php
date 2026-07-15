@@ -14,10 +14,10 @@ enum FunnelNotificationReason: string
     public function subject(): string
     {
         return match ($this) {
-            self::CreatorSubmission => 'New Creator Pack submission',
-            self::ProEnquiry => 'New Pro Pack enquiry',
-            self::ScaleAuditRequest => 'New Scale Pack audit request',
-            self::PaymentReceived => 'Payment received',
+            self::CreatorSubmission => __('New Creator Pack submission'),
+            self::ProEnquiry => __('New Pro Pack enquiry'),
+            self::ScaleAuditRequest => __('New Scale Pack audit request'),
+            self::PaymentReceived => __('Payment received'),
         };
     }
 }

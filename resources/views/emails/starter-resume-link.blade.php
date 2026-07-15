@@ -1,17 +1,17 @@
-<p>Hello{{ $submission->first_name ? ' '.$submission->first_name : '' }},</p>
+<p>{{ __('Hello') }}{{ $submission->first_name ? ' '.$submission->first_name : '' }},</p>
 
 @if ($isActive)
-    <p>Here is your secure link to your Festilaw file. Your Creator Pack is active · you can view it and download your signed mandate and documents:</p>
+    <p>{{ __('Here is your secure link to your Festilaw file. Your Creator Pack is active · you can view it and download your signed mandate and documents:') }}</p>
 
-    <p><a href="{{ $resumeUrl }}">Open my file</a></p>
+    <p><a href="{{ $resumeUrl }}">{{ __('Open my file') }}</a></p>
 
-    <p>Keep this link private: anyone who has it can access your file. Your reference is <strong>{{ $submission->reference }}</strong>.</p>
+    <p>{!! __('Keep this link private: anyone who has it can access your file. Your reference is :reference.', ['reference' => '<strong>'.e($submission->reference).'</strong>']) !!}</p>
 @else
-    <p>Here is your secure link to continue your Festilaw application (Creator Pack), right where you left off:</p>
+    <p>{{ __('Here is your secure link to continue your Festilaw application (Creator Pack), right where you left off:') }}</p>
 
-    <p><a href="{{ $resumeUrl }}">Continue my application</a></p>
+    <p><a href="{{ $resumeUrl }}">{{ __('Continue my application') }}</a></p>
 
-    <p>Keep this link private: anyone who has it can access your file. Your reference is <strong>{{ $submission->reference }}</strong>, and the link stays valid for {{ $ttlDays }} days.</p>
+    <p>{!! __('Keep this link private: anyone who has it can access your file. Your reference is :reference, and the link stays valid for :days days.', ['reference' => '<strong>'.e($submission->reference).'</strong>', 'days' => $ttlDays]) !!}</p>
 @endif
 
-<p>If you didn't start an application with Festilaw, you can safely ignore this email.</p>
+<p>{{ __('If you didn\'t start an application with Festilaw, you can safely ignore this email.') }}</p>

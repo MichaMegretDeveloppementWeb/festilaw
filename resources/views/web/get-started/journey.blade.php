@@ -1,6 +1,6 @@
 @extends('layouts.web')
 
-@section('title', 'Your Creator Pack · Get started · Festilaw')
+@section('title', __('Your Creator Pack · Get started · Festilaw'))
 @section('robots', 'noindex, nofollow')
 
 @push('meta')
@@ -17,9 +17,9 @@
         <div class="funnel__inner funnel__inner--split">
             <div class="funnel__card">
                 <header class="funnel__head">
-                    <span class="eyebrow">Creator Pack</span>
-                    <h1 class="funnel__title">Your <span class="funnel__title-em">compliance file</span></h1>
-                    <p class="funnel__intro">Three steps to your EU Responsible Person: sign your mandate, upload your documents, and pay securely.</p>
+                    <span class="eyebrow">{{ __('Creator Pack') }}</span>
+                    <h1 class="funnel__title">{!! __('Your :file', ['file' => '<span class="funnel__title-em">'.e(__('compliance file')).'</span>']) !!}</h1>
+                    <p class="funnel__intro">{{ __('Three steps to your EU Responsible Person: sign your mandate, upload your documents, and pay securely.') }}</p>
                 </header>
 
                 <div class="funnel__body">
@@ -28,16 +28,16 @@
                     </div>
 
                     <x-funnel.summary
-                        plan="Creator Pack"
-                        price="€333 / year"
-                        scope="up to 9 products"
+                        :plan="__('Creator Pack')"
+                        :price="__('€333 / year')"
+                        :scope="__('up to 9 products')"
                         :included="[
-                            'Your official EU Responsible Person address',
-                            'Set up and live within 24 hours',
-                            'Sign your mandate 100% online',
-                            'Real human support, from entrepreneurs',
+                            __('Your official EU Responsible Person address'),
+                            __('Set up and live within 24 hours'),
+                            __('Sign your mandate 100% online'),
+                            __('Real human support, from entrepreneurs'),
                         ]"
-                        note="Your documents are stored privately and never shared with third parties." />
+                        :note="__('Your documents are stored privately and never shared with third parties.')" />
                 </div>
             </div>
         </div>

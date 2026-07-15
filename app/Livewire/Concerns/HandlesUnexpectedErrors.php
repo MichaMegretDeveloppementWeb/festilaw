@@ -19,6 +19,6 @@ trait HandlesUnexpectedErrors
     {
         Log::error("Unexpected error in {$context}.", ['exception' => $e]);
 
-        $this->addError($errorBag, 'Something went wrong on our end. Please try again. If the problem persists, contact us.');
+        $this->addError($errorBag, __('Something went wrong on our end. Please try again. If the problem persists, contact us.'));
     }
 }
