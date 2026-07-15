@@ -31,6 +31,9 @@ class StarterForm extends Component
 
     public bool $sent = false;
 
+    /** True when the email already had an open dossier : we re-sent the resume link instead. */
+    public bool $resent = false;
+
     /** @return array<string, array<int, string>> */
     protected function rules(): array
     {
@@ -71,7 +74,7 @@ class StarterForm extends Component
         $this->validate();
 
         try {
-            $submission = $action->execute([
+            $outcome = $action->execute([
                 'company_name' => $this->company_name,
                 'company_registration_number' => $this->company_registration_number ?: null,
                 'first_name' => $this->first_name,
@@ -90,10 +93,18 @@ class StarterForm extends Component
             return;
         }
 
-        // Le dossier est ouvert : on enchaine directement sur le parcours (signer -> televerser -> payer).
+        // Un dossier existait deja pour cet email : on a renvoye le lien de reprise par email. On ne
+        // redirige pas dans le dossier (le token vaut acces : un simple email ne doit pas y donner acces).
+        if (! $outcome->isNew) {
+            $this->resent = true;
+
+            return;
+        }
+
+        // Nouveau dossier : on enchaine directement sur le parcours (signer -> televerser -> payer).
         $this->redirectRoute('get-started.starter.journey', [
             'locale' => app()->getLocale(),
-            'dossier' => $submission->resume_token,
+            'dossier' => $outcome->submission->resume_token,
         ], navigate: true);
     }
 

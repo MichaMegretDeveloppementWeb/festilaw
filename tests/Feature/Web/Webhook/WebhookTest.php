@@ -7,7 +7,9 @@ use App\Enums\Submission\SubmissionStatus;
 use App\Models\Contract;
 use App\Models\Submission;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 
 use function Pest\Laravel\postJson;
 
@@ -55,6 +57,60 @@ it('marks a contract signed from the fake signature webhook', function () {
 
     expect($contract->fresh()->signature_status)->toBe(SignatureStatus::Signed)
         ->and($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingDocuments);
+});
+
+it('marks a contract signed from a valid SignWell webhook', function () {
+    Storage::fake('local');
+    config()->set('signature.default', 'signwell');
+    config()->set('signature.drivers.signwell', [
+        'api_key' => 'testkey',
+        'api_base_url' => 'https://www.signwell.com/api/v1',
+        'test_mode' => true,
+    ]);
+    Http::fake(['*/api/v1/documents/*/completed_pdf*' => Http::response('SIGNED-PDF', 200)]);
+
+    $submission = Submission::factory()->starter()->create();
+    $contract = Contract::factory()->for($submission)->create([
+        'signature_status' => SignatureStatus::Pending,
+        'signature_provider' => 'signwell',
+        'signature_provider_reference' => 'DOC1',
+    ]);
+
+    $time = 1689332249;
+    $hash = hash_hmac('sha256', "document_completed@{$time}", 'testkey');
+
+    postJson('/webhooks/signature', [
+        'event' => ['type' => 'document_completed', 'time' => $time, 'hash' => $hash],
+        'data' => ['object' => ['id' => 'DOC1', 'status' => 'Completed']],
+    ])->assertNoContent();
+
+    expect($contract->fresh()->signature_status)->toBe(SignatureStatus::Signed)
+        ->and($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingDocuments);
+    Storage::disk('local')->assertExists('contracts/DOC1.pdf');
+});
+
+it('rejects a SignWell webhook with an invalid signature and leaves the contract untouched', function () {
+    config()->set('signature.default', 'signwell');
+    config()->set('signature.drivers.signwell', [
+        'api_key' => 'testkey',
+        'api_base_url' => 'https://www.signwell.com/api/v1',
+        'test_mode' => true,
+    ]);
+
+    $submission = Submission::factory()->starter()->create();
+    $contract = Contract::factory()->for($submission)->create([
+        'signature_status' => SignatureStatus::Pending,
+        'signature_provider' => 'signwell',
+        'signature_provider_reference' => 'DOC1',
+    ]);
+
+    postJson('/webhooks/signature', [
+        'event' => ['type' => 'document_completed', 'time' => 1689332249, 'hash' => 'not-a-valid-hash'],
+        'data' => ['object' => ['id' => 'DOC1', 'status' => 'Completed']],
+    ])->assertStatus(400);
+
+    expect($contract->fresh()->signature_status)->toBe(SignatureStatus::Pending)
+        ->and($submission->fresh()->status)->toBe(SubmissionStatus::InProgress);
 });
 
 it('acknowledges a webhook for an unknown reference without failing', function () {

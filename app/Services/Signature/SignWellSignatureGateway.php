@@ -102,6 +102,32 @@ final class SignWellSignatureGateway implements SignatureGatewayInterface
         );
     }
 
+    public function currentSigningUrl(Contract $contract): ?string
+    {
+        $this->assertConfigured(['api_key']);
+
+        $documentId = (string) ($contract->signature_provider_reference ?? '');
+        if ($documentId === '') {
+            return null;
+        }
+
+        try {
+            $document = $this->api()->get("/documents/{$documentId}")->throw()->json();
+        } catch (Throwable $e) {
+            throw SignatureException::apiRequestFailed('get document status', $e);
+        }
+
+        // Document deja fini (ou annule/refuse/expire) : plus signable, on recreera une session.
+        $status = (string) Arr::get($document, 'status', '');
+        if (in_array($status, [...self::COMPLETED_STATUSES, 'Declined', 'Canceled', 'Expired'], true)) {
+            return null;
+        }
+
+        $url = (string) Arr::get($document, 'recipients.0.signing_url', '');
+
+        return $url !== '' ? $url : null;
+    }
+
     public function checkStatus(Contract $contract): SignatureWebhookData
     {
         $this->assertConfigured(['api_key']);

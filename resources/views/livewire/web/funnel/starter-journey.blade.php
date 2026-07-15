@@ -43,9 +43,9 @@
                 <span wire:loading wire:target="sign">Redirecting&hellip;</span>
             </button>
 
-            {{-- Retour du signataire : on confirme la signature en interrogeant le prestataire (sans webhook). --}}
-            @if ($justReturned)
-                <div wire:init="confirmSignature"></div>
+            {{-- Retour OU reprise avec une signature en cours : on verifie le statut en silence (sans webhook). --}}
+            @if ($autoConfirm)
+                <div wire:init="autoConfirmSignature"></div>
             @endif
             @if ($signatureStarted)
                 <button type="button" class="btn btn--outline-dark btn--sm" wire:click="confirmSignature" wire:loading.attr="disabled" wire:target="confirmSignature">

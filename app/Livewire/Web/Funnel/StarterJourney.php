@@ -45,49 +45,38 @@ class StarterJourney extends Component
     /** @var array<string, string> */
     public array $paymentOptions = [];
 
-    /** True right after the signer returns from the provider, to auto-confirm the signature. */
-    public bool $justReturned = false;
+    /** Auto-confirm the signature on load when a session is already in flight (provider return OR resume). */
+    public bool $autoConfirm = false;
 
     public function mount(Submission $submission, PaymentGatewayRegistry $gateways): void
     {
         $this->submission = $submission;
         $this->paymentOptions = $gateways->options();
         $this->paymentProvider = (string) array_key_first($this->paymentOptions);
-        $this->justReturned = request()->boolean('signature_return');
+        $this->autoConfirm = $this->signatureInFlight();
+    }
+
+    /** A signing session already exists for this dossier but the contract is not signed yet. */
+    private function signatureInFlight(): bool
+    {
+        $this->submission->loadMissing('contract');
+        $contract = $this->submission->contract;
+
+        return $this->step() === 'sign'
+            && $contract !== null
+            && (string) ($contract->signature_provider_reference ?? '') !== '';
     }
 
     /**
-     * Confirms the signature by polling the provider (used when the signer returns, no webhook needed).
-     * Auto-fired on return, and available as a manual retry.
+     * Manual confirmation (the "I have signed" button): polls the provider and advances if signed,
+     * otherwise tells the signer it is not recorded yet.
      */
     public function confirmSignature(SignatureGatewayInterface $signatureGateway, MarkContractSignedAction $markContractSigned): void
     {
-        $this->justReturned = false;
-
-        if ($this->step() !== 'sign') {
-            return;
-        }
-
-        $contract = $this->submission->contract;
-        if ($contract === null || (string) ($contract->signature_provider_reference ?? '') === '') {
-            return;
-        }
-
         try {
-            $event = $signatureGateway->checkStatus($contract);
-
-            if (! $event->signed) {
+            if (! $this->tryConfirmSignature($signatureGateway, $markContractSigned) && $this->step() === 'sign') {
                 $this->addError('journey', 'Your signature has not been recorded yet. If you have just signed, wait a few seconds and check again.');
-
-                return;
             }
-
-            $markContractSigned->execute($contract, $event->signedFilePath, $event->providerReference);
-            $this->submission->refresh();
-
-            // Bandeau de succes, comme le retour "fake" (StarterDevSignController) mais cote Livewire :
-            // now() = visible dans ce re-render uniquement, sans fuiter a l'interaction suivante.
-            session()->now('starter_status', 'signed');
         } catch (BaseAppException $e) {
             Log::error($e->getMessage(), ['exception' => $e]);
             $this->addError('journey', $e->getUserMessage());
@@ -96,10 +85,64 @@ class StarterJourney extends Component
         }
     }
 
-    public function sign(StartContractSigningAction $startContractSigning): mixed
+    /**
+     * Silent auto-confirmation on return/resume (wire:init): advances if the provider already has the
+     * signature, otherwise does nothing (the signer can still sign or check manually). Self-heals the
+     * "signed but the browser closed before the redirect completed" case.
+     */
+    public function autoConfirmSignature(SignatureGatewayInterface $signatureGateway, MarkContractSignedAction $markContractSigned): void
+    {
+        $this->autoConfirm = false;
+
+        try {
+            $this->tryConfirmSignature($signatureGateway, $markContractSigned);
+        } catch (Throwable $e) {
+            // Best effort : un echec ne montre rien ici, le signataire garde le bouton manuel.
+            Log::error('STARTER auto signature confirmation failed.', ['exception' => $e]);
+        }
+    }
+
+    /**
+     * Polls the provider once; if the signature is complete, records it (idempotent), advances the
+     * dossier and flashes the success banner. Returns whether the signature was confirmed.
+     */
+    private function tryConfirmSignature(SignatureGatewayInterface $signatureGateway, MarkContractSignedAction $markContractSigned): bool
+    {
+        if ($this->step() !== 'sign') {
+            return false;
+        }
+
+        $contract = $this->submission->contract;
+        if ($contract === null || (string) ($contract->signature_provider_reference ?? '') === '') {
+            return false;
+        }
+
+        $event = $signatureGateway->checkStatus($contract);
+        if (! $event->signed) {
+            return false;
+        }
+
+        $markContractSigned->execute($contract, $event->signedFilePath, $event->providerReference);
+        $this->submission->refresh();
+
+        // Bandeau de succes, comme le retour "fake" (StarterDevSignController) mais cote Livewire :
+        // now() = visible dans ce re-render uniquement, sans fuiter a l'interaction suivante.
+        session()->now('starter_status', 'signed');
+
+        return true;
+    }
+
+    public function sign(StartContractSigningAction $startContractSigning, SignatureGatewayInterface $signatureGateway): mixed
     {
         if ($this->step() !== 'sign') {
             return null;
+        }
+
+        // Reprise : reutiliser la session de signature deja en cours plutot que d'en creer une 2e
+        // (evite un document en double chez le prestataire et un 2e email au signataire).
+        $existingUrl = $this->existingSigningUrl($signatureGateway);
+        if ($existingUrl !== null) {
+            return $this->redirect($existingUrl);
         }
 
         try {
@@ -116,6 +159,26 @@ class StarterJourney extends Component
         }
 
         return $this->redirect($session->signingUrl);
+    }
+
+    /** The in-flight signing URL to reuse on resume, or null to start a fresh session. */
+    private function existingSigningUrl(SignatureGatewayInterface $signatureGateway): ?string
+    {
+        $contract = $this->submission->contract;
+        if ($contract === null || (string) ($contract->signature_provider_reference ?? '') === '') {
+            return null;
+        }
+
+        try {
+            $url = $signatureGateway->currentSigningUrl($contract);
+
+            return ($url !== null && $url !== '') ? $url : null;
+        } catch (Throwable $e) {
+            // Provider indisponible : on retombe sur la creation d'une nouvelle session.
+            Log::warning('STARTER could not reuse the signing session, creating a new one.', ['exception' => $e]);
+
+            return null;
+        }
     }
 
     /** Removes a staged (not yet persisted) document before submitting. */

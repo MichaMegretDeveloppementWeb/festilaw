@@ -22,6 +22,13 @@ interface SignatureGatewayInterface
     public function createSigningSession(Contract $contract): SigningSessionData;
 
     /**
+     * The signing URL of the session already in flight for this contract, if one exists and is still
+     * signable (so a resume reuses it instead of creating a duplicate document). Null if none / not
+     * reusable, in which case the caller starts a fresh session.
+     */
+    public function currentSigningUrl(Contract $contract): ?string;
+
+    /**
      * Poll the provider for the current signature status of the contract (used to confirm completion
      * when the signer returns, without relying on a webhook). Downloads the signed document if done.
      */

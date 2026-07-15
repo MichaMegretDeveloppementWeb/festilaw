@@ -36,12 +36,15 @@ it('walks the STARTER happy path end-to-end with the fake providers', function (
     Mail::fake();
 
     // 1. Open the file (submission + unsigned contract).
-    $submission = app(CreateStarterSubmissionAction::class)->execute([
+    $outcome = app(CreateStarterSubmissionAction::class)->execute([
         'company_name' => 'Wildthread Ceramics',
         'first_name' => 'Maya',
         'last_name' => 'Thornton',
         'email' => 'maya@example.com',
     ]);
+
+    expect($outcome->isNew)->toBeTrue();
+    $submission = $outcome->submission;
 
     expect($submission->type)->toBe(SubmissionType::Starter)
         ->and($submission->status)->toBe(SubmissionStatus::InProgress)

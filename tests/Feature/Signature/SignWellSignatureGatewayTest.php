@@ -103,6 +103,33 @@ it('reports a signature still pending without downloading anything', function ()
         ->and($event->signedFilePath)->toBeNull();
 });
 
+it('returns the in-flight signing url for a document still pending (resume reuse)', function () {
+    Http::fake([
+        '*/api/v1/documents/*' => Http::response([
+            'id' => 'DOC1',
+            'status' => 'Sent',
+            'recipients' => [['id' => '1', 'signing_url' => 'https://www.signwell.com/sign/abc']],
+        ]),
+    ]);
+
+    $submission = Submission::factory()->starter()->create();
+    $contract = Contract::factory()->for($submission)->create(['signature_provider_reference' => 'DOC1']);
+
+    expect(app(SignatureGatewayInterface::class)->currentSigningUrl($contract))
+        ->toBe('https://www.signwell.com/sign/abc');
+});
+
+it('returns null from currentSigningUrl when the document is already completed', function () {
+    Http::fake([
+        '*/api/v1/documents/*' => Http::response(['id' => 'DOC1', 'status' => 'Completed']),
+    ]);
+
+    $submission = Submission::factory()->starter()->create();
+    $contract = Contract::factory()->for($submission)->create(['signature_provider_reference' => 'DOC1']);
+
+    expect(app(SignatureGatewayInterface::class)->currentSigningUrl($contract))->toBeNull();
+});
+
 it('parses a completion webhook, verifies the HMAC hash and downloads the signed PDF', function () {
     Storage::fake('local');
     Http::fake([

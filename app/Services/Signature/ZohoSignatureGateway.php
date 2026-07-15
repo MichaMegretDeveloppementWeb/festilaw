@@ -100,6 +100,13 @@ final class ZohoSignatureGateway implements SignatureGatewayInterface
         );
     }
 
+    public function currentSigningUrl(Contract $contract): ?string
+    {
+        // L'embed token Zoho est a usage unique et expire en 2 min : pas de reutilisation fiable, on
+        // recreera une session au besoin (driver de secours, non retenu).
+        return null;
+    }
+
     public function checkStatus(Contract $contract): SignatureWebhookData
     {
         $this->assertConfigured(['client_id', 'client_secret', 'refresh_token']);

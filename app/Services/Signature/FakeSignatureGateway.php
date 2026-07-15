@@ -51,6 +51,15 @@ final class FakeSignatureGateway implements SignatureGatewayInterface
             : url('/');
     }
 
+    public function currentSigningUrl(Contract $contract): ?string
+    {
+        if ((string) ($contract->signature_provider_reference ?? '') === '' || $contract->signature_status === SignatureStatus::Signed) {
+            return null;
+        }
+
+        return $this->devSigningUrl($contract);
+    }
+
     public function checkStatus(Contract $contract): SignatureWebhookData
     {
         // Reflete le statut reel : le Fake se complete via la route dev-sign, pas par polling.
