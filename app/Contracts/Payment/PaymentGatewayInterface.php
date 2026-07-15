@@ -26,6 +26,13 @@ interface PaymentGatewayInterface
     public function createCheckout(Payment $payment): CheckoutSessionData;
 
     /**
+     * The checkout URL of the session already in flight for this payment, if it exists and is still
+     * payable (so a resume reuses it instead of creating a second charge). Null if none / not reusable,
+     * in which case the caller starts a fresh checkout.
+     */
+    public function currentCheckoutUrl(Payment $payment): ?string;
+
+    /**
      * Poll the provider for the current status of the payment (used to confirm on the buyer's return
      * without relying on the webhook). Returns paid=false while still pending.
      */

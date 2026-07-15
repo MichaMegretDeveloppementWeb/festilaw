@@ -205,7 +205,7 @@ function dossierAwaitingStripePayment(): Submission
     return $submission->fresh();
 }
 
-it('confirms the payment on return and shows the success banner', function () {
+it('auto-confirms the payment on return and shows the success banner', function () {
     config()->set('payment.enabled', ['stripe']);
     config()->set('payment.drivers.stripe', ['secret_key' => 'sk_test_x', 'webhook_secret' => 'whsec_x']);
     Http::fake(['*/v1/checkout/sessions/*' => Http::response(['id' => 'cs_1', 'payment_status' => 'paid'])]);
@@ -213,7 +213,7 @@ it('confirms the payment on return and shows the success banner', function () {
     $submission = dossierAwaitingStripePayment();
 
     Livewire::test(StarterJourney::class, ['submission' => $submission])
-        ->call('confirmPayment')
+        ->call('pollPayment')
         ->assertHasNoErrors()
         ->assertSee('Payment received')
         ->assertSee('Your Creator Pack is active.');
@@ -221,7 +221,7 @@ it('confirms the payment on return and shows the success banner', function () {
     expect($submission->fresh()->status)->toBe(SubmissionStatus::Paid);
 });
 
-it('tells the buyer to retry when the payment is not confirmed yet', function () {
+it('keeps confirming silently (no error) while an async payment is still pending', function () {
     config()->set('payment.enabled', ['stripe']);
     config()->set('payment.drivers.stripe', ['secret_key' => 'sk_test_x', 'webhook_secret' => 'whsec_x']);
     Http::fake(['*/v1/checkout/sessions/*' => Http::response(['id' => 'cs_1', 'payment_status' => 'unpaid'])]);
@@ -229,10 +229,41 @@ it('tells the buyer to retry when the payment is not confirmed yet', function ()
     $submission = dossierAwaitingStripePayment();
 
     Livewire::test(StarterJourney::class, ['submission' => $submission])
-        ->call('confirmPayment')
-        ->assertHasErrors('journey');
+        ->call('pollPayment')
+        ->assertHasNoErrors()
+        ->assertSet('paymentChecks', 1);
 
     expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingPayment);
+});
+
+it('shows the confirming state (not a second Pay button) while a payment is in flight', function () {
+    config()->set('payment.enabled', ['stripe']);
+    config()->set('payment.drivers.stripe', ['secret_key' => 'sk_test_x', 'webhook_secret' => 'whsec_x']);
+
+    $submission = dossierAwaitingStripePayment();
+
+    Livewire::test(StarterJourney::class, ['submission' => $submission])
+        ->assertSee('confirming your payment')
+        ->assertDontSee('securely'); // le bouton "Pay ... securely" n'est plus propose
+});
+
+it('reuses the in-flight checkout on resume instead of creating a second charge', function () {
+    config()->set('payment.enabled', ['stripe']);
+    config()->set('payment.drivers.stripe', ['secret_key' => 'sk_test_x', 'webhook_secret' => 'whsec_x']);
+    Http::fake(['*/v1/checkout/sessions/*' => Http::response([
+        'id' => 'cs_1',
+        'status' => 'open',
+        'url' => 'https://checkout.stripe.com/c/pay/cs_1',
+    ])]);
+
+    $submission = dossierAwaitingStripePayment();
+
+    Livewire::test(StarterJourney::class, ['submission' => $submission])
+        ->call('pay')
+        ->assertRedirect('https://checkout.stripe.com/c/pay/cs_1');
+
+    // Un seul paiement : aucune nouvelle session/charge creee.
+    expect($submission->fresh()->payments()->count())->toBe(1);
 });
 
 it('rejects an oversized document on submit', function () {

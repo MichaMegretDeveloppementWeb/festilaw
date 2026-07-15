@@ -38,6 +38,9 @@ class StarterJourney extends Component
     use HandlesUnexpectedErrors;
     use WithFileUploads;
 
+    /** Bounds the "confirming payment" auto-refresh loop (~2 min at 5s before the email fallback). */
+    private const MAX_PAYMENT_POLLS = 24;
+
     public Submission $submission;
 
     /** @var array<string, TemporaryUploadedFile|null> Staged uploads keyed by document type value. */
@@ -51,8 +54,8 @@ class StarterJourney extends Component
     /** Auto-confirm the signature on load when a session is already in flight (provider return OR resume). */
     public bool $autoConfirm = false;
 
-    /** Auto-confirm the payment on load when a checkout is already in flight (provider return OR resume). */
-    public bool $autoConfirmPay = false;
+    /** How many payment-status polls have run on this dossier (drives + bounds the confirming loop). */
+    public int $paymentChecks = 0;
 
     public function mount(Submission $submission, PaymentGatewayRegistry $gateways): void
     {
@@ -60,7 +63,6 @@ class StarterJourney extends Component
         $this->paymentOptions = $gateways->options();
         $this->paymentProvider = (string) array_key_first($this->paymentOptions);
         $this->autoConfirm = $this->signatureInFlight();
-        $this->autoConfirmPay = $this->paymentInFlight();
     }
 
     /** A signing session already exists for this dossier but the contract is not signed yet. */
@@ -72,12 +74,6 @@ class StarterJourney extends Component
         return $this->step() === 'sign'
             && $contract !== null
             && (string) ($contract->signature_provider_reference ?? '') !== '';
-    }
-
-    /** A checkout has been started (pending payment with a provider reference) but is not confirmed yet. */
-    private function paymentInFlight(): bool
-    {
-        return $this->step() === 'payment' && $this->pendingPayment() !== null;
     }
 
     /** The pending payment whose checkout is in flight, if any. */
@@ -260,10 +256,17 @@ class StarterJourney extends Component
         $this->submission->refresh();
     }
 
-    public function pay(StartStarterPaymentAction $startStarterPayment): mixed
+    public function pay(StartStarterPaymentAction $startStarterPayment, PaymentGatewayRegistry $gateways): mixed
     {
         if ($this->step() !== 'payment') {
             return null;
+        }
+
+        // Reprise : reutiliser la session de paiement deja en cours plutot que d'en creer une 2e
+        // (anti double-debit, crucial avec les moyens de paiement asynchrones).
+        $existingUrl = $this->existingCheckoutUrl($gateways);
+        if ($existingUrl !== null) {
+            return $this->redirect($existingUrl);
         }
 
         try {
@@ -282,38 +285,40 @@ class StarterJourney extends Component
         return $this->redirect($checkout->redirectUrl);
     }
 
-    /**
-     * Manual confirmation (the "I have paid" button): polls the provider and advances if paid,
-     * otherwise tells the buyer it is not confirmed yet.
-     */
-    public function confirmPayment(PaymentGatewayRegistry $gateways, MarkPaymentSucceededAction $markPaymentSucceeded): void
+    /** The in-flight checkout URL to reuse on resume, or null to start a fresh checkout. */
+    private function existingCheckoutUrl(PaymentGatewayRegistry $gateways): ?string
     {
+        $payment = $this->pendingPayment();
+        if ($payment === null || ! $gateways->has($payment->provider)) {
+            return null;
+        }
+
         try {
-            if (! $this->tryConfirmPayment($gateways, $markPaymentSucceeded) && $this->step() === 'payment') {
-                $this->addError('journey', 'Your payment has not been confirmed yet. If you have just paid, wait a few seconds and check again.');
-            }
-        } catch (BaseAppException $e) {
-            Log::error($e->getMessage(), ['exception' => $e]);
-            $this->addError('journey', $e->getUserMessage());
+            $url = $gateways->get($payment->provider)->currentCheckoutUrl($payment);
+
+            return ($url !== null && $url !== '') ? $url : null;
         } catch (Throwable $e) {
-            $this->reportUnexpectedError($e, 'journey', 'STARTER payment confirmation');
+            // Provider indisponible : on retombe sur la creation d'une nouvelle session.
+            Log::warning('STARTER could not reuse the checkout session, creating a new one.', ['exception' => $e]);
+
+            return null;
         }
     }
 
     /**
-     * Silent auto-confirmation on return/resume (wire:init): advances if the provider already has the
-     * payment, otherwise does nothing (the buyer can still pay or check manually). Self-heals the
-     * "paid but the browser closed before the redirect completed" case.
+     * Auto-refresh loop (wire:init + wire:poll): silently polls the provider until the payment settles,
+     * then advances + flashes the success banner. Bounded by MAX_PAYMENT_POLLS · past that, the UI shows
+     * the "we'll email you" fallback. Lets asynchronous methods settle without ever blocking the buyer.
      */
-    public function autoConfirmPayment(PaymentGatewayRegistry $gateways, MarkPaymentSucceededAction $markPaymentSucceeded): void
+    public function pollPayment(PaymentGatewayRegistry $gateways, MarkPaymentSucceededAction $markPaymentSucceeded): void
     {
-        $this->autoConfirmPay = false;
+        $this->paymentChecks++;
 
         try {
             $this->tryConfirmPayment($gateways, $markPaymentSucceeded);
         } catch (Throwable $e) {
-            // Best effort : un echec ne montre rien ici, l'acheteur garde le bouton manuel.
-            Log::error('STARTER auto payment confirmation failed.', ['exception' => $e]);
+            // Best effort : un echec de poll n'affiche rien, le webhook reste la source de verite.
+            Log::error('STARTER payment poll failed.', ['exception' => $e]);
         }
     }
 
@@ -415,6 +420,7 @@ class StarterJourney extends Component
             'contractDeclined' => $this->submission->contract?->signature_status === SignatureStatus::Declined,
             'signatureStarted' => (string) ($this->submission->contract?->signature_provider_reference ?? '') !== '',
             'paymentStarted' => $this->pendingPayment() !== null,
+            'paymentTimedOut' => $this->paymentChecks >= self::MAX_PAYMENT_POLLS,
             'requiredDocuments' => $this->requiredDocumentTypes(),
             'deposits' => $this->stagedDocuments(),
             'acceptAttr' => '.'.implode(',.', $this->documentMimes()),

@@ -61,6 +61,15 @@ final class FakePaymentGateway implements PaymentGatewayInterface
         };
     }
 
+    public function currentCheckoutUrl(Payment $payment): ?string
+    {
+        if ((string) ($payment->provider_reference ?? '') === '' || $payment->status === PaymentStatus::Succeeded) {
+            return null;
+        }
+
+        return $this->devRedirectUrl($payment);
+    }
+
     public function checkStatus(Payment $payment): PaymentWebhookData
     {
         // Reflete le statut reel : le Fake se complete via la route dev-pay, pas par polling.
@@ -76,6 +85,8 @@ final class FakePaymentGateway implements PaymentGatewayInterface
         return new PaymentWebhookData(
             providerReference: (string) $request->input('provider_reference', ''),
             paid: $request->boolean('paid', true),
+            failed: $request->boolean('failed', false),
+            clientReference: $request->input('client_reference') !== null ? (string) $request->input('client_reference') : null,
         );
     }
 }

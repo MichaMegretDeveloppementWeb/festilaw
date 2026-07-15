@@ -92,6 +92,53 @@ it('reports an unpaid checkout session as still pending', function () {
     expect(app(StripePaymentGateway::class)->checkStatus($payment)->paid)->toBeFalse();
 });
 
+it('returns the in-flight checkout url for an open session (resume reuse)', function () {
+    Http::fake(['*/v1/checkout/sessions/*' => Http::response([
+        'id' => 'cs_1',
+        'status' => 'open',
+        'url' => 'https://checkout.stripe.com/c/pay/cs_1',
+    ])]);
+
+    $payment = stripePendingPayment();
+    $payment->update(['provider_reference' => 'cs_1']);
+
+    expect(app(StripePaymentGateway::class)->currentCheckoutUrl($payment))
+        ->toBe('https://checkout.stripe.com/c/pay/cs_1');
+});
+
+it('returns null from currentCheckoutUrl when the session is no longer open', function () {
+    Http::fake(['*/v1/checkout/sessions/*' => Http::response([
+        'id' => 'cs_1',
+        'status' => 'complete',
+        'url' => 'https://checkout.stripe.com/c/pay/cs_1',
+    ])]);
+
+    $payment = stripePendingPayment();
+    $payment->update(['provider_reference' => 'cs_1']);
+
+    expect(app(StripePaymentGateway::class)->currentCheckoutUrl($payment))->toBeNull();
+});
+
+it('reports an async_payment_failed event as failed and not paid', function () {
+    $event = app(StripePaymentGateway::class)->parseWebhook(stripeWebhookRequest([
+        'type' => 'checkout.session.async_payment_failed',
+        'data' => ['object' => ['id' => 'cs_1', 'payment_status' => 'unpaid']],
+    ]));
+
+    expect($event->paid)->toBeFalse()
+        ->and($event->failed)->toBeTrue();
+});
+
+it('carries our payment id (client_reference_id) for reconciliation', function () {
+    $event = app(StripePaymentGateway::class)->parseWebhook(stripeWebhookRequest([
+        'type' => 'checkout.session.completed',
+        'data' => ['object' => ['id' => 'cs_1', 'payment_status' => 'paid', 'client_reference_id' => '42']],
+    ]));
+
+    expect($event->paid)->toBeTrue()
+        ->and($event->clientReference)->toBe('42');
+});
+
 it('parses a valid Stripe webhook and reports the payment as paid', function () {
     $event = app(StripePaymentGateway::class)->parseWebhook(stripeWebhookRequest([
         'type' => 'checkout.session.completed',

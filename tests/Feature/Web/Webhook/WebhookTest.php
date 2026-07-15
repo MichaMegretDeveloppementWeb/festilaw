@@ -72,6 +72,66 @@ it('confirms a payment from a valid Stripe webhook', function () {
         ->and($submission->fresh()->status)->toBe(SubmissionStatus::Paid);
 });
 
+it('marks a payment failed from a Stripe async_payment_failed webhook, leaving the dossier payable', function () {
+    config()->set('payment.enabled', ['stripe']);
+    config()->set('payment.drivers.stripe', ['secret_key' => 'sk_test_x', 'webhook_secret' => 'whsec_x']);
+
+    $submission = Submission::factory()->starter()->create(['status' => SubmissionStatus::AwaitingPayment]);
+    $payment = $submission->payments()->create([
+        'type' => PaymentType::StarterSubscription,
+        'amount_cents' => 33300,
+        'currency' => 'EUR',
+        'provider' => 'stripe',
+        'provider_reference' => 'cs_1',
+        'status' => PaymentStatus::Pending,
+    ]);
+
+    $payload = json_encode([
+        'type' => 'checkout.session.async_payment_failed',
+        'data' => ['object' => ['id' => 'cs_1', 'payment_status' => 'unpaid']],
+    ]);
+    $time = now()->timestamp;
+    $signature = hash_hmac('sha256', "{$time}.{$payload}", 'whsec_x');
+
+    $this->call('POST', '/webhooks/payment/stripe', [], [], [], [
+        'CONTENT_TYPE' => 'application/json',
+        'HTTP_STRIPE_SIGNATURE' => "t={$time},v1={$signature}",
+    ], $payload)->assertNoContent();
+
+    expect($payment->fresh()->status)->toBe(PaymentStatus::Failed)
+        ->and($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingPayment);
+});
+
+it('reconciles a Stripe webhook by our payment id when the provider reference does not match', function () {
+    config()->set('payment.enabled', ['stripe']);
+    config()->set('payment.drivers.stripe', ['secret_key' => 'sk_test_x', 'webhook_secret' => 'whsec_x']);
+
+    $submission = Submission::factory()->starter()->create();
+    // provider_reference jamais stocke (echec rare apres createCheckout) : on rapproche par notre id.
+    $payment = $submission->payments()->create([
+        'type' => PaymentType::StarterSubscription,
+        'amount_cents' => 33300,
+        'currency' => 'EUR',
+        'provider' => 'stripe',
+        'status' => PaymentStatus::Pending,
+    ]);
+
+    $payload = json_encode([
+        'type' => 'checkout.session.completed',
+        'data' => ['object' => ['id' => 'cs_unknown', 'payment_status' => 'paid', 'client_reference_id' => (string) $payment->id]],
+    ]);
+    $time = now()->timestamp;
+    $signature = hash_hmac('sha256', "{$time}.{$payload}", 'whsec_x');
+
+    $this->call('POST', '/webhooks/payment/stripe', [], [], [], [
+        'CONTENT_TYPE' => 'application/json',
+        'HTTP_STRIPE_SIGNATURE' => "t={$time},v1={$signature}",
+    ], $payload)->assertNoContent();
+
+    expect($payment->fresh()->status)->toBe(PaymentStatus::Succeeded)
+        ->and($submission->fresh()->status)->toBe(SubmissionStatus::Paid);
+});
+
 it('marks a contract signed from the fake signature webhook', function () {
     $submission = Submission::factory()->starter()->create();
     $contract = Contract::factory()->for($submission)->create([

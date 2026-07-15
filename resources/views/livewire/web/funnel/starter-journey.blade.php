@@ -114,34 +114,42 @@
         @php $amount = '€'.number_format($amountCents / 100, $amountCents % 100 === 0 ? 0 : 2); @endphp
         <div class="journey-panel">
             <h2 class="journey-panel__title">Pay &amp; activate</h2>
-            <p class="journey-panel__text">Your file is complete. Pay your Creator Pack subscription to activate your EU Responsible Person.</p>
-            <div class="journey-amount">
-                <span class="journey-amount__value">{{ $amount }}</span>
-                <span class="journey-amount__period">per year</span>
-            </div>
-            @if (count($paymentOptions) > 1)
-                <div class="journey-methods">
-                    @foreach ($paymentOptions as $key => $label)
-                        <label class="journey-method">
-                            <input type="radio" wire:model="paymentProvider" value="{{ $key }}">
-                            <span>{{ $label }}</span>
-                        </label>
-                    @endforeach
-                </div>
-            @endif
-            <button type="button" class="btn btn--coral" wire:click="pay" wire:loading.attr="disabled" wire:target="pay">
-                <span wire:loading.remove wire:target="pay">Pay {{ $amount }} securely</span>
-                <span wire:loading wire:target="pay">Redirecting&hellip;</span>
-            </button>
 
-            {{-- Retour OU reprise avec un paiement en cours : on verifie le statut en silence (sans webhook). --}}
-            @if ($autoConfirmPay)
-                <div wire:init="autoConfirmPayment"></div>
-            @endif
-            @if ($paymentStarted)
-                <button type="button" class="btn btn--outline-dark btn--sm" wire:click="confirmPayment" wire:loading.attr="disabled" wire:target="confirmPayment">
-                    <span wire:loading.remove wire:target="confirmPayment">I have paid &middot; check now</span>
-                    <span wire:loading wire:target="confirmPayment">Checking&hellip;</span>
+            @if (! $paymentStarted)
+                {{-- Aucun paiement lance : le formulaire de paiement classique. --}}
+                <p class="journey-panel__text">Your file is complete. Pay your Creator Pack subscription to activate your EU Responsible Person.</p>
+                <div class="journey-amount">
+                    <span class="journey-amount__value">{{ $amount }}</span>
+                    <span class="journey-amount__period">per year</span>
+                </div>
+                @if (count($paymentOptions) > 1)
+                    <div class="journey-methods">
+                        @foreach ($paymentOptions as $key => $label)
+                            <label class="journey-method">
+                                <input type="radio" wire:model="paymentProvider" value="{{ $key }}">
+                                <span>{{ $label }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+                @endif
+                <button type="button" class="btn btn--coral" wire:click="pay" wire:loading.attr="disabled" wire:target="pay">
+                    <span wire:loading.remove wire:target="pay">Pay {{ $amount }} securely</span>
+                    <span wire:loading wire:target="pay">Redirecting&hellip;</span>
+                </button>
+            @else
+                {{-- Paiement en vol : on confirme (boucle auto), sans re-proposer "Payer" => anti double-debit.
+                     La boucle interroge le prestataire ; le webhook reste la source de verite en fond. --}}
+                @if (! $paymentTimedOut)
+                    <div class="journey-processing" wire:init="pollPayment" wire:poll.5s="pollPayment">
+                        <span class="journey-processing__spinner" aria-hidden="true"></span>
+                        <p class="journey-panel__text">We're confirming your payment. Some payment methods take a moment to clear &middot; this page updates on its own, no need to pay again.</p>
+                    </div>
+                @else
+                    <p class="journey-note">Your payment is still being confirmed. We'll email you the moment it clears &middot; you can safely close this page.</p>
+                @endif
+                <button type="button" class="btn btn--outline-dark btn--sm" wire:click="pay" wire:loading.attr="disabled" wire:target="pay">
+                    <span wire:loading.remove wire:target="pay">Haven't finished paying? Resume</span>
+                    <span wire:loading wire:target="pay">Redirecting&hellip;</span>
                 </button>
             @endif
         </div>

@@ -83,6 +83,31 @@ final class StripePaymentGateway implements PaymentGatewayInterface
         return new CheckoutSessionData(providerReference: $id, redirectUrl: $url);
     }
 
+    public function currentCheckoutUrl(Payment $payment): ?string
+    {
+        $this->assertConfigured('secret_key');
+
+        $sessionId = (string) ($payment->provider_reference ?? '');
+        if ($sessionId === '') {
+            return null;
+        }
+
+        try {
+            $session = $this->api()->get("/checkout/sessions/{$sessionId}")->throw()->json();
+        } catch (Throwable $e) {
+            throw PaymentException::apiRequestFailed('retrieve checkout session', $e);
+        }
+
+        // Reutilisable seulement tant que la session est ouverte (ni payee, ni expiree).
+        if (Arr::get($session, 'status') !== 'open') {
+            return null;
+        }
+
+        $url = (string) Arr::get($session, 'url', '');
+
+        return $url !== '' ? $url : null;
+    }
+
     public function checkStatus(Payment $payment): PaymentWebhookData
     {
         $this->assertConfigured('secret_key');
@@ -119,6 +144,9 @@ final class StripePaymentGateway implements PaymentGatewayInterface
         return new PaymentWebhookData(
             providerReference: (string) Arr::get($session, 'id', ''),
             paid: $paid,
+            failed: $type === 'checkout.session.async_payment_failed',
+            // Notre payment id (envoye en client_reference_id) : rapprochement de secours.
+            clientReference: ((string) Arr::get($session, 'client_reference_id', '')) ?: null,
         );
     }
 
