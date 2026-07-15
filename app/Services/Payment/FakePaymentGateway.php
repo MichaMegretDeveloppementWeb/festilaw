@@ -7,6 +7,7 @@ namespace App\Services\Payment;
 use App\Contracts\Payment\PaymentGatewayInterface;
 use App\Data\Payment\CheckoutSessionData;
 use App\Data\Payment\PaymentWebhookData;
+use App\Enums\Payment\PaymentStatus;
 use App\Enums\Payment\PaymentType;
 use App\Models\Payment;
 use Illuminate\Http\Request;
@@ -58,6 +59,15 @@ final class FakePaymentGateway implements PaymentGatewayInterface
             ),
             default => url('/'),
         };
+    }
+
+    public function checkStatus(Payment $payment): PaymentWebhookData
+    {
+        // Reflete le statut reel : le Fake se complete via la route dev-pay, pas par polling.
+        return new PaymentWebhookData(
+            providerReference: (string) ($payment->provider_reference ?? ''),
+            paid: $payment->status === PaymentStatus::Succeeded,
+        );
     }
 
     public function parseWebhook(Request $request): PaymentWebhookData

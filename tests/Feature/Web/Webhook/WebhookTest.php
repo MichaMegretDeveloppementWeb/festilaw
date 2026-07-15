@@ -41,6 +41,37 @@ it('confirms a payment from the fake payment webhook', function () {
         ->and($submission->fresh()->status)->toBe(SubmissionStatus::Paid);
 });
 
+it('confirms a payment from a valid Stripe webhook', function () {
+    config()->set('payment.enabled', ['stripe']);
+    config()->set('payment.drivers.stripe', ['secret_key' => 'sk_test_x', 'webhook_secret' => 'whsec_x']);
+
+    $submission = Submission::factory()->starter()->create();
+    $payment = $submission->payments()->create([
+        'type' => PaymentType::StarterSubscription,
+        'amount_cents' => 33300,
+        'currency' => 'EUR',
+        'provider' => 'stripe',
+        'provider_reference' => 'cs_1',
+        'status' => PaymentStatus::Pending,
+    ]);
+
+    // Le corps doit etre transmis brut : la signature Stripe porte sur ces octets exacts.
+    $payload = json_encode([
+        'type' => 'checkout.session.completed',
+        'data' => ['object' => ['id' => 'cs_1', 'payment_status' => 'paid']],
+    ]);
+    $time = now()->timestamp;
+    $signature = hash_hmac('sha256', "{$time}.{$payload}", 'whsec_x');
+
+    $this->call('POST', '/webhooks/payment/stripe', [], [], [], [
+        'CONTENT_TYPE' => 'application/json',
+        'HTTP_STRIPE_SIGNATURE' => "t={$time},v1={$signature}",
+    ], $payload)->assertNoContent();
+
+    expect($payment->fresh()->status)->toBe(PaymentStatus::Succeeded)
+        ->and($submission->fresh()->status)->toBe(SubmissionStatus::Paid);
+});
+
 it('marks a contract signed from the fake signature webhook', function () {
     $submission = Submission::factory()->starter()->create();
     $contract = Contract::factory()->for($submission)->create([

@@ -133,6 +133,17 @@
                 <span wire:loading.remove wire:target="pay">Pay {{ $amount }} securely</span>
                 <span wire:loading wire:target="pay">Redirecting&hellip;</span>
             </button>
+
+            {{-- Retour OU reprise avec un paiement en cours : on verifie le statut en silence (sans webhook). --}}
+            @if ($autoConfirmPay)
+                <div wire:init="autoConfirmPayment"></div>
+            @endif
+            @if ($paymentStarted)
+                <button type="button" class="btn btn--outline-dark btn--sm" wire:click="confirmPayment" wire:loading.attr="disabled" wire:target="confirmPayment">
+                    <span wire:loading.remove wire:target="confirmPayment">I have paid &middot; check now</span>
+                    <span wire:loading wire:target="confirmPayment">Checking&hellip;</span>
+                </button>
+            @endif
         </div>
 
     @elseif ($step === 'done')

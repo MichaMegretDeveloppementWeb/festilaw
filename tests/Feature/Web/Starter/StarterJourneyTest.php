@@ -6,6 +6,7 @@ use App\Data\Signature\SignatureWebhookData;
 use App\Data\Signature\SigningSessionData;
 use App\Enums\Contract\SignatureStatus;
 use App\Enums\Payment\PaymentStatus;
+use App\Enums\Payment\PaymentType;
 use App\Enums\Submission\SubmissionStatus;
 use App\Enums\Submission\SubmissionType;
 use App\Livewire\Web\Funnel\StarterJourney;
@@ -14,6 +15,7 @@ use App\Models\Submission;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
@@ -183,6 +185,54 @@ it('reuses the in-flight signing session on resume instead of creating a second 
 
     // The reference was not overwritten: no second session/document was created.
     expect($submission->fresh()->contract->signature_provider_reference)->toBe('fake_existing');
+});
+
+/** A dossier at the payment step with a pending Stripe checkout in flight. */
+function dossierAwaitingStripePayment(): Submission
+{
+    $submission = openStarterDossier();
+    $submission->update(['status' => SubmissionStatus::AwaitingPayment]);
+    $submission->contract->update(['signature_status' => SignatureStatus::Signed]);
+    $submission->payments()->create([
+        'type' => PaymentType::StarterSubscription,
+        'amount_cents' => 33300,
+        'currency' => 'EUR',
+        'provider' => 'stripe',
+        'provider_reference' => 'cs_1',
+        'status' => PaymentStatus::Pending,
+    ]);
+
+    return $submission->fresh();
+}
+
+it('confirms the payment on return and shows the success banner', function () {
+    config()->set('payment.enabled', ['stripe']);
+    config()->set('payment.drivers.stripe', ['secret_key' => 'sk_test_x', 'webhook_secret' => 'whsec_x']);
+    Http::fake(['*/v1/checkout/sessions/*' => Http::response(['id' => 'cs_1', 'payment_status' => 'paid'])]);
+
+    $submission = dossierAwaitingStripePayment();
+
+    Livewire::test(StarterJourney::class, ['submission' => $submission])
+        ->call('confirmPayment')
+        ->assertHasNoErrors()
+        ->assertSee('Payment received')
+        ->assertSee('Your Creator Pack is active.');
+
+    expect($submission->fresh()->status)->toBe(SubmissionStatus::Paid);
+});
+
+it('tells the buyer to retry when the payment is not confirmed yet', function () {
+    config()->set('payment.enabled', ['stripe']);
+    config()->set('payment.drivers.stripe', ['secret_key' => 'sk_test_x', 'webhook_secret' => 'whsec_x']);
+    Http::fake(['*/v1/checkout/sessions/*' => Http::response(['id' => 'cs_1', 'payment_status' => 'unpaid'])]);
+
+    $submission = dossierAwaitingStripePayment();
+
+    Livewire::test(StarterJourney::class, ['submission' => $submission])
+        ->call('confirmPayment')
+        ->assertHasErrors('journey');
+
+    expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingPayment);
 });
 
 it('rejects an oversized document on submit', function () {

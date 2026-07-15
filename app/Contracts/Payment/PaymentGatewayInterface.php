@@ -25,6 +25,12 @@ interface PaymentGatewayInterface
     /** Start a payment and return where to send the buyer. */
     public function createCheckout(Payment $payment): CheckoutSessionData;
 
+    /**
+     * Poll the provider for the current status of the payment (used to confirm on the buyer's return
+     * without relying on the webhook). Returns paid=false while still pending.
+     */
+    public function checkStatus(Payment $payment): PaymentWebhookData;
+
     /** Verify + parse an incoming provider webhook. Throws on an invalid/untrusted payload. */
     public function parseWebhook(Request $request): PaymentWebhookData;
 }

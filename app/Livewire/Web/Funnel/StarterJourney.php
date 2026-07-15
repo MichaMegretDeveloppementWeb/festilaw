@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire\Web\Funnel;
 
+use App\Actions\Web\Payment\MarkPaymentSucceededAction;
 use App\Actions\Web\Starter\MarkContractSignedAction;
 use App\Actions\Web\Starter\StartContractSigningAction;
 use App\Actions\Web\Starter\StartStarterPaymentAction;
@@ -11,9 +12,11 @@ use App\Actions\Web\Starter\SubmitStarterDocumentsAction;
 use App\Contracts\Signature\SignatureGatewayInterface;
 use App\Enums\Contract\SignatureStatus;
 use App\Enums\Document\DocumentType;
+use App\Enums\Payment\PaymentStatus;
 use App\Enums\Submission\SubmissionStatus;
 use App\Exceptions\BaseAppException;
 use App\Livewire\Concerns\HandlesUnexpectedErrors;
+use App\Models\Payment;
 use App\Models\Submission;
 use App\Services\Payment\PaymentGatewayRegistry;
 use Illuminate\Support\Facades\Log;
@@ -48,12 +51,16 @@ class StarterJourney extends Component
     /** Auto-confirm the signature on load when a session is already in flight (provider return OR resume). */
     public bool $autoConfirm = false;
 
+    /** Auto-confirm the payment on load when a checkout is already in flight (provider return OR resume). */
+    public bool $autoConfirmPay = false;
+
     public function mount(Submission $submission, PaymentGatewayRegistry $gateways): void
     {
         $this->submission = $submission;
         $this->paymentOptions = $gateways->options();
         $this->paymentProvider = (string) array_key_first($this->paymentOptions);
         $this->autoConfirm = $this->signatureInFlight();
+        $this->autoConfirmPay = $this->paymentInFlight();
     }
 
     /** A signing session already exists for this dossier but the contract is not signed yet. */
@@ -65,6 +72,22 @@ class StarterJourney extends Component
         return $this->step() === 'sign'
             && $contract !== null
             && (string) ($contract->signature_provider_reference ?? '') !== '';
+    }
+
+    /** A checkout has been started (pending payment with a provider reference) but is not confirmed yet. */
+    private function paymentInFlight(): bool
+    {
+        return $this->step() === 'payment' && $this->pendingPayment() !== null;
+    }
+
+    /** The pending payment whose checkout is in flight, if any. */
+    private function pendingPayment(): ?Payment
+    {
+        return $this->submission->payments()
+            ->where('status', PaymentStatus::Pending)
+            ->whereNotNull('provider_reference')
+            ->latest()
+            ->first();
     }
 
     /**
@@ -260,6 +283,69 @@ class StarterJourney extends Component
     }
 
     /**
+     * Manual confirmation (the "I have paid" button): polls the provider and advances if paid,
+     * otherwise tells the buyer it is not confirmed yet.
+     */
+    public function confirmPayment(PaymentGatewayRegistry $gateways, MarkPaymentSucceededAction $markPaymentSucceeded): void
+    {
+        try {
+            if (! $this->tryConfirmPayment($gateways, $markPaymentSucceeded) && $this->step() === 'payment') {
+                $this->addError('journey', 'Your payment has not been confirmed yet. If you have just paid, wait a few seconds and check again.');
+            }
+        } catch (BaseAppException $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            $this->addError('journey', $e->getUserMessage());
+        } catch (Throwable $e) {
+            $this->reportUnexpectedError($e, 'journey', 'STARTER payment confirmation');
+        }
+    }
+
+    /**
+     * Silent auto-confirmation on return/resume (wire:init): advances if the provider already has the
+     * payment, otherwise does nothing (the buyer can still pay or check manually). Self-heals the
+     * "paid but the browser closed before the redirect completed" case.
+     */
+    public function autoConfirmPayment(PaymentGatewayRegistry $gateways, MarkPaymentSucceededAction $markPaymentSucceeded): void
+    {
+        $this->autoConfirmPay = false;
+
+        try {
+            $this->tryConfirmPayment($gateways, $markPaymentSucceeded);
+        } catch (Throwable $e) {
+            // Best effort : un echec ne montre rien ici, l'acheteur garde le bouton manuel.
+            Log::error('STARTER auto payment confirmation failed.', ['exception' => $e]);
+        }
+    }
+
+    /**
+     * Polls the provider once; if the payment is settled, records it (idempotent), advances the
+     * dossier and flashes the success banner. Returns whether the payment was confirmed.
+     */
+    private function tryConfirmPayment(PaymentGatewayRegistry $gateways, MarkPaymentSucceededAction $markPaymentSucceeded): bool
+    {
+        if ($this->step() !== 'payment') {
+            return false;
+        }
+
+        $payment = $this->pendingPayment();
+        if ($payment === null || ! $gateways->has($payment->provider)) {
+            return false;
+        }
+
+        $event = $gateways->get($payment->provider)->checkStatus($payment);
+        if (! $event->paid) {
+            return false;
+        }
+
+        $markPaymentSucceeded->execute($payment, $event->providerReference);
+        $this->submission->refresh();
+
+        session()->now('starter_status', 'paid');
+
+        return true;
+    }
+
+    /**
      * The single source of truth for what the user sees, derived from the submission status.
      */
     private function step(): string
@@ -328,6 +414,7 @@ class StarterJourney extends Component
             'step' => $this->step(),
             'contractDeclined' => $this->submission->contract?->signature_status === SignatureStatus::Declined,
             'signatureStarted' => (string) ($this->submission->contract?->signature_provider_reference ?? '') !== '',
+            'paymentStarted' => $this->pendingPayment() !== null,
             'requiredDocuments' => $this->requiredDocumentTypes(),
             'deposits' => $this->stagedDocuments(),
             'acceptAttr' => '.'.implode(',.', $this->documentMimes()),
