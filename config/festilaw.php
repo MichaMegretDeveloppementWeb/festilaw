@@ -29,7 +29,7 @@ return [
      | Adresse qui recoit les notifications (chaque soumission de formulaire, paiement...).
      | Valeur par defaut a confirmer avec Festilaw (voir questions-cliente.md B3).
      */
-    'notification_email' => env('FESTILAW_NOTIFICATION_EMAIL', 'team@festilaw.com'),
+    'notification_email' => env('FESTILAW_NOTIFICATION_EMAIL') ?: 'team@festilaw.com',
 
     /*
      | Parcours STARTER (Creator Pack). Montant en centimes ; liste des pieces obligatoires
