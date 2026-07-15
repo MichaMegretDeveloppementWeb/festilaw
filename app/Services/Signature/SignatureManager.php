@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Signature;
 
 use App\Contracts\Signature\SignatureGatewayInterface;
+use App\Services\Contract\ContractPdfGenerator;
 use Illuminate\Support\Manager;
 
 /**
@@ -23,8 +24,22 @@ final class SignatureManager extends Manager
         return new FakeSignatureGateway;
     }
 
+    public function createSignwellDriver(): SignatureGatewayInterface
+    {
+        return new SignWellSignatureGateway(
+            (array) $this->config->get('signature.drivers.signwell', []),
+            $this->container->make(ContractPdfGenerator::class),
+        );
+    }
+
     public function createZohoDriver(): SignatureGatewayInterface
     {
-        return new ZohoSignatureGateway($this->config->get('signature.drivers.zoho', []));
+        $config = (array) $this->config->get('signature.drivers.zoho', []);
+
+        return new ZohoSignatureGateway(
+            $config,
+            new ZohoTokenProvider($config),
+            $this->container->make(ContractPdfGenerator::class),
+        );
     }
 }

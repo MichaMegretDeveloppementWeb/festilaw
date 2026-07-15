@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Livewire\Web\Funnel;
 
+use App\Actions\Web\Starter\MarkContractSignedAction;
 use App\Actions\Web\Starter\StartContractSigningAction;
 use App\Actions\Web\Starter\StartStarterPaymentAction;
 use App\Actions\Web\Starter\SubmitStarterDocumentsAction;
+use App\Contracts\Signature\SignatureGatewayInterface;
 use App\Enums\Contract\SignatureStatus;
 use App\Enums\Document\DocumentType;
 use App\Enums\Submission\SubmissionStatus;
@@ -43,11 +45,55 @@ class StarterJourney extends Component
     /** @var array<string, string> */
     public array $paymentOptions = [];
 
+    /** True right after the signer returns from the provider, to auto-confirm the signature. */
+    public bool $justReturned = false;
+
     public function mount(Submission $submission, PaymentGatewayRegistry $gateways): void
     {
         $this->submission = $submission;
         $this->paymentOptions = $gateways->options();
         $this->paymentProvider = (string) array_key_first($this->paymentOptions);
+        $this->justReturned = request()->boolean('signature_return');
+    }
+
+    /**
+     * Confirms the signature by polling the provider (used when the signer returns, no webhook needed).
+     * Auto-fired on return, and available as a manual retry.
+     */
+    public function confirmSignature(SignatureGatewayInterface $signatureGateway, MarkContractSignedAction $markContractSigned): void
+    {
+        $this->justReturned = false;
+
+        if ($this->step() !== 'sign') {
+            return;
+        }
+
+        $contract = $this->submission->contract;
+        if ($contract === null || (string) ($contract->signature_provider_reference ?? '') === '') {
+            return;
+        }
+
+        try {
+            $event = $signatureGateway->checkStatus($contract);
+
+            if (! $event->signed) {
+                $this->addError('journey', 'Your signature has not been recorded yet. If you have just signed, wait a few seconds and check again.');
+
+                return;
+            }
+
+            $markContractSigned->execute($contract, $event->signedFilePath, $event->providerReference);
+            $this->submission->refresh();
+
+            // Bandeau de succes, comme le retour "fake" (StarterDevSignController) mais cote Livewire :
+            // now() = visible dans ce re-render uniquement, sans fuiter a l'interaction suivante.
+            session()->now('starter_status', 'signed');
+        } catch (BaseAppException $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            $this->addError('journey', $e->getUserMessage());
+        } catch (Throwable $e) {
+            $this->reportUnexpectedError($e, 'journey', 'STARTER signature confirmation');
+        }
     }
 
     public function sign(StartContractSigningAction $startContractSigning): mixed
@@ -218,6 +264,7 @@ class StarterJourney extends Component
         return view('livewire.web.funnel.starter-journey', [
             'step' => $this->step(),
             'contractDeclined' => $this->submission->contract?->signature_status === SignatureStatus::Declined,
+            'signatureStarted' => (string) ($this->submission->contract?->signature_provider_reference ?? '') !== '',
             'requiredDocuments' => $this->requiredDocumentTypes(),
             'deposits' => $this->stagedDocuments(),
             'acceptAttr' => '.'.implode(',.', $this->documentMimes()),

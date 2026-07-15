@@ -42,6 +42,17 @@
                 <span wire:loading.remove wire:target="sign">Sign the mandate</span>
                 <span wire:loading wire:target="sign">Redirecting&hellip;</span>
             </button>
+
+            {{-- Retour du signataire : on confirme la signature en interrogeant le prestataire (sans webhook). --}}
+            @if ($justReturned)
+                <div wire:init="confirmSignature"></div>
+            @endif
+            @if ($signatureStarted)
+                <button type="button" class="btn btn--outline-dark btn--sm" wire:click="confirmSignature" wire:loading.attr="disabled" wire:target="confirmSignature">
+                    <span wire:loading.remove wire:target="confirmSignature">I have signed &middot; check now</span>
+                    <span wire:loading wire:target="confirmSignature">Checking&hellip;</span>
+                </button>
+            @endif
         </div>
 
     @elseif ($step === 'documents')

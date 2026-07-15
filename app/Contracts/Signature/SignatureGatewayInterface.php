@@ -21,6 +21,12 @@ interface SignatureGatewayInterface
     /** Start a signing session for the given contract and return where the signer must go. */
     public function createSigningSession(Contract $contract): SigningSessionData;
 
+    /**
+     * Poll the provider for the current signature status of the contract (used to confirm completion
+     * when the signer returns, without relying on a webhook). Downloads the signed document if done.
+     */
+    public function checkStatus(Contract $contract): SignatureWebhookData;
+
     /** Verify + parse an incoming provider webhook. Throws on an invalid/untrusted payload. */
     public function parseWebhook(Request $request): SignatureWebhookData;
 }

@@ -1,13 +1,18 @@
 <?php
 
 use App\Actions\Web\Starter\CreateStarterSubmissionAction;
+use App\Contracts\Signature\SignatureGatewayInterface;
+use App\Data\Signature\SignatureWebhookData;
+use App\Data\Signature\SigningSessionData;
 use App\Enums\Contract\SignatureStatus;
 use App\Enums\Payment\PaymentStatus;
 use App\Enums\Submission\SubmissionStatus;
 use App\Enums\Submission\SubmissionType;
 use App\Livewire\Web\Funnel\StarterJourney;
+use App\Models\Contract;
 use App\Models\Submission;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
@@ -85,6 +90,80 @@ it('walks the STARTER journey end-to-end through the UI and the fake dev routes'
     get(route('get-started.starter.journey', ['locale' => 'en', 'dossier' => $token]))
         ->assertOk()
         ->assertSee('Your Creator Pack is active.');
+});
+
+it('confirms the signature on the signer return and shows the success banner', function () {
+    // A provider that answers "signed" to the return poll, exactly like SignWell once the signer
+    // completed on its hosted page (no webhook involved).
+    app()->bind(SignatureGatewayInterface::class, fn () => new class implements SignatureGatewayInterface
+    {
+        public function key(): string
+        {
+            return 'stub';
+        }
+
+        public function createSigningSession(Contract $contract): SigningSessionData
+        {
+            return new SigningSessionData('ref-1', 'https://example.com/sign');
+        }
+
+        public function checkStatus(Contract $contract): SignatureWebhookData
+        {
+            return new SignatureWebhookData('ref-1', true, 'contracts/ref-1.pdf');
+        }
+
+        public function parseWebhook(Request $request): SignatureWebhookData
+        {
+            return new SignatureWebhookData('ref-1', true, null);
+        }
+    });
+
+    $submission = openStarterDossier();
+    $submission->contract->update(['signature_provider' => 'stub', 'signature_provider_reference' => 'ref-1']);
+
+    Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
+        ->call('confirmSignature')
+        ->assertHasNoErrors()
+        ->assertSee('Mandate signed')
+        ->assertSee('Upload your documents');
+
+    expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingDocuments)
+        ->and($submission->fresh()->contract->signature_status)->toBe(SignatureStatus::Signed);
+});
+
+it('tells the signer to retry when the signature is not recorded yet on return', function () {
+    // The provider still reports "pending" (e.g. the signer returned a hair too early).
+    app()->bind(SignatureGatewayInterface::class, fn () => new class implements SignatureGatewayInterface
+    {
+        public function key(): string
+        {
+            return 'stub';
+        }
+
+        public function createSigningSession(Contract $contract): SigningSessionData
+        {
+            return new SigningSessionData('ref-1', 'https://example.com/sign');
+        }
+
+        public function checkStatus(Contract $contract): SignatureWebhookData
+        {
+            return new SignatureWebhookData('ref-1', false, null);
+        }
+
+        public function parseWebhook(Request $request): SignatureWebhookData
+        {
+            return new SignatureWebhookData('ref-1', false, null);
+        }
+    });
+
+    $submission = openStarterDossier();
+    $submission->contract->update(['signature_provider' => 'stub', 'signature_provider_reference' => 'ref-1']);
+
+    Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
+        ->call('confirmSignature')
+        ->assertHasErrors('journey');
+
+    expect($submission->fresh()->status)->toBe(SubmissionStatus::InProgress);
 });
 
 it('rejects an oversized document on submit', function () {

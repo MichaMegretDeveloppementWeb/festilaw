@@ -7,6 +7,7 @@ namespace App\Services\Signature;
 use App\Contracts\Signature\SignatureGatewayInterface;
 use App\Data\Signature\SignatureWebhookData;
 use App\Data\Signature\SigningSessionData;
+use App\Enums\Contract\SignatureStatus;
 use App\Models\Contract;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -48,6 +49,18 @@ final class FakeSignatureGateway implements SignatureGatewayInterface
         return $token !== null
             ? route('get-started.starter.dev-sign', ['locale' => app()->getLocale(), 'dossier' => $token])
             : url('/');
+    }
+
+    public function checkStatus(Contract $contract): SignatureWebhookData
+    {
+        // Reflete le statut reel : le Fake se complete via la route dev-sign, pas par polling.
+        $signed = $contract->signature_status === SignatureStatus::Signed;
+
+        return new SignatureWebhookData(
+            providerReference: (string) ($contract->signature_provider_reference ?? ''),
+            signed: $signed,
+            signedFilePath: $contract->signed_file_path,
+        );
     }
 
     public function parseWebhook(Request $request): SignatureWebhookData
