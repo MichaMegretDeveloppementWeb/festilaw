@@ -15,8 +15,10 @@
 </head>
 <body class="min-h-screen bg-slate-50 text-slate-800 antialiased">
     @auth
-        @php($isContacts = request()->routeIs('admin.contacts.*'))
-        @php($isDossiers = request()->routeIs('admin.submissions.*'))
+        @php($routeSubmission = request()->route('submission'))
+        @php($viewingContact = $routeSubmission instanceof \App\Models\Submission && $routeSubmission->type === \App\Enums\Submission\SubmissionType::Contact)
+        @php($isContacts = request()->routeIs('admin.contacts.*') || $viewingContact)
+        @php($isDossiers = request()->routeIs('admin.submissions.*') && ! $viewingContact)
 
         {{-- Barre superieure mobile + menu burger (le menu se superpose au contenu, sans le decaler) --}}
         <div x-data="{ mobileOpen: false }" @keydown.escape.window="mobileOpen = false" class="md:hidden">
