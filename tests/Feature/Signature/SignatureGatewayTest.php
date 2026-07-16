@@ -4,7 +4,7 @@ use App\Contracts\Signature\SignatureGatewayInterface;
 use App\Data\Signature\SigningSessionData;
 use App\Models\Contract;
 use App\Services\Signature\FakeSignatureGateway;
-use App\Services\Signature\ZohoSignatureGateway;
+use App\Services\Signature\SignWellSignatureGateway;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -30,10 +30,10 @@ it('creates a signing session without any external call', function () {
 });
 
 it('swaps the active provider through config alone', function () {
-    config()->set('signature.default', 'zoho');
+    config()->set('signature.default', 'signwell');
 
     $gateway = app(SignatureGatewayInterface::class);
 
-    expect($gateway)->toBeInstanceOf(ZohoSignatureGateway::class)
-        ->and($gateway->key())->toBe('zoho');
+    expect($gateway)->toBeInstanceOf(SignWellSignatureGateway::class)
+        ->and($gateway->key())->toBe('signwell');
 });

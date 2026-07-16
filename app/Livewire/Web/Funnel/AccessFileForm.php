@@ -5,11 +5,9 @@ declare(strict_types=1);
 namespace App\Livewire\Web\Funnel;
 
 use App\Actions\Web\Starter\SendStarterResumeLinkAction;
-use App\Enums\Submission\SubmissionStatus;
-use App\Enums\Submission\SubmissionType;
 use App\Livewire\Concerns\HandlesUnexpectedErrors;
 use App\Livewire\Concerns\HasSpamProtection;
-use App\Models\Submission;
+use App\Services\Starter\StarterDossierFinder;
 use Livewire\Component;
 
 /**
@@ -43,7 +41,7 @@ class AccessFileForm extends Component
         ];
     }
 
-    public function submit(SendStarterResumeLinkAction $sendResumeLink): void
+    public function submit(SendStarterResumeLinkAction $sendResumeLink, StarterDossierFinder $finder): void
     {
         if ($this->looksLikeSpam()) {
             $this->sent = true;
@@ -59,31 +57,12 @@ class AccessFileForm extends Component
 
         // On envoie le lien seulement si un dossier existe, mais le message est toujours le meme
         // (on ne revele jamais si un email a un dossier). L'envoi est resilient (ne casse rien).
-        $dossier = $this->findDossier($this->email);
+        $dossier = $finder->mostRelevantResumableForEmail($this->email);
         if ($dossier !== null) {
             $sendResumeLink->execute($dossier);
         }
 
         $this->sent = true;
-    }
-
-    /** The most relevant still-resumable STARTER dossier for this email: active first, else most advanced. */
-    private function findDossier(string $email): ?Submission
-    {
-        return Submission::query()
-            ->where('type', SubmissionType::Starter)
-            ->where('email', $email)
-            ->whereIn('status', [
-                SubmissionStatus::Paid,
-                SubmissionStatus::Completed,
-                SubmissionStatus::AwaitingPayment,
-                SubmissionStatus::AwaitingDocuments,
-                SubmissionStatus::InProgress,
-            ])
-            ->resumable()
-            ->orderByRaw("CASE status WHEN 'paid' THEN 0 WHEN 'completed' THEN 1 WHEN 'awaiting_payment' THEN 2 WHEN 'awaiting_documents' THEN 3 ELSE 4 END")
-            ->latest()
-            ->first();
     }
 
     public function render()

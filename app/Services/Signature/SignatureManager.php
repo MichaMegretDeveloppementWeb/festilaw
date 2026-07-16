@@ -31,15 +31,4 @@ final class SignatureManager extends Manager
             $this->container->make(ContractPdfGenerator::class),
         );
     }
-
-    public function createZohoDriver(): SignatureGatewayInterface
-    {
-        $config = (array) $this->config->get('signature.drivers.zoho', []);
-
-        return new ZohoSignatureGateway(
-            $config,
-            new ZohoTokenProvider($config),
-            $this->container->make(ContractPdfGenerator::class),
-        );
-    }
 }

@@ -6,13 +6,16 @@ namespace App\Models;
 
 use App\Enums\Submission\SubmissionStatus;
 use App\Enums\Submission\SubmissionType;
+use App\Observers\SubmissionObserver;
 use Database\Factories\SubmissionFactory;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
+#[ObservedBy([SubmissionObserver::class])]
 class Submission extends Model
 {
     /** @use HasFactory<SubmissionFactory> */

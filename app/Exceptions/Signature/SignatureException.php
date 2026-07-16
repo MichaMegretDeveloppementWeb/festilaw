@@ -19,29 +19,12 @@ final class SignatureException extends BaseAppException
         );
     }
 
-    public static function tokenExchangeFailed(?Throwable $previous = null): self
-    {
-        return new self(
-            technicalMessage: 'Zoho Sign OAuth token exchange failed (check client id/secret, refresh token and datacenter).',
-            userMessage: self::USER_MESSAGE,
-            previous: $previous,
-        );
-    }
-
     public static function apiRequestFailed(string $operation, ?Throwable $previous = null): self
     {
         return new self(
             technicalMessage: "Signature provider API request failed during [{$operation}].",
             userMessage: self::USER_MESSAGE,
             previous: $previous,
-        );
-    }
-
-    public static function templateSignerMissing(string $templateId): self
-    {
-        return new self(
-            technicalMessage: "Zoho Sign template [{$templateId}] has no SIGN recipient action to bind the signer to.",
-            userMessage: self::USER_MESSAGE,
         );
     }
 

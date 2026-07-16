@@ -229,7 +229,10 @@ final class SignWellSignatureGateway implements SignatureGatewayInterface
     private function api(): PendingRequest
     {
         return Http::withHeaders(['X-Api-Key' => (string) $this->config['api_key']])
-            ->baseUrl(rtrim((string) $this->config['api_base_url'], '/'));
+            ->baseUrl(rtrim((string) $this->config['api_base_url'], '/'))
+            ->timeout(15)
+            ->connectTimeout(5)
+            ->retry(2, 200, throw: false);
     }
 
     private function isTesting(): bool

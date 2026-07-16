@@ -35,6 +35,9 @@ return [
         'required_documents' => ['turnover_proof', 'technical_documentation'],
         // Duree de validite du lien de reprise du dossier (jours).
         'resume_ttl_days' => (int) env('FESTILAW_STARTER_RESUME_TTL_DAYS', 30),
+        // Purge RGPD : delai (jours) apres expiration du lien avant de supprimer un dossier
+        // abandonne (jamais paye) et ses fichiers televerses. Les dossiers payes sont conserves.
+        'abandoned_retention_days' => (int) env('FESTILAW_STARTER_ABANDONED_RETENTION_DAYS', 90),
     ],
 
     /*

@@ -15,7 +15,7 @@ use Illuminate\Http\Request;
  */
 interface SignatureGatewayInterface
 {
-    /** Identifier of the active provider (e.g. 'zoho', 'fake'). */
+    /** Identifier of the active provider (e.g. 'signwell', 'fake'). */
     public function key(): string;
 
     /** Start a signing session for the given contract and return where the signer must go. */

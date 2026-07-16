@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetLocale;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -13,11 +14,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // La locale vit en session : SetLocale l'applique sur CHAQUE requete web (y compris les
-        // updates Livewire sur /livewire/update, hors du groupe {locale}). Ajoute apres StartSession.
-        $middleware->web(append: [SetLocale::class]);
+        // Derriere le proxy de l'hebergement mutualise : detecter correctement HTTPS et l'IP client.
+        $middleware->trustProxies(at: '*');
 
-        // Les webhooks providers (Stripe/Zoho) sont des POST externes : hors CSRF.
+        // Sur chaque requete web (apres StartSession) : SetLocale applique la locale de session
+        // (y compris /livewire/update) ; SecurityHeaders pose les en-tetes de securite (nosniff, etc.).
+        $middleware->web(append: [SetLocale::class, SecurityHeaders::class]);
+
+        // Les webhooks providers (Stripe/SignWell) sont des POST externes : hors CSRF.
         $middleware->validateCsrfTokens(except: ['webhooks/*']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

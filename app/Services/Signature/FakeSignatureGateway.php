@@ -15,7 +15,7 @@ use Illuminate\Support\Str;
 /**
  * Default driver: simulates a signature provider with no external call, so the STARTER
  * flow can be built and tested end-to-end without any credentials. Swap to a real driver
- * (e.g. Zoho) by setting SIGNATURE_DRIVER once keys are available.
+ * (e.g. SignWell) by setting SIGNATURE_DRIVER once keys are available.
  */
 final class FakeSignatureGateway implements SignatureGatewayInterface
 {

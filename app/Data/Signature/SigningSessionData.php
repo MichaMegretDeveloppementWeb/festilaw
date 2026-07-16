@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Data\Signature;
 
 /**
- * Provider-agnostic output of a signing session: no Zoho/DocuSign object ever leaks upward.
+ * Provider-agnostic output of a signing session: no SignWell/DocuSign object ever leaks upward.
  */
 final readonly class SigningSessionData
 {

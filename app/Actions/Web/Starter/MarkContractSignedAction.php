@@ -10,7 +10,7 @@ use App\Models\Contract;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Records a completed signature (called by the Zoho webhook). Idempotent AND concurrency-safe:
+ * Records a completed signature (called by the signature webhook). Idempotent AND concurrency-safe:
  * only the first of two redelivered webhooks transitions the state. Advances the submission
  * to "awaiting documents".
  */

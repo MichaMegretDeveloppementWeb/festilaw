@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Receives the signature provider webhook (Zoho...), verifies + parses it via the active gateway,
+ * Receives the signature provider webhook (SignWell...), verifies + parses it via the active gateway,
  * and records the signature synchronously. Idempotent (the Action is), no worker/cron.
  */
 final class SignatureWebhookController extends Controller

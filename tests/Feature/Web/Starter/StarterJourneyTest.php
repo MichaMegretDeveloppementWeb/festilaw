@@ -41,7 +41,7 @@ function openStarterDossier(): Submission
     ])->submission;
 }
 
-/** Binds a stub signature provider that reports the given completion state (like SignWell/Zoho would). */
+/** Binds a stub signature provider that reports the given completion state (like SignWell would). */
 function bindSignatureGateway(bool $signed): void
 {
     app()->bind(SignatureGatewayInterface::class, fn () => new class($signed) implements SignatureGatewayInterface

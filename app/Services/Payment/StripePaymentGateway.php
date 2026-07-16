@@ -192,7 +192,10 @@ final class StripePaymentGateway implements PaymentGatewayInterface
     private function api(): PendingRequest
     {
         return Http::withToken((string) $this->config['secret_key'])
-            ->baseUrl('https://api.stripe.com/v1');
+            ->baseUrl('https://api.stripe.com/v1')
+            ->timeout(15)
+            ->connectTimeout(5)
+            ->retry(2, 200, throw: false);
     }
 
     private function assertConfigured(string $key): void
