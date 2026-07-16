@@ -144,10 +144,11 @@ class SubmissionDetail extends Component
 
     public function deleteDossier(): mixed
     {
+        $isContact = $this->submission->type === SubmissionType::Contact;
         $this->submission->delete();
-        session()->flash('admin_flash', __('Dossier supprimé.'));
+        session()->flash('admin_flash', $isContact ? __('Prise de contact supprimée.') : __('Dossier supprimé.'));
 
-        return $this->redirectRoute('admin.submissions.index', navigate: true);
+        return $this->redirectRoute($isContact ? 'admin.contacts.index' : 'admin.submissions.index', navigate: true);
     }
 
     public function render(): View

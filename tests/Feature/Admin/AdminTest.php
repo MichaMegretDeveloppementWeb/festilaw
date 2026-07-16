@@ -2,6 +2,7 @@
 
 use App\Enums\Submission\SubmissionStatus;
 use App\Enums\Submission\SubmissionType;
+use App\Livewire\Admin\AdminProfile;
 use App\Livewire\Admin\LoginForm;
 use App\Livewire\Admin\SubmissionDetail;
 use App\Livewire\Admin\SubmissionList;
@@ -11,6 +12,7 @@ use App\Mail\StarterResumeLink;
 use App\Models\Submission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
 
@@ -245,6 +247,58 @@ it('presents a contact as an inquiry, not a dossier', function () {
         ->assertDontSee('Statut du dossier')
         ->assertDontSee('Pièces')
         ->assertDontSee('Supprimer le dossier');
+});
+
+it('lets an admin update their email address', function () {
+    $admin = User::factory()->create(['email' => 'old@festilaw.com']);
+    actingAs($admin);
+
+    Livewire::test(AdminProfile::class)
+        ->set('email', 'new@festilaw.com')
+        ->call('updateEmail')
+        ->assertHasNoErrors();
+
+    expect($admin->fresh()->email)->toBe('new@festilaw.com');
+});
+
+it('lets an admin change their password using the current one', function () {
+    $admin = User::factory()->create(['password' => 'old-password-123']);
+    actingAs($admin);
+
+    Livewire::test(AdminProfile::class)
+        ->set('current_password', 'old-password-123')
+        ->set('password', 'new-password-456')
+        ->set('password_confirmation', 'new-password-456')
+        ->call('updatePassword')
+        ->assertHasNoErrors()
+        ->assertSet('password', '');
+
+    expect(Hash::check('new-password-456', $admin->fresh()->password))->toBeTrue();
+});
+
+it('rejects a password change when the current password is wrong', function () {
+    $admin = User::factory()->create(['password' => 'old-password-123']);
+    actingAs($admin);
+
+    Livewire::test(AdminProfile::class)
+        ->set('current_password', 'wrong-password')
+        ->set('password', 'new-password-456')
+        ->set('password_confirmation', 'new-password-456')
+        ->call('updatePassword')
+        ->assertHasErrors('current_password');
+
+    expect(Hash::check('old-password-123', $admin->fresh()->password))->toBeTrue();
+});
+
+it('redirects to the contacts list after deleting a contact', function () {
+    $contact = Submission::factory()->create(['type' => SubmissionType::Contact]);
+    actingAs(User::factory()->create());
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $contact])
+        ->call('deleteDossier')
+        ->assertRedirect(route('admin.contacts.index'));
+
+    expect(Submission::find($contact->id))->toBeNull();
 });
 
 it('deletes a dossier and redirects to the list', function () {

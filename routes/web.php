@@ -24,6 +24,7 @@ use App\Http\Controllers\Web\SwitchLocaleController;
 use App\Http\Controllers\Web\UnderstandGpsr\UnderstandGpsrController;
 use App\Http\Controllers\Web\Webhook\PaymentWebhookController;
 use App\Http\Controllers\Web\Webhook\SignatureWebhookController;
+use App\Livewire\Admin\AdminProfile;
 use App\Livewire\Admin\LoginForm;
 use App\Livewire\Admin\SubmissionDetail;
 use App\Livewire\Admin\SubmissionList;
@@ -109,6 +110,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/', fn () => redirect()->route('admin.submissions.index'))->name('dashboard');
         Route::get('/submissions', SubmissionList::class)->name('submissions.index');
         Route::get('/contacts', SubmissionList::class)->name('contacts.index');
+        Route::get('/profile', AdminProfile::class)->name('profile');
         Route::get('/submissions/{submission:id}', SubmissionDetail::class)->name('submissions.show');
         Route::get('/submissions/{submission:id}/documents/{document:id}', AdminDocumentDownloadController::class)
             ->name('submissions.document')

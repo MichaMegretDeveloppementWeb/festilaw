@@ -17,6 +17,7 @@
     @auth
         @php($routeSubmission = request()->route('submission'))
         @php($viewingContact = $routeSubmission instanceof \App\Models\Submission && $routeSubmission->type === \App\Enums\Submission\SubmissionType::Contact)
+        @php($isProfile = request()->routeIs('admin.profile'))
         @php($isContacts = request()->routeIs('admin.contacts.*') || $viewingContact)
         @php($isDossiers = request()->routeIs('admin.submissions.*') && ! $viewingContact)
 
@@ -64,7 +65,15 @@
                         </a>
                     </nav>
                     <div class="mt-3 border-t border-slate-200 pt-3">
-                        <div class="mb-2 px-3 text-xs text-slate-500">{{ auth()->user()->email }}</div>
+                        <a href="{{ route('admin.profile') }}" @click="mobileOpen = false" @class([
+                            'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium',
+                            'bg-brand-50 text-brand-700' => $isProfile,
+                            'text-slate-600 hover:bg-slate-100' => ! $isProfile,
+                        ])>
+                            <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            {{ __('Mon compte') }}
+                        </a>
+                        <div class="mb-2 mt-1 px-3 text-xs text-slate-500">{{ auth()->user()->email }}</div>
                         <form method="POST" action="{{ route('admin.logout') }}">
                             @csrf
                             <button type="submit" class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">
@@ -103,6 +112,14 @@
                 </a>
             </nav>
             <div class="mt-auto border-t border-slate-200 py-3">
+                <a href="{{ route('admin.profile') }}" @class([
+                    'admin-navitem flex items-center gap-2.5 rounded-lg py-2 text-sm font-medium transition',
+                    'bg-brand-50 text-brand-700' => $isProfile,
+                    'text-slate-600 hover:bg-slate-100 hover:text-slate-900' => ! $isProfile,
+                ])>
+                    <svg class="h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    <span class="admin-navlabel">{{ __('Mon compte') }}</span>
+                </a>
                 <a href="{{ route('home') }}" target="_blank" rel="noopener"
                     class="admin-navitem flex items-center gap-2.5 rounded-lg py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900">
                     <svg class="h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
