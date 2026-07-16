@@ -46,7 +46,6 @@ final class StripePaymentGateway implements PaymentGatewayInterface
 
         $submission = $payment->submission;
         $journeyUrl = route('get-started.starter.journey', [
-            'locale' => $submission->locale ?: config('app.locale'),
             'dossier' => $submission->resume_token,
         ]);
 

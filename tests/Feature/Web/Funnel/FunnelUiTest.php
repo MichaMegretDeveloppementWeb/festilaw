@@ -14,14 +14,14 @@ use function Pest\Laravel\get;
 uses(RefreshDatabase::class);
 
 it('serves the get-started hub and the three parcours pages (noindex)', function () {
-    get(route('get-started.index', ['locale' => 'en']))
+    get(route('get-started.index'))
         ->assertOk()
         ->assertSee('Choose your')
         ->assertSee('noindex, nofollow', false);
 
-    get(route('get-started.starter', ['locale' => 'en']))->assertOk()->assertSeeLivewire(StarterForm::class);
-    get(route('get-started.pro', ['locale' => 'en']))->assertOk()->assertSeeLivewire(ProForm::class);
-    get(route('get-started.scale', ['locale' => 'en']))->assertOk()->assertSeeLivewire(ScaleForm::class);
+    get(route('get-started.starter'))->assertOk()->assertSeeLivewire(StarterForm::class);
+    get(route('get-started.pro'))->assertOk()->assertSeeLivewire(ProForm::class);
+    get(route('get-started.scale'))->assertOk()->assertSeeLivewire(ScaleForm::class);
 });
 
 it('creates a PRO submission and shows success when WhatsApp is not configured', function () {
@@ -64,7 +64,7 @@ it('opens a STARTER file and redirects into the journey', function () {
     $submission = Submission::where('type', SubmissionType::Starter)->sole();
 
     expect($submission->resume_token)->not->toBeNull();
-    $component->assertRedirect(route('get-started.starter.journey', ['locale' => 'en', 'dossier' => $submission->resume_token]));
+    $component->assertRedirect(route('get-started.starter.journey', ['dossier' => $submission->resume_token]));
 });
 
 it('requests a SCALE audit from the form', function () {

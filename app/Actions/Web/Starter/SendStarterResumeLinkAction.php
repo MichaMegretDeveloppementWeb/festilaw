@@ -23,7 +23,9 @@ final readonly class SendStarterResumeLinkAction
         }
 
         try {
-            Mail::to($submission->email)->send(new StarterResumeLink($submission));
+            Mail::to($submission->email)
+                ->locale($submission->locale ?: config('app.locale'))
+                ->send(new StarterResumeLink($submission));
         } catch (Throwable $e) {
             Log::error('Failed to send the STARTER resume link.', [
                 'exception' => $e,

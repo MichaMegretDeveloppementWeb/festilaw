@@ -80,7 +80,9 @@ final readonly class MarkPaymentSucceededAction
         }
 
         try {
-            Mail::to($submission->email)->send(new StarterPaymentConfirmed($submission));
+            Mail::to($submission->email)
+                ->locale($submission->locale ?: config('app.locale'))
+                ->send(new StarterPaymentConfirmed($submission));
         } catch (Throwable $e) {
             Log::error('Failed to send the STARTER payment confirmation email.', [
                 'exception' => $e,

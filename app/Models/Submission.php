@@ -49,6 +49,17 @@ class Submission extends Model
         ];
     }
 
+    /**
+     * Le token de reprise (magic link) est la cle de route publique du dossier, pas l'id :
+     * route('...', ['dossier' => $submission]) genere alors l'URL avec le resume_token, ce qui
+     * correspond au binding {dossier} (cf. AppServiceProvider). Sans cela, la generation d'URL a
+     * partir du modele (ex: le selecteur de langue sur le parcours) produirait l'id et renverrait 404.
+     */
+    public function getRouteKeyName(): string
+    {
+        return 'resume_token';
+    }
+
     protected static function booted(): void
     {
         static::creating(function (Submission $submission): void {

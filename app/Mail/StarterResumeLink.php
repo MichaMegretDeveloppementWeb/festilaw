@@ -36,7 +36,6 @@ final class StarterResumeLink extends Mailable
             view: 'emails.starter-resume-link',
             with: [
                 'resumeUrl' => route('my-project', [
-                    'locale' => $this->submission->locale ?: config('app.locale'),
                     'dossier' => $this->submission->resume_token,
                 ]),
                 'ttlDays' => (int) config('festilaw.starter.resume_ttl_days', 30),

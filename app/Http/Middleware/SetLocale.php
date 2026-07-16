@@ -6,25 +6,33 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\URL;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Traduction visuelle : la langue d'affichage vit en SESSION, jamais dans l'URL.
+ *
+ * Le site a un seul jeu d'URLs et une langue canonique (l'anglais, `config('app.locale')`). Le
+ * selecteur de langue memorise le choix via SwitchLocaleController ; ce middleware le lit et l'applique
+ * sur chaque requete web (y compris les updates Livewire sur /livewire/update). Aucune negociation
+ * d'URL, aucun hreflang : ce n'est pas un site multilingue reference, seulement une traduction d'affichage.
+ *
+ * Applique globalement au groupe web (apres le demarrage de session).
+ */
 final class SetLocale
 {
-    /**
-     * Lit la locale depuis le prefixe d'URL (`/{locale}/...`), la valide,
-     * l'applique, et la fixe comme parametre par defaut des URLs generees.
-     */
     public function handle(Request $request, Closure $next): Response
     {
-        $locale = $request->route('locale');
+        $default = (string) config('app.locale');
+
+        $locale = $request->hasSession()
+            ? (string) $request->session()->get('locale', $default)
+            : $default;
 
         if (! in_array($locale, config('festilaw.supported_locales'), true)) {
-            abort(404);
+            $locale = $default;
         }
 
         app()->setLocale($locale);
-        URL::defaults(['locale' => $locale]);
 
         return $next($request);
     }

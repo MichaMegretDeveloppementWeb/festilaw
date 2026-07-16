@@ -1,5 +1,5 @@
 <?php
 
-test('the application root redirects to a locale', function () {
-    $this->get('/')->assertRedirect();
+test('the application root serves the home page', function () {
+    $this->get('/')->assertOk();
 });

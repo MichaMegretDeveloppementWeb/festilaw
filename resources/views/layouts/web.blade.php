@@ -5,29 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#696bf2">
 
-    @php
-        $publishedLocales = config('festilaw.published_locales');
-        $publishedDefault = $publishedLocales[0] ?? 'en';
-        $isPublishedLocale = in_array(app()->getLocale(), $publishedLocales, true);
-        $defaultRobots = $isPublishedLocale ? 'index, follow' : 'noindex, follow';
-        $currentRoute = request()->route();
-        $currentRouteName = $currentRoute?->getName();
-        $currentRouteParams = $currentRoute?->parameters() ?? [];
-    @endphp
-
-    {{-- SEO de base. Chaque page surcharge via @section ; sinon, repli calque sur la page d'accueil. --}}
+    {{-- SEO de base. Chaque page surcharge via @section ; sinon, repli calque sur la page d'accueil.
+         Langue canonique du site : anglais. La traduction FR/ES est purement visuelle (locale en
+         session) : un seul jeu d'URLs, un seul canonical, aucun hreflang. --}}
     <title>@yield('title', 'Festilaw · Your GPSR Responsible Person')</title>
     <meta name="description" content="@yield('meta_description', 'Sell safely in the European market. Festilaw is your GPSR Responsible Person, with dedicated support from entrepreneurs for entrepreneurs.')">
-    <meta name="robots" content="@yield('robots', $defaultRobots)">
+    <meta name="robots" content="@yield('robots', 'index, follow')">
     <link rel="canonical" href="{{ url()->current() }}">
-
-    {{-- Alternatives de langue : uniquement les locales publiees (traduites) + x-default. --}}
-    @if ($currentRouteName)
-        @foreach ($publishedLocales as $loc)
-            <link rel="alternate" hreflang="{{ $loc }}" href="{{ route($currentRouteName, array_merge($currentRouteParams, ['locale' => $loc])) }}">
-        @endforeach
-        <link rel="alternate" hreflang="x-default" href="{{ route($currentRouteName, array_merge($currentRouteParams, ['locale' => $publishedDefault])) }}">
-    @endif
 
     {{-- Open Graph --}}
     <meta property="og:site_name" content="{{ config('app.name') }}">

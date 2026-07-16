@@ -3,9 +3,9 @@
 use function Pest\Laravel\get;
 
 /*
- | Couverture du site public : routing localise, rendu des pages, et SEO
- | (canonical, hreflang, noindex des locales non publiees, JSON-LD, sitemap, robots, fil d'Ariane, FAQ).
- | Pas de base de donnees : ce sont des GET sur des vues statiques.
+ | Couverture du site public : rendu des pages et SEO (canonical, JSON-LD, sitemap, robots, fil
+ | d'Ariane, FAQ). Un seul jeu d'URLs, langue canonique anglaise : pas de prefixe de langue ni de
+ | hreflang (la traduction FR/ES est visuelle, cf. LocaleTest). Pas de base de donnees : GET sur vues.
  */
 
 dataset('indexable_pages', [
@@ -18,54 +18,50 @@ dataset('indexable_pages', [
     'contact' => ['contact', 'compliance'],
 ]);
 
-it('serves each public page with 200 in English', function (string $routeName, string $needle) {
-    get(route($routeName, ['locale' => 'en']))
+it('serves each public page with 200', function (string $routeName, string $needle) {
+    get(route($routeName))
         ->assertOk()
         ->assertSee($needle, false);
 })->with('indexable_pages');
 
-it('redirects the root to a locale', function () {
-    get('/')->assertRedirect();
+it('serves the root as the home page (no locale redirect)', function () {
+    get('/')
+        ->assertOk()
+        ->assertSee('Your GPSR', false);
 });
 
-it('returns 404 for an unsupported locale', function () {
-    get('/xx')->assertNotFound();
+it('returns 404 for an unknown path', function () {
+    get('/does-not-exist')->assertNotFound();
 });
 
 it('links navigation to the real pages, including About', function () {
-    get(route('home', ['locale' => 'en']))
-        ->assertSee(route('about', ['locale' => 'en']), false)
-        ->assertSee(route('understand-gpsr', ['locale' => 'en']), false)
-        ->assertSee(route('services', ['locale' => 'en']), false)
-        ->assertSee(route('pricing', ['locale' => 'en']), false);
+    get(route('home'))
+        ->assertSee(route('about'), false)
+        ->assertSee(route('understand-gpsr'), false)
+        ->assertSee(route('services'), false)
+        ->assertSee(route('pricing'), false);
 });
 
 it('sets a self-referencing canonical', function () {
-    get(route('about', ['locale' => 'en']))
+    get(route('about'))
         ->assertOk()
         ->assertSee('<link rel="canonical"', false);
 });
 
-it('indexes published locales and noindexes the rest', function () {
-    get(route('home', ['locale' => 'en']))
+it('marks marketing pages as indexable', function () {
+    get(route('home'))
         ->assertOk()
         ->assertSee('name="robots" content="index, follow"', false);
-
-    get(route('home', ['locale' => 'fr']))
-        ->assertOk()
-        ->assertSee('name="robots" content="noindex, follow"', false);
 });
 
-it('emits hreflang only for published locales plus x-default', function () {
-    get(route('about', ['locale' => 'en']))
+it('emits no hreflang (single-language site, visual translation only)', function () {
+    get(route('about'))
         ->assertOk()
-        ->assertSee('rel="alternate" hreflang="en"', false)
-        ->assertSee('rel="alternate" hreflang="x-default"', false)
-        ->assertDontSee('rel="alternate" hreflang="fr"', false);
+        ->assertDontSee('hreflang', false);
 });
 
 it('includes global and page-specific structured data', function () {
-    get(route('pricing', ['locale' => 'en']))
+    get(route('pricing'))
         ->assertOk()
         ->assertSee('application/ld+json', false)
         ->assertSee('"Organization"', false)
@@ -76,32 +72,32 @@ it('includes global and page-specific structured data', function () {
 });
 
 it('shows breadcrumbs on sub-pages but not on home or contact', function () {
-    get(route('about', ['locale' => 'en']))->assertSee('aria-label="Breadcrumb"', false);
-    get(route('home', ['locale' => 'en']))->assertDontSee('aria-label="Breadcrumb"', false);
-    get(route('contact', ['locale' => 'en']))->assertDontSee('aria-label="Breadcrumb"', false);
+    get(route('about'))->assertSee('aria-label="Breadcrumb"', false);
+    get(route('home'))->assertDontSee('aria-label="Breadcrumb"', false);
+    get(route('contact'))->assertDontSee('aria-label="Breadcrumb"', false);
 });
 
 it('renders the FAQ with FAQPage markup on Understand GPSR and Pricing', function () {
-    get(route('understand-gpsr', ['locale' => 'en']))
+    get(route('understand-gpsr'))
         ->assertOk()
         ->assertSee('class="faq"', false)
         ->assertSee('"FAQPage"', false)
         ->assertSee('What is the GPSR?');
 
-    get(route('pricing', ['locale' => 'en']))
+    get(route('pricing'))
         ->assertOk()
         ->assertSee('"FAQPage"', false)
         ->assertSee('How does Festilaw work?');
 });
 
-it('serves a valid XML sitemap of published pages only', function () {
+it('serves a valid XML sitemap of the indexable pages', function () {
     $response = get('/sitemap.xml')->assertOk();
 
     expect($response->headers->get('Content-Type'))->toContain('xml');
 
-    $response->assertSee(route('home', ['locale' => 'en']), false)
-        ->assertSee(route('pricing', ['locale' => 'en']), false)
-        ->assertDontSee('/fr/', false);
+    $response->assertSee(route('home'), false)
+        ->assertSee(route('pricing'), false)
+        ->assertDontSee('/get-started', false);
 });
 
 it('serves robots.txt referencing the sitemap', function () {

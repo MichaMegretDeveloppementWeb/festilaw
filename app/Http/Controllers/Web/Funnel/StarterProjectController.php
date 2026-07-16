@@ -23,7 +23,7 @@ final class StarterProjectController extends Controller
 {
     public function __construct(private readonly StarterDossierResolver $resolver) {}
 
-    public function __invoke(string $locale, Submission $dossier): View
+    public function __invoke(Submission $dossier): View
     {
         abort_unless($dossier->type === SubmissionType::Starter, 404);
 

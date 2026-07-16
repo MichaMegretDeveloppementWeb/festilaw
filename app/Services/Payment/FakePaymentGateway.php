@@ -55,7 +55,7 @@ final class FakePaymentGateway implements PaymentGatewayInterface
         return match (true) {
             $payment->type === PaymentType::StarterSubscription && $token !== null => route(
                 'get-started.starter.dev-pay',
-                ['locale' => app()->getLocale(), 'dossier' => $token],
+                ['dossier' => $token],
             ),
             default => url('/'),
         };

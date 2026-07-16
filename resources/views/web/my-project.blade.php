@@ -34,7 +34,7 @@
 
                 @if ($cancelled)
                     <p class="my-project__note">{{ __('This project was cancelled. Get in touch if you\'d like to reopen it.') }}</p>
-                    <a href="{{ route('contact', ['locale' => app()->getLocale()]) }}" class="btn btn--outline-dark btn--sm">{{ __('Contact us') }}</a>
+                    <a href="{{ route('contact') }}" class="btn btn--outline-dark btn--sm">{{ __('Contact us') }}</a>
                 @else
                     <ul class="project-steps">
                         <li @class(['project-step', 'is-done' => $signed])>
@@ -82,7 +82,7 @@
                         </dl>
                     @else
                         <p class="my-project__resume-text">{{ __('Your project isn\'t finished yet. Pick up right where you left off.') }}</p>
-                        <a href="{{ route('get-started.starter.journey', ['locale' => app()->getLocale(), 'dossier' => $submission->resume_token]) }}" class="btn btn--coral">{{ __('Resume my project') }}</a>
+                        <a href="{{ route('get-started.starter.journey', ['dossier' => $submission->resume_token]) }}" class="btn btn--coral">{{ __('Resume my project') }}</a>
                     @endif
 
                     @if (($signed && $submission->contract?->signed_file_path) || $submission->uploadedDocuments->isNotEmpty())
@@ -92,14 +92,14 @@
                                 <li class="dossier__file">
                                     <svg class="dossier__file-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                                     <span class="dossier__file-name">{{ __('Signed Responsible Person mandate') }}</span>
-                                    <a class="dossier__download" href="{{ route('get-started.starter.mandate', ['locale' => app()->getLocale(), 'dossier' => $submission->resume_token]) }}">{{ __('Download') }}</a>
+                                    <a class="dossier__download" href="{{ route('get-started.starter.mandate', ['dossier' => $submission->resume_token]) }}">{{ __('Download') }}</a>
                                 </li>
                             @endif
                             @foreach ($submission->uploadedDocuments as $doc)
                                 <li class="dossier__file">
                                     <svg class="dossier__file-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                                     <span class="dossier__file-name">{{ $doc->type->label() }} <span class="dossier__file-sub">&middot; {{ $doc->original_filename }}</span></span>
-                                    <a class="dossier__download" href="{{ route('get-started.starter.document', ['locale' => app()->getLocale(), 'dossier' => $submission->resume_token, 'document' => $doc->id]) }}">{{ __('Download') }}</a>
+                                    <a class="dossier__download" href="{{ route('get-started.starter.document', ['dossier' => $submission->resume_token, 'document' => $doc->id]) }}">{{ __('Download') }}</a>
                                 </li>
                             @endforeach
                         </ul>
@@ -107,7 +107,7 @@
                 @endif
             </div>
 
-            <p class="my-project__support">{{ __('Need anything?') }} <a href="{{ route('contact', ['locale' => app()->getLocale()]) }}">{{ __('Contact us') }}</a> · {{ __('real humans, happy to help.') }}</p>
+            <p class="my-project__support">{{ __('Need anything?') }} <a href="{{ route('contact') }}">{{ __('Contact us') }}</a> · {{ __('real humans, happy to help.') }}</p>
         </div>
     </section>
 @endsection

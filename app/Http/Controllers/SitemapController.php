@@ -25,13 +25,10 @@ final class SitemapController extends Controller
 
     public function __invoke(): Response
     {
-        $urls = [];
-
-        foreach (config('festilaw.published_locales') as $locale) {
-            foreach (self::INDEXABLE_ROUTES as $name) {
-                $urls[] = route($name, ['locale' => $locale]);
-            }
-        }
+        $urls = array_map(
+            static fn (string $name): string => route($name),
+            self::INDEXABLE_ROUTES,
+        );
 
         return response()
             ->view('sitemap', ['urls' => $urls])

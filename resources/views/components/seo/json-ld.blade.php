@@ -10,7 +10,7 @@
                 'name' => config('app.name'),
                 'url' => url('/'),
                 'logo' => asset('logo-festilaw.jpg'),
-                'description' => 'Your GPSR Responsible Person in the EU for non-EU sellers.',
+                'description' => __('Your GPSR Responsible Person in the EU for non-EU sellers.'),
                 'email' => 'team@festilaw.com',
                 'contactPoint' => [
                     '@type' => 'ContactPoint',

@@ -50,7 +50,7 @@ function activeStarterDossier(): Submission
 it('shows the active my-project space with reference, renewal date and downloads', function () {
     $submission = activeStarterDossier();
 
-    get(route('my-project', ['locale' => 'en', 'dossier' => 'mydossier']))
+    get(route('my-project', ['dossier' => 'mydossier']))
         ->assertOk()
         ->assertSee('Active')
         ->assertSee($submission->reference)
@@ -65,8 +65,8 @@ it('shows the active my-project space with reference, renewal date and downloads
 it('sends a paid dossier from the journey to its my-project space', function () {
     activeStarterDossier();
 
-    get(route('get-started.starter.journey', ['locale' => 'en', 'dossier' => 'mydossier']))
-        ->assertRedirect(route('my-project', ['locale' => 'en', 'dossier' => 'mydossier']));
+    get(route('get-started.starter.journey', ['dossier' => 'mydossier']))
+        ->assertRedirect(route('my-project', ['dossier' => 'mydossier']));
 });
 
 it('shows an in-progress project as a status page with a resume link, not a redirect', function () {
@@ -75,11 +75,11 @@ it('shows an in-progress project as a status page with a resume link, not a redi
         'resume_token' => 'inprogress',
     ]);
 
-    get(route('my-project', ['locale' => 'en', 'dossier' => 'inprogress']))
+    get(route('my-project', ['dossier' => 'inprogress']))
         ->assertOk()
         ->assertSee('In progress')
         ->assertSee('Resume my project')
-        ->assertSee(route('get-started.starter.journey', ['locale' => 'en', 'dossier' => 'inprogress']), false);
+        ->assertSee(route('get-started.starter.journey', ['dossier' => 'inprogress']), false);
 });
 
 it('downloads the signed mandate for the dossier', function () {
@@ -87,7 +87,7 @@ it('downloads the signed mandate for the dossier', function () {
     Storage::disk('local')->put('contracts/mandate.pdf', '%PDF-signed');
     $submission = activeStarterDossier();
 
-    get(route('get-started.starter.mandate', ['locale' => 'en', 'dossier' => 'mydossier']))
+    get(route('get-started.starter.mandate', ['dossier' => 'mydossier']))
         ->assertOk()
         ->assertDownload('festilaw-mandate-'.$submission->reference.'.pdf');
 });
@@ -97,7 +97,7 @@ it('downloads an uploaded document for the dossier', function () {
     Storage::disk('local')->put('documents/turnover.pdf', '%PDF-doc');
     $document = activeStarterDossier()->uploadedDocuments()->first();
 
-    get(route('get-started.starter.document', ['locale' => 'en', 'dossier' => 'mydossier', 'document' => $document->id]))
+    get(route('get-started.starter.document', ['dossier' => 'mydossier', 'document' => $document->id]))
         ->assertOk()
         ->assertDownload('turnover.pdf');
 });
@@ -117,7 +117,7 @@ it('does not let a dossier link download another dossier document', function () 
         'uploaded_at' => now(),
     ]);
 
-    get(route('get-started.starter.document', ['locale' => 'en', 'dossier' => 'mydossier', 'document' => $foreignDocument->id]))
+    get(route('get-started.starter.document', ['dossier' => 'mydossier', 'document' => $foreignDocument->id]))
         ->assertNotFound();
 });
 
@@ -125,6 +125,6 @@ it('404s when the mandate file is missing on disk', function () {
     Storage::fake('local'); // rien depose
     activeStarterDossier();
 
-    get(route('get-started.starter.mandate', ['locale' => 'en', 'dossier' => 'mydossier']))
+    get(route('get-started.starter.mandate', ['dossier' => 'mydossier']))
         ->assertNotFound();
 });

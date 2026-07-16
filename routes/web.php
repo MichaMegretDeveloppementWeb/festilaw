@@ -17,20 +17,15 @@ use App\Http\Controllers\Web\Funnel\StarterProjectController;
 use App\Http\Controllers\Web\Home\HomeController;
 use App\Http\Controllers\Web\Pricing\PricingController;
 use App\Http\Controllers\Web\Services\ServicesController;
+use App\Http\Controllers\Web\SwitchLocaleController;
 use App\Http\Controllers\Web\UnderstandGpsr\UnderstandGpsrController;
 use App\Http\Controllers\Web\Webhook\PaymentWebhookController;
 use App\Http\Controllers\Web\Webhook\SignatureWebhookController;
 use Illuminate\Support\Facades\Route;
 
 /*
- | La racine redirige vers la meilleure locale (negociation navigateur, repli sur la 1re supportee).
- */
-Route::get('/', function () {
-    return redirect('/'.request()->getPreferredLanguage(config('festilaw.supported_locales')));
-});
-
-/*
- | Fichiers SEO non localises. Declares AVANT le groupe {locale} pour ne pas etre captes par le prefixe.
+ | Fichiers SEO. Le site a un SEUL jeu d'URLs (langue canonique : anglais). La traduction FR/ES est
+ | purement visuelle (locale en session, cf. SetLocale), sans prefixe d'URL ni hreflang.
  */
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 Route::get('/robots.txt', function () {
@@ -40,48 +35,49 @@ Route::get('/robots.txt', function () {
 })->name('robots');
 
 /*
- | Webhooks providers (Stripe/Zoho) : POST externes, hors CSRF (voir bootstrap/app.php), traites en synchrone.
+ | Webhooks providers (Stripe/SignWell) : POST externes, hors CSRF (voir bootstrap/app.php), synchrones.
  */
 Route::post('/webhooks/payment/{provider}', PaymentWebhookController::class)->name('webhooks.payment');
 Route::post('/webhooks/signature', SignatureWebhookController::class)->name('webhooks.signature');
 
 /*
- | Espace public, prefixe par la locale (ADR-003). Les futures pages localisees vont dans ce groupe.
- | Les routes NON localisees (webhooks, back-office, etc.) restent hors de ce groupe.
+ | Bascule de langue (traduction visuelle) : memorise la locale en session, recharge la page courante.
  */
-Route::prefix('{locale}')->middleware('setlocale')->group(function () {
-    Route::get('/', HomeController::class)->name('home');
-    Route::get('/about', AboutController::class)->name('about');
-    Route::get('/understand-gpsr', UnderstandGpsrController::class)->name('understand-gpsr');
-    Route::get('/services', ServicesController::class)->name('services');
-    Route::get('/pricing', PricingController::class)->name('pricing');
-    Route::get('/excluded-products', ExcludedProductsController::class)->name('excluded-products');
-    Route::get('/contact', ContactController::class)->name('contact');
+Route::get('/language/{locale}', SwitchLocaleController::class)->name('locale.switch');
 
-    /*
-     | Tunnel de souscription (noindex). Chaque page rend un composant Livewire du parcours.
-     */
-    Route::prefix('get-started')->name('get-started.')->group(function () {
-        Route::get('/', GetStartedController::class)->name('index');
-        Route::get('/pro', ProController::class)->name('pro');
-        Route::get('/scale', ScaleController::class)->name('scale');
+/*
+ | Espace public. La locale est appliquee par le middleware `setlocale` (groupe web) depuis la session.
+ */
+Route::get('/', HomeController::class)->name('home');
+Route::get('/about', AboutController::class)->name('about');
+Route::get('/understand-gpsr', UnderstandGpsrController::class)->name('understand-gpsr');
+Route::get('/services', ServicesController::class)->name('services');
+Route::get('/pricing', PricingController::class)->name('pricing');
+Route::get('/excluded-products', ExcludedProductsController::class)->name('excluded-products');
+Route::get('/contact', ContactController::class)->name('contact');
 
-        // Parcours STARTER : page d'ouverture, puis dossier resumable via son token ({dossier}).
-        Route::get('/starter', StarterController::class)->name('starter');
-        Route::get('/starter/{dossier}', StarterJourneyController::class)->name('starter.journey');
+/*
+ | Tunnel de souscription (noindex). Chaque page rend un composant Livewire du parcours.
+ */
+Route::prefix('get-started')->name('get-started.')->group(function () {
+    Route::get('/', GetStartedController::class)->name('index');
+    Route::get('/pro', ProController::class)->name('pro');
+    Route::get('/scale', ScaleController::class)->name('scale');
 
-        // Espace "mon dossier" : telechargement du mandat signe et des documents (portes par le token).
-        Route::get('/starter/{dossier}/mandate', StarterMandateDownloadController::class)->name('starter.mandate');
-        Route::get('/starter/{dossier}/document/{document}', StarterDocumentDownloadController::class)->name('starter.document');
+    // Parcours STARTER : page d'ouverture, puis dossier resumable via son token ({dossier}).
+    Route::get('/starter', StarterController::class)->name('starter');
+    Route::get('/starter/{dossier}', StarterJourneyController::class)->name('starter.journey');
 
-        // Completion des providers Fake (dev/local uniquement, bloquee en production) : ces routes
-        // rejouent ce que ferait le webhook du vrai provider, puis renvoient au dossier.
-        Route::get('/starter/{dossier}/dev/sign', StarterDevSignController::class)->name('starter.dev-sign');
-        Route::get('/starter/{dossier}/dev/pay', StarterDevPayController::class)->name('starter.dev-pay');
-    });
+    // Espace "mon dossier" : telechargement du mandat signe et des documents (portes par le token).
+    Route::get('/starter/{dossier}/mandate', StarterMandateDownloadController::class)->name('starter.mandate');
+    Route::get('/starter/{dossier}/document/{document}', StarterDocumentDownloadController::class)->name('starter.document');
 
-    // Espace client "mon projet" (le hub du dossier a tout stade), separe du parcours. Magic link.
-    // /my-project : saisie de l'email -> envoi du lien. /my-project/{dossier} : le projet lui-meme.
-    Route::view('/my-project', 'web.find-my-project')->name('find-my-project');
-    Route::get('/my-project/{dossier}', StarterProjectController::class)->name('my-project');
+    // Completion des providers Fake (dev/local uniquement, bloquee en production) : ces routes
+    // rejouent ce que ferait le webhook du vrai provider, puis renvoient au dossier.
+    Route::get('/starter/{dossier}/dev/sign', StarterDevSignController::class)->name('starter.dev-sign');
+    Route::get('/starter/{dossier}/dev/pay', StarterDevPayController::class)->name('starter.dev-pay');
 });
+
+// Espace client "mon projet" (le hub du dossier a tout stade), separe du parcours. Magic link.
+Route::view('/my-project', 'web.find-my-project')->name('find-my-project');
+Route::get('/my-project/{dossier}', StarterProjectController::class)->name('my-project');

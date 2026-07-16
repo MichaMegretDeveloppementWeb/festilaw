@@ -17,7 +17,7 @@ beforeEach(function () {
 });
 
 it('renders the access-my-project page', function () {
-    get(route('find-my-project', ['locale' => 'en']))
+    get(route('find-my-project'))
         ->assertOk()
         ->assertSee('Access')
         ->assertSeeLivewire(AccessFileForm::class);

@@ -16,7 +16,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 final class StarterDocumentDownloadController extends Controller
 {
-    public function __invoke(string $locale, Submission $dossier, UploadedDocument $document): StreamedResponse
+    public function __invoke(Submission $dossier, UploadedDocument $document): StreamedResponse
     {
         abort_unless($document->submission_id === $dossier->id, 404);
         abort_unless(Storage::disk('local')->exists($document->file_path), 404);

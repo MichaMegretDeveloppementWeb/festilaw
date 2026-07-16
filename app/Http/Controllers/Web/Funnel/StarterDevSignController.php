@@ -16,7 +16,7 @@ use Illuminate\Http\RedirectResponse;
  */
 final class StarterDevSignController extends Controller
 {
-    public function __invoke(string $locale, Submission $dossier, MarkContractSignedAction $markContractSigned): RedirectResponse
+    public function __invoke(Submission $dossier, MarkContractSignedAction $markContractSigned): RedirectResponse
     {
         abort_if(app()->isProduction(), 404);
 
@@ -26,7 +26,7 @@ final class StarterDevSignController extends Controller
         $markContractSigned->execute($contract, null, $contract->signature_provider_reference);
 
         return redirect()
-            ->route('get-started.starter.journey', ['locale' => app()->getLocale(), 'dossier' => $dossier->resume_token])
+            ->route('get-started.starter.journey', ['dossier' => $dossier->resume_token])
             ->with('starter_status', 'signed');
     }
 }

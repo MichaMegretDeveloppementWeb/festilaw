@@ -15,7 +15,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 final class StarterMandateDownloadController extends Controller
 {
-    public function __invoke(string $locale, Submission $dossier): StreamedResponse
+    public function __invoke(Submission $dossier): StreamedResponse
     {
         $path = (string) ($dossier->contract?->signed_file_path ?? '');
         abort_if($path === '' || ! Storage::disk('local')->exists($path), 404);

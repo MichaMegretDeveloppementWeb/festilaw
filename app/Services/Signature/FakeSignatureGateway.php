@@ -47,7 +47,7 @@ final class FakeSignatureGateway implements SignatureGatewayInterface
         $token = $contract->submission?->resume_token;
 
         return $token !== null
-            ? route('get-started.starter.dev-sign', ['locale' => app()->getLocale(), 'dossier' => $token])
+            ? route('get-started.starter.dev-sign', ['dossier' => $token])
             : url('/');
     }
 

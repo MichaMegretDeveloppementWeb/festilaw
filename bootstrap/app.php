@@ -13,9 +13,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->alias([
-            'setlocale' => SetLocale::class,
-        ]);
+        // La locale vit en session : SetLocale l'applique sur CHAQUE requete web (y compris les
+        // updates Livewire sur /livewire/update, hors du groupe {locale}). Ajoute apres StartSession.
+        $middleware->web(append: [SetLocale::class]);
 
         // Les webhooks providers (Stripe/Zoho) sont des POST externes : hors CSRF.
         $middleware->validateCsrfTokens(except: ['webhooks/*']);

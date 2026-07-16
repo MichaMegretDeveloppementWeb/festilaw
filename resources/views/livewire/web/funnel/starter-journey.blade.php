@@ -162,14 +162,14 @@
             </div>
             <h3 class="funnel-success__title">{{ __('Your Creator Pack is active.') }}</h3>
             <p class="funnel-success__text">{{ __('Your file is ready in your personal space, with your signed mandate and documents.') }}</p>
-            <a href="{{ route('my-project', ['locale' => app()->getLocale(), 'dossier' => $submission->resume_token]) }}" class="btn btn--coral">{{ __('Go to my project') }}</a>
+            <a href="{{ route('my-project', ['dossier' => $submission->resume_token]) }}" class="btn btn--coral">{{ __('Go to my project') }}</a>
         </div>
 
     @elseif ($step === 'cancelled')
         <div class="journey-panel">
             <h2 class="journey-panel__title">{{ __('This file was cancelled') }}</h2>
             <p class="journey-panel__text">{{ __('Please get in touch if you\'d like to reopen it.') }}</p>
-            <a href="{{ route('contact', ['locale' => app()->getLocale()]) }}" class="btn btn--outline-dark">{{ __('Contact us') }}</a>
+            <a href="{{ route('contact') }}" class="btn btn--outline-dark">{{ __('Contact us') }}</a>
         </div>
     @endif
 </div>

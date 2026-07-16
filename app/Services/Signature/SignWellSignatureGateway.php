@@ -9,6 +9,7 @@ use App\Data\Signature\SignatureWebhookData;
 use App\Data\Signature\SigningSessionData;
 use App\Exceptions\Signature\SignatureException;
 use App\Models\Contract;
+use App\Models\Submission;
 use App\Services\Contract\ContractPdfGenerator;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Request;
@@ -53,7 +54,6 @@ final class SignWellSignatureGateway implements SignatureGatewayInterface
         $pdf = $this->pdfGenerator->generate($submission);
 
         $returnUrl = route('get-started.starter.journey', [
-            'locale' => $submission->locale ?: config('app.locale'),
             'dossier' => $submission->resume_token,
             'signature_return' => 1,
         ]);
@@ -77,6 +77,8 @@ final class SignWellSignatureGateway implements SignatureGatewayInterface
             'decline_redirect_url' => $returnUrl,
             'draft' => false,
             'reminders' => false,
+            // Langue de la page de signature ET des emails envoyes par SignWell, selon le signataire.
+            'language' => $this->signerLanguage($submission),
             'metadata' => ['submission_reference' => (string) $submission->reference],
         ];
 
@@ -178,6 +180,17 @@ final class SignWellSignatureGateway implements SignatureGatewayInterface
         $name = trim(($submission->first_name ?? '').' '.($submission->last_name ?? ''));
 
         return $name !== '' ? $name : (string) ($submission->company_name ?? 'Signer');
+    }
+
+    /**
+     * Langue de la page de signature et des emails SignWell, calee sur la locale du signataire.
+     * SignWell n'accepte qu'une liste finie de langues ; on retombe sur l'anglais sinon.
+     */
+    private function signerLanguage(Submission $submission): string
+    {
+        $locale = (string) ($submission->locale ?: config('app.locale'));
+
+        return in_array($locale, ['en', 'fr', 'es'], true) ? $locale : 'en';
     }
 
     private function downloadSignedPdf(string $documentId): string

@@ -4,6 +4,7 @@ use App\Enums\Contract\SignatureStatus;
 use App\Enums\Payment\PaymentStatus;
 use App\Enums\Payment\PaymentType;
 use App\Enums\Submission\SubmissionStatus;
+use App\Mail\StarterPaymentConfirmed;
 use App\Models\Contract;
 use App\Models\Submission;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -21,8 +22,10 @@ beforeEach(function () {
     Mail::fake();
 });
 
-it('confirms a payment from the fake payment webhook', function () {
-    $submission = Submission::factory()->starter()->create();
+it('confirms a payment from the fake payment webhook and emails the buyer in their locale', function () {
+    // La locale du client est portee par le dossier : le webhook n'a aucun contexte de locale,
+    // l'email de confirmation doit quand meme partir dans la langue du client.
+    $submission = Submission::factory()->starter()->create(['locale' => 'fr']);
     $payment = $submission->payments()->create([
         'type' => PaymentType::StarterSubscription,
         'amount_cents' => 33300,
@@ -39,6 +42,11 @@ it('confirms a payment from the fake payment webhook', function () {
 
     expect($payment->fresh()->status)->toBe(PaymentStatus::Succeeded)
         ->and($submission->fresh()->status)->toBe(SubmissionStatus::Paid);
+
+    Mail::assertSent(
+        StarterPaymentConfirmed::class,
+        fn (StarterPaymentConfirmed $mail) => $mail->hasTo($submission->email) && $mail->locale === 'fr',
+    );
 });
 
 it('confirms a payment from a valid Stripe webhook', function () {

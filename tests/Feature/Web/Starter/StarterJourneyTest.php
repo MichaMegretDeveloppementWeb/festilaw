@@ -81,7 +81,7 @@ it('walks the STARTER journey end-to-end through the UI and the fake dev routes'
     $token = $submission->resume_token;
 
     // Step 1 - the journey page renders at the sign step.
-    get(route('get-started.starter.journey', ['locale' => 'en', 'dossier' => $token]))
+    get(route('get-started.starter.journey', ['dossier' => $token]))
         ->assertOk()
         ->assertSeeLivewire(StarterJourney::class)
         ->assertSee('Sign your Responsible Person mandate');
@@ -89,11 +89,11 @@ it('walks the STARTER journey end-to-end through the UI and the fake dev routes'
     // Clicking "sign" starts the fake signing session and redirects to the dev-sign route.
     Livewire::test(StarterJourney::class, ['submission' => $submission])
         ->call('sign')
-        ->assertRedirect(route('get-started.starter.dev-sign', ['locale' => 'en', 'dossier' => $token]));
+        ->assertRedirect(route('get-started.starter.dev-sign', ['dossier' => $token]));
 
     // The dev-sign route stands in for the provider webhook: contract signed -> awaiting documents.
-    get(route('get-started.starter.dev-sign', ['locale' => 'en', 'dossier' => $token]))
-        ->assertRedirect(route('get-started.starter.journey', ['locale' => 'en', 'dossier' => $token]));
+    get(route('get-started.starter.dev-sign', ['dossier' => $token]))
+        ->assertRedirect(route('get-started.starter.journey', ['dossier' => $token]));
     expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingDocuments);
 
     // Step 2 - drop both required documents and submit in one go; the dossier then becomes awaiting payment.
@@ -113,19 +113,19 @@ it('walks the STARTER journey end-to-end through the UI and the fake dev routes'
 
     // Step 3 - pay: creates a pending payment and redirects to the dev-pay route.
     $component->call('pay')
-        ->assertRedirect(route('get-started.starter.dev-pay', ['locale' => 'en', 'dossier' => $token]));
+        ->assertRedirect(route('get-started.starter.dev-pay', ['dossier' => $token]));
 
     expect($submission->fresh()->payments()->where('status', PaymentStatus::Pending)->count())->toBe(1);
 
     // The dev-pay route stands in for the provider webhook: payment succeeded -> paid, land on my file.
-    get(route('get-started.starter.dev-pay', ['locale' => 'en', 'dossier' => $token]))
-        ->assertRedirect(route('my-project', ['locale' => 'en', 'dossier' => $token]));
+    get(route('get-started.starter.dev-pay', ['dossier' => $token]))
+        ->assertRedirect(route('my-project', ['dossier' => $token]));
     expect($submission->fresh()->status)->toBe(SubmissionStatus::Paid);
 
     // The paid dossier now lives in its "my file" space (the journey redirects there).
-    get(route('get-started.starter.journey', ['locale' => 'en', 'dossier' => $token]))
-        ->assertRedirect(route('my-project', ['locale' => 'en', 'dossier' => $token]));
-    get(route('my-project', ['locale' => 'en', 'dossier' => $token]))
+    get(route('get-started.starter.journey', ['dossier' => $token]))
+        ->assertRedirect(route('my-project', ['dossier' => $token]));
+    get(route('my-project', ['dossier' => $token]))
         ->assertOk()
         ->assertSee('Your documents');
 });
@@ -183,7 +183,7 @@ it('reuses the in-flight signing session on resume instead of creating a second 
 
     Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
         ->call('sign')
-        ->assertRedirect(route('get-started.starter.dev-sign', ['locale' => 'en', 'dossier' => $submission->resume_token]));
+        ->assertRedirect(route('get-started.starter.dev-sign', ['dossier' => $submission->resume_token]));
 
     // The reference was not overwritten: no second session/document was created.
     expect($submission->fresh()->contract->signature_provider_reference)->toBe('fake_existing');
@@ -216,7 +216,7 @@ it('auto-confirms the payment on return and redirects to the my-project space', 
 
     Livewire::test(StarterJourney::class, ['submission' => $submission])
         ->call('pollPayment')
-        ->assertRedirect(route('my-project', ['locale' => 'en', 'dossier' => $submission->resume_token]));
+        ->assertRedirect(route('my-project', ['dossier' => $submission->resume_token]));
 
     expect($submission->fresh()->status)->toBe(SubmissionStatus::Paid);
 });
@@ -303,7 +303,7 @@ it('returns 404 for an expired resume token', function () {
     $submission = openStarterDossier();
     $submission->update(['resume_expires_at' => now()->subDay()]);
 
-    get(route('get-started.starter.journey', ['locale' => 'en', 'dossier' => $submission->resume_token]))
+    get(route('get-started.starter.journey', ['dossier' => $submission->resume_token]))
         ->assertNotFound();
 });
 
@@ -314,7 +314,7 @@ it('returns 404 when the token belongs to a non-STARTER submission', function ()
         'resume_expires_at' => now()->addDay(),
     ]);
 
-    get(route('get-started.starter.journey', ['locale' => 'en', 'dossier' => 'contact-token-xyz']))
+    get(route('get-started.starter.journey', ['dossier' => 'contact-token-xyz']))
         ->assertNotFound();
 });
 
@@ -322,8 +322,21 @@ it('blocks the fake dev completion routes in production', function () {
     $submission = openStarterDossier();
     app()->instance('env', 'production');
 
-    get(route('get-started.starter.dev-sign', ['locale' => 'en', 'dossier' => $submission->resume_token]))
+    get(route('get-started.starter.dev-sign', ['dossier' => $submission->resume_token]))
         ->assertNotFound();
-    get(route('get-started.starter.dev-pay', ['locale' => 'en', 'dossier' => $submission->resume_token]))
+    get(route('get-started.starter.dev-pay', ['dossier' => $submission->resume_token]))
         ->assertNotFound();
+});
+
+it('builds a journey URL from the submission model using the resume token as route key', function () {
+    // Certains appels route() recoivent le modele resolu par le binding (route->parameters()), pas le
+    // token brut. La cle de route du dossier doit donc etre le resume_token, sinon route() genererait
+    // l'id et l'URL ne resoudrait pas (404).
+    $submission = openStarterDossier();
+
+    $url = route('get-started.starter.journey', ['dossier' => $submission]);
+
+    expect($url)->toEndWith('/get-started/starter/'.$submission->resume_token);
+
+    get($url)->assertOk();
 });

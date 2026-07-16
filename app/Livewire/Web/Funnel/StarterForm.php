@@ -107,7 +107,6 @@ class StarterForm extends Component
 
         // Nouveau dossier : on enchaine directement sur le parcours (signer -> televerser -> payer).
         $this->redirectRoute('get-started.starter.journey', [
-            'locale' => app()->getLocale(),
             'dossier' => $outcome->submission->resume_token,
         ], navigate: true);
     }

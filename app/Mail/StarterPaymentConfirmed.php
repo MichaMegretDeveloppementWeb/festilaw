@@ -30,7 +30,6 @@ final class StarterPaymentConfirmed extends Mailable
     {
         return new Content(view: 'emails.starter-payment-confirmed', with: [
             'fileUrl' => route('my-project', [
-                'locale' => $this->submission->locale ?: config('app.locale'),
                 'dossier' => $this->submission->resume_token,
             ]),
         ]);

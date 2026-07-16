@@ -5,16 +5,11 @@ declare(strict_types=1);
 return [
 
     /*
-     | Locales supportees par le site (ADR-003). L'ordre definit l'affichage du selecteur.
-     | La locale par defaut vient de config('app.locale') (APP_LOCALE).
+     | Langues proposees par le selecteur (traduction visuelle uniquement, cf. SetLocale). L'ordre
+     | definit l'affichage. La langue canonique / par defaut vient de config('app.locale') (APP_LOCALE) :
+     | le site n'est PAS un multilingue reference (un seul jeu d'URLs, pas de hreflang).
      */
     'supported_locales' => ['en', 'fr', 'es'],
-
-    /*
-     | Locales reellement publiees (traduites). Les autres sont servies mais passees en noindex
-     | et exclues du hreflang et du sitemap, jusqu'a ce que leurs traductions existent (Jalon i18n).
-     */
-    'published_locales' => ['en'],
 
     /*
      | Libelles affiches dans le selecteur de langue.
