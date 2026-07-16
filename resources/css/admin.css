@@ -94,3 +94,16 @@ body.admin { background: #f4f5fb; color: var(--color-ink); font-family: var(--fo
     .admin-detail__grid { grid-template-columns: 1fr; }
     .admin-detail__aside { position: static; }
 }
+
+/* Boutons secondaires + zone sensible */
+.admin-btn--outline { background: #fff; color: var(--color-blue); border: 1px solid var(--color-line, #d7d7e2); }
+.admin-btn--outline:hover { background: #f4f5fb; }
+.admin-btn--danger { background: #b23b38; color: #fff; }
+.admin-btn--danger:hover { filter: brightness(0.95); }
+.admin-card--danger { border-color: #f3cfcd; background: #fdf4f4; }
+.admin-card--danger .admin-card__title { color: #b23b38; }
+
+/* Notes internes */
+.admin-note { padding: 12px 0; border-top: 1px solid var(--color-line, #eee); }
+.admin-note__meta { font-size: 12px; color: var(--color-ink-soft); margin-bottom: 4px; }
+.admin-note__body { font-size: 14px; line-height: 1.5; white-space: pre-wrap; }

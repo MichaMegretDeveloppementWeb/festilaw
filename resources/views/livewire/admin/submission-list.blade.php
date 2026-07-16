@@ -1,6 +1,10 @@
 <div>
     <h1 class="admin-page-title">{{ __('Dossiers') }}</h1>
 
+    @if (session('admin_flash'))
+        <div class="admin-flash">{{ session('admin_flash') }}</div>
+    @endif
+
     <div class="admin-filters">
         <div class="admin-field">
             <label class="admin-field__label" for="f-search">{{ __('Recherche') }}</label>

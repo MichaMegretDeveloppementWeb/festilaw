@@ -5,9 +5,12 @@ use App\Enums\Submission\SubmissionType;
 use App\Livewire\Admin\LoginForm;
 use App\Livewire\Admin\SubmissionDetail;
 use App\Livewire\Admin\SubmissionList;
+use App\Mail\StarterResponsiblePersonIssued;
+use App\Mail\StarterResumeLink;
 use App\Models\Submission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
 
 use function Pest\Laravel\actingAs;
@@ -79,4 +82,64 @@ it('changes a submission status from the detail screen', function () {
         ->assertHasNoErrors();
 
     expect($submission->fresh()->status)->toBe(SubmissionStatus::Paid);
+});
+
+it('adds an internal note attributed to the current admin', function () {
+    $submission = Submission::factory()->starter()->create();
+    $admin = User::factory()->create();
+
+    actingAs($admin);
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $submission])
+        ->set('noteBody', 'Rappeler le client demain matin.')
+        ->call('addNote')
+        ->assertHasNoErrors()
+        ->assertSet('noteBody', '');
+
+    expect($submission->notes()->count())->toBe(1);
+    expect($submission->notes()->first())
+        ->body->toBe('Rappeler le client demain matin.')
+        ->author_id->toBe($admin->id);
+});
+
+it('resends the resume link to a starter client', function () {
+    Mail::fake();
+    $submission = Submission::factory()->starter()->create();
+
+    actingAs(User::factory()->create());
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $submission])
+        ->call('resendLink');
+
+    Mail::assertSent(StarterResumeLink::class, fn ($mail) => $mail->hasTo($submission->email));
+});
+
+it('issues the EU responsible person address, completes the dossier and emails the client', function () {
+    Mail::fake();
+    $submission = Submission::factory()->starter()->create(['status' => SubmissionStatus::Paid]);
+
+    actingAs(User::factory()->create());
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $submission])
+        ->set('rpAddress', "Festilaw SAS\n1 rue de l'Europe, 75001 Paris")
+        ->call('issueResponsiblePerson')
+        ->assertHasNoErrors();
+
+    $submission->refresh();
+    expect($submission->status)->toBe(SubmissionStatus::Completed);
+    expect($submission->eu_rp_address)->toContain('rue de l');
+
+    Mail::assertSent(StarterResponsiblePersonIssued::class, fn ($mail) => $mail->hasTo($submission->email));
+});
+
+it('deletes a dossier and redirects to the list', function () {
+    $submission = Submission::factory()->starter()->create();
+
+    actingAs(User::factory()->create());
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $submission])
+        ->call('deleteDossier')
+        ->assertRedirect(route('admin.submissions.index'));
+
+    expect(Submission::find($submission->id))->toBeNull();
 });

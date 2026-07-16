@@ -22,6 +22,7 @@ final readonly class MyProjectData
         public ?Carbon $renewsAt,
         public string $resumeUrl,
         public ?string $mandateDownloadUrl,
+        public ?string $euRpAddress,
         public array $documents,
     ) {}
 

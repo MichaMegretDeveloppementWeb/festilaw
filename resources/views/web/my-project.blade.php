@@ -77,7 +77,11 @@
                             @endif
                             <div class="my-project__meta-row">
                                 <dt>{{ __('EU Responsible Person') }}</dt>
-                                <dd class="my-project__pending">{{ __('Issued within 24 h, emailed to you') }}</dd>
+                                @if ($project->euRpAddress)
+                                    <dd style="white-space: pre-wrap;">{{ $project->euRpAddress }}</dd>
+                                @else
+                                    <dd class="my-project__pending">{{ __('Issued within 24 h, emailed to you') }}</dd>
+                                @endif
                             </div>
                         </dl>
                     @else

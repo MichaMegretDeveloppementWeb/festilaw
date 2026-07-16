@@ -56,6 +56,7 @@ final class StarterProjectController extends Controller
             mandateDownloadUrl: $hasSignedMandate
                 ? route('get-started.starter.mandate', ['dossier' => $dossier->resume_token])
                 : null,
+            euRpAddress: $dossier->eu_rp_address ?: null,
             documents: $documents,
         );
 

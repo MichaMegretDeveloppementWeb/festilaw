@@ -9,8 +9,8 @@
         <x-admin.status-badge :status="$submission->status" />
     </div>
 
-    @if (session('admin_flash'))
-        <div class="admin-flash">{{ session('admin_flash') }}</div>
+    @if ($flash)
+        <div class="admin-flash">{{ $flash }}</div>
     @endif
 
     <div class="admin-detail__grid">
@@ -110,6 +110,24 @@
                     </dl>
                 </div>
             @endif
+
+            {{-- Notes internes --}}
+            <div class="admin-card">
+                <div class="admin-card__title">{{ __('Notes internes') }}</div>
+                <form wire:submit="addNote" style="margin-bottom: 18px;">
+                    <textarea class="admin-input" style="width: 100%; min-height: 70px;" wire:model="noteBody" placeholder="{{ __('Ajouter une note de suivi...') }}"></textarea>
+                    @error('noteBody') <p class="admin-error">{{ $message }}</p> @enderror
+                    <button type="submit" class="admin-btn admin-btn--dark admin-btn--sm" style="margin-top: 10px;">{{ __('Ajouter la note') }}</button>
+                </form>
+                @forelse ($submission->notes as $note)
+                    <div class="admin-note" wire:key="note-{{ $note->id }}">
+                        <div class="admin-note__meta">{{ $note->author?->name ?: __('Équipe') }} · {{ $note->created_at->format('d/m/Y à H:i') }}</div>
+                        <div class="admin-note__body">{{ $note->body }}</div>
+                    </div>
+                @empty
+                    <p style="color: var(--color-ink-soft); font-size: 14px; margin: 0;">{{ __('Aucune note pour le moment.') }}</p>
+                @endforelse
+            </div>
         </div>
 
         {{-- Panneau d'actions --}}
@@ -134,9 +152,31 @@
                 </form>
             </div>
 
+            @if ($isStarter)
+                <div class="admin-card">
+                    <div class="admin-card__title">{{ __('Personne Responsable UE') }}</div>
+                    <form wire:submit="issueResponsiblePerson">
+                        <div class="admin-field" style="margin-bottom: 12px;">
+                            <label class="admin-field__label" for="rp-address">{{ __('Adresse délivrée') }}</label>
+                            <textarea id="rp-address" class="admin-input" style="width: 100%; min-height: 84px;" wire:model="rpAddress" placeholder="{{ __('Adresse officielle de représentation dans l\'UE...') }}"></textarea>
+                        </div>
+                        <button type="submit" class="admin-btn admin-btn--primary admin-btn--sm" style="width: 100%;">{{ __('Émettre et terminer') }}</button>
+                        @error('rpAddress') <p class="admin-error">{{ $message }}</p> @enderror
+                    </form>
+                </div>
+            @endif
+
             <div class="admin-card">
-                <div class="admin-card__title">{{ __('Contacter le client') }}</div>
-                <a href="mailto:{{ $submission->email }}" class="admin-btn admin-btn--primary admin-btn--sm" style="width: 100%;">{{ __('Envoyer un email') }}</a>
+                <div class="admin-card__title">{{ __('Actions') }}</div>
+                <a href="mailto:{{ $submission->email }}" class="admin-btn admin-btn--dark admin-btn--sm" style="width: 100%; margin-bottom: 10px;">{{ __('Envoyer un email') }}</a>
+                @if ($isStarter && $submission->resume_token)
+                    <button type="button" wire:click="resendLink" wire:target="resendLink" wire:loading.attr="disabled" class="admin-btn admin-btn--outline admin-btn--sm" style="width: 100%;">{{ __('Renvoyer le lien de reprise') }}</button>
+                @endif
+            </div>
+
+            <div class="admin-card admin-card--danger">
+                <div class="admin-card__title">{{ __('Zone sensible') }}</div>
+                <button type="button" wire:click="deleteDossier" wire:confirm="{{ __('Supprimer définitivement ce dossier et tous ses fichiers ? Action irréversible.') }}" class="admin-btn admin-btn--danger admin-btn--sm" style="width: 100%;">{{ __('Supprimer le dossier') }}</button>
             </div>
         </aside>
     </div>

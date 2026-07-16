@@ -6,6 +6,7 @@ use App\Enums\Submission\SubmissionStatus;
 use App\Enums\Submission\SubmissionType;
 use App\Models\Submission;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 /**
  * @extends Factory<Submission>
@@ -36,6 +37,8 @@ class SubmissionFactory extends Factory
             'last_name' => fake()->lastName(),
             'website_url' => 'https://'.fake()->domainName(),
             'message' => null,
+            'resume_token' => Str::random(48),
+            'resume_expires_at' => now()->addDays(30),
         ]);
     }
 

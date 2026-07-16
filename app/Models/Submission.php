@@ -39,6 +39,7 @@ class Submission extends Model
         'resume_token',
         'resume_expires_at',
         'meta',
+        'eu_rp_address',
     ];
 
     protected function casts(): array
@@ -127,5 +128,11 @@ class Submission extends Model
     public function appointment(): HasOne
     {
         return $this->hasOne(Appointment::class);
+    }
+
+    /** Notes internes de l'equipe (back-office), les plus recentes d'abord. */
+    public function notes(): HasMany
+    {
+        return $this->hasMany(SubmissionNote::class)->latest();
     }
 }
