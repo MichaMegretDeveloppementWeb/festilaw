@@ -19,7 +19,10 @@
 .lang-switch--footer a:hover,
 .lang-switch--footer a.is-active { color: var(--color-cream); }
 
-.site-footer__copy { margin-top: clamp(36px, 5vw, 52px); padding-top: 24px; border-top: 1px solid rgba(255, 255, 255, 0.12); color: rgba(239, 229, 208, 0.5); font-size: 13px; }
+.site-footer__copy { margin-top: clamp(36px, 5vw, 52px); padding-top: 24px; border-top: 1px solid rgba(255, 255, 255, 0.12); color: rgba(239, 229, 208, 0.5); font-size: 13px; display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; }
+/* Acces discret au back-office. */
+.site-footer__admin { color: rgba(239, 229, 208, 0.4); text-decoration: none; font-size: 12px; }
+.site-footer__admin:hover { color: rgba(239, 229, 208, 0.85); }
 
 @media (min-width: 820px) {
     .site-footer__grid { grid-template-columns: 2fr 1fr 1fr 1.4fr; gap: 40px; }

@@ -36,6 +36,9 @@
                 <p class="site-footer__note">{{ __('EU Consumer Law Ready, trained under the European Commission programme.') }}</p>
             </div>
         </div>
-        <div class="site-footer__copy">&copy; {{ date('Y') }} Festilaw. {{ __('All rights reserved.') }}</div>
+        <div class="site-footer__copy">
+            <span>&copy; {{ date('Y') }} Festilaw. {{ __('All rights reserved.') }}</span>
+            <a href="{{ route('admin.login') }}" class="site-footer__admin" aria-label="Administration">&middot;</a>
+        </div>
     </div>
 </footer>
