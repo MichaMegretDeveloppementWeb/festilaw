@@ -45,6 +45,8 @@
                 <span wire:loading.remove wire:target="save">{{ __('Send message') }}</span>
                 <span wire:loading wire:target="save">{{ __('Sending') }}&hellip;</span>
             </button>
+
+            <x-web.privacy-consent />
         </form>
     @endif
 </div>

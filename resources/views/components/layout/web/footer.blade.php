@@ -23,9 +23,9 @@
             <div class="site-footer__col">
                 <div class="site-footer__heading">{{ __('Legal') }}</div>
                 <div class="site-footer__links">
-                    <a href="#footer">{{ __('Legal notice') }}</a>
-                    <a href="#footer">{{ __('Privacy policy') }}</a>
-                    <a href="#footer">{{ __('Terms') }}</a>
+                    <a href="{{ route('legal-notice') }}">{{ __('Legal notice') }}</a>
+                    <a href="{{ route('privacy-policy') }}">{{ __('Privacy policy') }}</a>
+                    <a href="{{ route('terms') }}">{{ __('Terms') }}</a>
                     <a href="{{ route('excluded-products') }}">{{ __('Excluded products') }}</a>
                 </div>
             </div>

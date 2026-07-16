@@ -3,7 +3,7 @@
         <div class="risks__head">
             <span class="eyebrow risks__eyebrow">{{ __('Why it matters') }}</span>
             <h2 class="risks__title">{{ __('The GPSR is now') }} <span class="risks__title-em">{{ __('mandatory') }}</span></h2>
-            <p class="risks__intro">{{ __('Compliance is no longer optional. The EU General Product Safety Regulation (GPSR) is fully in effect. Today, any brand or seller operating inside or exporting to the EU must appoint a Responsible Person and meet strict traceability rules to protect their business and consumers.') }}</p>
+            <p class="risks__intro">{{ __('Compliance is no longer optional. The EU General Product Safety Regulation (GPSR) is fully in effect. Any business selling consumer products to the EU must have an economic operator established in the EU who is responsible for those products. If you sell from outside the EU, that means appointing an EU Responsible Person and meeting strict traceability rules.') }}</p>
         </div>
 
         <div class="risks__grid">

@@ -18,7 +18,7 @@
     "isEntry": true
   },
   "resources/css/web/contact/index.css": {
-    "file": "assets/index-BOfSqkZn.css",
+    "file": "assets/index-LLz_XEEA.css",
     "name": "index",
     "names": [
       "index.css"
@@ -36,7 +36,7 @@
     "isEntry": true
   },
   "resources/css/web/get-started/index.css": {
-    "file": "assets/index-rTYuMI2m.css",
+    "file": "assets/index-nxUg2-Cf.css",
     "name": "index",
     "names": [
       "index.css"
@@ -45,7 +45,7 @@
     "isEntry": true
   },
   "resources/css/web/get-started/journey.css": {
-    "file": "assets/journey-B1GWdCBr.css",
+    "file": "assets/journey-CLMXitj9.css",
     "name": "journey",
     "names": [
       "journey.css"
@@ -60,6 +60,15 @@
       "index.css"
     ],
     "src": "resources/css/web/home/index.css",
+    "isEntry": true
+  },
+  "resources/css/web/legal/index.css": {
+    "file": "assets/index-B276CZTe.css",
+    "name": "index",
+    "names": [
+      "index.css"
+    ],
+    "src": "resources/css/web/legal/index.css",
     "isEntry": true
   },
   "resources/css/web/pricing/index.css": {

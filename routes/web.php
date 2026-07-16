@@ -57,6 +57,13 @@ Route::get('/excluded-products', ExcludedProductsController::class)->name('exclu
 Route::get('/contact', ContactController::class)->name('contact');
 
 /*
+ | Pages legales (le contenu definitif est fourni et valide par Festilaw). Indexables, faible priorite.
+ */
+Route::view('/legal-notice', 'web.legal.legal-notice')->name('legal-notice');
+Route::view('/privacy-policy', 'web.legal.privacy-policy')->name('privacy-policy');
+Route::view('/terms', 'web.legal.terms')->name('terms');
+
+/*
  | Tunnel de souscription (noindex). Chaque page rend un composant Livewire du parcours.
  */
 Route::prefix('get-started')->name('get-started.')->group(function () {

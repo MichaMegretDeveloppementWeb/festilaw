@@ -70,6 +70,8 @@
                 <span wire:loading.remove wire:target="submit">{{ __('Open my file') }}</span>
                 <span wire:loading wire:target="submit">{{ __('Opening') }}&hellip;</span>
             </button>
+
+            <x-web.privacy-consent />
         </form>
     @endif
 </div>

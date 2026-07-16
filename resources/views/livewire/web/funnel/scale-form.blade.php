@@ -50,6 +50,8 @@
                 <span wire:loading.remove wire:target="submit">{{ __('Request my audit') }}</span>
                 <span wire:loading wire:target="submit">{{ __('Sending') }}&hellip;</span>
             </button>
+
+            <x-web.privacy-consent />
         </form>
     @endif
 </div>

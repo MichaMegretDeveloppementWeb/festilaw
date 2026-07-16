@@ -18,6 +18,7 @@ export default defineConfig({
                 'resources/css/web/get-started/index.css',
                 'resources/css/web/get-started/journey.css',
                 'resources/css/web/contact/index.css',
+                'resources/css/web/legal/index.css',
             ],
             refresh: true,
         }),
