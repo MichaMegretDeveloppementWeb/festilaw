@@ -8,6 +8,8 @@ export default defineConfig({
                 'resources/js/app.js',
                 // Manifeste CSS de l'espace public (base + coquille), charge sur toutes les pages web.
                 'resources/css/web.css',
+                // Back-office (auth) : espace separe, styles sur-mesure.
+                'resources/css/admin.css',
                 // Un point d'entree CSS par page (charge uniquement par la page concernee).
                 'resources/css/web/home/index.css',
                 'resources/css/web/about/index.css',

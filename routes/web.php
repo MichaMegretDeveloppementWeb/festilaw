@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminDocumentDownloadController;
+use App\Http\Controllers\Admin\AdminMandateDownloadController;
+use App\Http\Controllers\Admin\LogoutController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\Web\About\AboutController;
 use App\Http\Controllers\Web\Contact\ContactController;
@@ -21,6 +24,9 @@ use App\Http\Controllers\Web\SwitchLocaleController;
 use App\Http\Controllers\Web\UnderstandGpsr\UnderstandGpsrController;
 use App\Http\Controllers\Web\Webhook\PaymentWebhookController;
 use App\Http\Controllers\Web\Webhook\SignatureWebhookController;
+use App\Livewire\Admin\LoginForm;
+use App\Livewire\Admin\SubmissionDetail;
+use App\Livewire\Admin\SubmissionList;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -88,3 +94,24 @@ Route::prefix('get-started')->name('get-started.')->group(function () {
 // Espace client "mon projet" (le hub du dossier a tout stade), separe du parcours. Magic link.
 Route::view('/my-project', 'web.find-my-project')->name('find-my-project');
 Route::get('/my-project/{dossier}', StarterProjectController::class)->name('my-project');
+
+/*
+ | Back-office (ADR-002) : Blade + Livewire sur-mesure, prefixe /admin, noindex, hors sitemap.
+ | Auth minimale par session ; comptes crees par la commande festilaw:create-admin (pas d'inscription
+ | publique). Les dossiers sont routes par id (getRouteKeyName = resume_token cote public, absent hors
+ | STARTER). Traitement manuel des dossiers.
+ */
+Route::prefix('admin')->name('admin.')->group(function () {
+    Route::get('/login', LoginForm::class)->middleware('guest')->name('login');
+
+    Route::middleware('auth')->group(function () {
+        Route::post('/logout', LogoutController::class)->name('logout');
+        Route::get('/', fn () => redirect()->route('admin.submissions.index'))->name('dashboard');
+        Route::get('/submissions', SubmissionList::class)->name('submissions.index');
+        Route::get('/submissions/{submission:id}', SubmissionDetail::class)->name('submissions.show');
+        Route::get('/submissions/{submission:id}/documents/{document:id}', AdminDocumentDownloadController::class)
+            ->name('submissions.document')
+            ->withoutScopedBindings();
+        Route::get('/submissions/{submission:id}/mandate', AdminMandateDownloadController::class)->name('submissions.mandate');
+    });
+});

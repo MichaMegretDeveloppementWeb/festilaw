@@ -23,6 +23,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Les webhooks providers (Stripe/SignWell) sont des POST externes : hors CSRF.
         $middleware->validateCsrfTokens(except: ['webhooks/*']);
+
+        // Back-office : les invites vont au login admin, les connectes au tableau des dossiers.
+        $middleware->redirectGuestsTo(fn () => route('admin.login'));
+        $middleware->redirectUsersTo(fn () => route('admin.submissions.index'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
