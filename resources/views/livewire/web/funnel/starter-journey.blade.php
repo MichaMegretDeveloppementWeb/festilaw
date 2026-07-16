@@ -162,7 +162,7 @@
             </div>
             <h3 class="funnel-success__title">{{ __('Your Creator Pack is active.') }}</h3>
             <p class="funnel-success__text">{{ __('Your file is ready in your personal space, with your signed mandate and documents.') }}</p>
-            <a href="{{ route('my-project', ['dossier' => $submission->resume_token]) }}" class="btn btn--coral">{{ __('Go to my project') }}</a>
+            <a href="{{ $myProjectUrl }}" class="btn btn--coral">{{ __('Go to my project') }}</a>
         </div>
 
     @elseif ($step === 'cancelled')

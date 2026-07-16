@@ -434,6 +434,7 @@ class StarterJourney extends Component
             'deposits' => $this->stagedDocuments(),
             'acceptAttr' => '.'.implode(',.', $this->documentMimes()),
             'amountCents' => (int) config('festilaw.starter.amount_cents'),
+            'myProjectUrl' => route('my-project', ['dossier' => $this->submission->resume_token]),
         ]);
     }
 }
