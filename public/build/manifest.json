@@ -26,6 +26,15 @@
     "src": "resources/css/web/contact/index.css",
     "isEntry": true
   },
+  "resources/css/web/errors/index.css": {
+    "file": "assets/index-uLPbhU-R.css",
+    "name": "index",
+    "names": [
+      "index.css"
+    ],
+    "src": "resources/css/web/errors/index.css",
+    "isEntry": true
+  },
   "resources/css/web/excluded-products/index.css": {
     "file": "assets/index-BD5hKwJv.css",
     "name": "index",
