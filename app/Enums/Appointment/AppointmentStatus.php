@@ -10,4 +10,15 @@ enum AppointmentStatus: string
     case Scheduled = 'scheduled';
     case Completed = 'completed';
     case Cancelled = 'cancelled';
+
+    /** Libelle francais (affiche uniquement dans le back-office interne). */
+    public function label(): string
+    {
+        return match ($this) {
+            self::Requested => __('Demandé'),
+            self::Scheduled => __('Programmé'),
+            self::Completed => __('Terminé'),
+            self::Cancelled => __('Annulé'),
+        };
+    }
 }

@@ -34,6 +34,16 @@ class LoginForm extends Component
         ];
     }
 
+    /** @return array<string, string> */
+    protected function messages(): array
+    {
+        return [
+            'email.required' => __('L\'adresse email est obligatoire.'),
+            'email.email' => __('Veuillez saisir une adresse email valide.'),
+            'password.required' => __('Le mot de passe est obligatoire.'),
+        ];
+    }
+
     public function login(): mixed
     {
         $this->validate();

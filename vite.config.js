@@ -1,8 +1,12 @@
 import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
     plugins: [
+        // Tailwind : utilise uniquement par le back-office (resources/css/admin.css importe "tailwindcss").
+        // L'espace public reste en CSS modulaire pur (aucun @import "tailwindcss").
+        tailwindcss(),
         laravel({
             input: [
                 'resources/js/app.js',

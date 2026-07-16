@@ -5,6 +5,7 @@ use App\Enums\Submission\SubmissionType;
 use App\Livewire\Admin\LoginForm;
 use App\Livewire\Admin\SubmissionDetail;
 use App\Livewire\Admin\SubmissionList;
+use App\Mail\AdminMessageToClient;
 use App\Mail\StarterResponsiblePersonIssued;
 use App\Mail\StarterResumeLink;
 use App\Models\Submission;
@@ -114,6 +115,65 @@ it('resends the resume link to a starter client', function () {
     Mail::assertSent(StarterResumeLink::class, fn ($mail) => $mail->hasTo($submission->email));
 });
 
+it('resends the resume link in the language the client used', function () {
+    Mail::fake();
+    $submission = Submission::factory()->starter()->create(['locale' => 'fr']);
+
+    actingAs(User::factory()->create());
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $submission])
+        ->call('resendLink');
+
+    Mail::assertSent(StarterResumeLink::class, fn ($mail) => $mail->hasTo($submission->email) && $mail->locale === 'fr');
+});
+
+it('sends a free-form email to the client from the detail screen', function () {
+    Mail::fake();
+    $submission = Submission::factory()->starter()->create();
+
+    actingAs(User::factory()->create());
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $submission])
+        ->set('emailSubject', 'Un point sur votre dossier')
+        ->set('emailBody', 'Bonjour, votre dossier avance bien.')
+        ->call('sendEmail')
+        ->assertHasNoErrors()
+        ->assertSet('emailSubject', '')
+        ->assertSet('emailBody', '')
+        ->assertDispatched('email-sent')
+        ->assertDispatched('admin-toast');
+
+    Mail::assertSent(AdminMessageToClient::class, fn ($mail) => $mail->hasTo($submission->email)
+        && $mail->hasSubject('Un point sur votre dossier'));
+});
+
+it('requires a subject and a message before sending an email', function () {
+    Mail::fake();
+    $submission = Submission::factory()->starter()->create();
+
+    actingAs(User::factory()->create());
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $submission])
+        ->set('emailSubject', '')
+        ->set('emailBody', '')
+        ->call('sendEmail')
+        ->assertHasErrors(['emailSubject' => 'required', 'emailBody' => 'required']);
+
+    Mail::assertNothingSent();
+});
+
+it('shows admin validation errors in French', function () {
+    $submission = Submission::factory()->starter()->create();
+
+    actingAs(User::factory()->create());
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $submission])
+        ->set('noteBody', '')
+        ->call('addNote')
+        ->assertHasErrors('noteBody')
+        ->assertSee('Le contenu de la note est obligatoire.');
+});
+
 it('issues the EU responsible person address, completes the dossier and emails the client', function () {
     Mail::fake();
     $submission = Submission::factory()->starter()->create(['status' => SubmissionStatus::Paid]);
@@ -130,6 +190,25 @@ it('issues the EU responsible person address, completes the dossier and emails t
     expect($submission->eu_rp_address)->toContain('rue de l');
 
     Mail::assertSent(StarterResponsiblePersonIssued::class, fn ($mail) => $mail->hasTo($submission->email));
+});
+
+it('presents a contact as an inquiry, not a dossier', function () {
+    $contact = Submission::factory()->create([
+        'type' => SubmissionType::Contact,
+        'first_name' => 'Marie Dupont',
+        'message' => 'Bonjour, une question sur vos services.',
+    ]);
+
+    actingAs(User::factory()->create());
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $contact])
+        ->assertSee('Prise de contact')
+        ->assertSee('Marie Dupont')
+        ->assertSee('Bonjour, une question sur vos services.')
+        ->assertSee('Supprimer la prise de contact')
+        ->assertDontSee('Statut du dossier')
+        ->assertDontSee('Pièces')
+        ->assertDontSee('Supprimer le dossier');
 });
 
 it('deletes a dossier and redirects to the list', function () {
