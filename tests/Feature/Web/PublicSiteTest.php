@@ -106,3 +106,12 @@ it('serves robots.txt referencing the sitemap', function () {
         ->assertSee('Sitemap:', false)
         ->assertSee('sitemap.xml', false);
 });
+
+it('references the favicons and the OG share image in the head', function () {
+    get(route('home'))
+        ->assertOk()
+        ->assertSee('rel="icon"', false)
+        ->assertSee('apple-touch-icon.png', false)
+        ->assertSee('rel="manifest"', false)
+        ->assertSee('og-default.png', false);
+});
