@@ -9,6 +9,7 @@ use App\Enums\Payment\PaymentStatus;
 use App\Enums\Payment\PaymentType;
 use App\Enums\Submission\SubmissionStatus;
 use App\Enums\Submission\SubmissionType;
+use App\Exceptions\Signature\SignatureException;
 use App\Livewire\Web\Funnel\StarterJourney;
 use App\Models\Contract;
 use App\Models\Submission;
@@ -326,6 +327,45 @@ it('blocks the fake dev completion routes in production', function () {
         ->assertNotFound();
     get(route('get-started.starter.dev-pay', ['dossier' => $submission->resume_token]))
         ->assertNotFound();
+});
+
+it('shows a graceful error and does not crash when the signature provider fails', function () {
+    $submission = openStarterDossier();
+
+    app()->bind(SignatureGatewayInterface::class, fn () => new class implements SignatureGatewayInterface
+    {
+        public function key(): string
+        {
+            return 'stub';
+        }
+
+        public function createSigningSession(Contract $contract): SigningSessionData
+        {
+            throw SignatureException::apiRequestFailed('create document');
+        }
+
+        public function currentSigningUrl(Contract $contract): ?string
+        {
+            return null;
+        }
+
+        public function checkStatus(Contract $contract): SignatureWebhookData
+        {
+            return new SignatureWebhookData('x', false, null);
+        }
+
+        public function parseWebhook(Request $request): SignatureWebhookData
+        {
+            return new SignatureWebhookData('x', false, null);
+        }
+    });
+
+    Livewire::test(StarterJourney::class, ['submission' => $submission])
+        ->call('sign')
+        ->assertHasErrors('journey');
+
+    // Le dossier reste au stade signature : aucune transition cassee, pas de crash.
+    expect($submission->fresh()->status)->toBe(SubmissionStatus::InProgress);
 });
 
 it('builds a journey URL from the submission model using the resume token as route key', function () {
