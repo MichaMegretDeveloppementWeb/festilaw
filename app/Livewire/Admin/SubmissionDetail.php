@@ -115,7 +115,15 @@ class SubmissionDetail extends Component
         }
 
         $sendLink->execute($this->submission);
-        $this->toast(__('Lien de reprise renvoyé au client.'));
+        $this->toast($this->isPaid()
+            ? __('Lien du dossier renvoyé au client.')
+            : __('Lien de reprise renvoyé au client.'));
+    }
+
+    /** Dossier deja actif (paye ou finalise) : le lien mene a l'espace projet, pas a une reprise. */
+    private function isPaid(): bool
+    {
+        return in_array($this->submission->status, [SubmissionStatus::Paid, SubmissionStatus::Completed], true);
     }
 
     public function issueResponsiblePerson(IssueResponsiblePersonAction $issue): void
@@ -150,6 +158,7 @@ class SubmissionDetail extends Component
             'statuses' => SubmissionStatus::cases(),
             'isStarter' => $this->submission->type === SubmissionType::Starter,
             'isContact' => $isContact,
+            'isPaid' => $this->isPaid(),
         ])->title(($isContact ? __('Prise de contact') : __('Dossier')).' '.$this->submission->reference.' · Festilaw');
     }
 

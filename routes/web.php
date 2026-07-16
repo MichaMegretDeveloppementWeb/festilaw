@@ -108,6 +108,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/logout', LogoutController::class)->name('logout');
         Route::get('/', fn () => redirect()->route('admin.submissions.index'))->name('dashboard');
         Route::get('/submissions', SubmissionList::class)->name('submissions.index');
+        Route::get('/contacts', SubmissionList::class)->name('contacts.index');
         Route::get('/submissions/{submission:id}', SubmissionDetail::class)->name('submissions.show');
         Route::get('/submissions/{submission:id}/documents/{document:id}', AdminDocumentDownloadController::class)
             ->name('submissions.document')

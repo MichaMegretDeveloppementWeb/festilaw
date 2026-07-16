@@ -9,20 +9,22 @@ use App\Enums\Submission\SubmissionType;
 use App\Models\Submission;
 use Illuminate\View\View;
 use Livewire\Attributes\Layout;
-use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
 /**
- * Back-office : liste filtrable des demandes (statut, parcours, recherche). Lecture seule ; le detail
- * et le changement de statut sont sur SubmissionDetail.
+ * Back-office : liste filtrable (statut, parcours, recherche). Deux modes selon la route : les DOSSIERS
+ * (parcours Creator/Pro/Scale) et, a part, les PRISES DE CONTACT (formulaire de contact) · un message
+ * n'est pas un dossier. Lecture seule ; le detail est sur SubmissionDetail.
  */
 #[Layout('layouts.admin')]
-#[Title('Dossiers · Back-office Festilaw')]
 class SubmissionList extends Component
 {
     use WithPagination;
+
+    /** Mode "prises de contact" (sinon : dossiers). Fixe au montage selon la route (persiste ensuite). */
+    public bool $contactsMode = false;
 
     #[Url]
     public string $search = '';
@@ -32,6 +34,11 @@ class SubmissionList extends Component
 
     #[Url]
     public string $type = '';
+
+    public function mount(): void
+    {
+        $this->contactsMode = request()->routeIs('admin.contacts.*');
+    }
 
     public function updatedSearch(): void
     {
@@ -55,9 +62,16 @@ class SubmissionList extends Component
 
     public function render(): View
     {
+        $dossierTypes = [SubmissionType::Starter, SubmissionType::Pro, SubmissionType::Scale];
+
         $submissions = Submission::query()
-            ->when($this->status !== '', fn ($query) => $query->where('status', $this->status))
-            ->when($this->type !== '', fn ($query) => $query->where('type', $this->type))
+            ->when(
+                $this->contactsMode,
+                fn ($query) => $query->where('type', SubmissionType::Contact),
+                fn ($query) => $query->whereIn('type', $dossierTypes),
+            )
+            ->when(! $this->contactsMode && $this->status !== '', fn ($query) => $query->where('status', $this->status))
+            ->when(! $this->contactsMode && $this->type !== '', fn ($query) => $query->where('type', $this->type))
             ->when($this->search !== '', function ($query): void {
                 $term = '%'.$this->search.'%';
                 $query->where(function ($inner) use ($term): void {
@@ -74,7 +88,7 @@ class SubmissionList extends Component
         return view('livewire.admin.submission-list', [
             'submissions' => $submissions,
             'statuses' => SubmissionStatus::cases(),
-            'types' => SubmissionType::cases(),
-        ]);
+            'types' => $dossierTypes,
+        ])->title(($this->contactsMode ? __('Prises de contact') : __('Dossiers')).' · Back-office Festilaw');
     }
 }

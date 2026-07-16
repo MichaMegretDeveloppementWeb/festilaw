@@ -48,18 +48,40 @@ it('logs an admin in with valid credentials', function () {
     expect(auth()->check())->toBeTrue();
 });
 
-it('lists and filters submissions for an authenticated admin', function () {
-    $starter = Submission::factory()->starter()->create(['email' => 'buyer@example.com']);
-    $contact = Submission::factory()->create(['type' => SubmissionType::Contact, 'email' => 'hello@example.com']);
+it('lists and filters dossiers for an authenticated admin', function () {
+    $starter = Submission::factory()->starter()->create(['email' => 'buyer@example.com', 'company_name' => 'Buyer Co']);
+    $other = Submission::factory()->starter()->create(['email' => 'other@example.com', 'company_name' => 'Other Co']);
 
     actingAs(User::factory()->create());
 
     Livewire::test(SubmissionList::class)
         ->assertSee($starter->reference)
-        ->assertSee($contact->reference)
+        ->assertSee($other->reference)
         ->set('search', 'buyer@example.com')
         ->assertSee($starter->reference)
-        ->assertDontSee($contact->reference);
+        ->assertDontSee($other->reference);
+});
+
+it('keeps contacts out of the dossiers list and shows them on their own page', function () {
+    $starter = Submission::factory()->starter()->create();
+    Submission::factory()->create([
+        'type' => SubmissionType::Contact,
+        'first_name' => 'Zoe Martin',
+        'email' => 'zoe@example.com',
+    ]);
+
+    actingAs(User::factory()->create());
+
+    get(route('admin.submissions.index'))
+        ->assertOk()
+        ->assertSee($starter->reference)
+        ->assertDontSee('zoe@example.com');
+
+    get(route('admin.contacts.index'))
+        ->assertOk()
+        ->assertSee('Zoe Martin')
+        ->assertSee('zoe@example.com')
+        ->assertDontSee($starter->reference);
 });
 
 it('opens the detail when a list row is clicked', function () {
@@ -101,6 +123,20 @@ it('adds an internal note attributed to the current admin', function () {
     expect($submission->notes()->first())
         ->body->toBe('Rappeler le client demain matin.')
         ->author_id->toBe($admin->id);
+});
+
+it('labels the resend action as a dossier link once the dossier is paid', function () {
+    $paid = Submission::factory()->starter()->create(['status' => SubmissionStatus::Paid]);
+    $inProgress = Submission::factory()->starter()->create(['status' => SubmissionStatus::InProgress]);
+
+    actingAs(User::factory()->create());
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $paid])
+        ->assertSee('Renvoyer le lien du dossier')
+        ->assertDontSee('Renvoyer le lien de reprise');
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $inProgress])
+        ->assertSee('Renvoyer le lien de reprise');
 });
 
 it('resends the resume link to a starter client', function () {

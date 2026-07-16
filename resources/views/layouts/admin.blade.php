@@ -15,6 +15,7 @@
 </head>
 <body class="min-h-screen bg-slate-50 text-slate-800 antialiased">
     @auth
+        @php($isContacts = request()->routeIs('admin.contacts.*'))
         @php($isDossiers = request()->routeIs('admin.submissions.*'))
 
         {{-- Barre superieure mobile + menu burger (le menu se superpose au contenu, sans le decaler) --}}
@@ -45,6 +46,14 @@
                         ])>
                             <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v4H4z"/><path d="M4 10h16v10H4z"/><path d="M9 14h6"/></svg>
                             {{ __('Dossiers') }}
+                        </a>
+                        <a href="{{ route('admin.contacts.index') }}" @click="mobileOpen = false" @class([
+                            'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium',
+                            'bg-brand-50 text-brand-700' => $isContacts,
+                            'text-slate-600 hover:bg-slate-100' => ! $isContacts,
+                        ])>
+                            <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>
+                            {{ __('Prises de contact') }}
                         </a>
                         <a href="{{ route('home') }}" target="_blank" rel="noopener" @click="mobileOpen = false"
                             class="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">
@@ -81,6 +90,14 @@
                 ])>
                     <svg class="h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v4H4z"/><path d="M4 10h16v10H4z"/><path d="M9 14h6"/></svg>
                     <span class="admin-navlabel">{{ __('Dossiers') }}</span>
+                </a>
+                <a href="{{ route('admin.contacts.index') }}" @class([
+                    'admin-navitem flex items-center gap-2.5 rounded-lg py-2 text-sm font-medium transition',
+                    'bg-brand-50 text-brand-700' => $isContacts,
+                    'text-slate-600 hover:bg-slate-100 hover:text-slate-900' => ! $isContacts,
+                ])>
+                    <svg class="h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>
+                    <span class="admin-navlabel">{{ __('Prises de contact') }}</span>
                 </a>
             </nav>
             <div class="mt-auto border-t border-slate-200 py-3">
