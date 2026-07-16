@@ -1,3 +1,4 @@
 /* Coquille de l'espace web : styles des composants du layout. */
 @import './header.css';
 @import './footer.css';
+@import './sticky-cta.css';

@@ -31,6 +31,7 @@
             <span class="eyebrow page-hero__eyebrow">{{ __('Our Services') }}</span>
             <h1 class="page-hero__title">{{ __('Your full GPSR service,') }} <span class="page-hero__title-em">{{ __('handled') }}</span></h1>
             <p class="page-hero__lead">{{ __('One partner for legal representation, compliance assessment, documentation, authority liaison and ongoing monitoring, so you can sell into Europe with confidence.') }}</p>
+            <p class="page-hero__links"><a href="{{ route('pricing') }}">{{ __('View plans and pricing') }} →</a></p>
         </div>
     </section>
 

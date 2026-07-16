@@ -4,6 +4,9 @@
             <span class="eyebrow risks__eyebrow">{{ __('Why it matters') }}</span>
             <h2 class="risks__title">{{ __('The GPSR is now') }} <span class="risks__title-em">{{ __('mandatory') }}</span></h2>
             <p class="risks__intro">{{ __('Compliance is no longer optional. The EU General Product Safety Regulation (GPSR) is fully in effect. Any business selling consumer products to the EU must have an economic operator established in the EU who is responsible for those products. If you sell from outside the EU, that means appointing an EU Responsible Person and meeting strict traceability rules.') }}</p>
+            @unless (request()->routeIs('understand-gpsr'))
+                <p class="risks__more"><a href="{{ route('understand-gpsr') }}">{{ __('Understand the GPSR in plain language') }} →</a></p>
+            @endunless
         </div>
 
         <div class="risks__grid">

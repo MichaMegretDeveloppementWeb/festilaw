@@ -21,3 +21,8 @@
 .breadcrumb__link:hover { color: var(--color-cream); text-decoration: underline; }
 .breadcrumb__sep { color: rgba(239, 229, 208, 0.45); }
 .breadcrumb__current { color: var(--color-salmon); font-weight: 600; }
+
+/* Lien contextuel dans le bandeau (ex. Services -> Tarifs). */
+.page-hero__links { margin-top: 18px; }
+.page-hero__links a { color: #fff; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.page-hero__links a:hover { color: var(--color-coral); }

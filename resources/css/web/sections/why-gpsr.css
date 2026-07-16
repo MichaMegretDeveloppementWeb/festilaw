@@ -28,3 +28,8 @@
 @media (min-width: 800px) {
     .risks__grid { grid-template-columns: repeat(3, 1fr); gap: 40px; }
 }
+
+/* Lien contextuel vers le hub GPSR. */
+.risks__more { margin-top: 18px; }
+.risks__more a { color: var(--color-coral); font-weight: 600; text-decoration: none; }
+.risks__more a:hover { text-decoration: underline; }

@@ -92,6 +92,7 @@
                     <h2 class="gtabs__panel-title">{{ __('Does this apply to your business?') }}</h2>
                     <p>{{ __('If you sell non-food consumer products to customers inside the European Union, whether you are an e-commerce brand, an international manufacturer, or a marketplace seller, then yes, the GPSR applies directly to you.') }}</p>
                     <p class="gtabs__good"><strong>{{ __('The good news:') }}</strong> {{ __('you don\'t have to navigate the European legal maze alone. Festilaw is here to assess your products, define your exact documentation blueprint, and handle the authority liaison so you can focus entirely on what you do best: growing your business.') }}</p>
+                    <p><a href="{{ route('services') }}" class="gtabs__link">{{ __('See how Festilaw handles your GPSR compliance') }} →</a></p>
                 </div>
 
                 <div class="gtabs__panel" x-show="tab === 3" x-cloak>
@@ -103,6 +104,7 @@
                         <li>{{ __('Aviation, Aerospace & Military Equipment (subject to strict defense and aerospace safety standards).') }}</li>
                         <li>{{ __('Pharmaceuticals & Human Medicines (requires European Medicines Agency (EMA) approval).') }}</li>
                     </ul>
+                    <p><a href="{{ route('excluded-products') }}" class="gtabs__link">{{ __('See the full list of products we don\'t cover') }} →</a></p>
                     <p>{{ __('If you are in doubt,') }} <a href="{{ route('contact') }}" class="gtabs__link">{{ __('send us an email') }}</a>.</p>
                 </div>
             </div>
