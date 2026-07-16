@@ -79,7 +79,7 @@
                         <ul class="gtabs__list">
                             <li>{{ __('The identity and contact details of both the manufacturer and the EU Responsible Person.') }}</li>
                             <li>{{ __('Specific product identifiers (such as a batch number, serial number, or type).') }}</li>
-                            <li>{{ __('Clear, legible warnings and safety instructions in the language of the destination country.') }}</li>
+                            <li>{{ __('Clear, legible warnings and safety instructions in a language easily understood by consumers, as required by the destination Member State.') }}</li>
                         </ul>
                     </div>
                     <div class="gtabs__pillar">

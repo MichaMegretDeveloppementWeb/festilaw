@@ -57,7 +57,6 @@
     "Choose your :path": "Elige tu :path",
     "Choose your GPSR compliance plan: Creator, Pro or Scale, and get your EU Responsible Person set up.": "Elige tu plan de conformidad GPSR: Creator, Pro o Scale, y configura tu Persona Responsable en la UE.",
     "Choose your plan": "Elige tu plan",
-    "Clear, legible warnings and safety instructions in the language of the destination country.": "Advertencias e instrucciones de seguridad claras y legibles en el idioma del país de destino.",
     "Coming soon": "Próximamente",
     "Company": "Empresa",
     "Company registration no.": "N.º de registro mercantil",
@@ -429,7 +428,7 @@
     "You choose the plan that fits your size, complete a short form, sign your mandate online, upload the required documents, and pay securely. We then provide your official EU Responsible Person address and your signed mandate, typically within 24 hours.": "Eliges el plan que se ajusta a tu tamaño, completas un breve formulario, firmas tu mandato en línea, subes los documentos requeridos y pagas de forma segura. A continuación, te proporcionamos tu dirección oficial de Persona Responsable en la UE y tu mandato firmado, normalmente en 24 horas.",
     "you don't have to navigate the European legal maze alone. Festilaw is here to assess your products, define your exact documentation blueprint, and handle the authority liaison so you can focus entirely on what you do best: growing your business.": "no tienes que recorrer solo el laberinto legal europeo. Festilaw está aquí para evaluar tus productos, definir el plan exacto de tu documentación y encargarse del enlace con las autoridades para que puedas centrarte por completo en lo que mejor sabes hacer: hacer crecer tu negocio.",
     "You must have a GPSR Responsible Person. Festilaw can provide your official mandate within 24 hours.": "Debes tener una Persona Responsable GPSR. Festilaw puede proporcionarte tu mandato oficial en 24 horas.",
-    "You started your business to innovate and create, not to get lost in European paperwork. Festilaw steps in as your dedicated compliance partner. We give you the exact guidelines to get compliant once, and we mount guard to manage any updates. We take care of the regulatory backup so you can run your business with": "Creaste tu negocio para innovar y crear, no para perderte en el papeleo europeo. Festilaw interviene como tu socio de conformidad dedicado. Te damos las pautas exactas para cumplir una sola vez y montamos guardia para gestionar cualquier actualización. Nos ocupamos del respaldo normativo para que puedas dirigir tu negocio con",
+    "You started your business to innovate and create, not to get lost in European paperwork. Festilaw steps in as your dedicated compliance partner. We give you the exact guidelines to get compliant once, and we stand guard over every update. We handle the regulatory heavy lifting so you can run your business with": "Creaste tu negocio para innovar y crear, no para perderte en el papeleo europeo. Festilaw interviene como tu socio de conformidad dedicado. Te damos las pautas exactas para cumplir una sola vez y montamos guardia para gestionar cualquier actualización. Nos ocupamos del respaldo normativo para que puedas dirigir tu negocio con",
     "You're likely not concerned.": "Es probable que no te afecte.",
     "Your": "Tu",
     "Your :file": "Tu :file",
@@ -523,5 +522,7 @@
     "See how Festilaw handles your GPSR compliance": "Descubre cómo Festilaw gestiona tu conformidad GPSR",
     "See the full list of products we don't cover": "Ver la lista completa de productos que no cubrimos",
     "Understand the GPSR in plain language": "Entiende el GPSR en lenguaje sencillo",
-    "View plans and pricing": "Ver planes y precios"
+    "View plans and pricing": "Ver planes y precios",
+    "Clear, legible warnings and safety instructions in a language easily understood by consumers, as required by the destination Member State.": "Advertencias e instrucciones de seguridad claras y legibles, en una lengua fácilmente comprensible por los consumidores, según lo exija el Estado miembro de destino.",
+    "Your eligibility result": "Tu resultado de elegibilidad"
 }

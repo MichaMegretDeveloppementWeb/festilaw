@@ -28,7 +28,7 @@ final class SignatureWebhookController extends Controller
         try {
             $event = $gateway->parseWebhook($request);
         } catch (BaseAppException $e) {
-            Log::warning($e->getMessage(), ['exception' => $e]);
+            Log::channel('signature')->warning($e->getMessage(), ['exception' => $e]);
 
             return response()->noContent(400);
         }
@@ -43,7 +43,7 @@ final class SignatureWebhookController extends Controller
             }
         } catch (Throwable $e) {
             // Erreur inattendue cote traitement : on trace et on repond 500 pour que le provider reessaie.
-            Log::error('Signature webhook processing failed.', ['exception' => $e]);
+            Log::channel('signature')->error('Signature webhook processing failed.', ['exception' => $e]);
 
             return response()->noContent(500);
         }

@@ -45,7 +45,7 @@
                     <svg x-show="concerned" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                     <svg x-show="!concerned" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                 </div>
-                <h3 class="quiz__result-title" x-text="resultTitle"></h3>
+                <h3 class="quiz__result-title" x-text="resultTitle">{{ __('Your eligibility result') }}</h3>
                 <p class="quiz__result-text" x-text="resultText"></p>
                 <div class="quiz__result-actions">
                     <a x-show="concerned" href="{{ route('pricing') }}" class="btn btn--coral btn--sm">{{ __('See the plans') }}</a>

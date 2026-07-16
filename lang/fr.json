@@ -57,7 +57,6 @@
     "Choose your :path": "Choisissez votre :path",
     "Choose your GPSR compliance plan: Creator, Pro or Scale, and get your EU Responsible Person set up.": "Choisissez votre formule de conformité GPSR : Creator, Pro ou Scale, et faites établir votre Personne Responsable dans l'UE.",
     "Choose your plan": "Choisissez votre formule",
-    "Clear, legible warnings and safety instructions in the language of the destination country.": "Des avertissements et des consignes de sécurité clairs et lisibles, dans la langue du pays de destination.",
     "Coming soon": "Bientôt disponible",
     "Company": "Entreprise",
     "Company registration no.": "N° d'immatriculation de l'entreprise",
@@ -429,7 +428,7 @@
     "You choose the plan that fits your size, complete a short form, sign your mandate online, upload the required documents, and pay securely. We then provide your official EU Responsible Person address and your signed mandate, typically within 24 hours.": "Vous choisissez la formule adaptée à votre taille, remplissez un court formulaire, signez votre mandat en ligne, téléversez les documents requis et payez en toute sécurité. Nous vous fournissons ensuite votre adresse officielle de Personne Responsable dans l'UE ainsi que votre mandat signé, généralement sous 24 heures.",
     "you don't have to navigate the European legal maze alone. Festilaw is here to assess your products, define your exact documentation blueprint, and handle the authority liaison so you can focus entirely on what you do best: growing your business.": "vous n'avez pas à parcourir seul le dédale juridique européen. Festilaw est là pour évaluer vos produits, définir le plan précis de votre documentation et assurer l'interlocution avec les autorités, afin que vous puissiez vous consacrer entièrement à ce que vous faites de mieux : développer votre activité.",
     "You must have a GPSR Responsible Person. Festilaw can provide your official mandate within 24 hours.": "Vous devez disposer d'une Personne Responsable GPSR. Festilaw peut vous fournir votre mandat officiel sous 24 heures.",
-    "You started your business to innovate and create, not to get lost in European paperwork. Festilaw steps in as your dedicated compliance partner. We give you the exact guidelines to get compliant once, and we mount guard to manage any updates. We take care of the regulatory backup so you can run your business with": "Vous avez lancé votre activité pour innover et créer, pas pour vous perdre dans la paperasse européenne. Festilaw intervient comme votre partenaire de conformité dédié. Nous vous donnons les directives exactes pour vous mettre en conformité une bonne fois pour toutes, et nous montons la garde pour gérer les mises à jour. Nous nous occupons de tout le soutien réglementaire pour que vous puissiez gérer votre entreprise avec",
+    "You started your business to innovate and create, not to get lost in European paperwork. Festilaw steps in as your dedicated compliance partner. We give you the exact guidelines to get compliant once, and we stand guard over every update. We handle the regulatory heavy lifting so you can run your business with": "Vous avez lancé votre activité pour innover et créer, pas pour vous perdre dans la paperasse européenne. Festilaw intervient comme votre partenaire de conformité dédié. Nous vous donnons les directives exactes pour vous mettre en conformité une bonne fois pour toutes, et nous montons la garde pour gérer les mises à jour. Nous nous occupons de tout le soutien réglementaire pour que vous puissiez gérer votre entreprise avec",
     "You're likely not concerned.": "Vous n'êtes probablement pas concerné.",
     "Your": "Votre",
     "Your :file": "Votre :file",
@@ -523,5 +522,7 @@
     "See how Festilaw handles your GPSR compliance": "Découvrez comment Festilaw gère votre conformité GPSR",
     "See the full list of products we don't cover": "Voir la liste complète des produits que nous ne couvrons pas",
     "Understand the GPSR in plain language": "Comprendre le GPSR en langage clair",
-    "View plans and pricing": "Voir les offres et les tarifs"
+    "View plans and pricing": "Voir les offres et les tarifs",
+    "Clear, legible warnings and safety instructions in a language easily understood by consumers, as required by the destination Member State.": "Des avertissements et consignes de sécurité clairs et lisibles, dans une langue aisément comprise par les consommateurs, telle que requise par l'État membre de destination.",
+    "Your eligibility result": "Votre résultat d'éligibilité"
 }

@@ -32,8 +32,7 @@ final class PaymentWebhookController extends Controller
         try {
             $event = $gateways->get($provider)->parseWebhook($request);
         } catch (BaseAppException $e) {
-            // TODO: canal de log dedie 'payments' (audit) une fois configure.
-            Log::warning($e->getMessage(), ['exception' => $e, 'provider' => $provider]);
+            Log::channel('payments')->warning($e->getMessage(), ['exception' => $e, 'provider' => $provider]);
 
             return response()->noContent(400);
         }
@@ -48,7 +47,7 @@ final class PaymentWebhookController extends Controller
             }
         } catch (Throwable $e) {
             // Erreur inattendue cote traitement : on trace et on repond 500 pour que le provider reessaie.
-            Log::error('Payment webhook processing failed.', ['exception' => $e, 'provider' => $provider]);
+            Log::channel('payments')->error('Payment webhook processing failed.', ['exception' => $e, 'provider' => $provider]);
 
             return response()->noContent(500);
         }

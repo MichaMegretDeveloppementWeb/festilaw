@@ -73,6 +73,23 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // Canaux d'audit a retention longue pour les domaines critiques (paiements, signature).
+        'payments' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/payments.log'),
+            'level' => 'info',
+            'days' => env('LOG_AUDIT_DAYS', 365),
+            'replace_placeholders' => true,
+        ],
+
+        'signature' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/signature.log'),
+            'level' => 'info',
+            'days' => env('LOG_AUDIT_DAYS', 365),
+            'replace_placeholders' => true,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),

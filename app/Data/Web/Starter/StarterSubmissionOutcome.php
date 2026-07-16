@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Data\Starter;
+namespace App\Data\Web\Starter;
 
 use App\Models\Submission;
 

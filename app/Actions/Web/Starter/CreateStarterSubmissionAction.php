@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Web\Starter;
 
-use App\Data\Starter\StarterSubmissionOutcome;
+use App\Data\Web\Starter\StarterSubmissionOutcome;
 use App\Enums\Contract\SignatureStatus;
 use App\Enums\Notification\FunnelNotificationReason;
 use App\Enums\Submission\SubmissionStatus;
