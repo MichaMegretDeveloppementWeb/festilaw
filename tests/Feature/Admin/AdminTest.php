@@ -58,6 +58,16 @@ it('lists and filters submissions for an authenticated admin', function () {
         ->assertDontSee($contact->reference);
 });
 
+it('opens the detail when a list row is clicked', function () {
+    $submission = Submission::factory()->starter()->create();
+
+    actingAs(User::factory()->create());
+
+    Livewire::test(SubmissionList::class)
+        ->call('show', $submission->id)
+        ->assertRedirect(route('admin.submissions.show', ['submission' => $submission->id]));
+});
+
 it('changes a submission status from the detail screen', function () {
     $submission = Submission::factory()->starter()->create(['status' => SubmissionStatus::AwaitingPayment]);
 

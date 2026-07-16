@@ -48,6 +48,11 @@ class SubmissionList extends Component
         $this->resetPage();
     }
 
+    public function show(int $id): void
+    {
+        $this->redirectRoute('admin.submissions.show', ['submission' => $id], navigate: true);
+    }
+
     public function render(): View
     {
         $submissions = Submission::query()

@@ -40,19 +40,17 @@
                             <th>{{ __('Client') }}</th>
                             <th>{{ __('Email') }}</th>
                             <th>{{ __('Date') }}</th>
-                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach ($submissions as $submission)
-                            <tr wire:key="submission-{{ $submission->id }}">
+                            <tr wire:key="submission-{{ $submission->id }}" wire:click="show({{ $submission->id }})" class="admin-table__row">
                                 <td>{{ $submission->reference }}</td>
                                 <td>{{ $submission->type->label() }}</td>
                                 <td><x-admin.status-badge :status="$submission->status" /></td>
                                 <td>{{ $submission->company_name ?: (trim(($submission->first_name ?? '').' '.($submission->last_name ?? '')) ?: '-') }}</td>
                                 <td>{{ $submission->email }}</td>
                                 <td>{{ $submission->created_at->format('d/m/Y') }}</td>
-                                <td><a class="admin-table__link" href="{{ route('admin.submissions.show', ['submission' => $submission->id]) }}">{{ __('Voir') }} →</a></td>
                             </tr>
                         @endforeach
                     </tbody>

@@ -32,6 +32,7 @@ body.admin { background: #f4f5fb; color: var(--color-ink); font-family: var(--fo
 .admin-table th { text-align: left; padding: 10px 12px; color: var(--color-ink-soft); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 2px solid var(--color-line, #e6e6ef); }
 .admin-table td { padding: 12px; border-bottom: 1px solid var(--color-line, #eee); }
 .admin-table tr:hover td { background: #fafaff; }
+.admin-table__row { cursor: pointer; }
 .admin-table__link { color: var(--color-blue); font-weight: 600; text-decoration: none; }
 .admin-table__link:hover { text-decoration: underline; }
 .admin-empty { padding: 40px; text-align: center; color: var(--color-ink-soft); }
@@ -81,3 +82,15 @@ body.admin { background: #f4f5fb; color: var(--color-ink); font-family: var(--fo
 .admin-pagination__link { padding: 8px 14px; border: 1px solid var(--color-line, #d7d7e2); border-radius: var(--radius-md, 9px); background: #fff; color: var(--color-blue); font-size: 13.5px; font-weight: 600; cursor: pointer; }
 .admin-pagination__link.is-disabled { color: #b9bccb; cursor: default; }
 .admin-pagination__info { font-size: 13px; color: var(--color-ink-soft); }
+
+/* Detail d'un dossier : en-tete + deux colonnes (infos / actions). */
+.admin-detail__head { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
+.admin-detail__ref { font-size: 24px; font-weight: 700; }
+.admin-detail__sub { color: var(--color-ink-soft); font-size: 14px; margin-top: 3px; }
+.admin-detail__grid { display: grid; grid-template-columns: 1fr 320px; gap: 20px; align-items: start; }
+.admin-detail__aside { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 20px; }
+.admin-detail__aside .admin-card { margin-bottom: 0; }
+@media (max-width: 860px) {
+    .admin-detail__grid { grid-template-columns: 1fr; }
+    .admin-detail__aside { position: static; }
+}
