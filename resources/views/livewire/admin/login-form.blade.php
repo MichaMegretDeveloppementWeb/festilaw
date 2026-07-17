@@ -33,5 +33,12 @@
                 </button>
             </form>
         </div>
+
+        <div class="mt-6 text-center">
+            <a href="{{ route('home') }}" class="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition hover:text-slate-700">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                {{ __('Retour au site') }}
+            </a>
+        </div>
     </div>
 </div>

@@ -26,6 +26,13 @@ it('redirects guests from the back-office to the login', function () {
     get(route('admin.dashboard'))->assertRedirect(route('admin.login'));
 });
 
+it('offers a link back to the public site on the login page', function () {
+    get(route('admin.login'))
+        ->assertOk()
+        ->assertSee('Retour au site')
+        ->assertSee(route('home'), false);
+});
+
 it('marks the back-office as noindex via HTTP header and meta tag', function () {
     get(route('admin.login'))
         ->assertOk()
