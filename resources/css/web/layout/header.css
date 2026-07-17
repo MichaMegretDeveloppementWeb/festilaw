@@ -53,6 +53,7 @@
     flex-direction: column;
     gap: 5px;
     padding: 11px;
+    border: 0;
     border-radius: 10px;
     background: rgba(255, 255, 255, 0.1);
     cursor: pointer;
@@ -78,10 +79,11 @@
 .site-header__mobile a:not(.btn):hover { background: rgba(255, 255, 255, 0.08); }
 .site-header__mobile .btn { margin-top: 8px; }
 
-.site-header__toggle:checked ~ .site-header__mobile { display: flex; }
+.site-header__mobile.is-open { display: flex; }
 
 @media (min-width: 1080px) {
     .site-header__menu { display: flex; }
     .site-header__burger,
-    .site-header__mobile { display: none; }
+    .site-header__mobile,
+    .site-header__mobile.is-open { display: none; }
 }

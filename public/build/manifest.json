@@ -9,7 +9,7 @@
     "isEntry": true
   },
   "resources/css/web.css": {
-    "file": "assets/web-Cd5dEhbO.css",
+    "file": "assets/web-Dr3JcNNQ.css",
     "name": "web",
     "names": [
       "web.css"
@@ -120,6 +120,12 @@
     "file": "assets/app-BvRk9kiK.js",
     "name": "app",
     "src": "resources/js/app.js",
+    "isEntry": true
+  },
+  "resources/js/web.js": {
+    "file": "assets/web-BwF6bSjq.js",
+    "name": "web",
+    "src": "resources/js/web.js",
     "isEntry": true
   }
 }

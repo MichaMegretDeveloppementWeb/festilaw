@@ -17,12 +17,11 @@
         <a href="{{ route('get-started.index') }}" class="btn btn--coral btn--sm">{{ __('Get compliant in 24h') }}</a>
     </div>
 
-    {{-- Menu mobile : bascule CSS pure --}}
-    <label for="site-nav-toggle" class="site-header__burger" aria-label="{{ __('Menu') }}">
+    {{-- Menu mobile : bascule en vanilla JS (resources/js/web/layout/header.js) --}}
+    <button type="button" class="site-header__burger" aria-label="{{ __('Menu') }}" aria-expanded="false" aria-controls="site-mobile-menu">
         <span></span><span></span><span></span>
-    </label>
-    <input type="checkbox" id="site-nav-toggle" class="site-header__toggle" hidden>
-    <div class="site-header__mobile">
+    </button>
+    <div id="site-mobile-menu" class="site-header__mobile">
         <a href="{{ route('home') }}">{{ __('Home') }}</a>
         <a href="{{ route('about') }}">{{ __('About') }}</a>
         <a href="{{ route('understand-gpsr') }}">{{ __('Understand GPSR') }}</a>

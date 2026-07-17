@@ -80,7 +80,8 @@
 
     <x-layout.web.footer />
 
-    @vite('resources/js/app.js')
+    {{-- JS global de l'espace web (coquille : menu mobile, etc.) --}}
+    @vite('resources/js/web.js')
 
     {{-- JS propre a la page (ex. enregistrement de composants Alpine), AVANT le boot de Livewire/Alpine --}}
     @stack('scripts')
