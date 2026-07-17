@@ -19,6 +19,7 @@ use App\Http\Controllers\Web\Funnel\StarterMandateDownloadController;
 use App\Http\Controllers\Web\Funnel\StarterProjectController;
 use App\Http\Controllers\Web\Home\HomeController;
 use App\Http\Controllers\Web\Pricing\PricingController;
+use App\Http\Controllers\Web\Quiz\StoreQuizResultController;
 use App\Http\Controllers\Web\Services\ServicesController;
 use App\Http\Controllers\Web\SwitchLocaleController;
 use App\Http\Controllers\Web\UnderstandGpsr\UnderstandGpsrController;
@@ -26,6 +27,7 @@ use App\Http\Controllers\Web\Webhook\PaymentWebhookController;
 use App\Http\Controllers\Web\Webhook\SignatureWebhookController;
 use App\Livewire\Admin\AdminProfile;
 use App\Livewire\Admin\LoginForm;
+use App\Livewire\Admin\QuizResultList;
 use App\Livewire\Admin\SubmissionDetail;
 use App\Livewire\Admin\SubmissionList;
 use Illuminate\Support\Facades\Route;
@@ -40,6 +42,11 @@ Route::get('/robots.txt', function () {
 
     return response($body, 200, ['Content-Type' => 'text/plain; charset=UTF-8']);
 })->name('robots');
+
+// Persistance (anonyme) d'une reponse au quiz d'eligibilite, appelee en fin de quiz. Sous /api/* pour
+// que les erreurs de validation sortent en JSON (cf. shouldRenderJsonWhen dans bootstrap/app.php).
+// Limitee contre l'abus.
+Route::post('/api/quiz/result', StoreQuizResultController::class)->name('quiz.result')->middleware('throttle:20,1');
 
 /*
  | Webhooks providers (Stripe/SignWell) : POST externes, hors CSRF (voir bootstrap/app.php), synchrones.
@@ -110,6 +117,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/', fn () => redirect()->route('admin.submissions.index'))->name('dashboard');
         Route::get('/submissions', SubmissionList::class)->name('submissions.index');
         Route::get('/contacts', SubmissionList::class)->name('contacts.index');
+        Route::get('/quiz', QuizResultList::class)->name('quiz.index');
         Route::get('/profile', AdminProfile::class)->name('profile');
         Route::get('/submissions/{submission:id}', SubmissionDetail::class)->name('submissions.show');
         Route::get('/submissions/{submission:id}/documents/{document:id}', AdminDocumentDownloadController::class)

@@ -18,6 +18,7 @@ class QuizResult extends Model
     protected $fillable = [
         'submission_id',
         'q1_based_outside_eu',
+        'q2_sells_to_eu',
         'q2_eu_countries',
         'q3_sells_restricted',
         'outcome',
@@ -28,6 +29,7 @@ class QuizResult extends Model
     {
         return [
             'q1_based_outside_eu' => 'boolean',
+            'q2_sells_to_eu' => 'boolean',
             'q2_eu_countries' => 'array',
             'q3_sells_restricted' => 'boolean',
             'outcome' => QuizOutcome::class,

@@ -18,6 +18,7 @@
         @php($routeSubmission = request()->route('submission'))
         @php($viewingContact = $routeSubmission instanceof \App\Models\Submission && $routeSubmission->type === \App\Enums\Submission\SubmissionType::Contact)
         @php($isProfile = request()->routeIs('admin.profile'))
+        @php($isQuiz = request()->routeIs('admin.quiz.*'))
         @php($isContacts = request()->routeIs('admin.contacts.*') || $viewingContact)
         @php($isDossiers = request()->routeIs('admin.submissions.*') && ! $viewingContact)
 
@@ -57,6 +58,14 @@
                         ])>
                             <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>
                             {{ __('Prises de contact') }}
+                        </a>
+                        <a href="{{ route('admin.quiz.index') }}" @click="mobileOpen = false" @class([
+                            'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium',
+                            'bg-brand-50 text-brand-700' => $isQuiz,
+                            'text-slate-600 hover:bg-slate-100' => ! $isQuiz,
+                        ])>
+                            <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/><circle cx="12" cy="12" r="10"/></svg>
+                            {{ __('Quiz') }}
                         </a>
                         <a href="{{ route('home') }}" target="_blank" rel="noopener" @click="mobileOpen = false"
                             class="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">
@@ -109,6 +118,14 @@
                 ])>
                     <svg class="h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>
                     <span class="admin-navlabel">{{ __('Prises de contact') }}</span>
+                </a>
+                <a href="{{ route('admin.quiz.index') }}" @class([
+                    'admin-navitem flex items-center gap-2.5 rounded-lg py-2 text-sm font-medium transition',
+                    'bg-brand-50 text-brand-700' => $isQuiz,
+                    'text-slate-600 hover:bg-slate-100 hover:text-slate-900' => ! $isQuiz,
+                ])>
+                    <svg class="h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/><circle cx="12" cy="12" r="10"/></svg>
+                    <span class="admin-navlabel">{{ __('Quiz') }}</span>
                 </a>
             </nav>
             <div class="mt-auto border-t border-slate-200 py-3">

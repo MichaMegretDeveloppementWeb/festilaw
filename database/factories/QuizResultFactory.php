@@ -18,7 +18,8 @@ class QuizResultFactory extends Factory
     {
         return [
             'q1_based_outside_eu' => true,
-            'q2_eu_countries' => ['ALL_27'],
+            'q2_sells_to_eu' => true,
+            'q2_eu_countries' => null,
             'q3_sells_restricted' => false,
             'outcome' => QuizOutcome::Concerned,
             'locale' => 'en',

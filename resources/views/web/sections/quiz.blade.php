@@ -49,7 +49,8 @@
                 <p class="quiz__result-text" x-text="resultText"></p>
                 <div class="quiz__result-actions">
                     <a x-show="concerned" href="{{ route('pricing') }}" class="btn btn--coral btn--sm">{{ __('See the plans') }}</a>
-                    <a x-show="!concerned" href="{{ route('contact') }}" class="btn btn--coral btn--sm">{{ __('Contact us') }}</a>
+                    <a x-show="excluded" href="{{ route('excluded-products') }}" class="btn btn--coral btn--sm">{{ __('See excluded products') }}</a>
+                    <a x-show="!concerned && !excluded" href="{{ route('contact') }}" class="btn btn--coral btn--sm">{{ __('Contact us') }}</a>
                     <button type="button" class="btn btn--outline-dark btn--sm" x-on:click="restart()">{{ __('Start over') }}</button>
                 </div>
             </div>
@@ -74,9 +75,28 @@
                 this.answers.push(value);
                 if (this.answers.length >= this.questions.length) {
                     this.done = true;
+                    this.persist();
                 } else {
                     this.step++;
                 }
+            },
+            // Enregistrement anonyme cote serveur (une fois par quiz complete). Peripherique : un echec
+            // ne casse pas l'affichage du resultat.
+            persist() {
+                const token = document.querySelector('meta[name="csrf-token"]');
+                fetch(@js(route('quiz.result')), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': token ? token.content : '',
+                    },
+                    body: JSON.stringify({
+                        q1_based_outside_eu: this.answers[0],
+                        q2_sells_to_eu: this.answers[1],
+                        q3_sells_restricted: this.answers[2],
+                    }),
+                }).catch(() => {});
             },
             restart() {
                 this.step = 0;
