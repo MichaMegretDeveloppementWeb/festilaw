@@ -137,7 +137,7 @@
         </aside>
 
         <div class="admin-content">
-            <main class="max-w-7xl px-4 py-6 md:px-8 md:py-8">
+            <main class="mx-auto max-w-7xl px-4 py-6 md:px-8 md:py-8">
                 {{ $slot ?? '' }}
                 @yield('content')
             </main>

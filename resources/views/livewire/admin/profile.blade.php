@@ -1,10 +1,10 @@
-<div>
+<div class="mx-auto max-w-2xl">
     <div class="mb-6">
         <h1 class="text-xl font-semibold tracking-tight text-slate-900">{{ __('Mon compte') }}</h1>
         <p class="mt-1 text-sm text-slate-500">{{ __('Gérez votre adresse email et votre mot de passe.') }}</p>
     </div>
 
-    <div class="grid max-w-2xl gap-6">
+    <div class="grid gap-6">
         {{-- Adresse email --}}
         <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
             <div class="border-b border-slate-100 px-5 py-3.5">
