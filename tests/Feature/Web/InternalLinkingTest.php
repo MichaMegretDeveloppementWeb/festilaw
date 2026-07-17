@@ -2,13 +2,6 @@
 
 use function Pest\Laravel\get;
 
-it('shows the sticky funnel CTA on content pages but hides it inside the funnel', function () {
-    get(route('home'))->assertSee('class="sticky-cta"', false);
-    get(route('pricing'))->assertSee('class="sticky-cta"', false);
-
-    get(route('get-started.index'))->assertDontSee('class="sticky-cta"', false);
-});
-
 it('links content pages contextually to the GPSR hub, services, pricing and excluded products', function () {
     // Home -> Understand GPSR (hub), masque sur la page hub elle-meme.
     get(route('home'))->assertSee('Understand the GPSR in plain language', false);

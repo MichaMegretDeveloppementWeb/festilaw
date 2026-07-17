@@ -79,8 +79,6 @@
 
     <x-layout.web.footer />
 
-    <x-layout.web.sticky-cta />
-
     @vite('resources/js/app.js')
 
     {{-- JS propre a la page (ex. enregistrement de composants Alpine), AVANT le boot de Livewire/Alpine --}}
