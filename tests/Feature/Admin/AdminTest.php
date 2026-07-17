@@ -26,6 +26,26 @@ it('redirects guests from the back-office to the login', function () {
     get(route('admin.dashboard'))->assertRedirect(route('admin.login'));
 });
 
+it('marks the back-office as noindex via HTTP header and meta tag', function () {
+    get(route('admin.login'))
+        ->assertOk()
+        ->assertHeader('X-Robots-Tag', 'noindex, nofollow')
+        ->assertSee('name="robots"', false)
+        ->assertSee('noindex, nofollow', false);
+});
+
+it('sets the noindex header on authenticated back-office pages', function () {
+    actingAs(User::factory()->create());
+
+    get(route('admin.submissions.index'))
+        ->assertOk()
+        ->assertHeader('X-Robots-Tag', 'noindex, nofollow');
+});
+
+it('does not mark public pages as noindex', function () {
+    get(route('home'))->assertHeaderMissing('X-Robots-Tag');
+});
+
 it('rejects invalid admin credentials', function () {
     User::factory()->create(['email' => 'admin@festilaw.com', 'password' => 'good-password']);
 

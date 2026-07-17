@@ -26,6 +26,14 @@ final class SecurityHeaders
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
         $response->headers->set('X-Permitted-Cross-Domain-Policies', 'none');
 
+        // Le back-office ne doit jamais etre indexe. En-tete HTTP autoritatif (en plus de la balise
+        // meta du layout admin), qui couvre aussi les reponses non-HTML (telechargements de pieces).
+        // On ne bloque volontairement PAS /admin dans robots.txt : un blocage empecherait les moteurs
+        // de VOIR ce noindex, et l'URL pourrait alors etre indexee malgre tout.
+        if ($request->is('admin', 'admin/*')) {
+            $response->headers->set('X-Robots-Tag', 'noindex, nofollow');
+        }
+
         if ($request->secure()) {
             $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
         }
