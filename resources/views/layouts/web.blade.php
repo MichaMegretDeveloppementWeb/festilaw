@@ -59,9 +59,11 @@
     @endphp
     <x-seo.json-ld :nodes="$seoNodes" />
 
-    {{-- Polices : Bunny Fonts (alternative GDPR-friendly a Google Fonts) --}}
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link rel="stylesheet" href="https://fonts.bunny.net/css?family=poiret-one:400|inter:400,500,600,700|satisfy:400&display=swap">
+    {{-- Polices auto-hebergees (declarations dans resources/css/web/base/fonts.css) : aucune requete
+         vers un CDN tiers. Prechargement des variantes au-dessus de la ligne de flottaison. --}}
+    <link rel="preload" href="{{ asset('fonts/inter-latin-400-normal.woff2') }}" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="{{ asset('fonts/poiret-one-latin-400-normal.woff2') }}" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="{{ asset('fonts/satisfy-latin-400-normal.woff2') }}" as="font" type="font/woff2" crossorigin>
 
     @livewireStyles
 
