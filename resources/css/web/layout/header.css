@@ -17,19 +17,33 @@
     overflow: hidden;
     background: #ff7e6b;
     box-shadow: 0 8px 22px rgba(6, 8, 30, 0.28);
+    transition: width 0.25s ease, height 0.25s ease;
 }
 .brand-logo img { width: 100%; height: 100%; object-fit: cover; transform: scale(1.06); }
 
-/* En-tete sobre, sur le bleu, logo centre. */
+/* En-tete collant en haut, sur le bleu, logo centre. */
 .site-header {
-    position: relative;
-    z-index: 40;
+    position: sticky;
+    top: 0;
+    z-index: 50;
     display: grid;
     grid-template-columns: 1fr auto 1fr;
     align-items: center;
     gap: 16px;
     padding: 16px var(--gutter);
     background: var(--color-blue);
+    transition: padding 0.25s ease, box-shadow 0.25s ease;
+}
+
+/* Une fois que l'en-tete quitte le haut de la page : plus compact, logo reduit. */
+.site-header.is-scrolled {
+    padding-top: 8px;
+    padding-bottom: 8px;
+    box-shadow: 0 6px 20px rgba(6, 8, 30, 0.28);
+}
+.site-header.is-scrolled .brand-logo {
+    width: clamp(52px, 6vw, 68px);
+    height: clamp(52px, 6vw, 68px);
 }
 
 .site-header__menu { display: none; align-items: center; gap: clamp(16px, 1.7vw, 30px); }
@@ -78,6 +92,12 @@
 .site-header__mobile a:not(.btn) { color: var(--color-cream); font-weight: 600; font-size: 16.5px; padding: 11px 12px; border-radius: 8px; }
 .site-header__mobile a:not(.btn):hover { background: rgba(255, 255, 255, 0.08); }
 .site-header__mobile .btn { margin-top: 8px; }
+
+/* Selecteur de langue dans le menu mobile : rangee compacte avec un separateur. */
+.site-header__mobile-lang { margin-top: 8px; padding-top: 14px; gap: 18px; border-top: 1px solid rgba(255, 255, 255, 0.14); }
+.site-header__mobile-lang a:not(.btn) { padding: 4px 2px; font-size: 15px; color: rgba(239, 229, 208, 0.55); }
+.site-header__mobile-lang a:not(.btn):hover { background: none; color: var(--color-cream); }
+.site-header__mobile-lang a.is-active { color: var(--color-cream); }
 
 .site-header__mobile.is-open { display: flex; }
 

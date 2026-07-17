@@ -28,6 +28,7 @@
         <a href="{{ route('services') }}">{{ __('Our Services') }}</a>
         <a href="{{ route('pricing') }}">{{ __('Pricing') }}</a>
         <a href="{{ route('contact') }}">{{ __('Contact') }}</a>
+        <x-layout.web.lang-switch class="site-header__mobile-lang" />
         <a href="{{ route('get-started.index') }}" class="btn btn--coral">{{ __('Get compliant in 24h') }}</a>
     </div>
 </header>
