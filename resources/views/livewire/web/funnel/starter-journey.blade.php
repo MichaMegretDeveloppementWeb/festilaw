@@ -38,6 +38,34 @@
             @if ($contractDeclined)
                 <p class="journey-note journey-note--warn">{{ __('The previous signature was declined. You can restart it below.') }}</p>
             @endif
+
+            @unless ($signatureStarted)
+                <div class="journey-mandate">
+                    <p class="journey-mandate__intro">{{ __('Confirm the details that will appear on your mandate:') }}</p>
+                    <div class="funnel-form">
+                        <div class="funnel-form__field">
+                            <label>{{ __('Company') }}</label>
+                            <input type="text" value="{{ $submission->company_name }}" readonly>
+                        </div>
+                        <div class="funnel-form__field">
+                            <label for="mandate-place">{{ __('City and country of incorporation') }}</label>
+                            <input type="text" id="mandate-place" wire:model="incorporationPlace" placeholder="{{ __('e.g. Toronto, Canada') }}">
+                            @error('incorporationPlace') <span class="funnel-form__error">{{ $message }}</span> @enderror
+                        </div>
+                        <div class="funnel-form__field">
+                            <label for="mandate-year">{{ __('Year founded') }}</label>
+                            <input type="text" id="mandate-year" wire:model="foundingYear" inputmode="numeric" placeholder="{{ __('e.g. 2015') }}">
+                            @error('foundingYear') <span class="funnel-form__error">{{ $message }}</span> @enderror
+                        </div>
+                        <div class="funnel-form__field">
+                            <label for="mandate-activity">{{ __('Main business activity') }}</label>
+                            <textarea id="mandate-activity" wire:model="activity" rows="2" placeholder="{{ __('e.g. the design and online sale of home decor') }}"></textarea>
+                            @error('activity') <span class="funnel-form__error">{{ $message }}</span> @enderror
+                        </div>
+                    </div>
+                </div>
+            @endunless
+
             <button type="button" class="btn btn--coral" wire:click="sign" wire:loading.attr="disabled" wire:target="sign">
                 <span wire:loading.remove wire:target="sign">{{ __('Sign the mandate') }}</span>
                 <span wire:loading wire:target="sign">{{ __('Redirecting') }}&hellip;</span>

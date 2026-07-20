@@ -87,8 +87,11 @@ it('walks the STARTER journey end-to-end through the UI and the fake dev routes'
         ->assertSeeLivewire(StarterJourney::class)
         ->assertSee('Sign your Responsible Person mandate');
 
-    // Clicking "sign" starts the fake signing session and redirects to the dev-sign route.
+    // Clicking "sign" captures the mandate details, starts the fake signing session and redirects.
     Livewire::test(StarterJourney::class, ['submission' => $submission])
+        ->set('incorporationPlace', 'Toronto, Canada')
+        ->set('foundingYear', '2015')
+        ->set('activity', 'handmade ceramics')
         ->call('sign')
         ->assertRedirect(route('get-started.starter.dev-sign', ['dossier' => $token]));
 
@@ -188,6 +191,60 @@ it('reuses the in-flight signing session on resume instead of creating a second 
 
     // The reference was not overwritten: no second session/document was created.
     expect($submission->fresh()->contract->signature_provider_reference)->toBe('fake_existing');
+});
+
+it('requires the mandate details before starting the signature', function () {
+    $submission = openStarterDossier();
+
+    Livewire::test(StarterJourney::class, ['submission' => $submission])
+        ->call('sign')
+        ->assertHasErrors(['incorporationPlace', 'foundingYear', 'activity']);
+
+    expect($submission->fresh()->status)->toBe(SubmissionStatus::InProgress)
+        ->and($submission->fresh()->contract->signature_provider_reference)->toBeNull();
+});
+
+it('saves the mandate details to the contract before signing', function () {
+    $submission = openStarterDossier();
+
+    Livewire::test(StarterJourney::class, ['submission' => $submission])
+        ->set('incorporationPlace', 'Toronto, Canada')
+        ->set('foundingYear', '2015')
+        ->set('activity', 'the design and sale of ceramics')
+        ->call('sign')
+        ->assertHasNoErrors()
+        ->assertRedirect(route('get-started.starter.dev-sign', ['dossier' => $submission->resume_token]));
+
+    expect($submission->fresh()->contract->filled_fields)->toMatchArray([
+        'incorporation_place' => 'Toronto, Canada',
+        'founding_year' => '2015',
+        'activity' => 'the design and sale of ceramics',
+    ]);
+});
+
+it('rejects a founding year that is not four digits', function () {
+    $submission = openStarterDossier();
+
+    Livewire::test(StarterJourney::class, ['submission' => $submission])
+        ->set('incorporationPlace', 'Toronto, Canada')
+        ->set('foundingYear', '15')
+        ->set('activity', 'ceramics')
+        ->call('sign')
+        ->assertHasErrors('foundingYear');
+});
+
+it('pre-fills the mandate fields from what was already saved (resume)', function () {
+    $submission = openStarterDossier();
+    $submission->contract->update(['filled_fields' => [
+        'incorporation_place' => 'Berlin, Germany',
+        'founding_year' => '2019',
+        'activity' => 'toys',
+    ]]);
+
+    Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
+        ->assertSet('incorporationPlace', 'Berlin, Germany')
+        ->assertSet('foundingYear', '2019')
+        ->assertSet('activity', 'toys');
 });
 
 /** A dossier at the payment step with a pending Stripe checkout in flight. */
@@ -361,6 +418,9 @@ it('shows a graceful error and does not crash when the signature provider fails'
     });
 
     Livewire::test(StarterJourney::class, ['submission' => $submission])
+        ->set('incorporationPlace', 'Toronto, Canada')
+        ->set('foundingYear', '2015')
+        ->set('activity', 'handmade ceramics')
         ->call('sign')
         ->assertHasErrors('journey');
 

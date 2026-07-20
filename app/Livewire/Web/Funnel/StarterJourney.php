@@ -57,12 +57,30 @@ class StarterJourney extends Component
     /** How many payment-status polls have run on this dossier (drives + bounds the confirming loop). */
     public int $paymentChecks = 0;
 
+    /** Client details printed on the mandate, captured on the sign step and stored in the contract's filled_fields. */
+    public string $incorporationPlace = '';
+
+    public string $foundingYear = '';
+
+    public string $activity = '';
+
     public function mount(Submission $submission, PaymentGatewayRegistry $gateways): void
     {
         $this->submission = $submission;
         $this->paymentOptions = $gateways->options();
         $this->paymentProvider = (string) array_key_first($this->paymentOptions);
         $this->autoConfirm = $this->signatureInFlight();
+        $this->loadMandateDetails();
+    }
+
+    /** Pre-fills the mandate-detail fields from what was already saved (resume / going back). */
+    private function loadMandateDetails(): void
+    {
+        $this->submission->loadMissing('contract');
+        $fields = $this->submission->contract?->filled_fields ?? [];
+        $this->incorporationPlace = (string) ($fields['incorporation_place'] ?? '');
+        $this->foundingYear = (string) ($fields['founding_year'] ?? '');
+        $this->activity = (string) ($fields['activity'] ?? '');
     }
 
     /** A signing session already exists for this dossier but the contract is not signed yet. */
@@ -164,6 +182,11 @@ class StarterJourney extends Component
             return $this->redirect($existingUrl);
         }
 
+        // Nouvelle session : on fige d'abord les informations imprimees sur le mandat (le PDF est
+        // genere a partir de la, cf. ContractPdfGenerator).
+        $this->validate($this->mandateRules(), $this->mandateMessages());
+        $this->saveMandateDetails();
+
         try {
             $session = $startContractSigning->execute($this->submission);
         } catch (BaseAppException $e) {
@@ -198,6 +221,44 @@ class StarterJourney extends Component
 
             return null;
         }
+    }
+
+    /** @return array<string, array<int, string>> */
+    private function mandateRules(): array
+    {
+        return [
+            'incorporationPlace' => ['required', 'string', 'max:160'],
+            'foundingYear' => ['required', 'regex:/^[0-9]{4}$/'],
+            'activity' => ['required', 'string', 'max:400'],
+        ];
+    }
+
+    /** @return array<string, string> */
+    private function mandateMessages(): array
+    {
+        return [
+            'incorporationPlace.required' => __('Please enter the city and country where your company is registered.'),
+            'foundingYear.required' => __('Please enter the year your company was founded.'),
+            'foundingYear.regex' => __('Please enter a 4-digit year (e.g. 2015).'),
+            'activity.required' => __('Please describe your main business activity.'),
+        ];
+    }
+
+    /** Freezes the mandate details on the contract so the generated PDF is filled in. */
+    private function saveMandateDetails(): void
+    {
+        $contract = $this->submission->contract;
+        if ($contract === null) {
+            return;
+        }
+
+        $contract->update([
+            'filled_fields' => array_merge($contract->filled_fields ?? [], [
+                'incorporation_place' => trim($this->incorporationPlace),
+                'founding_year' => trim($this->foundingYear),
+                'activity' => trim($this->activity),
+            ]),
+        ]);
     }
 
     /** Removes a staged (not yet persisted) document before submitting. */
