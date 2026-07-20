@@ -41,9 +41,10 @@ return [
     ],
 
     /*
-     | Parcours PRO : redirection WhatsApp Business (numero fourni par la cliente, LV2).
+     | Parcours PRO : cotisation annuelle (contrat Pack Pro) + numero WhatsApp Business (LV2).
      */
     'pro' => [
+        'amount_cents' => (int) env('FESTILAW_PRO_AMOUNT_CENTS', 120000),
         'whatsapp_url' => env('FESTILAW_WHATSAPP_URL'),
     ],
 
