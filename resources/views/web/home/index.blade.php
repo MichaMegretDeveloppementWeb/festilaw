@@ -9,6 +9,7 @@
 
 @section('content')
     @include('web.home.partials.hero')
+    <section class="home-photo" role="img" aria-label="{{ __('A container ship carrying goods across the sea.') }}"></section>
     @include('web.sections.who-we-are')
     @include('web.sections.why-festilaw')
     @include('web.sections.quiz')

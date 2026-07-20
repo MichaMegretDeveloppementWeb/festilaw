@@ -1,6 +1,6 @@
 {
   "resources/css/admin.css": {
-    "file": "assets/admin-Dg9zwp_l.css",
+    "file": "assets/admin-BaEMVYZz.css",
     "name": "admin",
     "names": [
       "admin.css"
@@ -18,7 +18,7 @@
     "isEntry": true
   },
   "resources/css/web/about/index.css": {
-    "file": "assets/index-Ci79gcVu.css",
+    "file": "assets/index-CNarvwus.css",
     "name": "index",
     "names": [
       "index.css"
@@ -72,7 +72,7 @@
     "isEntry": true
   },
   "resources/css/web/home/index.css": {
-    "file": "assets/index-BAxsZfM0.css",
+    "file": "assets/index-CL_k1gCp.css",
     "name": "index",
     "names": [
       "index.css"
@@ -90,7 +90,7 @@
     "isEntry": true
   },
   "resources/css/web/pricing/index.css": {
-    "file": "assets/index-D-oDzEti.css",
+    "file": "assets/index-D22nxYzI.css",
     "name": "index",
     "names": [
       "index.css"
@@ -99,7 +99,7 @@
     "isEntry": true
   },
   "resources/css/web/services/index.css": {
-    "file": "assets/index-QyiA482k.css",
+    "file": "assets/index-DPsEFWvt.css",
     "name": "index",
     "names": [
       "index.css"
@@ -108,7 +108,7 @@
     "isEntry": true
   },
   "resources/css/web/understand-gpsr/index.css": {
-    "file": "assets/index-Br5o_4zh.css",
+    "file": "assets/index-uWabBRVL.css",
     "name": "index",
     "names": [
       "index.css"

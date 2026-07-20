@@ -18,3 +18,6 @@
 .faq__item[open] .faq__icon { transform: rotate(45deg); }
 .faq__a { padding: 0 24px 22px; }
 .faq__a p { color: var(--color-ink-soft); font-size: 15.5px; line-height: 1.65; }
+.faq__a-cta { margin-top: 12px; }
+.faq__a-cta a { color: var(--color-coral); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+.faq__a-cta a:hover { color: var(--color-blue); }

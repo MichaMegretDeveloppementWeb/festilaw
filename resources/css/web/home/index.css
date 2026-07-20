@@ -1,6 +1,7 @@
 /* Point d'entree CSS de la page home : hero + final-cta (propres a la home)
    et les sections partagees (dossier ../sections), dans l'ordre d'apparition. */
 @import './hero.css';
+@import './photo.css';
 @import '../sections/who-we-are.css';
 @import '../sections/why-festilaw.css';
 @import '../sections/quiz.css';

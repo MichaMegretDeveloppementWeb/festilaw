@@ -13,6 +13,10 @@
     border-radius: var(--radius-lg);
     padding: 34px 32px;
 }
+/* Teintes legeres (saumon / bleu-violet / beige) pour rendre les cartes plus attirantes. */
+.pillars__card:nth-child(1) { background: #FCEAE6; border-color: #F2D5CD; }
+.pillars__card:nth-child(2) { background: #ECECFC; border-color: #D9D9F7; }
+.pillars__card:nth-child(3) { background: #F7EFDB; border-color: #ECE0C4; }
 .pillars__icon {
     display: inline-flex;
     align-items: center;

@@ -13,7 +13,7 @@
 
     @unless (in_array($step, ['done', 'cancelled'], true))
         @php
-            $labels = ['sign' => __('Sign'), 'documents' => __('Documents'), 'payment' => __('Payment')];
+            $labels = ['sign' => __('Read & Sign'), 'documents' => __('Documents'), 'payment' => __('Payment')];
             $order = array_keys($labels);
             $currentIndex = array_search($step, $order, true);
         @endphp

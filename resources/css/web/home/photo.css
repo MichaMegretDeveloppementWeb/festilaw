@@ -1,0 +1,17 @@
+/* Bande photo parallax entre le hero et "Who we are" : l'image reste fixe, la page defile
+   par-dessus (background-attachment: fixed). Pas d'overlay. */
+.home-photo {
+    height: clamp(340px, 62vh, 640px);
+    background-image: url('/images/home-transport.webp');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+}
+
+/* Mobile : bande un peu plus courte. */
+@media (max-width: 768px) {
+    .home-photo {
+        height: clamp(240px, 46vh, 380px);
+    }
+}

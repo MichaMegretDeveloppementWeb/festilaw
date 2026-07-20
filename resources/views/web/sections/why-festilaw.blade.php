@@ -2,7 +2,7 @@
     <div class="pillars__inner">
         <div class="pillars__head">
             <span class="eyebrow">{{ __('Why Festilaw') }}</span>
-            <h2 class="pillars__title">{{ __('Compliance that feels made for founders') }}</h2>
+            <h2 class="pillars__title">{{ __('Tailored compliance for every business') }}</h2>
         </div>
         <div class="pillars__grid">
             <div class="pillars__card">
