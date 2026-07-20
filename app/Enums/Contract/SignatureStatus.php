@@ -10,7 +10,6 @@ enum SignatureStatus: string
     case Signed = 'signed';
     case Declined = 'declined';
 
-    /** Libelle francais (affiche uniquement dans le back-office interne). */
     public function label(): string
     {
         return match ($this) {

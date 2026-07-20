@@ -11,9 +11,8 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * En-tetes de securite HTTP de base, appliques a chaque reponse web.
  *
- * Volontairement sans Content-Security-Policy : Livewire/Alpine et Bunny Fonts injectent/inline des
- * ressources, une CSP stricte casserait le site. On pose uniquement les en-tetes surs et sans effet
- * de bord. Referrer-Policy est important ici car le token de reprise du dossier voyage dans l'URL.
+ * Pas de Content-Security-Policy : Livewire/Alpine inline des ressources, une CSP stricte casserait
+ * le site. Referrer-Policy compte ici car le token de reprise du dossier voyage dans l'URL.
  */
 final class SecurityHeaders
 {
@@ -26,10 +25,7 @@ final class SecurityHeaders
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
         $response->headers->set('X-Permitted-Cross-Domain-Policies', 'none');
 
-        // Le back-office ne doit jamais etre indexe. En-tete HTTP autoritatif (en plus de la balise
-        // meta du layout admin), qui couvre aussi les reponses non-HTML (telechargements de pieces).
-        // On ne bloque volontairement PAS /admin dans robots.txt : un blocage empecherait les moteurs
-        // de VOIR ce noindex, et l'URL pourrait alors etre indexee malgre tout.
+        // Pas de Disallow robots.txt pour /admin : cela empecherait les moteurs de VOIR ce noindex.
         if ($request->is('admin', 'admin/*')) {
             $response->headers->set('X-Robots-Tag', 'noindex, nofollow');
         }

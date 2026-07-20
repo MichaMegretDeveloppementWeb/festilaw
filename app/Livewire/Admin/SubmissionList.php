@@ -14,16 +14,15 @@ use Livewire\Component;
 use Livewire\WithPagination;
 
 /**
- * Back-office : liste filtrable (statut, parcours, recherche). Deux modes selon la route : les DOSSIERS
- * (parcours Creator/Pro/Scale) et, a part, les PRISES DE CONTACT (formulaire de contact) · un message
- * n'est pas un dossier. Lecture seule ; le detail est sur SubmissionDetail.
+ * Back-office : liste filtrable des dossiers, ou des prises de contact selon la route
+ * (une prise de contact n'est pas un dossier). Lecture seule.
  */
 #[Layout('layouts.admin')]
 class SubmissionList extends Component
 {
     use WithPagination;
 
-    /** Mode "prises de contact" (sinon : dossiers). Fixe au montage selon la route (persiste ensuite). */
+    /** Mode "prises de contact" plutot que "dossiers", fixe selon la route au montage. */
     public bool $contactsMode = false;
 
     #[Url]

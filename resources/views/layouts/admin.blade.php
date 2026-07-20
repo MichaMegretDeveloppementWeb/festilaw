@@ -22,9 +22,7 @@
         @php($isContacts = request()->routeIs('admin.contacts.*') || $viewingContact)
         @php($isDossiers = request()->routeIs('admin.submissions.*') && ! $viewingContact)
 
-        {{-- Barre superieure mobile + menu burger (le menu se superpose au contenu, sans le decaler) --}}
         <div x-data="{ mobileOpen: false }" @keydown.escape.window="mobileOpen = false" class="md:hidden">
-            {{-- Fond semi-transparent : recouvre le contenu et ferme au clic --}}
             <div x-show="mobileOpen" x-cloak x-transition.opacity @click="mobileOpen = false" class="fixed inset-0 z-30 bg-slate-900/20"></div>
 
             <div class="sticky top-0 z-40 border-b border-slate-200 bg-white">
@@ -40,7 +38,6 @@
                         <svg x-show="mobileOpen" x-cloak class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                     </button>
                 </div>
-                {{-- Menu deroulant : positionne en absolute, il passe PAR-DESSUS le contenu --}}
                 <div x-show="mobileOpen" x-cloak x-transition class="absolute inset-x-0 top-full z-40 border-t border-slate-200 bg-white px-3 py-3 shadow-lg">
                     <nav class="space-y-1">
                         <a href="{{ route('admin.submissions.index') }}" @click="mobileOpen = false" @class([
@@ -95,7 +92,6 @@
             </div>
         </div>
 
-        {{-- Sidebar (>=md) : rail replie qui se deploie au survol, plein en >=lg --}}
         <aside class="admin-sidebar fixed inset-y-0 left-0 z-30 hidden flex-col overflow-hidden border-r border-slate-200 bg-white md:flex">
             <div class="admin-navitem flex h-16 items-center gap-2 border-b border-slate-200">
                 <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-500 text-sm font-bold text-white">F</span>
@@ -166,8 +162,7 @@
         </main>
     @endauth
 
-    {{-- Toast ephemere : retour d'action (succes/erreur) qui s'efface tout seul, avec une barre de
-         temps restant. Ecoute l'evenement Livewire admin-toast et le flash de session (apres redirect). --}}
+    {{-- Toast ephemere : retour d'action (evenement admin-toast + flash de session apres redirect). --}}
     @php($serverFlash = session('admin_flash'))
     <div
         x-data="{

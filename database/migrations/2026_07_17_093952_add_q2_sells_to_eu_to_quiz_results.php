@@ -7,8 +7,8 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * La Q2 du quiz public est un Oui/Non ("vendez-vous aux consommateurs de l'UE ?"). La colonne
- * q2_eu_countries (JSON) reste reservee au tunnel (liste de pays). On ajoute ici le booleen de la Q2.
+ * Q2 du quiz public : un booleen Oui/Non. La colonne q2_eu_countries (JSON) reste reservee au
+ * tunnel (liste de pays).
  */
 return new class extends Migration
 {

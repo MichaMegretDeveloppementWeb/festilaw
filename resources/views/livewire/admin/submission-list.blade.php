@@ -4,7 +4,6 @@
         <p class="mt-1 text-sm text-slate-500">{{ $contactsMode ? __('Messages reçus via le formulaire de contact.') : __('Tous les dossiers clients, du premier contact à la finalisation.') }}</p>
     </div>
 
-    {{-- Filtres --}}
     <div class="mb-4 flex flex-wrap items-end gap-3">
         <div class="min-w-[240px] flex-1">
             <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500" for="f-search">{{ __('Recherche') }}</label>
@@ -38,7 +37,6 @@
         @endunless
     </div>
 
-    {{-- Tableau --}}
     <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         @if ($submissions->isEmpty())
             <p class="px-6 py-16 text-center text-sm text-slate-500">{{ $contactsMode ? __('Aucune prise de contact.') : __('Aucun dossier ne correspond.') }}</p>

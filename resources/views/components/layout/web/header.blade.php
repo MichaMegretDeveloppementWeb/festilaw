@@ -17,7 +17,6 @@
         <a href="{{ route('get-started.index') }}" class="btn btn--coral btn--sm">{{ __('Get compliant in 24h') }}</a>
     </div>
 
-    {{-- Menu mobile : bascule en vanilla JS (resources/js/web/layout/header.js) --}}
     <button type="button" class="site-header__burger" aria-label="{{ __('Menu') }}" aria-expanded="false" aria-controls="site-mobile-menu">
         <span></span><span></span><span></span>
     </button>

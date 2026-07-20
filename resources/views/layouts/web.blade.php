@@ -59,8 +59,7 @@
     @endphp
     <x-seo.json-ld :nodes="$seoNodes" />
 
-    {{-- Polices auto-hebergees (declarations dans resources/css/web/base/fonts.css) : aucune requete
-         vers un CDN tiers. Prechargement des variantes au-dessus de la ligne de flottaison. --}}
+    {{-- Polices auto-hebergees (declarations dans resources/css/web/base/fonts.css). --}}
     <link rel="preload" href="{{ asset('fonts/inter-latin-400-normal.woff2') }}" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="{{ asset('fonts/poiret-one-latin-400-normal.woff2') }}" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="{{ asset('fonts/satisfy-latin-400-normal.woff2') }}" as="font" type="font/woff2" crossorigin>
@@ -82,13 +81,11 @@
 
     <x-layout.web.footer />
 
-    {{-- JS global de l'espace web (coquille : menu mobile, etc.) --}}
     @vite('resources/js/web.js')
 
-    {{-- JS propre a la page (ex. enregistrement de composants Alpine), AVANT le boot de Livewire/Alpine --}}
+    {{-- JS de la page, avant le boot de Livewire/Alpine. --}}
     @stack('scripts')
 
-    {{-- Livewire (fournit Alpine, bundle) --}}
     @livewireScripts
 </body>
 </html>

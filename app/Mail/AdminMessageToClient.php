@@ -11,10 +11,7 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-/**
- * Message libre ecrit par l'equipe depuis le back-office et envoye au client (objet + corps saisis a
- * la main). Envoye dans la langue du dossier pour que la signature reste coherente.
- */
+/** Message libre (objet + corps) ecrit par l'equipe et envoye au client depuis le back-office. */
 final class AdminMessageToClient extends Mailable
 {
     use Queueable;

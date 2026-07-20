@@ -1,12 +1,10 @@
 <div x-data="{ emailOpen: false }" @email-sent.window="emailOpen = false">
-    {{-- Fil d'ariane --}}
     <nav class="mb-4 flex items-center gap-1.5 text-sm text-slate-500">
         <a href="{{ $isContact ? route('admin.contacts.index') : route('admin.submissions.index') }}" class="transition hover:text-slate-700">{{ $isContact ? __('Prises de contact') : __('Dossiers') }}</a>
         <svg class="h-3.5 w-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
         <span class="font-medium text-slate-700">{{ $isContact ? __('Prise de contact') : $submission->reference }}</span>
     </nav>
 
-    {{-- En-tete --}}
     @if ($isContact)
         <div class="mb-6">
             <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">
@@ -27,9 +25,7 @@
     @endif
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {{-- Colonne principale --}}
         <div class="space-y-6 lg:col-span-2">
-            {{-- Coordonnees / Client --}}
             <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
                 <div class="border-b border-slate-100 px-5 py-3.5">
                     <h2 class="text-sm font-semibold text-slate-900">{{ $isContact ? __('Coordonnées') : __('Client') }}</h2>
@@ -87,7 +83,6 @@
                 </div>
             </section>
 
-            {{-- Message (Contact) --}}
             @if ($submission->message)
                 <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
                     <div class="border-b border-slate-100 px-5 py-3.5">
@@ -99,7 +94,6 @@
                 </section>
             @endif
 
-            {{-- Mandat / signature --}}
             @if ($submission->contract)
                 <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
                     <div class="border-b border-slate-100 px-5 py-3.5">
@@ -127,7 +121,6 @@
                 </section>
             @endif
 
-            {{-- Pieces (non pertinent pour une prise de contact) --}}
             @unless ($isContact)
                 <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
                     <div class="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
@@ -154,7 +147,6 @@
                 </section>
             @endunless
 
-            {{-- Paiements --}}
             @if ($submission->payments->isNotEmpty())
                 <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
                     <div class="border-b border-slate-100 px-5 py-3.5">
@@ -185,7 +177,6 @@
                 </section>
             @endif
 
-            {{-- RDV (Scale) --}}
             @if ($submission->appointment)
                 <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
                     <div class="border-b border-slate-100 px-5 py-3.5">
@@ -206,7 +197,6 @@
                 </section>
             @endif
 
-            {{-- Notes internes --}}
             <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
                 <div class="border-b border-slate-100 px-5 py-3.5">
                     <h2 class="text-sm font-semibold text-slate-900">{{ __('Notes internes') }}</h2>
@@ -231,9 +221,7 @@
             </section>
         </div>
 
-        {{-- Rail d'actions --}}
         <aside class="space-y-6 lg:sticky lg:top-8 lg:self-start">
-            {{-- Statut (workflow de dossier : non pertinent pour une prise de contact) --}}
             @unless ($isContact)
                 <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
                     <div class="border-b border-slate-100 px-5 py-3.5">
@@ -259,7 +247,6 @@
                 </section>
             @endunless
 
-            {{-- Personne Responsable UE --}}
             @if ($isStarter)
                 <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
                     <div class="border-b border-slate-100 px-5 py-3.5">
@@ -278,7 +265,6 @@
                 </section>
             @endif
 
-            {{-- Actions --}}
             <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
                 <div class="border-b border-slate-100 px-5 py-3.5">
                     <h2 class="text-sm font-semibold text-slate-900">{{ __('Actions') }}</h2>
@@ -299,7 +285,6 @@
                 </div>
             </section>
 
-            {{-- Zone sensible --}}
             <section class="rounded-xl border border-rose-200 bg-rose-50/50 shadow-sm">
                 <div class="border-b border-rose-100 px-5 py-3.5">
                     <h2 class="text-sm font-semibold text-rose-700">{{ __('Zone sensible') }}</h2>
@@ -314,7 +299,6 @@
         </aside>
     </div>
 
-    {{-- Modale : ecrire au client depuis la plateforme (envoi direct, sans client mail) --}}
     <div x-show="emailOpen" x-cloak class="fixed inset-0 z-40 flex items-center justify-center p-4" @keydown.escape.window="emailOpen = false" style="display: none;">
         <div class="absolute inset-0 bg-slate-900/40" @click="emailOpen = false" x-show="emailOpen" x-transition.opacity></div>
         <div class="relative w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl" x-show="emailOpen" x-transition

@@ -4,7 +4,6 @@
         <p class="mt-1 text-sm text-slate-500">{{ __('Réponses au test d\'éligibilité (30 secondes) du site public.') }}</p>
     </div>
 
-    {{-- Recapitulatif --}}
     <div class="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <div class="text-2xl font-semibold text-emerald-600">{{ $counts['concerned'] }}</div>
@@ -20,7 +19,6 @@
         </div>
     </div>
 
-    {{-- Filtre --}}
     <div class="mb-4">
         <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500" for="f-outcome">{{ __('Résultat') }}</label>
         <select id="f-outcome" wire:model.live="outcome"
@@ -32,7 +30,6 @@
         </select>
     </div>
 
-    {{-- Tableau --}}
     <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         @if ($results->isEmpty())
             <p class="px-6 py-16 text-center text-sm text-slate-500">{{ __('Aucune réponse au quiz pour le moment.') }}</p>

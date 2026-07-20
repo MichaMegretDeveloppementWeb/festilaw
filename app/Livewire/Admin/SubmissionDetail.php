@@ -18,11 +18,8 @@ use Livewire\Component;
 use Throwable;
 
 /**
- * Back-office : detail d'un dossier (infos, contrat/signature, pieces, paiements, RDV, notes internes)
- * et actions de traitement manuel : changer le statut, ecrire au client, renvoyer le lien de reprise,
- * delivrer l'adresse de Personne Responsable UE (finalisation), supprimer le dossier (RGPD). Modele
- * charge avec ses relations dans mount (pas de N+1). Route par id (getRouteKeyName = resume_token cote
- * public). Les retours d'action passent par un toast ephemere (evenement admin-toast).
+ * Back-office : detail d'un dossier et actions de traitement manuel (statut, email au client,
+ * renvoi du lien, delivrance de la Personne Responsable UE, suppression RGPD).
  */
 #[Layout('layouts.admin')]
 class SubmissionDetail extends Component

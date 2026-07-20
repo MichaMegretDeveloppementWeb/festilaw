@@ -10,10 +10,7 @@ use Illuminate\View\View;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
-/**
- * Back-office : gestion du compte admin connecte. Permet de changer son adresse email et son mot de
- * passe (le changement de mot de passe exige le mot de passe actuel). Retours via toast ephemere.
- */
+/** Back-office : le compte admin connecte modifie son adresse email et son mot de passe. */
 #[Layout('layouts.admin')]
 class AdminProfile extends Component
 {

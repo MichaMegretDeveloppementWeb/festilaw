@@ -12,10 +12,7 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
-/**
- * Back-office : suivi (lecture seule) des reponses au quiz d'eligibilite du site public. Anonyme :
- * les trois reponses + l'issue derivee, filtrable par issue, avec un recapitulatif des volumes.
- */
+/** Back-office : suivi (lecture seule) des reponses anonymes au quiz d'eligibilite public. */
 #[Layout('layouts.admin')]
 class QuizResultList extends Component
 {

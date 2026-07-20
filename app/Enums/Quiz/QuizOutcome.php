@@ -10,11 +10,7 @@ enum QuizOutcome: string
     case Excluded = 'excluded';
     case NotConcerned = 'not_concerned';
 
-    /**
-     * Issue derivee des trois reponses du quiz (source de verite cote serveur, on ne fait pas
-     * confiance au calcul du client) : vend une categorie exclue => exclu ; hors UE ET vend dans
-     * l'UE => concerne ; sinon => non concerne.
-     */
+    /** Issue derivee des trois reponses, cote serveur (le calcul du client n'est pas fiable). */
     public static function fromAnswers(bool $basedOutsideEu, bool $sellsToEu, bool $sellsRestricted): self
     {
         return match (true) {
@@ -24,7 +20,6 @@ enum QuizOutcome: string
         };
     }
 
-    /** Libelle francais (affiche uniquement dans le back-office interne). */
     public function label(): string
     {
         return match ($this) {

@@ -11,9 +11,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * Enregistre une reponse au quiz public d'eligibilite (anonyme, cf. CDC 6). Appele une fois en fin de
- * quiz par le composant Alpine. L'issue est RE-derivee cote serveur a partir des trois reponses : on
- * ne fait pas confiance au calcul du client. Permet a l'equipe de suivre les reponses dans le back-office.
+ * Enregistre une reponse anonyme au quiz public. L'issue est re-derivee cote serveur a partir
+ * des trois reponses : on ne fait pas confiance au calcul du client.
  */
 final class StoreQuizResultController extends Controller
 {

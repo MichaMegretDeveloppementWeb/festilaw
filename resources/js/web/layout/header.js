@@ -1,5 +1,4 @@
-// Menu mobile de l'en-tete public : bascule en vanilla JS (aucune dependance). Ouvre/ferme le panneau,
-// tient a jour aria-expanded, et ferme au clic exterieur, sur Echap, ou a la selection d'un lien.
+// Menu mobile de l'en-tete public : bascule en vanilla JS (aucune dependance).
 function initHeaderMenu() {
     const burger = document.querySelector('.site-header__burger');
     const menu = document.querySelector('.site-header__mobile');
@@ -18,21 +17,18 @@ function initHeaderMenu() {
         setOpen(!menu.classList.contains('is-open'));
     });
 
-    // Clic en dehors du menu et du burger : on ferme.
     document.addEventListener('click', (event) => {
         if (menu.classList.contains('is-open') && !menu.contains(event.target) && !burger.contains(event.target)) {
             setOpen(false);
         }
     });
 
-    // Touche Echap : on ferme.
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
             setOpen(false);
         }
     });
 
-    // Selection d'un lien : on ferme (utile quand la cible est une ancre de la meme page).
     menu.querySelectorAll('a').forEach((link) => {
         link.addEventListener('click', () => setOpen(false));
     });
@@ -40,11 +36,9 @@ function initHeaderMenu() {
 
 // En-tete collant : reduit le logo (classe .is-scrolled) des que la page quitte le haut.
 //
-// Hysteresis (deux seuils avec une zone morte) : quand le header se reduit, sa hauteur change, la page
-// se reagence et le navigateur ajuste scrollY (scroll anchoring). Avec un seuil unique, ce decalage
-// refranchit le seuil et fait osciller le header. Une zone morte plus large que la variation de hauteur
-// (~80px) empeche ce va-et-vient : on reduit au-dela de SHRINK_AT, on agrandit seulement en deca de
-// GROW_AT, et entre les deux on garde l'etat courant.
+// Deux seuils avec une zone morte (hysteresis) : la reduction change la hauteur du header, le
+// navigateur ajuste scrollY (scroll anchoring) et, avec un seuil unique, ce decalage le refranchit
+// et fait osciller le header. La zone morte, plus large que la variation de hauteur (~80px), l'evite.
 function initHeaderScroll() {
     const header = document.querySelector('.site-header');
 

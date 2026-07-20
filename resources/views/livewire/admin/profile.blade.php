@@ -5,7 +5,6 @@
     </div>
 
     <div class="grid gap-6">
-        {{-- Adresse email --}}
         <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
             <div class="border-b border-slate-100 px-5 py-3.5">
                 <h2 class="text-sm font-semibold text-slate-900">{{ __('Adresse email') }}</h2>
@@ -29,7 +28,6 @@
             </div>
         </section>
 
-        {{-- Mot de passe --}}
         <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
             <div class="border-b border-slate-100 px-5 py-3.5">
                 <h2 class="text-sm font-semibold text-slate-900">{{ __('Mot de passe') }}</h2>

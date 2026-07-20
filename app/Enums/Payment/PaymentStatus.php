@@ -11,7 +11,6 @@ enum PaymentStatus: string
     case Failed = 'failed';
     case Refunded = 'refunded';
 
-    /** Libelle francais (affiche uniquement dans le back-office interne). */
     public function label(): string
     {
         return match ($this) {

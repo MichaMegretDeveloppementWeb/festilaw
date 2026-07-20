@@ -23,7 +23,6 @@
                 </div>
             </div>
 
-            {{-- Question courante --}}
             <div class="quiz__q" x-show="!done">
                 <span class="quiz__q-count">{{ __('QUESTION') }} <span x-text="step + 1">1</span> {{ __('OF') }} <span x-text="questions.length">3</span></span>
                 <h3 class="quiz__q-text" x-text="questions[step]">{{ __('Is your company based outside the European Union?') }}</h3>
@@ -39,7 +38,6 @@
                 </div>
             </div>
 
-            {{-- Resultat --}}
             <div class="quiz__result" x-show="done" x-cloak>
                 <div class="quiz__result-check" :class="{ 'quiz__result-check--muted': !concerned }">
                     <svg x-show="concerned" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -80,8 +78,7 @@
                     this.step++;
                 }
             },
-            // Enregistrement anonyme cote serveur (une fois par quiz complete). Peripherique : un echec
-            // ne casse pas l'affichage du resultat.
+            // Enregistrement anonyme cote serveur : peripherique, un echec ne casse pas le resultat.
             persist() {
                 const token = document.querySelector('meta[name="csrf-token"]');
                 fetch(@js(route('quiz.result')), {
@@ -103,11 +100,9 @@
                 this.answers = [];
                 this.done = false;
             },
-            // Concerne : base hors UE + vend dans l'UE + ne vend PAS de categorie exclue.
             get concerned() {
                 return this.answers[0] === true && this.answers[1] === true && this.answers[2] === false;
             },
-            // Vend une categorie que Festilaw ne prend pas en charge.
             get excluded() {
                 return this.answers[2] === true;
             },
