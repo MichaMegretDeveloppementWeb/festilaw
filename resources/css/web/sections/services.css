@@ -6,35 +6,27 @@
 .services__title { font-size: clamp(30px, 4.2vw, 52px); }
 .services__title-em { color: var(--color-coral); }
 
-/* Six cartes uniformes (demande cliente). */
-.services__grid { display: grid; grid-template-columns: 1fr; gap: 18px; }
+/* Cartes pleine largeur empilees : chacune devient sticky juste sous l'en-tete collant et se
+   superpose a la precedente au defilement (effet de pile). */
+.services__grid { display: flex; flex-direction: column; gap: 26px; }
 .services__card {
+    position: sticky;
+    top: min(15em, 15vh); /* sous l'en-tete collant, avec une marge confortable (pas colle au header) */
     background: var(--color-card);
     border: 1px solid var(--color-line);
     border-radius: var(--radius-lg);
-    padding: 30px 28px;
+    padding: 40px clamp(28px, 4vw, 56px);
+    min-height: 200px;
 }
 /* Teintes legeres cyclees (saumon / bleu-violet / beige) pour egayer les cartes. */
 .services__card:nth-child(3n+1) { background: #FCEAE6; border-color: #F2D5CD; }
 .services__card:nth-child(3n+2) { background: #ECECFC; border-color: #D9D9F7; }
 .services__card:nth-child(3n)   { background: #F7EFDB; border-color: #ECE0C4; }
-.services__num {
-    font-family: var(--font-display);
-    font-size: 30px;
-    color: var(--color-coral);
-    display: block;
-    margin-bottom: 12px;
-}
-.services__card-title { font-size: 18px; margin-bottom: 10px; }
-.services__card-text { color: var(--color-ink-soft); font-size: 15px; line-height: 1.6; }
 
-.services__more { text-align: center; margin-top: 34px; }
+.services__num { font-family: var(--font-display); font-size: 34px; color: var(--color-coral); display: block; margin-bottom: 12px; }
+.services__card-title { font-size: 22px; margin-bottom: 10px; }
+.services__card-text { color: var(--color-ink-soft); font-size: 16px; line-height: 1.65; max-width: 68ch; }
+
+.services__more { text-align: center; margin-top: 44px; }
 .services__more-link { display: inline-flex; align-items: center; gap: 9px; color: var(--color-coral); font-weight: 600; font-size: 16px; }
 .services__more-link:hover { text-decoration: underline; }
-
-@media (min-width: 680px) {
-    .services__grid { grid-template-columns: repeat(2, 1fr); }
-}
-@media (min-width: 1000px) {
-    .services__grid { grid-template-columns: repeat(3, 1fr); }
-}

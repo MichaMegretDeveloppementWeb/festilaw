@@ -1,4 +1,9 @@
 /* Typographie de base · nouvelle charte. */
+
+/* Anti-scroll horizontal sur <html> (le conteneur de defilement), pas sur <body> : un overflow
+   sur <body> capture les elements position: sticky et les empeche de s'accrocher. */
+html { overflow-x: hidden; }
+
 body {
     background: var(--color-cream);
     color: var(--color-ink);
@@ -7,7 +12,6 @@ body {
     line-height: 1.65;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
-    overflow-x: clip;
 }
 
 /* Grands titres : Poiret One (une seule graisse). */
