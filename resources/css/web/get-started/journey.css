@@ -108,6 +108,10 @@
 .project-step.is-done { color: var(--color-ink); font-weight: 600; }
 .project-step.is-done .project-step__mark { background: var(--color-coral); border-color: var(--color-coral); }
 .project-step__amount { color: var(--color-ink-soft); font-weight: 400; }
+.my-project__renew { margin: 0 0 22px; padding: 16px 18px; border-radius: 12px; background: #eeeefc; border: 1px solid #d6d6fb; }
+.my-project__renew.is-overdue { background: #fdecea; border-color: #f6c6c0; }
+.my-project__renew-text { margin: 0 0 12px; font-size: 14.5px; color: var(--color-ink); }
+.my-project__renew-error { margin: 0 0 14px; font-size: 14px; color: #c0392b; }
 .my-project__resume-text, .my-project__note { color: var(--color-ink-soft); font-size: 14.5px; margin: 0 0 14px; }
 .my-project__meta { margin: 0 0 22px; padding: 0; }
 .my-project__meta-row { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 11px 0; border-bottom: 1px solid var(--color-line); }

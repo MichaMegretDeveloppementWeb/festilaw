@@ -17,6 +17,7 @@ use App\Http\Controllers\Web\Funnel\StarterDocumentDownloadController;
 use App\Http\Controllers\Web\Funnel\StarterJourneyController;
 use App\Http\Controllers\Web\Funnel\StarterMandateDownloadController;
 use App\Http\Controllers\Web\Funnel\StarterProjectController;
+use App\Http\Controllers\Web\Funnel\StarterRenewalController;
 use App\Http\Controllers\Web\Home\HomeController;
 use App\Http\Controllers\Web\Pricing\PricingController;
 use App\Http\Controllers\Web\Quiz\StoreQuizResultController;
@@ -88,6 +89,9 @@ Route::prefix('get-started')->name('get-started.')->group(function () {
     // Parcours STARTER : page d'ouverture, puis dossier resumable via son token ({dossier}).
     Route::get('/starter', StarterController::class)->name('starter');
     Route::get('/starter/{dossier}', StarterJourneyController::class)->name('starter.journey');
+
+    // Renouvellement annuel : paiement plein tarif declenche depuis l'espace "mon projet" (POST).
+    Route::post('/starter/{dossier}/renew', StarterRenewalController::class)->name('starter.renew');
 
     // Espace "mon dossier" : telechargement du mandat signe et des documents (portes par le token).
     Route::get('/starter/{dossier}/mandate', StarterMandateDownloadController::class)->name('starter.mandate');

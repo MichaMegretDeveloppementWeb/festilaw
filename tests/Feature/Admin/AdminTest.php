@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\Payment\PaymentType;
 use App\Enums\Submission\SubmissionStatus;
 use App\Enums\Submission\SubmissionType;
 use App\Livewire\Admin\AdminProfile;
@@ -9,6 +10,7 @@ use App\Livewire\Admin\SubmissionList;
 use App\Mail\AdminMessageToClient;
 use App\Mail\StarterResponsiblePersonIssued;
 use App\Mail\StarterResumeLink;
+use App\Models\Payment;
 use App\Models\Submission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -338,4 +340,50 @@ it('deletes a dossier and redirects to the list', function () {
         ->assertRedirect(route('admin.submissions.index'));
 
     expect(Submission::find($submission->id))->toBeNull();
+});
+
+/** A paid dossier whose subscription covered $serviceYear (so a renewal may be due). */
+function adminPaidDossier(int $serviceYear): Submission
+{
+    $submission = Submission::factory()->starter()->create([
+        'status' => SubmissionStatus::Paid,
+        'company_name' => 'Renewco',
+    ]);
+    Payment::factory()->succeeded()->for($submission)->create([
+        'type' => PaymentType::StarterSubscription,
+        'service_year' => $serviceYear,
+    ]);
+
+    return $submission->fresh();
+}
+
+it('shows the renewal status badge in the dossiers list', function () {
+    actingAs(User::factory()->create());
+    adminPaidDossier((int) now()->year - 1); // paye l'an dernier -> a renouveler
+
+    Livewire::test(SubmissionList::class)
+        ->assertSee('Renouvellement')
+        ->assertSee('En retard'); // 21 juillet : grace de janvier depassee
+});
+
+it('filters the list down to dossiers needing renewal', function () {
+    actingAs(User::factory()->create());
+    adminPaidDossier((int) now()->year - 1); // Renewco : a renouveler
+    $upToDate = adminPaidDossier((int) now()->year); // paye cette annee : a jour
+    $upToDate->update(['company_name' => 'Freshpaid']);
+
+    Livewire::test(SubmissionList::class)
+        ->set('renewal', 'due')
+        ->assertSee('Renewco')
+        ->assertDontSee('Freshpaid');
+});
+
+it('shows the renewal section on the dossier detail', function () {
+    actingAs(User::factory()->create());
+    $dossier = adminPaidDossier((int) now()->year - 1);
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $dossier])
+        ->assertSee('Renouvellement')
+        ->assertSee('Payé jusqu\'à l\'année')
+        ->assertSee((string) (now()->year - 1)); // annee payee
 });

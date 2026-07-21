@@ -147,6 +147,37 @@
                 </section>
             @endunless
 
+            @if ($renewal)
+                <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
+                    <div class="border-b border-slate-100 px-5 py-3.5">
+                        <h2 class="text-sm font-semibold text-slate-900">{{ __('Renouvellement') }}</h2>
+                    </div>
+                    <div class="px-5 py-2">
+                        <dl class="divide-y divide-slate-100 text-sm">
+                            <div class="flex items-center justify-between gap-4 py-2.5">
+                                <dt class="text-slate-500">{{ __('État') }}</dt>
+                                <dd>
+                                    <span @class([
+                                        'inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold',
+                                        'bg-emerald-50 text-emerald-700' => $renewal['severity'] === 'ok',
+                                        'bg-amber-50 text-amber-700' => $renewal['severity'] === 'warn',
+                                        'bg-red-50 text-red-700' => $renewal['severity'] === 'bad',
+                                    ])>{{ $renewal['label'] }}</span>
+                                </dd>
+                            </div>
+                            <div class="flex items-center justify-between gap-4 py-2.5">
+                                <dt class="text-slate-500">{{ __('Payé jusqu\'à l\'année') }}</dt>
+                                <dd class="font-medium text-slate-900">{{ $renewal['paidThroughYear'] ?? '-' }}</dd>
+                            </div>
+                            <div class="flex items-center justify-between gap-4 py-2.5">
+                                <dt class="text-slate-500">{{ __('Prochain renouvellement') }}</dt>
+                                <dd class="font-medium text-slate-900">{{ $renewal['nextRenewalDate']?->format('d/m/Y') ?? '-' }}</dd>
+                            </div>
+                        </dl>
+                    </div>
+                </section>
+            @endif
+
             @if ($submission->payments->isNotEmpty())
                 <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
                     <div class="border-b border-slate-100 px-5 py-3.5">
@@ -157,6 +188,7 @@
                             <thead>
                                 <tr class="border-b border-slate-100 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                                     <th class="px-5 py-2.5">{{ __('Montant') }}</th>
+                                    <th class="px-5 py-2.5">{{ __('Année') }}</th>
                                     <th class="px-5 py-2.5">{{ __('Statut') }}</th>
                                     <th class="px-5 py-2.5">{{ __('Prestataire') }}</th>
                                     <th class="px-5 py-2.5">{{ __('Payé le') }}</th>
@@ -166,6 +198,7 @@
                                 @foreach ($submission->payments as $payment)
                                     <tr wire:key="pay-{{ $payment->id }}">
                                         <td class="px-5 py-2.5 font-medium text-slate-900">{{ number_format($payment->amount_cents / 100, 2, ',', ' ') }} {{ $payment->currency }}</td>
+                                        <td class="px-5 py-2.5 text-slate-600">{{ $payment->service_year ?: '-' }}</td>
                                         <td class="px-5 py-2.5 text-slate-600">{{ $payment->status->label() }}</td>
                                         <td class="px-5 py-2.5 text-slate-600">{{ $payment->provider }}</td>
                                         <td class="px-5 py-2.5 text-slate-500">{{ $payment->paid_at?->format('d/m/Y H:i') ?: '-' }}</td>

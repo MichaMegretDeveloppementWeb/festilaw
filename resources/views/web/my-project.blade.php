@@ -84,6 +84,26 @@
                                 @endif
                             </div>
                         </dl>
+
+                        @if (session('renewal_error'))
+                            <p class="my-project__renew-error">{{ session('renewal_error') }}</p>
+                        @endif
+
+                        @if ($project->renewalDue)
+                            <div @class(['my-project__renew', 'is-overdue' => $project->renewalOverdue])>
+                                <p class="my-project__renew-text">
+                                    @if ($project->renewalOverdue)
+                                        {{ __('Your :year subscription is overdue. Renew now to keep your EU Responsible Person active.', ['year' => $project->renewalYear]) }}
+                                    @else
+                                        {{ __('Time to renew for :year. Renew to keep your EU Responsible Person active.', ['year' => $project->renewalYear]) }}
+                                    @endif
+                                </p>
+                                <form method="POST" action="{{ $project->renewUrl }}">
+                                    @csrf
+                                    <button type="submit" class="btn btn--coral">{{ __('Pay :amount to renew', ['amount' => '€'.number_format($project->annualCents / 100)]) }}</button>
+                                </form>
+                            </div>
+                        @endif
                     @else
                         <p class="my-project__resume-text">{{ __('Your project isn\'t finished yet. Pick up right where you left off.') }}</p>
                         <a href="{{ $project->resumeUrl }}" class="btn btn--coral">{{ __('Resume my project') }}</a>

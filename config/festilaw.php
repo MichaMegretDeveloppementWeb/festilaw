@@ -49,6 +49,16 @@ return [
     ],
 
     /*
+     | Renouvellement annuel (cf. contrat) : l'annee de service court du 1er janvier au 31 decembre,
+     | facturee chaque janvier au plein tarif. Le client dispose de grace_days jours pour regler avant
+     | d'etre "en retard". Renouvellement manuel (rappel + paiement depuis le dossier), pas d'abonnement
+     | Stripe.
+     */
+    'renewal' => [
+        'grace_days' => (int) env('FESTILAW_RENEWAL_GRACE_DAYS', 30),
+    ],
+
+    /*
      | Parcours SCALE : paiement de l'audit (deduit du contrat final) + agenda de reservation.
      */
     'scale' => [

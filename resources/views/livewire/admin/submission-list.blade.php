@@ -34,6 +34,14 @@
                     @endforeach
                 </select>
             </div>
+            <div>
+                <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500" for="f-renewal">{{ __('Renouvellement') }}</label>
+                <select id="f-renewal" wire:model.live="renewal"
+                    class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30">
+                    <option value="">{{ __('Tous') }}</option>
+                    <option value="due">{{ __('À renouveler / en retard') }}</option>
+                </select>
+            </div>
         @endunless
     </div>
 
@@ -54,6 +62,7 @@
                                 <th class="px-4 py-3">{{ __('Référence') }}</th>
                                 <th class="px-4 py-3">{{ __('Parcours') }}</th>
                                 <th class="px-4 py-3">{{ __('Statut') }}</th>
+                                <th class="px-4 py-3">{{ __('Renouvellement') }}</th>
                                 <th class="px-4 py-3">{{ __('Client') }}</th>
                                 <th class="px-4 py-3">{{ __('Email') }}</th>
                                 <th class="px-4 py-3">{{ __('Date') }}</th>
@@ -73,6 +82,18 @@
                                     <td class="px-4 py-3 font-medium text-slate-900">{{ $submission->reference }}</td>
                                     <td class="px-4 py-3 text-slate-600">{{ $submission->type->label() }}</td>
                                     <td class="px-4 py-3"><x-admin.status-badge :status="$submission->status" /></td>
+                                    <td class="px-4 py-3">
+                                        @isset ($renewalBadges[$submission->id])
+                                            <span @class([
+                                                'inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold',
+                                                'bg-emerald-50 text-emerald-700' => $renewalBadges[$submission->id]['severity'] === 'ok',
+                                                'bg-amber-50 text-amber-700' => $renewalBadges[$submission->id]['severity'] === 'warn',
+                                                'bg-red-50 text-red-700' => $renewalBadges[$submission->id]['severity'] === 'bad',
+                                            ])>{{ $renewalBadges[$submission->id]['label'] }}</span>
+                                        @else
+                                            <span class="text-slate-300">-</span>
+                                        @endisset
+                                    </td>
                                     <td class="px-4 py-3 text-slate-600">{{ $submission->company_name ?: (trim(($submission->first_name ?? '').' '.($submission->last_name ?? '')) ?: '-') }}</td>
                                     <td class="px-4 py-3 text-slate-600">{{ $submission->email }}</td>
                                     <td class="px-4 py-3 whitespace-nowrap text-slate-500">{{ $submission->created_at->format('d/m/Y') }}</td>

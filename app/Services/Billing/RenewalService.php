@@ -1,0 +1,89 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services\Billing;
+
+use App\Enums\Billing\RenewalStatus;
+use App\Enums\Payment\PaymentStatus;
+use App\Models\Payment;
+use App\Models\Submission;
+use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
+
+/**
+ * Suivi du renouvellement annuel, entierement derive des paiements (aucun statut stocke). Une annee de
+ * service court du 1er janvier au 31 decembre ; la 1re annee est au prorata, chaque annee suivante est
+ * facturee au plein tarif en janvier. Le client dispose d'une fenetre de grace pour regler.
+ */
+final class RenewalService
+{
+    /** Annee de service la plus recente couverte par un paiement d'abonnement reussi, ou null. */
+    public function paidThroughYear(Submission $submission): ?int
+    {
+        $submission->loadMissing('payments');
+
+        $years = $submission->payments
+            ->filter(fn (Payment $p): bool => $p->status === PaymentStatus::Succeeded && $p->type->isSubscription())
+            ->map(fn (Payment $p): ?int => $p->service_year ?? $p->paid_at?->year)
+            ->filter();
+
+        return $years->isEmpty() ? null : (int) $years->max();
+    }
+
+    /**
+     * Annee dont le renouvellement est du (annee de service courante non encore couverte), ou null si le
+     * dossier est a jour. Retourne null pour un dossier jamais paye (c'est le parcours initial, pas un
+     * renouvellement).
+     */
+    public function dueYear(Submission $submission, ?CarbonInterface $now = null): ?int
+    {
+        $now = $this->normalise($now);
+        $paidThrough = $this->paidThroughYear($submission);
+
+        if ($paidThrough === null) {
+            return null;
+        }
+
+        return $paidThrough < $now->year ? $now->year : null;
+    }
+
+    /** Etat de renouvellement a la date donnee (a jour / a renouveler / en retard). */
+    public function status(Submission $submission, ?CarbonInterface $now = null): RenewalStatus
+    {
+        $now = $this->normalise($now);
+        $dueYear = $this->dueYear($submission, $now);
+
+        if ($dueYear === null) {
+            return RenewalStatus::UpToDate;
+        }
+
+        return $now->greaterThan($this->graceEndsAt($dueYear))
+            ? RenewalStatus::Overdue
+            : RenewalStatus::Due;
+    }
+
+    /** Date du prochain renouvellement : 1er janvier suivant l'annee couverte (null si jamais paye). */
+    public function nextRenewalDate(Submission $submission): ?CarbonImmutable
+    {
+        $paidThrough = $this->paidThroughYear($submission);
+
+        return $paidThrough === null ? null : CarbonImmutable::create($paidThrough + 1, 1, 1);
+    }
+
+    /** Fin de la fenetre de grace pour l'annee donnee : 1er janvier + grace_days. */
+    public function graceEndsAt(int $year): CarbonImmutable
+    {
+        return CarbonImmutable::create($year, 1, 1)->addDays($this->graceDays());
+    }
+
+    private function normalise(?CarbonInterface $now): CarbonImmutable
+    {
+        return $now !== null ? CarbonImmutable::instance($now) : CarbonImmutable::now();
+    }
+
+    private function graceDays(): int
+    {
+        return (int) config('festilaw.renewal.grace_days', 30);
+    }
+}

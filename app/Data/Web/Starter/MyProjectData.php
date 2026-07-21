@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Data\Web\Starter;
 
-use Illuminate\Support\Carbon;
+use Carbon\CarbonInterface;
 
 /**
  * View-model de l'espace client "mon projet" : contrat de sortie type entre le controleur et la vue,
@@ -21,9 +21,13 @@ final readonly class MyProjectData
         public bool $documentsDone,
         public bool $paid,
         public bool $cancelled,
-        public ?Carbon $renewsAt,
+        public ?CarbonInterface $renewsAt,
+        public bool $renewalDue,
+        public bool $renewalOverdue,
+        public ?int $renewalYear,
+        public string $renewUrl,
         public ?int $paidAmountCents,
-        public ?Carbon $paidAt,
+        public ?CarbonInterface $paidAt,
         public string $resumeUrl,
         public ?string $mandateDownloadUrl,
         public ?string $euRpAddress,

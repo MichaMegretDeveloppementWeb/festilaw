@@ -20,6 +20,7 @@ class Payment extends Model
         'submission_id',
         'type',
         'amount_cents',
+        'service_year',
         'currency',
         'provider',
         'provider_reference',
@@ -32,6 +33,7 @@ class Payment extends Model
         return [
             'type' => PaymentType::class,
             'amount_cents' => 'integer',
+            'service_year' => 'integer',
             'status' => PaymentStatus::class,
             'paid_at' => 'datetime',
         ];

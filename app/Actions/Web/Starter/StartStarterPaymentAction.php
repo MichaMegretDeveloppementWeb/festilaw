@@ -40,12 +40,11 @@ final readonly class StartStarterPaymentAction
         // Ecriture unique : pas de transaction (cf. architecture-couches, pragmatisme).
         // Annee 1 au prorata (date de signature -> 31/12), cf. contrat. La reprise annuelle plein tarif
         // sera geree separement (rappel + paiement depuis le dossier). Le tarif depend du pack (type).
+        $reference = $submission->contract?->signed_at ?? now();
         $payment = $submission->payments()->create([
             'type' => PaymentType::StarterSubscription,
-            'amount_cents' => $this->prorator->firstYearCents(
-                $submission->type->annualCents(),
-                $submission->contract?->signed_at ?? now(),
-            ),
+            'amount_cents' => $this->prorator->firstYearCents($submission->type->annualCents(), $reference),
+            'service_year' => (int) $reference->year,
             'currency' => 'EUR',
             'provider' => $gateway->key(),
             'status' => PaymentStatus::Pending,

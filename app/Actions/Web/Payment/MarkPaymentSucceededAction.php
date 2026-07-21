@@ -6,7 +6,6 @@ namespace App\Actions\Web\Payment;
 
 use App\Enums\Notification\FunnelNotificationReason;
 use App\Enums\Payment\PaymentStatus;
-use App\Enums\Payment\PaymentType;
 use App\Enums\Submission\SubmissionStatus;
 use App\Mail\FunnelNotification;
 use App\Mail\StarterPaymentConfirmed;
@@ -65,12 +64,13 @@ final readonly class MarkPaymentSucceededAction
     }
 
     /**
-     * Confirmation email to the buyer (STARTER only) · also the safety net for slow async payments.
-     * Peripheral side effect: a failure is logged but never breaks the confirmation.
+     * Confirmation email to the buyer (subscription payments: year 1 AND renewals) · also the safety
+     * net for slow async payments. Peripheral side effect: a failure is logged but never breaks the
+     * confirmation.
      */
     private function emailBuyerConfirmation(Payment $payment): void
     {
-        if ($payment->type !== PaymentType::StarterSubscription) {
+        if (! $payment->type->isSubscription()) {
             return;
         }
 

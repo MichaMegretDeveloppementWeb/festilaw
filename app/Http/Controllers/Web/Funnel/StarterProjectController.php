@@ -6,31 +6,36 @@ namespace App\Http\Controllers\Web\Funnel;
 
 use App\Data\Web\Starter\MyProjectData;
 use App\Data\Web\Starter\ProjectDocumentData;
+use App\Enums\Billing\RenewalStatus;
 use App\Enums\Payment\PaymentStatus;
 use App\Enums\Submission\SubmissionStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\Submission;
 use App\Models\UploadedDocument;
+use App\Services\Billing\RenewalService;
 use App\Services\Web\Starter\StarterDossierResolver;
-use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 
 /**
- * The client's "my project" space · the hub for a STARTER dossier at ANY stage, reached by its magic
- * link ({dossier} binding, capability URL). It shows where the project stands (signed, documents, paid),
- * lets the visitor resume the funnel at the right step if unfinished, and once active exposes the plan,
- * next renewal and document downloads. Separate from the funnel itself (no sales aside).
+ * The client's "my project" space · the hub for a self-service dossier (Creator or Pro) at ANY stage,
+ * reached by its magic link ({dossier} binding, capability URL). It shows where the project stands
+ * (signed, documents, paid), lets the visitor resume the funnel at the right step if unfinished, and
+ * once active exposes the plan, next renewal (with a pay-renewal call to action when due) and document
+ * downloads. Separate from the funnel itself (no sales aside).
  */
 final class StarterProjectController extends Controller
 {
-    public function __construct(private readonly StarterDossierResolver $resolver) {}
+    public function __construct(
+        private readonly StarterDossierResolver $resolver,
+        private readonly RenewalService $renewals,
+    ) {}
 
     public function __invoke(Submission $dossier): View
     {
         abort_unless($dossier->type->hasOnlineJourney(), 404);
 
-        $dossier->loadMissing(['contract', 'uploadedDocuments']);
+        $dossier->loadMissing(['contract', 'uploadedDocuments', 'payments']);
         $status = $this->resolver->resolve($dossier);
         $signed = $status->contractSigned;
         $paid = in_array($dossier->status, [SubmissionStatus::Paid, SubmissionStatus::Completed], true);
@@ -46,6 +51,9 @@ final class StarterProjectController extends Controller
         $hasSignedMandate = $signed && (string) ($dossier->contract?->signed_file_path ?? '') !== '';
         $lastPayment = $paid ? $this->lastSuccessfulPayment($dossier) : null;
 
+        $renewalStatus = $paid ? $this->renewals->status($dossier) : RenewalStatus::UpToDate;
+        $renewalYear = $paid ? $this->renewals->dueYear($dossier) : null;
+
         $project = new MyProjectData(
             reference: (string) $dossier->reference,
             packLabel: $dossier->type->label(),
@@ -54,7 +62,11 @@ final class StarterProjectController extends Controller
             documentsDone: $status->missingDocuments === [],
             paid: $paid,
             cancelled: $dossier->status === SubmissionStatus::Cancelled,
-            renewsAt: $this->renewalDate($lastPayment),
+            renewsAt: $this->renewals->nextRenewalDate($dossier),
+            renewalDue: $renewalYear !== null,
+            renewalOverdue: $renewalStatus === RenewalStatus::Overdue,
+            renewalYear: $renewalYear,
+            renewUrl: route('get-started.starter.renew', ['dossier' => $dossier->resume_token]),
             paidAmountCents: $lastPayment?->amount_cents,
             paidAt: $lastPayment?->paid_at,
             resumeUrl: route('get-started.starter.journey', ['dossier' => $dossier->resume_token]),
@@ -71,19 +83,9 @@ final class StarterProjectController extends Controller
     /** Last successful payment on the dossier (most recent by pay date), or null if none. */
     private function lastSuccessfulPayment(Submission $dossier): ?Payment
     {
-        return $dossier->payments()
+        return $dossier->payments
             ->where('status', PaymentStatus::Succeeded)
-            ->latest('paid_at')
+            ->sortByDesc('paid_at')
             ->first();
-    }
-
-    /**
-     * Next renewal date. A service year runs 1 January to 31 December, the first year is billed pro rata,
-     * and every following year is invoiced each January. So the next renewal is always 1 January of the
-     * year after the last successful payment, whatever the pay date within its year.
-     */
-    private function renewalDate(?Payment $lastPayment): ?Carbon
-    {
-        return $lastPayment?->paid_at?->copy()->startOfYear()->addYear();
     }
 }

@@ -9,9 +9,11 @@ use App\Actions\Admin\ChangeSubmissionStatusAction;
 use App\Actions\Admin\IssueResponsiblePersonAction;
 use App\Actions\Admin\SendAdminMessageAction;
 use App\Actions\Web\Starter\SendStarterResumeLinkAction;
+use App\Enums\Billing\RenewalStatus;
 use App\Enums\Submission\SubmissionStatus;
 use App\Enums\Submission\SubmissionType;
 use App\Models\Submission;
+use App\Services\Billing\RenewalService;
 use Illuminate\View\View;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -148,15 +150,31 @@ class SubmissionDetail extends Component
         return $this->redirectRoute($isContact ? 'admin.contacts.index' : 'admin.submissions.index', navigate: true);
     }
 
-    public function render(): View
+    public function render(RenewalService $renewals): View
     {
         $isContact = $this->submission->type === SubmissionType::Contact;
+
+        $renewal = null;
+        if ($this->submission->type->hasOnlineJourney() && $this->isPaid()) {
+            $status = $renewals->status($this->submission);
+            $renewal = [
+                'label' => $status->label(),
+                'severity' => match ($status) {
+                    RenewalStatus::UpToDate => 'ok',
+                    RenewalStatus::Due => 'warn',
+                    RenewalStatus::Overdue => 'bad',
+                },
+                'paidThroughYear' => $renewals->paidThroughYear($this->submission),
+                'nextRenewalDate' => $renewals->nextRenewalDate($this->submission),
+            ];
+        }
 
         return view('livewire.admin.submission-detail', [
             'statuses' => SubmissionStatus::cases(),
             'isStarter' => $this->submission->type === SubmissionType::Starter,
             'isContact' => $isContact,
             'isPaid' => $this->isPaid(),
+            'renewal' => $renewal,
         ])->title(($isContact ? __('Prise de contact') : __('Dossier')).' '.$this->submission->reference.' · Festilaw');
     }
 

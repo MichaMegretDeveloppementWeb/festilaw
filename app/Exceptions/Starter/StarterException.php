@@ -17,6 +17,14 @@ final class StarterException extends BaseAppException
         );
     }
 
+    public static function renewalNotDue(int $submissionId): self
+    {
+        return new self(
+            technicalMessage: "Submission [{$submissionId}] has no renewal due: cannot start a renewal payment.",
+            userMessage: 'Your subscription is up to date · there is nothing to renew right now.',
+        );
+    }
+
     public static function contractMissing(int $submissionId): self
     {
         return new self(
