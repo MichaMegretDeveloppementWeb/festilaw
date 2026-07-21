@@ -6,6 +6,7 @@ use App\Mail\AdminRenewalDigest;
 use App\Mail\RenewalReminder;
 use App\Models\Payment;
 use App\Models\Submission;
+use App\Services\Notification\TeamNotifier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 
@@ -73,6 +74,34 @@ it('does not touch up-to-date dossiers', function () {
     $this->artisan('festilaw:process-renewals', ['--now' => "{$year}-01-05"])->assertOk();
 
     Mail::assertNothingSent();
+});
+
+it('does not mark the yearly client reminder when it could not be sent (no email)', function () {
+    Mail::fake();
+    $year = (int) now()->year;
+    $dossier = renewalDossier($year - 1, ''); // dossier actif mais sans email
+
+    $this->artisan('festilaw:process-renewals', ['--now' => "{$year}-01-05"])->assertOk();
+
+    // Le rappel client n'a pas pu partir : le jalon annuel n'est PAS pose (le prochain passage reessaie).
+    expect($dossier->fresh()->meta['renewal']['reminded_year'] ?? null)->toBeNull();
+});
+
+it('does not mark the admin digest meta when the digest failed to send', function () {
+    Mail::fake();
+    $year = (int) now()->year;
+    $dossier = renewalDossier($year - 1);
+
+    // Digest admin en echec (double de TeamNotifier renvoyant false) ; le rappel client, lui, reussit.
+    $notifier = mock(TeamNotifier::class);
+    $notifier->shouldReceive('notify')->andReturnFalse();
+    app()->instance(TeamNotifier::class, $notifier);
+
+    $this->artisan('festilaw:process-renewals', ['--now' => "{$year}-01-05"])->assertOk();
+
+    $renewal = $dossier->fresh()->meta['renewal'] ?? [];
+    expect($renewal['reminded_year'] ?? null)->toBe($year)          // client OK -> marque
+        ->and($renewal['admin_notified_year'] ?? null)->toBeNull(); // digest KO -> non marque, reessaiera
 });
 
 it('dry run sends nothing and writes no meta', function () {

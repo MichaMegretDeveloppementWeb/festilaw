@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Str;
 
 #[ObservedBy([SubmissionObserver::class])]
 class Submission extends Model
@@ -92,6 +93,16 @@ class Submission extends Model
         } while (static::query()->where('reference', $reference)->exists());
 
         return $reference;
+    }
+
+    /**
+     * Rotates the resume token to a fresh unguessable value. Called on every magic-link request (client
+     * find-my-file or admin resend) so the emailed link is always the only valid one — a previously sent
+     * link can no longer be reused, which removes the whole class of stale/leaked-link problems.
+     */
+    public function regenerateResumeToken(): void
+    {
+        $this->update(['resume_token' => Str::random(48)]);
     }
 
     /**

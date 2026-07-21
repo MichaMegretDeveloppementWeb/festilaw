@@ -22,6 +22,10 @@ final readonly class SendStarterResumeLinkAction
             return;
         }
 
+        // Rotation systematique a chaque demande de lien : le mail porte un token frais et l'eventuel
+        // lien precedent devient caduc (plus jamais de lien perime/fuite reutilisable).
+        $submission->regenerateResumeToken();
+
         try {
             Mail::to($submission->email)
                 ->locale($submission->locale ?: config('app.locale'))

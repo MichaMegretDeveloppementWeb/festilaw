@@ -28,5 +28,11 @@ final class SubmissionObserver
         if ($signedPath !== null && $signedPath !== '') {
             $disk->delete($signedPath);
         }
+
+        // Le mandat contresigne par Festilaw (Q3) est un fichier prive de plus : a effacer aussi (RGPD).
+        $countersignedPath = $submission->contract?->countersigned_file_path;
+        if ($countersignedPath !== null && $countersignedPath !== '') {
+            $disk->delete($countersignedPath);
+        }
     }
 }

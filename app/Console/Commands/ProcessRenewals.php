@@ -53,13 +53,17 @@ final class ProcessRenewals extends Command
         $dueRows = [];
         /** @var list<array{company:string,pack:string,year:int,email:string,url:string}> $overdueRows */
         $overdueRows = [];
+        /** @var list<Submission> $dueToMark */
+        $dueToMark = [];
+        /** @var list<Submission> $overdueToMark */
+        $overdueToMark = [];
         $clientReminders = 0;
 
         Submission::query()
             ->whereIn('type', [SubmissionType::Starter, SubmissionType::Pro])
             ->active()
             ->with('payments')
-            ->chunkById(100, function (Collection $dossiers) use ($now, $year, $dry, &$dueRows, &$overdueRows, &$clientReminders): void {
+            ->chunkById(100, function (Collection $dossiers) use ($now, $year, $dry, &$dueRows, &$overdueRows, &$dueToMark, &$overdueToMark, &$clientReminders): void {
                 foreach ($dossiers as $dossier) {
                     $status = $this->renewals->status($dossier, $now);
                     if ($status === RenewalStatus::UpToDate) {
@@ -68,50 +72,43 @@ final class ProcessRenewals extends Command
 
                     $overdue = $status === RenewalStatus::Overdue;
                     $renewalMeta = $dossier->meta['renewal'] ?? [];
-                    $changed = false;
 
-                    // Rappel client : une seule fois par an (dans l'etat ou le dossier est vu en premier).
+                    // Rappel client : une seule fois par an, marque SEULEMENT si l'envoi a reussi (sinon
+                    // le jalon annuel ne doit pas etre pose, pour que le prochain passage reessaie).
                     if (($renewalMeta['reminded_year'] ?? null) !== $year) {
-                        $clientReminders++;
-                        if (! $dry) {
-                            $this->sendClientReminder($dossier, $year, $overdue);
-                            $renewalMeta['reminded_year'] = $year;
-                            $changed = true;
+                        if ($dry) {
+                            $clientReminders++;
+                        } elseif ($this->sendClientReminder($dossier, $year, $overdue)) {
+                            $clientReminders++;
+                            $this->markRenewalMeta($dossier, 'reminded_year', $year);
                         }
                     }
 
-                    // Digest admin : une fois par an et par etat (a renouveler / en retard).
+                    // Digest admin : on collecte les lignes ET les dossiers a marquer ; le jalon ne sera
+                    // pose qu'apres un envoi de digest reussi (voir apres la boucle).
                     if ($overdue) {
                         if (($renewalMeta['overdue_alerted_year'] ?? null) !== $year) {
                             $overdueRows[] = $this->row($dossier, $year);
-                            if (! $dry) {
-                                $renewalMeta['overdue_alerted_year'] = $year;
-                                $changed = true;
-                            }
+                            $overdueToMark[] = $dossier;
                         }
                     } elseif (($renewalMeta['admin_notified_year'] ?? null) !== $year) {
                         $dueRows[] = $this->row($dossier, $year);
-                        if (! $dry) {
-                            $renewalMeta['admin_notified_year'] = $year;
-                            $changed = true;
-                        }
-                    }
-
-                    if ($changed) {
-                        $meta = $dossier->meta ?? [];
-                        $meta['renewal'] = $renewalMeta;
-                        $dossier->meta = $meta;
-                        $dossier->save();
+                        $dueToMark[] = $dossier;
                     }
                 }
             });
 
         if (! $dry) {
-            if ($dueRows !== []) {
-                $this->teamNotifier->notify(new AdminRenewalDigest($dueRows, overdue: false));
+            // Le jalon anti-doublon du digest n'est pose que si le digest est reellement parti.
+            if ($dueRows !== [] && $this->teamNotifier->notify(new AdminRenewalDigest($dueRows, overdue: false))) {
+                foreach ($dueToMark as $dossier) {
+                    $this->markRenewalMeta($dossier, 'admin_notified_year', $year);
+                }
             }
-            if ($overdueRows !== []) {
-                $this->teamNotifier->notify(new AdminRenewalDigest($overdueRows, overdue: true));
+            if ($overdueRows !== [] && $this->teamNotifier->notify(new AdminRenewalDigest($overdueRows, overdue: true))) {
+                foreach ($overdueToMark as $dossier) {
+                    $this->markRenewalMeta($dossier, 'overdue_alerted_year', $year);
+                }
             }
         }
 
@@ -135,19 +132,35 @@ final class ProcessRenewals extends Command
         return CarbonImmutable::now();
     }
 
-    private function sendClientReminder(Submission $dossier, int $year, bool $overdue): void
+    /** Sends the yearly client reminder. Returns whether it was actually sent (gates the meta marker). */
+    private function sendClientReminder(Submission $dossier, int $year, bool $overdue): bool
     {
         if ((string) $dossier->email === '') {
-            return;
+            return false;
         }
 
         try {
             Mail::to($dossier->email)
                 ->locale($dossier->locale ?: config('app.locale'))
                 ->send(new RenewalReminder($dossier, $year, $overdue));
+
+            return true;
         } catch (Throwable $e) {
             Log::error('Renewal reminder failed to send.', ['exception' => $e, 'submission' => $dossier->id]);
+
+            return false;
         }
+    }
+
+    /** Poses un jalon d'anti-doublon annuel dans meta.renewal (appele uniquement apres un envoi reussi). */
+    private function markRenewalMeta(Submission $dossier, string $key, int $year): void
+    {
+        $meta = $dossier->meta ?? [];
+        $renewal = $meta['renewal'] ?? [];
+        $renewal[$key] = $year;
+        $meta['renewal'] = $renewal;
+        $dossier->meta = $meta;
+        $dossier->save();
     }
 
     /** @return array{company:string,pack:string,year:int,email:string,url:string} */

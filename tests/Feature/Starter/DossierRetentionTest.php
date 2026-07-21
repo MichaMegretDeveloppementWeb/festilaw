@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\Submission\SubmissionStatus;
+use App\Models\Contract;
 use App\Models\Submission;
 use App\Models\UploadedDocument;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -22,6 +23,23 @@ it('deletes uploaded files from the private disk when a dossier is deleted (GDPR
     $submission->delete();
 
     Storage::disk('local')->assertMissing('starter-documents/x/doc.pdf');
+});
+
+it('deletes the signed AND counter-signed PDFs when a dossier is deleted (GDPR erasure)', function () {
+    Storage::fake('local');
+
+    $submission = Submission::factory()->starter()->create();
+    Contract::factory()->for($submission)->create([
+        'signed_file_path' => 'contracts/signed.pdf',
+        'countersigned_file_path' => 'contracts/countersigned.pdf',
+    ]);
+    Storage::disk('local')->put('contracts/signed.pdf', 'data');
+    Storage::disk('local')->put('contracts/countersigned.pdf', 'data');
+
+    $submission->delete();
+
+    Storage::disk('local')->assertMissing('contracts/signed.pdf')
+        ->assertMissing('contracts/countersigned.pdf');
 });
 
 it('purges abandoned expired dossiers but keeps paid and still-fresh ones', function () {
