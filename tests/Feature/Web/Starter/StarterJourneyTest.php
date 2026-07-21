@@ -485,3 +485,22 @@ it('builds a journey URL from the submission model using the resume token as rou
 
     get($url)->assertOk();
 });
+
+it('reviews a completed step read-only and returns, and locks forward navigation', function () {
+    $submission = Submission::factory()->starter()->create(['status' => SubmissionStatus::AwaitingPayment]);
+    Contract::factory()->for($submission)->signed()->create();
+
+    Livewire::test(StarterJourney::class, ['submission' => $submission])
+        ->assertSet('viewStep', null)
+        ->call('goToStep', 'sign')->assertSet('viewStep', 'sign')            // revoir une etape terminee
+        ->call('goToStep', 'documents')->assertSet('viewStep', 'documents')
+        ->call('goToStep', 'payment')->assertSet('viewStep', null)           // retour a l'etape en cours
+        ->call('goToStep', 'nope')->assertSet('viewStep', null);             // cible invalide -> ignoree
+});
+
+it('locks review navigation to a not-yet-reached step', function () {
+    $submission = Submission::factory()->starter()->create(['status' => SubmissionStatus::InProgress]); // etape signature
+
+    Livewire::test(StarterJourney::class, ['submission' => $submission])
+        ->call('goToStep', 'payment')->assertSet('viewStep', null);         // etape future -> ignoree
+});

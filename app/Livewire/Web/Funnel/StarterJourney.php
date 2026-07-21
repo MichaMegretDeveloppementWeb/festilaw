@@ -56,6 +56,9 @@ class StarterJourney extends Component
     /** Auto-confirm the signature on load when a session is already in flight (provider return OR resume). */
     public bool $autoConfirm = false;
 
+    /** Step the visitor is *reviewing* (read-only) via the progress bar; null = the live current step. */
+    public ?string $viewStep = null;
+
     /** How many payment-status polls have run on this dossier (drives + bounds the confirming loop). */
     public int $paymentChecks = 0;
 
@@ -498,6 +501,41 @@ class StarterJourney extends Component
         };
     }
 
+    /**
+     * The step actually shown. Normally the live step; but if the visitor clicked a COMPLETED step in the
+     * progress bar, we show it read-only (review) instead. Never a future step. The action guards keep
+     * using step() (the live step), so reviewing a past step can never trigger an out-of-order action.
+     */
+    private function displayStep(): string
+    {
+        $order = ['sign', 'documents', 'payment'];
+        $current = $this->step();
+
+        if ($this->viewStep === null) {
+            return $current;
+        }
+
+        $currentIndex = array_search($current, $order, true);
+        $viewIndex = array_search($this->viewStep, $order, true);
+
+        return ($viewIndex !== false && $currentIndex !== false && $viewIndex <= $currentIndex) ? $this->viewStep : $current;
+    }
+
+    /** Review a completed (or current) step via the progress bar. Forward jumps are locked. */
+    public function goToStep(string $target): void
+    {
+        $order = ['sign', 'documents', 'payment'];
+        $currentIndex = array_search($this->step(), $order, true);
+        $targetIndex = array_search($target, $order, true);
+
+        if ($targetIndex === false || $currentIndex === false || $targetIndex > $currentIndex) {
+            return; // etape future / invalide : verrouillee
+        }
+
+        // Revenir a l'etape en cours = quitter le mode revue.
+        $this->viewStep = $targetIndex === $currentIndex ? null : $target;
+    }
+
     /** @return list<DocumentType> */
     private function requiredDocumentTypes(): array
     {
@@ -546,13 +584,18 @@ class StarterJourney extends Component
 
     public function render(): View
     {
-        $this->submission->loadMissing('contract');
+        $this->submission->loadMissing(['contract', 'uploadedDocuments']);
 
         $reference = $this->submission->contract?->signed_at ?? now();
         $annualCents = $this->submission->type->annualCents();
+        $displayStep = $this->displayStep();
+        $currentStep = $this->step();
 
         return view('livewire.web.funnel.starter-journey', [
-            'step' => $this->step(),
+            'step' => $displayStep,
+            'currentStep' => $currentStep,
+            'reviewing' => $displayStep !== $currentStep,
+            'reviewDocuments' => $this->submission->uploadedDocuments->map(fn ($d): string => $d->type->label())->all(),
             'contractDeclined' => $this->submission->contract?->signature_status === SignatureStatus::Declined,
             'signatureStarted' => (string) ($this->submission->contract?->signature_provider_reference ?? '') !== '',
             'paymentStarted' => $this->pendingPayment() !== null,

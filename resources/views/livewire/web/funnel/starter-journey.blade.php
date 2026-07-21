@@ -11,19 +11,24 @@
 
     @error('journey') <div class="funnel-form__error journey-error">{{ $message }}</div> @enderror
 
-    @unless (in_array($step, ['done', 'cancelled'], true))
+    @unless (in_array($currentStep, ['done', 'cancelled'], true))
         @php
             $labels = ['sign' => __('Read & Sign'), 'documents' => __('Documents'), 'payment' => __('Payment')];
             $order = array_keys($labels);
-            $currentIndex = array_search($step, $order, true);
+            $currentIndex = array_search($currentStep, $order, true);
+            $displayIndex = array_search($step, $order, true);
         @endphp
         <ol class="journey-progress">
             @foreach ($labels as $key => $label)
-                <li @class([
-                    'journey-progress__step',
-                    'is-done' => $currentIndex !== false && $loop->index < $currentIndex,
-                    'is-current' => $loop->index === $currentIndex,
-                ])>
+                @php $navigable = $currentIndex !== false && $loop->index <= $currentIndex; @endphp
+                <li wire:key="progress-{{ $key }}" @class([
+                        'journey-progress__step',
+                        'is-done' => $currentIndex !== false && $loop->index < $currentIndex,
+                        'is-current' => $loop->index === $currentIndex,
+                        'is-navigable' => $navigable,
+                        'is-viewing' => $reviewing && $loop->index === $displayIndex,
+                    ])
+                    @if ($navigable) wire:click="goToStep('{{ $key }}')" role="button" tabindex="0" @endif>
                     <span class="journey-progress__num">{{ $loop->iteration }}</span>
                     <span class="journey-progress__label">{{ $label }}</span>
                 </li>
@@ -31,7 +36,29 @@
         </ol>
     @endunless
 
-    @if ($step === 'sign')
+    @if ($reviewing)
+        {{-- Revue en LECTURE SEULE d'une etape deja franchie (clic sur la barre de progression). Les gardes
+             d'action restent sur l'etape reelle : impossible de declencher une action hors sequence ici. --}}
+        <div class="journey-panel">
+            @if ($step === 'sign')
+                <h2 class="journey-panel__title">{{ __('Sign your Responsible Person mandate') }}</h2>
+                <p class="journey-panel__text">{{ __('You have already signed your Responsible Person mandate. This step is done.') }}</p>
+            @elseif ($step === 'documents')
+                <h2 class="journey-panel__title">{{ __('Upload your documents') }}</h2>
+                <p class="journey-panel__text">{{ __('You have already uploaded your documents:') }}</p>
+                <ul class="journey-review-list">
+                    @foreach ($reviewDocuments as $label)
+                        <li>{{ $label }}</li>
+                    @endforeach
+                </ul>
+            @endif
+            <div class="journey-review">
+                <span>{{ __('Read-only · this step is complete.') }}</span>
+                <button type="button" class="btn btn--outline-dark btn--sm" wire:click="goToStep('{{ $currentStep }}')">{{ __('Back to the current step') }}</button>
+            </div>
+        </div>
+
+    @elseif ($step === 'sign')
         <div class="journey-panel">
             <h2 class="journey-panel__title">{{ __('Sign your Responsible Person mandate') }}</h2>
             <p class="journey-panel__text">{{ __('This mandate authorises Festilaw to act as your official GPSR Responsible Person in the EU. You\'ll be taken to our secure signing partner and brought right back here.') }}</p>
