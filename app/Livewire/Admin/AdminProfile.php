@@ -4,16 +4,20 @@ declare(strict_types=1);
 
 namespace App\Livewire\Admin;
 
+use App\Livewire\Concerns\HandlesAdminErrors;
 use App\Models\User;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Throwable;
 
 /** Back-office : le compte admin connecte modifie son adresse email et son mot de passe. */
 #[Layout('layouts.admin')]
 class AdminProfile extends Component
 {
+    use HandlesAdminErrors;
+
     public string $email = '';
 
     public string $current_password = '';
@@ -39,8 +43,14 @@ class AdminProfile extends Component
             'email.unique' => __('Cette adresse email est déjà utilisée.'),
         ]);
 
-        $user->email = $this->email;
-        $user->save();
+        try {
+            $user->email = $this->email;
+            $user->save();
+        } catch (Throwable $e) {
+            $this->reportAdminError($e, 'Admin update email');
+
+            return;
+        }
 
         $this->dispatch('admin-toast', message: __('Adresse email mise à jour.'), type: 'success');
     }
@@ -58,9 +68,15 @@ class AdminProfile extends Component
             'password.confirmed' => __('La confirmation ne correspond pas au nouveau mot de passe.'),
         ]);
 
-        $user = $this->user();
-        $user->password = $this->password;
-        $user->save();
+        try {
+            $user = $this->user();
+            $user->password = $this->password;
+            $user->save();
+        } catch (Throwable $e) {
+            $this->reportAdminError($e, 'Admin update password');
+
+            return;
+        }
 
         $this->reset('current_password', 'password', 'password_confirmation');
         $this->dispatch('admin-toast', message: __('Mot de passe mis à jour.'), type: 'success');

@@ -13,9 +13,10 @@ use App\Actions\Web\Starter\SendStarterResumeLinkAction;
 use App\Enums\Billing\RenewalStatus;
 use App\Enums\Submission\SubmissionStatus;
 use App\Enums\Submission\SubmissionType;
-use App\Livewire\Concerns\HandlesUnexpectedErrors;
+use App\Livewire\Concerns\HandlesAdminErrors;
 use App\Models\Submission;
 use App\Services\Billing\RenewalService;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -29,7 +30,7 @@ use Throwable;
 #[Layout('layouts.admin')]
 class SubmissionDetail extends Component
 {
-    use HandlesUnexpectedErrors;
+    use HandlesAdminErrors;
     use WithFileUploads;
 
     public Submission $submission;
@@ -69,7 +70,14 @@ class SubmissionDetail extends Component
             return;
         }
 
-        $changeStatus->execute($this->submission, $status);
+        try {
+            $changeStatus->execute($this->submission, $status);
+        } catch (Throwable $e) {
+            $this->reportAdminError($e, 'Admin update submission status');
+
+            return;
+        }
+
         $this->submission->refresh();
         $this->toast(__('Statut mis à jour.'));
     }
@@ -84,7 +92,14 @@ class SubmissionDetail extends Component
             ],
         );
 
-        $addNote->execute($this->submission, $this->noteBody, auth()->id());
+        try {
+            $addNote->execute($this->submission, $this->noteBody, auth()->id());
+        } catch (Throwable $e) {
+            $this->reportAdminError($e, 'Admin add submission note');
+
+            return;
+        }
+
         $this->noteBody = '';
         $this->submission->load('notes.author');
         $this->toast(__('Note ajoutée.'));
@@ -107,7 +122,8 @@ class SubmissionDetail extends Component
 
         try {
             $sendMessage->execute($this->submission, $this->emailSubject, $this->emailBody);
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            Log::error('Unexpected error in Admin send message to client.', ['exception' => $e]);
             $this->toast(__('L\'envoi de l\'email a échoué. Réessayez.'), 'error');
 
             return;
@@ -125,7 +141,14 @@ class SubmissionDetail extends Component
             return;
         }
 
-        $sendLink->execute($this->submission);
+        try {
+            $sendLink->execute($this->submission);
+        } catch (Throwable $e) {
+            $this->reportAdminError($e, 'Admin resend resume link');
+
+            return;
+        }
+
         $this->toast($this->isPaid()
             ? __('Lien du dossier renvoyé au client.')
             : __('Lien de reprise renvoyé au client.'));
@@ -147,7 +170,14 @@ class SubmissionDetail extends Component
             ],
         );
 
-        $issue->execute($this->submission, $this->rpAddress);
+        try {
+            $issue->execute($this->submission, $this->rpAddress);
+        } catch (Throwable $e) {
+            $this->reportAdminError($e, 'Admin issue Responsible Person');
+
+            return;
+        }
+
         $this->submission->refresh();
         $this->newStatus = $this->submission->status->value;
         $this->toast(__('Personne Responsable délivrée et client notifié.'));
@@ -174,7 +204,7 @@ class SubmissionDetail extends Component
             $path = $this->countersigned->storeAs('contracts/countersigned', $this->submission->id.'.pdf', 'local');
             $upload->execute($this->submission, $path, $this->notifyClientOnCountersign);
         } catch (Throwable $e) {
-            $this->reportUnexpectedError($e, 'countersigned', 'Countersigned contract upload');
+            $this->reportAdminError($e, 'Admin upload countersigned contract');
 
             return;
         }
@@ -189,7 +219,15 @@ class SubmissionDetail extends Component
     public function deleteDossier(): mixed
     {
         $isContact = $this->submission->type === SubmissionType::Contact;
-        $this->submission->delete();
+
+        try {
+            $this->submission->delete();
+        } catch (Throwable $e) {
+            $this->reportAdminError($e, 'Admin delete dossier');
+
+            return null;
+        }
+
         session()->flash('admin_flash', $isContact ? __('Prise de contact supprimée.') : __('Dossier supprimé.'));
 
         return $this->redirectRoute($isContact ? 'admin.contacts.index' : 'admin.submissions.index', navigate: true);
