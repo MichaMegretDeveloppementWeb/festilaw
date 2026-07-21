@@ -13,6 +13,7 @@ use App\Actions\Web\Starter\SendStarterResumeLinkAction;
 use App\Enums\Billing\RenewalStatus;
 use App\Enums\Submission\SubmissionStatus;
 use App\Enums\Submission\SubmissionType;
+use App\Livewire\Concerns\HandlesUnexpectedErrors;
 use App\Models\Submission;
 use App\Services\Billing\RenewalService;
 use Illuminate\View\View;
@@ -28,6 +29,7 @@ use Throwable;
 #[Layout('layouts.admin')]
 class SubmissionDetail extends Component
 {
+    use HandlesUnexpectedErrors;
     use WithFileUploads;
 
     public Submission $submission;
@@ -168,9 +170,15 @@ class SubmissionDetail extends Component
             ],
         );
 
-        $path = $this->countersigned->storeAs('contracts/countersigned', $this->submission->id.'.pdf', 'local');
+        try {
+            $path = $this->countersigned->storeAs('contracts/countersigned', $this->submission->id.'.pdf', 'local');
+            $upload->execute($this->submission, $path, $this->notifyClientOnCountersign);
+        } catch (Throwable $e) {
+            $this->reportUnexpectedError($e, 'countersigned', 'Countersigned contract upload');
 
-        $upload->execute($this->submission, $path, $this->notifyClientOnCountersign);
+            return;
+        }
+
         $this->reset('countersigned');
         $this->submission->load('contract');
         $this->toast($this->notifyClientOnCountersign

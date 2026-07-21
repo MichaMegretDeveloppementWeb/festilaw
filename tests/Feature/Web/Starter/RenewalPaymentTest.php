@@ -7,6 +7,7 @@ use App\Models\Payment;
 use App\Models\Submission;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 
 use function Pest\Laravel\post;
 
@@ -64,4 +65,18 @@ it('refuses to start a renewal when the subscription is up to date', function ()
         ->assertSessionHas('renewal_error');
 
     expect(Payment::where('type', PaymentType::AnnualRenewal)->count())->toBe(0);
+});
+
+it('never leaks an unexpected error: friendly message, no 500', function () {
+    $dossier = renewableDossier(now()->year - 1);
+
+    // Panne technique inattendue (comme la QueryException de contrainte vue en prod) : on casse la
+    // table pour provoquer une vraie erreur BDD. Le filet catch(Throwable) doit l'attraper.
+    Schema::drop('payments');
+
+    post(route('get-started.starter.renew', ['dossier' => 'renewme']))
+        ->assertRedirect(route('my-project', ['dossier' => 'renewme']))
+        ->assertSessionHas('renewal_error');
+
+    expect($dossier->fresh()->status)->toBe(SubmissionStatus::Paid); // dossier intact, pas de 500
 });

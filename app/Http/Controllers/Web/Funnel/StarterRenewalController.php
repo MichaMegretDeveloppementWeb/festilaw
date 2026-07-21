@@ -12,6 +12,7 @@ use App\Services\Payment\PaymentGatewayRegistry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * Starts an annual renewal payment from the client's "my project" space (POST). Resolves the dossier
@@ -36,13 +37,24 @@ final class StarterRenewalController extends Controller
         try {
             $checkout = $this->startRenewal->execute($dossier, $provider);
         } catch (BaseAppException $e) {
-            Log::warning($e->getMessage(), ['exception' => $e]);
+            Log::channel('payments')->warning($e->getMessage(), ['exception' => $e, 'submission' => $dossier->id]);
 
-            return redirect()
-                ->route('my-project', ['dossier' => $dossier->resume_token])
-                ->with('renewal_error', __($e->getUserMessage()));
+            return $this->backToDossier($dossier, __($e->getUserMessage()));
+        } catch (Throwable $e) {
+            // Dernier filet : aucune erreur inattendue (driver BDD, SDK de paiement, PHP) ne doit
+            // atteindre le client. On log le detail technique complet et on affiche un message generique.
+            Log::channel('payments')->error($e->getMessage(), ['exception' => $e, 'submission' => $dossier->id]);
+
+            return $this->backToDossier($dossier, __('Something went wrong on our end. Please try again. If the problem persists, contact us.'));
         }
 
         return redirect($checkout->redirectUrl);
+    }
+
+    private function backToDossier(Submission $dossier, string $message): RedirectResponse
+    {
+        return redirect()
+            ->route('my-project', ['dossier' => $dossier->resume_token])
+            ->with('renewal_error', $message);
     }
 }
