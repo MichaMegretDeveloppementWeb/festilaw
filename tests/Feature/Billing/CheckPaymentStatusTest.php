@@ -59,6 +59,23 @@ it('leaves a genuinely failed payment failed when Stripe still reports it unpaid
         ->and($payment->fresh()->status)->toBe(PaymentStatus::Failed);
 });
 
+it('corrects a false failure via the fake gateway sim reference (no external call)', function () {
+    config()->set('payment.enabled', ['fake']);
+    app()->forgetInstance(PaymentGatewayRegistry::class);
+
+    $submission = Submission::factory()->starter()->create(['status' => SubmissionStatus::AwaitingPayment]);
+    $payment = $submission->payments()->create([
+        'type' => PaymentType::StarterSubscription, 'amount_cents' => 33300, 'service_year' => 2026,
+        'currency' => 'EUR', 'provider' => 'fake', 'provider_reference' => 'sim:paid:demo', 'status' => PaymentStatus::Failed,
+    ]);
+
+    $result = app(CheckPaymentStatusAction::class)->execute($payment);
+
+    expect($result->corrected)->toBeTrue()
+        ->and($payment->fresh()->status)->toBe(PaymentStatus::Succeeded)
+        ->and($submission->fresh()->status)->toBe(SubmissionStatus::Paid);
+});
+
 it('does not re-query an already settled (succeeded) payment', function () {
     Http::fake();
     $payment = stripePaymentInStatus(PaymentStatus::Succeeded, SubmissionStatus::Paid);

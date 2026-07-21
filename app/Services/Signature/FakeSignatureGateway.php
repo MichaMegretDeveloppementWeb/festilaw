@@ -65,13 +65,29 @@ final class FakeSignatureGateway implements SignatureGatewayInterface
 
     public function checkStatus(Contract $contract): SignatureWebhookData
     {
-        // Reflete le statut reel : le Fake se complete via la route dev-sign, pas par polling.
         return new SignatureWebhookData(
             providerReference: (string) ($contract->signature_provider_reference ?? ''),
-            outcome: $contract->signature_status === SignatureStatus::Signed
-                ? SignatureEventOutcome::Signed
-                : SignatureEventOutcome::Unresolved,
+            outcome: $this->simulatedOutcome((string) ($contract->signature_provider_reference ?? ''), $contract->signature_status),
         );
+    }
+
+    /**
+     * Dev/demo : une reference "sim:<issue>:..." laisse un contrat Fake rapporter un etat prestataire qui
+     * DIVERGE du statut stocke (ex. signe chez le prestataire alors qu'on est encore en attente), pour
+     * exercer la reconciliation sans vrai gateway. Sinon le Fake reflete simplement notre statut.
+     */
+    private function simulatedOutcome(string $reference, SignatureStatus $status): SignatureEventOutcome
+    {
+        if (str_starts_with($reference, 'sim:')) {
+            return match (explode(':', $reference)[1] ?? '') {
+                'signed' => SignatureEventOutcome::Signed,
+                'declined' => SignatureEventOutcome::Declined,
+                'expired' => SignatureEventOutcome::Expired,
+                default => SignatureEventOutcome::Unresolved,
+            };
+        }
+
+        return $status === SignatureStatus::Signed ? SignatureEventOutcome::Signed : SignatureEventOutcome::Unresolved;
     }
 
     public function parseWebhook(Request $request): SignatureWebhookData

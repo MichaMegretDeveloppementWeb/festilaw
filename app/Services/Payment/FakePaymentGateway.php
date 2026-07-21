@@ -73,11 +73,31 @@ final class FakePaymentGateway implements PaymentGatewayInterface
 
     public function checkStatus(Payment $payment): PaymentWebhookData
     {
-        // Reflete le statut reel : le Fake se complete via la route dev-pay, pas par polling.
         return new PaymentWebhookData(
             providerReference: (string) ($payment->provider_reference ?? ''),
-            outcome: $payment->status === PaymentStatus::Succeeded ? PaymentEventOutcome::Paid : PaymentEventOutcome::Unresolved,
+            outcome: $this->simulatedOutcome((string) ($payment->provider_reference ?? ''), $payment->status),
         );
+    }
+
+    /**
+     * Dev/demo : une reference "sim:<issue>:..." laisse un paiement Fake rapporter un etat prestataire qui
+     * DIVERGE de notre statut stocke (ex. paye chez le prestataire alors qu'on a note un echec), pour
+     * exercer la reconciliation / le bouton "verifier chez le prestataire" sans vrai gateway. Sinon le
+     * Fake reflete simplement notre statut (Succeeded => paye), comme il se completait via la route dev-pay.
+     */
+    private function simulatedOutcome(string $reference, PaymentStatus $status): PaymentEventOutcome
+    {
+        if (str_starts_with($reference, 'sim:')) {
+            return match (explode(':', $reference)[1] ?? '') {
+                'paid' => PaymentEventOutcome::Paid,
+                'failed' => PaymentEventOutcome::Failed,
+                'expired' => PaymentEventOutcome::Expired,
+                'processing' => PaymentEventOutcome::Processing,
+                default => PaymentEventOutcome::Unresolved,
+            };
+        }
+
+        return $status === PaymentStatus::Succeeded ? PaymentEventOutcome::Paid : PaymentEventOutcome::Unresolved;
     }
 
     public function parseWebhook(Request $request): PaymentWebhookData
