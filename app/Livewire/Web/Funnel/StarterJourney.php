@@ -18,6 +18,7 @@ use App\Exceptions\BaseAppException;
 use App\Livewire\Concerns\HandlesUnexpectedErrors;
 use App\Models\Payment;
 use App\Models\Submission;
+use App\Services\Billing\AnnualFeeProrator;
 use App\Services\Payment\PaymentGatewayRegistry;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
@@ -485,6 +486,9 @@ class StarterJourney extends Component
     {
         $this->submission->loadMissing('contract');
 
+        $reference = $this->submission->contract?->signed_at ?? now();
+        $annualCents = (int) config('festilaw.starter.amount_cents');
+
         return view('livewire.web.funnel.starter-journey', [
             'step' => $this->step(),
             'contractDeclined' => $this->submission->contract?->signature_status === SignatureStatus::Declined,
@@ -494,7 +498,9 @@ class StarterJourney extends Component
             'requiredDocuments' => $this->requiredDocumentTypes(),
             'deposits' => $this->stagedDocuments(),
             'acceptAttr' => '.'.implode(',.', $this->documentMimes()),
-            'amountCents' => (int) config('festilaw.starter.amount_cents'),
+            'amountCents' => app(AnnualFeeProrator::class)->firstYearCents($annualCents, $reference),
+            'annualCents' => $annualCents,
+            'serviceYear' => (int) $reference->year,
             'myProjectUrl' => route('my-project', ['dossier' => $this->submission->resume_token]),
         ]);
     }

@@ -16,6 +16,7 @@ use App\Exceptions\Starter\StarterException;
 use App\Mail\FunnelNotification;
 use App\Models\Contract;
 use App\Models\Submission;
+use App\Services\Billing\AnnualFeeProrator;
 use App\Services\Web\Starter\StarterDossierResolver;
 use Illuminate\Contracts\Filesystem\Factory as FilesystemFactory;
 use Illuminate\Contracts\Filesystem\Filesystem;
@@ -86,9 +87,13 @@ it('walks the STARTER happy path end-to-end with the fake providers', function (
     $checkout = app(StartStarterPaymentAction::class)->execute($submission->fresh(), 'fake');
     expect($checkout)->toBeInstanceOf(CheckoutSessionData::class);
 
+    // Annee 1 au prorata de la date de signature (cf. contrat), pas le tarif plein.
+    $expectedCents = app(AnnualFeeProrator::class)
+        ->firstYearCents(33300, $submission->fresh()->contract->signed_at);
+
     $payment = $submission->fresh()->payments->first();
     expect($payment->status)->toBe(PaymentStatus::Pending)
-        ->and($payment->amount_cents)->toBe(33300)
+        ->and($payment->amount_cents)->toBe($expectedCents)
         ->and($payment->provider)->toBe('fake');
 
     // 6. Payment webhook confirms -> paid.

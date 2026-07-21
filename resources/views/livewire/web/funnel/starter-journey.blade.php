@@ -139,7 +139,10 @@
         </div>
 
     @elseif ($step === 'payment')
-        @php $amount = '€'.number_format($amountCents / 100, $amountCents % 100 === 0 ? 0 : 2); @endphp
+        @php
+            $amount = '€'.number_format($amountCents / 100, $amountCents % 100 === 0 ? 0 : 2);
+            $annual = '€'.number_format($annualCents / 100, $annualCents % 100 === 0 ? 0 : 2);
+        @endphp
         <div class="journey-panel">
             <h2 class="journey-panel__title">{{ __('Pay & activate') }}</h2>
 
@@ -148,8 +151,9 @@
                 <p class="journey-panel__text">{{ __('Your file is complete. Pay your Creator Pack subscription to activate your EU Responsible Person.') }}</p>
                 <div class="journey-amount">
                     <span class="journey-amount__value">{{ $amount }}</span>
-                    <span class="journey-amount__period">{{ __('per year') }}</span>
+                    <span class="journey-amount__period">{{ __('due now') }}</span>
                 </div>
+                <p class="journey-amount__note">{{ __('Prorated for the rest of :year. The full fee is :annual/year, invoiced each January.', ['year' => $serviceYear, 'annual' => $annual]) }}</p>
                 @if (count($paymentOptions) > 1)
                     <div class="journey-methods">
                         @foreach ($paymentOptions as $key => $label)

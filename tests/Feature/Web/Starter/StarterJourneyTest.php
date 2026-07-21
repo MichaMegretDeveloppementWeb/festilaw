@@ -13,6 +13,7 @@ use App\Exceptions\Signature\SignatureException;
 use App\Livewire\Web\Funnel\StarterJourney;
 use App\Models\Contract;
 use App\Models\Submission;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -245,6 +246,39 @@ it('pre-fills the mandate fields from what was already saved (resume)', function
         ->assertSet('incorporationPlace', 'Berlin, Germany')
         ->assertSet('foundingYear', '2019')
         ->assertSet('activity', 'toys');
+});
+
+it('shows the first year prorated to the signature date on the payment step', function () {
+    $submission = openStarterDossier();
+    $submission->update(['status' => SubmissionStatus::AwaitingPayment]);
+    $submission->contract->update(['signature_status' => SignatureStatus::Signed, 'signed_at' => Carbon::create(2026, 7, 15)]);
+
+    // July -> 6 remaining months -> 333 * 6/12 = 166.50, with the full-fee note.
+    Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
+        ->assertSee('€166.50')
+        ->assertSee('invoiced each January');
+});
+
+it('charges the first year prorated from the signature date', function () {
+    $submission = openStarterDossier();
+    $submission->update(['status' => SubmissionStatus::AwaitingPayment]);
+    $submission->contract->update(['signature_status' => SignatureStatus::Signed, 'signed_at' => Carbon::create(2026, 7, 15)]);
+    foreach (['turnover_proof', 'technical_documentation'] as $type) {
+        $submission->uploadedDocuments()->create([
+            'type' => $type,
+            'file_path' => "contracts/{$type}.pdf",
+            'original_filename' => "{$type}.pdf",
+            'mime_type' => 'application/pdf',
+            'size_bytes' => 1000,
+            'uploaded_at' => now(),
+        ]);
+    }
+
+    Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
+        ->call('pay')
+        ->assertHasNoErrors();
+
+    expect($submission->fresh()->payments()->latest()->first()->amount_cents)->toBe(16650);
 });
 
 /** A dossier at the payment step with a pending Stripe checkout in flight. */

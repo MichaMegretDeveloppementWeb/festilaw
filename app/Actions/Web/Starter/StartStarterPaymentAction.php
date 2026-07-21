@@ -9,6 +9,7 @@ use App\Enums\Payment\PaymentStatus;
 use App\Enums\Payment\PaymentType;
 use App\Exceptions\Starter\StarterException;
 use App\Models\Submission;
+use App\Services\Billing\AnnualFeeProrator;
 use App\Services\Payment\PaymentGatewayRegistry;
 use App\Services\Web\Starter\StarterDossierResolver;
 
@@ -22,6 +23,7 @@ final readonly class StartStarterPaymentAction
     public function __construct(
         private StarterDossierResolver $resolver,
         private PaymentGatewayRegistry $gateways,
+        private AnnualFeeProrator $prorator,
     ) {}
 
     public function execute(Submission $submission, string $providerKey): CheckoutSessionData
@@ -36,9 +38,14 @@ final readonly class StartStarterPaymentAction
         $gateway = $this->gateways->get($providerKey);
 
         // Ecriture unique : pas de transaction (cf. architecture-couches, pragmatisme).
+        // Annee 1 au prorata (date de signature -> 31/12), cf. contrat. La reprise annuelle plein tarif
+        // sera geree separement (rappel + paiement depuis le dossier).
         $payment = $submission->payments()->create([
             'type' => PaymentType::StarterSubscription,
-            'amount_cents' => (int) config('festilaw.starter.amount_cents'),
+            'amount_cents' => $this->prorator->firstYearCents(
+                (int) config('festilaw.starter.amount_cents'),
+                $submission->contract?->signed_at ?? now(),
+            ),
             'currency' => 'EUR',
             'provider' => $gateway->key(),
             'status' => PaymentStatus::Pending,
