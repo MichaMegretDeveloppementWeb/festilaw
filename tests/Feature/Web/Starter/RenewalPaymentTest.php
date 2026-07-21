@@ -48,6 +48,15 @@ it('starts a full-fee renewal payment from the dossier when a year is due', func
         ->and($renewal->status)->toBe(PaymentStatus::Pending);
 });
 
+it('reuses the pending renewal checkout instead of creating a duplicate (anti double-debit)', function () {
+    renewableDossier(now()->year - 1);
+
+    post(route('get-started.starter.renew', ['dossier' => 'renewme']))->assertRedirect();
+    post(route('get-started.starter.renew', ['dossier' => 'renewme']))->assertRedirect();
+
+    expect(Payment::where('type', PaymentType::AnnualRenewal)->count())->toBe(1);
+});
+
 it('charges the full Pro fee on a Pro renewal', function () {
     renewableDossier(now()->year - 1, 'pro');
 

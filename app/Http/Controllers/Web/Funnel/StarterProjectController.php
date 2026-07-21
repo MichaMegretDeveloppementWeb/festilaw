@@ -4,18 +4,24 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Web\Funnel;
 
+use App\Actions\Web\Payment\MarkPaymentSucceededAction;
 use App\Data\Web\Starter\MyProjectData;
 use App\Data\Web\Starter\ProjectDocumentData;
 use App\Enums\Billing\RenewalStatus;
 use App\Enums\Payment\PaymentStatus;
+use App\Enums\Payment\PaymentType;
 use App\Enums\Submission\SubmissionStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\Submission;
 use App\Models\UploadedDocument;
 use App\Services\Billing\RenewalService;
+use App\Services\Payment\PaymentGatewayRegistry;
 use App\Services\Web\Starter\StarterDossierResolver;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
+use Throwable;
 
 /**
  * The client's "my project" space · the hub for a self-service dossier (Creator or Pro) at ANY stage,
@@ -31,9 +37,19 @@ final class StarterProjectController extends Controller
         private readonly RenewalService $renewals,
     ) {}
 
-    public function __invoke(Submission $dossier): View
-    {
+    public function __invoke(
+        Request $request,
+        Submission $dossier,
+        PaymentGatewayRegistry $gateways,
+        MarkPaymentSucceededAction $markPaymentSucceeded,
+    ): View {
         abort_unless($dossier->type->hasOnlineJourney(), 404);
+
+        // Retour d'un paiement de renouvellement : on confirme la synchrone au retour (le webhook reste
+        // le filet cote serveur en prod ; en local il ne peut pas joindre le site).
+        if ($request->boolean('renewal_return')) {
+            $this->confirmPendingRenewal($dossier, $gateways, $markPaymentSucceeded);
+        }
 
         $dossier->loadMissing(['contract', 'uploadedDocuments', 'payments']);
         $status = $this->resolver->resolve($dossier);
@@ -82,6 +98,36 @@ final class StarterProjectController extends Controller
         );
 
         return view('web.my-project', ['project' => $project]);
+    }
+
+    /**
+     * Confirme (au retour du checkout) le paiement de renouvellement en attente : on interroge le
+     * provider (checkStatus) et, s'il est paye, on marque le paiement reussi. Erreur non bloquante :
+     * on log et on laisse le webhook confirmer cote serveur en prod.
+     */
+    private function confirmPendingRenewal(
+        Submission $dossier,
+        PaymentGatewayRegistry $gateways,
+        MarkPaymentSucceededAction $markPaymentSucceeded,
+    ): void {
+        // On interroge chaque paiement de renouvellement en attente (il peut en trainer plusieurs d'un
+        // essai anterieur) et on confirme ceux reellement payes chez le provider.
+        $pending = $dossier->payments()
+            ->where('type', PaymentType::AnnualRenewal)
+            ->where('status', PaymentStatus::Pending)
+            ->get();
+
+        foreach ($pending as $payment) {
+            try {
+                $event = $gateways->get((string) $payment->provider)->checkStatus($payment);
+
+                if ($event->paid) {
+                    $markPaymentSucceeded->execute($payment, $event->providerReference);
+                }
+            } catch (Throwable $e) {
+                Log::channel('payments')->error('Renewal confirm-on-return failed.', ['exception' => $e, 'submission' => $dossier->id, 'payment' => $payment->id]);
+            }
+        }
     }
 
     /** Last successful payment on the dossier (most recent by pay date), or null if none. */

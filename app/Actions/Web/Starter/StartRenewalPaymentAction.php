@@ -11,6 +11,8 @@ use App\Exceptions\Starter\StarterException;
 use App\Models\Submission;
 use App\Services\Billing\RenewalService;
 use App\Services\Payment\PaymentGatewayRegistry;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * Starts an annual renewal payment from the client's dossier space. Unlike the first year (pro rata),
@@ -33,6 +35,13 @@ final readonly class StartRenewalPaymentAction
             throw StarterException::renewalNotDue($submission->id);
         }
 
+        // Reprise : un paiement de renouvellement deja en cours -> reutiliser sa session plutot que d'en
+        // creer une 2e (anti double-debit, crucial notamment sur un double clic).
+        $existing = $this->existingRenewalCheckout($submission);
+        if ($existing !== null) {
+            return $existing;
+        }
+
         $gateway = $this->gateways->get($providerKey);
 
         // Plein tarif du pack (aucun prorata sur les renouvellements), pour l'annee de service due.
@@ -49,5 +58,31 @@ final readonly class StartRenewalPaymentAction
         $payment->update(['provider_reference' => $session->providerReference]);
 
         return $session;
+    }
+
+    /** La session de renouvellement deja en cours pour ce dossier (reprise), ou null si aucune / non reutilisable. */
+    private function existingRenewalCheckout(Submission $submission): ?CheckoutSessionData
+    {
+        $payment = $submission->payments()
+            ->where('type', PaymentType::AnnualRenewal)
+            ->where('status', PaymentStatus::Pending)
+            ->latest('id')
+            ->first();
+
+        if ($payment === null || ! $this->gateways->has((string) $payment->provider)) {
+            return null;
+        }
+
+        try {
+            $url = $this->gateways->get((string) $payment->provider)->currentCheckoutUrl($payment);
+        } catch (Throwable $e) {
+            Log::warning('Could not reuse the renewal checkout session, creating a new one.', ['exception' => $e]);
+
+            return null;
+        }
+
+        return ($url !== null && $url !== '')
+            ? new CheckoutSessionData((string) $payment->provider_reference, $url)
+            : null;
     }
 }
