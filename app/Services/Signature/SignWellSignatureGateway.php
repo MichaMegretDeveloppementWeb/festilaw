@@ -12,17 +12,20 @@ use App\Models\Contract;
 use App\Models\Submission;
 use App\Services\Contract\ContractPdfGenerator;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 /**
  * Real SignWell adapter. Pay-per-use, no subscription: the first 25 documents/month are free and
  * test_mode documents are free and send no email · ideal to validate the integration before going
- * live. Per signing: renders the contract PDF, creates a document (with an appended signature page
- * and a single recipient), and returns the hosted signing URL to redirect the signer to. Completion
+ * live. Per signing: renders the contract PDF (whose signing line carries invisible SignWell text tags),
+ * creates a document with a single recipient, and returns the hosted signing URL to redirect the signer
+ * to. The signature/date fields land on the contract line via the text tags (no appended page). Completion
  * is confirmed either by polling (checkStatus, on the signer's return · no webhook needed) or by the
  * HMAC-verified webhook (parseWebhook). The signed PDF (with its audit trail) is stored on the
  * private disk. Every technical error becomes a typed SignatureException; upstream stays
@@ -72,7 +75,10 @@ final class SignWellSignatureGateway implements SignatureGatewayInterface
                 'name' => $this->signerName($contract),
                 'email' => (string) $submission->email,
             ]],
-            'with_signature_page' => true,
+            // Champs de signature/date poses par des text tags invisibles sur la ligne de signature du
+            // contrat (cf. ContractPdfGenerator), plutot qu'une page de signature ajoutee a la fin.
+            'text_tags' => true,
+            'with_signature_page' => false,
             'redirect_url' => $returnUrl,
             'decline_redirect_url' => $returnUrl,
             'draft' => false,
@@ -88,6 +94,13 @@ final class SignWellSignatureGateway implements SignatureGatewayInterface
 
         try {
             $document = $this->api()->post('/documents', $payload)->throw()->json();
+        } catch (RequestException $e) {
+            // Surface SignWell's own error message (otherwise the wrapped exception hides why it failed).
+            Log::warning('SignWell rejected the document creation.', [
+                'status' => $e->response->status(),
+                'body' => $e->response->body(),
+            ]);
+            throw SignatureException::apiRequestFailed('create document', $e);
         } catch (Throwable $e) {
             throw SignatureException::apiRequestFailed('create document', $e);
         }

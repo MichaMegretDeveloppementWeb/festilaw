@@ -1,4 +1,4 @@
-<div class="muted" style="text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">Attachment to the Responsible Person Service Agreement</div>
+<div class="annex-eyebrow">Attachment to the Responsible Person Service Agreement</div>
 <h1 style="font-size: 16px;">General Terms</h1>
 
 <h2>1. Parties</h2>
@@ -102,5 +102,5 @@
 <p><strong>8.4</strong>&nbsp;&nbsp;No Partnership/Agency: The Parties are independent contractors. Nothing in this Agreement creates a joint venture, partnership, or employment relationship between Festilaw and Client. Client is the manufacturer/seller, and Festilaw is a service provider. Except as expressly stated in this Agreement for regulatory representation purposes, neither party is an agent of the other, and neither can bind the other to any third-party obligation.</p>
 <p><strong>8.5</strong>&nbsp;&nbsp;Severability: If any provision of this Agreement is held by a court or authority of competent jurisdiction to be invalid or unenforceable, that provision will be severed and the remainder of the Agreement will remain in full force. The Parties shall negotiate in good faith to replace any invalid provision with a valid provision that closest reflects the original intent and economic effect.</p>
 <p><strong>8.6</strong>&nbsp;&nbsp;Waiver: The failure of either Party to enforce any provision or to exercise any right under this Agreement shall not constitute a waiver of that provision or right. Any waiver must be explicit and in writing to be effective and will not apply to any circumstances other than those for which it is given.</p>
-<p><strong>8.7</strong>&nbsp;&nbsp;Language: This Agreement is drawn up in the English language at the request of the Parties. All notices, documentation, and communications under this Agreement shall be in English. (Partijen komen uitdrukkelijk overeen dat deze overeenkomst in het Engels is opgesteld.)</p>
+<p><strong>8.7</strong>&nbsp;&nbsp;Language: This Agreement is provided to the Client in English and, for convenience, in the Client's chosen language. All notices, documentation, and communications under this Agreement may be made in English. In the event of any discrepancy between language versions, the English version prevails.</p>
 <p><strong>8.8</strong>&nbsp;&nbsp;Counterparts &amp; Electronic Signatures: The Agreement may be signed in two counterparts, which together will constitute one instrument. Signatures transmitted by email PDF or via electronic signing platform shall be valid as original signatures.</p>

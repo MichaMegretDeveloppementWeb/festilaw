@@ -13,6 +13,7 @@ uses(RefreshDatabase::class);
 it('generates a Creator agreement PDF', function () {
     $submission = Submission::factory()->create([
         'type' => SubmissionType::Starter,
+        'locale' => 'en',
         'company_name' => 'Acme Trading Ltd',
     ]);
     $submission->contract()->create([
@@ -30,9 +31,10 @@ it('generates a Creator agreement PDF', function () {
         ->and(strlen($pdf))->toBeGreaterThan(8000);
 });
 
-it('generates a Pro agreement PDF even without filled fields', function () {
+it('generates the agreement in each supported language', function (string $locale) {
     $submission = Submission::factory()->create([
         'type' => SubmissionType::Pro,
+        'locale' => $locale,
         'company_name' => 'Beta Corp',
     ]);
     $submission->contract()->create([
@@ -43,28 +45,33 @@ it('generates a Pro agreement PDF even without filled fields', function () {
     $pdf = app(ContractPdfGenerator::class)->generate($submission->fresh());
 
     expect($pdf)->toStartWith('%PDF');
-});
+})->with(['en', 'fr', 'es']);
 
-it('injects pack, fee and client fields, and includes the General Terms annex', function () {
-    $html = view('contracts.responsible-person-agreement', [
-        'submission' => Submission::factory()->make(['reference' => 'FL-TEST-0001']),
-        'date' => '01 January 2026',
+it('injects the pack, fee and emphasised client fields, includes the annex, and carries the signature text tag', function () {
+    $html = view('contracts.en.agreement', [
+        'logo' => '',
         'pack' => 'Creator',
         'fee' => 333,
         'feeWords' => 'three hundred and thirty-three euros',
-        'company' => 'Acme Trading Ltd',
-        'place' => 'Toronto, Canada',
-        'year' => '2015',
-        'activity' => 'the sale of home goods',
+        'date' => '20 July 2026',
+        'reference' => 'FL-TEST-0001',
+        'company' => '<strong><em>Acme Trading Ltd</em></strong>',
+        'place' => '<strong><em>Toronto, Canada</em></strong>',
+        'year' => '<strong><em>2015</em></strong>',
+        'activity' => '<strong><em>the sale of home goods</em></strong>',
+        'signer' => 'Maya Chen',
     ])->render();
 
     expect($html)
-        ->toContain('Acme Trading Ltd')
         ->toContain('Pack Creator')
         ->toContain('EUR 333')
         ->toContain('three hundred and thirty-three euros')
-        ->toContain('the sale of home goods')
-        ->toContain('Toronto, Canada')
         ->toContain('333 € annual fee')
-        ->toContain('Governing Law and Jurisdiction');
+        ->toContain('Governing Law and Jurisdiction')
+        // Client-provided fields are rendered bold + italic.
+        ->toContain('<strong><em>Acme Trading Ltd</em></strong>')
+        ->toContain('<strong><em>the sale of home goods</em></strong>')
+        // Invisible SignWell text tags for the signature + date fields.
+        ->toContain('{{signature:1:y}}')
+        ->toContain('{{date:1:y}}');
 });
