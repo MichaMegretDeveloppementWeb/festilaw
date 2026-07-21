@@ -3,6 +3,7 @@
 use App\Enums\Payment\PaymentStatus;
 use App\Enums\Payment\PaymentType;
 use App\Enums\Submission\SubmissionStatus;
+use App\Models\Contract;
 use App\Models\Payment;
 use App\Models\Submission;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -31,6 +32,8 @@ function renewableDossier(int $serviceYear, string $state = 'starter'): Submissi
         'type' => PaymentType::StarterSubscription,
         'service_year' => $serviceYear,
     ]);
+    // Un client qui renouvelle a forcement signe son mandat en annee 1 (prerequis du renouvellement).
+    Contract::factory()->for($submission)->signed()->create();
 
     return $submission->fresh();
 }
@@ -64,6 +67,22 @@ it('charges the full Pro fee on a Pro renewal', function () {
 
     $renewal = Payment::where('type', PaymentType::AnnualRenewal)->sole();
     expect($renewal->amount_cents)->toBe(120000);
+});
+
+it('refuses to start a renewal for a dossier that never signed its mandate (no payment without prerequisites)', function () {
+    // Dossier "paye" en base mais SANS mandat signe (donnee incoherente / bypass) : le renouvellement
+    // doit etre refuse, aucun paiement ne doit demarrer.
+    $submission = Submission::factory()->starter()->create([
+        'status' => SubmissionStatus::Paid, 'resume_token' => 'renewme', 'resume_expires_at' => null,
+    ]);
+    Payment::factory()->succeeded()->for($submission)->create(['type' => PaymentType::StarterSubscription, 'service_year' => now()->year - 1]);
+    // Pas de contrat signe.
+
+    post(route('get-started.starter.renew', ['dossier' => 'renewme']))
+        ->assertRedirect(route('my-project', ['dossier' => 'renewme']))
+        ->assertSessionHas('renewal_error');
+
+    expect(Payment::where('type', PaymentType::AnnualRenewal)->count())->toBe(0);
 });
 
 it('refuses to start a renewal when the subscription is up to date', function () {

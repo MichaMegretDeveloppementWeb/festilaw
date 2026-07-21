@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Web\Starter;
 
 use App\Data\Payment\CheckoutSessionData;
+use App\Enums\Contract\SignatureStatus;
 use App\Enums\Payment\PaymentStatus;
 use App\Enums\Payment\PaymentType;
 use App\Exceptions\Starter\StarterException;
@@ -33,6 +34,14 @@ final readonly class StartRenewalPaymentAction
 
         if ($dueYear === null) {
             throw StarterException::renewalNotDue($submission->id);
+        }
+
+        // Garde defensive : aucun paiement (meme un renouvellement) pour un dossier qui n'a pas complete
+        // sa mise en place initiale -> le mandat DOIT etre signe. En flux normal l'annee 1 l'exige deja
+        // (StartStarterPaymentAction), mais on ne fait pas confiance a cet invariant implicite : on le
+        // verifie explicitement au bord. Les documents sont propres a l'annee 1, non re-exiges ici.
+        if ($submission->contract()->where('signature_status', SignatureStatus::Signed)->doesntExist()) {
+            throw StarterException::dossierIncomplete($submission->id);
         }
 
         // Reprise : un paiement de renouvellement deja en cours -> reutiliser sa session plutot que d'en

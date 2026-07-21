@@ -2,6 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Enums\Contract\SignatureStatus;
+use App\Enums\Document\DocumentType;
 use App\Enums\Payment\PaymentStatus;
 use App\Enums\Payment\PaymentType;
 use App\Enums\Submission\SubmissionStatus;
@@ -63,9 +65,10 @@ class SubmissionFactory extends Factory
     }
 
     /**
-     * Dossier actif (souscription payee) : statut « Payé » ET un paiement d'abonnement reussi, pour que
-     * l'etat actif DERIVE (Submission::isActive()) soit vrai — un statut Paye sans paiement n'est plus
-     * suffisant. Le lien de reprise ne doit plus expirer (comportement de MarkPaymentSucceededAction).
+     * Dossier actif (souscription payee) : un vrai client complet. Un dossier paye a FORCEMENT complete sa
+     * mise en place initiale (l'annee 1 l'exige) -> on cree donc aussi le mandat SIGNE et les documents
+     * requis, en plus du paiement reussi et du statut « Payé ». Sinon les scenarios (renouvellement,
+     * « mon projet ») partent d'une donnee incoherente. Le lien de reprise ne doit plus expirer.
      */
     public function paid(int $serviceYear = 2026): static
     {
@@ -83,6 +86,26 @@ class SubmissionFactory extends Factory
                 'status' => PaymentStatus::Succeeded,
                 'paid_at' => now(),
             ]);
+
+            $submission->contract()->create([
+                'filled_fields' => [],
+                'signature_status' => SignatureStatus::Signed,
+                'signature_provider' => 'fake',
+                'signature_provider_reference' => 'fake_doc_'.Str::random(8),
+                'signed_file_path' => 'contracts/fake_'.Str::random(8).'.pdf',
+                'signed_at' => now(),
+            ]);
+
+            foreach ([DocumentType::TurnoverProof, DocumentType::TechnicalDocumentation] as $type) {
+                $submission->uploadedDocuments()->create([
+                    'type' => $type,
+                    'file_path' => 'starter-documents/'.$submission->id.'/'.Str::random(8).'.pdf',
+                    'original_filename' => 'document.pdf',
+                    'mime_type' => 'application/pdf',
+                    'size_bytes' => 12345,
+                    'uploaded_at' => now(),
+                ]);
+            }
         });
     }
 }
