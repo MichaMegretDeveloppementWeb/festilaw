@@ -26,3 +26,9 @@ Schedule::command('festilaw:process-renewals')->dailyAt('07:00')->withoutOverlap
  | Re-interroge le provider pour les paiements en attente > 15 min et confirme les payes. Idempotent.
  */
 Schedule::command('festilaw:reconcile-payments')->everyFifteenMinutes()->withoutOverlapping();
+
+/*
+ | Reconciliation des signatures : meme filet, cote signature. Re-interroge le prestataire pour les
+ | contrats en attente > 15 min et enregistre signe/refuse/expire. Idempotent.
+ */
+Schedule::command('festilaw:reconcile-signatures')->everyFifteenMinutes()->withoutOverlapping();

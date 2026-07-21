@@ -23,7 +23,7 @@ final class StarterDevSignController extends Controller
         $contract = $dossier->contract;
         abort_if($contract === null, 404);
 
-        $markContractSigned->execute($contract, null, $contract->signature_provider_reference);
+        $markContractSigned->execute($contract, $contract->signature_provider_reference);
 
         return redirect()
             ->route('get-started.starter.journey', ['dossier' => $dossier->resume_token])

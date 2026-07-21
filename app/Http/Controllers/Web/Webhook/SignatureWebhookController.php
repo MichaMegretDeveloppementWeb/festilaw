@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Web\Webhook;
 
+use App\Actions\Web\Starter\MarkContractDeclinedAction;
+use App\Actions\Web\Starter\MarkContractExpiredAction;
 use App\Actions\Web\Starter\MarkContractSignedAction;
 use App\Contracts\Signature\SignatureGatewayInterface;
+use App\Enums\Contract\SignatureEventOutcome;
 use App\Exceptions\BaseAppException;
 use App\Http\Controllers\Controller;
 use App\Models\Contract;
@@ -16,7 +19,8 @@ use Throwable;
 
 /**
  * Receives the signature provider webhook (SignWell...), verifies + parses it via the active gateway,
- * and records the signature synchronously. Idempotent (the Action is), no worker/cron.
+ * and records the outcome synchronously (signed / declined / expired). Idempotent (the Actions are),
+ * no worker/cron.
  */
 final class SignatureWebhookController extends Controller
 {
@@ -24,6 +28,8 @@ final class SignatureWebhookController extends Controller
         Request $request,
         SignatureGatewayInterface $gateway,
         MarkContractSignedAction $markContractSigned,
+        MarkContractDeclinedAction $markContractDeclined,
+        MarkContractExpiredAction $markContractExpired,
     ): Response {
         try {
             $event = $gateway->parseWebhook($request);
@@ -38,8 +44,13 @@ final class SignatureWebhookController extends Controller
                 ->where('signature_provider_reference', $event->providerReference)
                 ->first();
 
-            if ($contract !== null && $event->signed) {
-                $markContractSigned->execute($contract, $event->signedFilePath, $event->providerReference);
+            if ($contract !== null) {
+                match ($event->outcome) {
+                    SignatureEventOutcome::Signed => $markContractSigned->execute($contract, $event->providerReference),
+                    SignatureEventOutcome::Declined => $markContractDeclined->execute($contract),
+                    SignatureEventOutcome::Expired => $markContractExpired->execute($contract),
+                    SignatureEventOutcome::Unresolved => null,
+                };
             }
         } catch (Throwable $e) {
             // Erreur inattendue cote traitement : on trace et on repond 500 pour que le provider reessaie.

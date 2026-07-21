@@ -30,10 +30,18 @@ interface SignatureGatewayInterface
 
     /**
      * Poll the provider for the current signature status of the contract (used to confirm completion
-     * when the signer returns, without relying on a webhook). Downloads the signed document if done.
+     * when the signer returns, without relying on a webhook). Detection only — the signed PDF is fetched
+     * separately (downloadSignedDocument) so a repeated poll never re-downloads.
      */
     public function checkStatus(Contract $contract): SignatureWebhookData;
 
     /** Verify + parse an incoming provider webhook. Throws on an invalid/untrusted payload. */
     public function parseWebhook(Request $request): SignatureWebhookData;
+
+    /**
+     * Fetch and store the signed document (with audit trail) for a completed contract, returning its
+     * stored path (null if the provider has no downloadable file, e.g. the Fake driver). Called once by
+     * MarkContractSignedAction on the actual Pending → Signed transition — never on a replay.
+     */
+    public function downloadSignedDocument(Contract $contract): ?string;
 }

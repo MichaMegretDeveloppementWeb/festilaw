@@ -156,11 +156,11 @@ class StarterJourney extends Component
         }
 
         $event = $signatureGateway->checkStatus($contract);
-        if (! $event->signed) {
+        if (! $event->isSigned()) {
             return false;
         }
 
-        $markContractSigned->execute($contract, $event->signedFilePath, $event->providerReference);
+        $markContractSigned->execute($contract, $event->providerReference);
         $this->submission->refresh();
 
         // Bandeau de succes, comme le retour "fake" (StarterDevSignController) mais cote Livewire :

@@ -4,6 +4,7 @@ use App\Actions\Web\Starter\CreateStarterSubmissionAction;
 use App\Contracts\Signature\SignatureGatewayInterface;
 use App\Data\Signature\SignatureWebhookData;
 use App\Data\Signature\SigningSessionData;
+use App\Enums\Contract\SignatureEventOutcome;
 use App\Enums\Contract\SignatureStatus;
 use App\Enums\Payment\PaymentStatus;
 use App\Enums\Payment\PaymentType;
@@ -67,12 +68,17 @@ function bindSignatureGateway(bool $signed): void
 
         public function checkStatus(Contract $contract): SignatureWebhookData
         {
-            return new SignatureWebhookData('ref-1', $this->signed, $this->signed ? 'contracts/ref-1.pdf' : null);
+            return new SignatureWebhookData('ref-1', $this->signed ? SignatureEventOutcome::Signed : SignatureEventOutcome::Unresolved);
         }
 
         public function parseWebhook(Request $request): SignatureWebhookData
         {
-            return new SignatureWebhookData('ref-1', $this->signed, null);
+            return new SignatureWebhookData('ref-1', $this->signed ? SignatureEventOutcome::Signed : SignatureEventOutcome::Unresolved);
+        }
+
+        public function downloadSignedDocument(Contract $contract): ?string
+        {
+            return $this->signed ? 'contracts/ref-1.pdf' : null;
         }
     });
 }
@@ -442,12 +448,17 @@ it('shows a graceful error and does not crash when the signature provider fails'
 
         public function checkStatus(Contract $contract): SignatureWebhookData
         {
-            return new SignatureWebhookData('x', false, null);
+            return new SignatureWebhookData('x', SignatureEventOutcome::Unresolved);
         }
 
         public function parseWebhook(Request $request): SignatureWebhookData
         {
-            return new SignatureWebhookData('x', false, null);
+            return new SignatureWebhookData('x', SignatureEventOutcome::Unresolved);
+        }
+
+        public function downloadSignedDocument(Contract $contract): ?string
+        {
+            return null;
         }
     });
 

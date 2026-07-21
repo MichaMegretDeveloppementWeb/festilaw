@@ -7,6 +7,7 @@ namespace App\Services\Signature;
 use App\Contracts\Signature\SignatureGatewayInterface;
 use App\Data\Signature\SignatureWebhookData;
 use App\Data\Signature\SigningSessionData;
+use App\Enums\Contract\SignatureEventOutcome;
 use App\Exceptions\Signature\SignatureException;
 use App\Models\Contract;
 use App\Models\Submission;
@@ -149,7 +150,7 @@ final class SignWellSignatureGateway implements SignatureGatewayInterface
 
         $documentId = (string) ($contract->signature_provider_reference ?? '');
         if ($documentId === '') {
-            return new SignatureWebhookData('', false, null);
+            return new SignatureWebhookData('', SignatureEventOutcome::Unresolved);
         }
 
         try {
@@ -172,19 +173,50 @@ final class SignWellSignatureGateway implements SignatureGatewayInterface
         );
     }
 
-    /**
-     * Maps a SignWell document status to the provider-agnostic result, downloading the signed PDF
-     * (with audit trail) once the document is fully completed.
-     */
+    public function downloadSignedDocument(Contract $contract): ?string
+    {
+        $this->assertConfigured(['api_key']);
+
+        $documentId = (string) ($contract->signature_provider_reference ?? '');
+        if ($documentId === '') {
+            return null;
+        }
+
+        try {
+            $response = $this->api()
+                ->get("/documents/{$documentId}/completed_pdf", ['audit_page' => 'true'])
+                ->throw();
+        } catch (Throwable $e) {
+            throw SignatureException::apiRequestFailed('download signed pdf', $e);
+        }
+
+        $path = "contracts/{$documentId}.pdf";
+        Storage::disk('local')->put($path, $response->body());
+
+        return $path;
+    }
+
+    /** Maps a SignWell document status to the provider-agnostic outcome (detection only — no download). */
     private function resultFor(string $documentId, string $status): SignatureWebhookData
     {
-        $signed = $documentId !== '' && in_array($status, self::COMPLETED_STATUSES, true);
-
         return new SignatureWebhookData(
             providerReference: $documentId,
-            signed: $signed,
-            signedFilePath: $signed ? $this->downloadSignedPdf($documentId) : null,
+            outcome: $this->outcomeFor($documentId, $status),
         );
+    }
+
+    private function outcomeFor(string $documentId, string $status): SignatureEventOutcome
+    {
+        if ($documentId === '') {
+            return SignatureEventOutcome::Unresolved;
+        }
+
+        return match (true) {
+            in_array($status, self::COMPLETED_STATUSES, true) => SignatureEventOutcome::Signed,
+            $status === 'Declined', $status === 'Canceled' => SignatureEventOutcome::Declined,
+            $status === 'Expired' => SignatureEventOutcome::Expired,
+            default => SignatureEventOutcome::Unresolved,
+        };
     }
 
     private function signerName(Contract $contract): string
@@ -204,22 +236,6 @@ final class SignWellSignatureGateway implements SignatureGatewayInterface
         $locale = (string) ($submission->locale ?: config('app.locale'));
 
         return in_array($locale, ['en', 'fr', 'es'], true) ? $locale : 'en';
-    }
-
-    private function downloadSignedPdf(string $documentId): string
-    {
-        try {
-            $response = $this->api()
-                ->get("/documents/{$documentId}/completed_pdf", ['audit_page' => 'true'])
-                ->throw();
-        } catch (Throwable $e) {
-            throw SignatureException::apiRequestFailed('download signed pdf', $e);
-        }
-
-        $path = "contracts/{$documentId}.pdf";
-        Storage::disk('local')->put($path, $response->body());
-
-        return $path;
     }
 
     /**

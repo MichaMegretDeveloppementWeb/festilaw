@@ -7,6 +7,7 @@ namespace App\Services\Signature;
 use App\Contracts\Signature\SignatureGatewayInterface;
 use App\Data\Signature\SignatureWebhookData;
 use App\Data\Signature\SigningSessionData;
+use App\Enums\Contract\SignatureEventOutcome;
 use App\Enums\Contract\SignatureStatus;
 use App\Models\Contract;
 use Illuminate\Http\Request;
@@ -53,7 +54,9 @@ final class FakeSignatureGateway implements SignatureGatewayInterface
 
     public function currentSigningUrl(Contract $contract): ?string
     {
-        if ((string) ($contract->signature_provider_reference ?? '') === '' || $contract->signature_status === SignatureStatus::Signed) {
+        // Reutilisable seulement tant que la signature est en attente (comme SignWell exclut Declined/
+        // Expired/Signed) : apres un refus/expiration on recreera une session, pas de reprise d'un mort.
+        if ((string) ($contract->signature_provider_reference ?? '') === '' || $contract->signature_status !== SignatureStatus::Pending) {
             return null;
         }
 
@@ -63,12 +66,11 @@ final class FakeSignatureGateway implements SignatureGatewayInterface
     public function checkStatus(Contract $contract): SignatureWebhookData
     {
         // Reflete le statut reel : le Fake se complete via la route dev-sign, pas par polling.
-        $signed = $contract->signature_status === SignatureStatus::Signed;
-
         return new SignatureWebhookData(
             providerReference: (string) ($contract->signature_provider_reference ?? ''),
-            signed: $signed,
-            signedFilePath: $contract->signed_file_path,
+            outcome: $contract->signature_status === SignatureStatus::Signed
+                ? SignatureEventOutcome::Signed
+                : SignatureEventOutcome::Unresolved,
         );
     }
 
@@ -77,8 +79,28 @@ final class FakeSignatureGateway implements SignatureGatewayInterface
         // Dev: no signature to verify; read the reference (and optional outcome) from the payload.
         return new SignatureWebhookData(
             providerReference: (string) $request->input('provider_reference', ''),
-            signed: $request->boolean('signed', true),
-            signedFilePath: $request->input('signed_file_path'),
+            outcome: $this->fakeOutcome($request),
         );
+    }
+
+    /** No downloadable file for the Fake driver (the dev completion sets no signed PDF). */
+    public function downloadSignedDocument(Contract $contract): ?string
+    {
+        return null;
+    }
+
+    /** Dev payload → outcome: `outcome=signed|declined|expired|unresolved`, or the legacy `signed` boolean. */
+    private function fakeOutcome(Request $request): SignatureEventOutcome
+    {
+        if ($request->filled('outcome')) {
+            return match ((string) $request->input('outcome')) {
+                'declined' => SignatureEventOutcome::Declined,
+                'expired' => SignatureEventOutcome::Expired,
+                'unresolved' => SignatureEventOutcome::Unresolved,
+                default => SignatureEventOutcome::Signed,
+            };
+        }
+
+        return $request->boolean('signed', true) ? SignatureEventOutcome::Signed : SignatureEventOutcome::Unresolved;
     }
 }

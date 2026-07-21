@@ -220,6 +220,40 @@ it('marks a contract signed from the fake signature webhook', function () {
         ->and($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingDocuments);
 });
 
+it('marks a contract declined from the fake signature webhook, leaving the dossier signable', function () {
+    $submission = Submission::factory()->starter()->create(['status' => SubmissionStatus::InProgress]);
+    $contract = Contract::factory()->for($submission)->create([
+        'signature_status' => SignatureStatus::Pending,
+        'signature_provider' => 'fake',
+        'signature_provider_reference' => 'sig_ref_dec',
+    ]);
+
+    postJson('/webhooks/signature', [
+        'provider_reference' => 'sig_ref_dec',
+        'outcome' => 'declined',
+    ])->assertNoContent();
+
+    // Plus jamais bloque en "en attente" : refus persiste, le dossier reste au stade signature.
+    expect($contract->fresh()->signature_status)->toBe(SignatureStatus::Declined)
+        ->and($submission->fresh()->status)->toBe(SubmissionStatus::InProgress);
+});
+
+it('marks a contract expired from the fake signature webhook', function () {
+    $submission = Submission::factory()->starter()->create(['status' => SubmissionStatus::InProgress]);
+    $contract = Contract::factory()->for($submission)->create([
+        'signature_status' => SignatureStatus::Pending,
+        'signature_provider' => 'fake',
+        'signature_provider_reference' => 'sig_ref_exp',
+    ]);
+
+    postJson('/webhooks/signature', [
+        'provider_reference' => 'sig_ref_exp',
+        'outcome' => 'expired',
+    ])->assertNoContent();
+
+    expect($contract->fresh()->signature_status)->toBe(SignatureStatus::Expired);
+});
+
 it('marks a contract signed from a valid SignWell webhook', function () {
     Storage::fake('local');
     config()->set('signature.default', 'signwell');

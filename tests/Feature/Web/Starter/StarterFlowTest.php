@@ -61,7 +61,6 @@ it('walks the STARTER happy path end-to-end with the fake providers', function (
 
     app(MarkContractSignedAction::class)->execute(
         $submission->contract->fresh(),
-        'private/contracts/signed.pdf',
         'sig_ref_123',
     );
     expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingDocuments);
