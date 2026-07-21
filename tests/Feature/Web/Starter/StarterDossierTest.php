@@ -39,6 +39,7 @@ function activeStarterDossier(SubmissionType $type = SubmissionType::Starter, in
     $submission->payments()->create([
         'type' => PaymentType::StarterSubscription,
         'amount_cents' => $amountCents,
+        'service_year' => (int) now()->year,
         'currency' => 'EUR',
         'provider' => 'stripe',
         'provider_reference' => 'cs_1',

@@ -317,6 +317,7 @@ class SubmissionDetail extends Component
         }
 
         return view('livewire.admin.submission-detail', [
+            'dossierState' => $renewals->state($this->submission),
             'statuses' => $this->assignableStatuses(),
             'isStarter' => $this->submission->type === SubmissionType::Starter,
             'isContact' => $isContact,

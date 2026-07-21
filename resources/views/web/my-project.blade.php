@@ -23,12 +23,22 @@
 
             <div class="my-project__card">
                 <div class="my-project__statusbar">
+                    @php
+                        // Badge renouvellement-conscient : un dossier en retard n'affiche pas "Active".
+                        $badgeLabel = $project->cancelled ? __('Cancelled')
+                            : (! $project->paid ? __('In progress')
+                            : ($project->renewalOverdue ? __('Overdue')
+                            : ($project->renewalDue ? __('Renewal due')
+                            : __('Active'))));
+                    @endphp
                     <span @class([
                         'my-project__badge',
-                        'is-active' => $project->paid,
+                        'is-active' => $project->paid && ! $project->renewalDue && ! $project->renewalOverdue,
+                        'is-warn' => $project->paid && $project->renewalDue && ! $project->renewalOverdue,
+                        'is-bad' => $project->paid && $project->renewalOverdue,
                         'is-cancelled' => $project->cancelled,
                         'is-progress' => ! $project->paid && ! $project->cancelled,
-                    ])>{{ $project->paid ? __('Active') : ($project->cancelled ? __('Cancelled') : __('In progress')) }}</span>
+                    ])>{{ $badgeLabel }}</span>
                     <span class="my-project__ref">{{ __('Ref.') }} {{ $project->reference }}</span>
                 </div>
 

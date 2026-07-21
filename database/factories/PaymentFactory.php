@@ -22,6 +22,7 @@ class PaymentFactory extends Factory
             'submission_id' => Submission::factory(),
             'type' => PaymentType::StarterSubscription,
             'amount_cents' => 33300,
+            'service_year' => (int) now()->year,
             'currency' => 'EUR',
             'provider' => 'fake',
             'status' => PaymentStatus::Pending,

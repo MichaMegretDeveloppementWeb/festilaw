@@ -2,6 +2,7 @@
 
 use App\Enums\Billing\RenewalStatus;
 use App\Enums\Payment\PaymentType;
+use App\Enums\Submission\DossierState;
 use App\Enums\Submission\SubmissionStatus;
 use App\Models\Payment;
 use App\Models\Submission;
@@ -65,4 +66,30 @@ it('treats a never-paid dossier as not a renewal (null due year)', function () {
     expect($service->paidThroughYear($dossier))->toBeNull()
         ->and($service->dueYear($dossier, CarbonImmutable::create(2027, 6, 1)))->toBeNull()
         ->and($service->status($dossier, CarbonImmutable::create(2027, 6, 1)))->toBe(RenewalStatus::UpToDate);
+});
+
+it('derives the displayed dossier state from workflow + payments + renewal', function () {
+    $service = app(RenewalService::class);
+    $jan = CarbonImmutable::create(2026, 1, 10); // dans la fenetre de grace
+    $mar = CarbonImmutable::create(2026, 3, 1);  // grace depassee
+
+    // Pas de paiement -> en cours (pas encore actif).
+    $inProgress = Submission::factory()->starter()->create(['status' => SubmissionStatus::InProgress]);
+    expect($service->state($inProgress, $mar))->toBe(DossierState::InProgress);
+
+    // Paye l'annee courante -> actif.
+    expect($service->state(paidDossier(2026), $mar))->toBe(DossierState::Active);
+
+    // Paye l'an dernier, dans la grace -> a renouveler ; grace depassee -> en retard.
+    expect($service->state(paidDossier(2025), $jan))->toBe(DossierState::RenewalDue)
+        ->and($service->state(paidDossier(2025), $mar))->toBe(DossierState::RenewalOverdue);
+
+    // Annule / termine : prioritaires sur le renouvellement.
+    $cancelled = paidDossier(2025);
+    $cancelled->update(['status' => SubmissionStatus::Cancelled]);
+    expect($service->state($cancelled->fresh(), $mar))->toBe(DossierState::Cancelled);
+
+    $completed = paidDossier(2025);
+    $completed->update(['status' => SubmissionStatus::Completed]);
+    expect($service->state($completed->fresh(), $mar))->toBe(DossierState::Completed);
 });

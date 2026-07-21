@@ -20,7 +20,7 @@
                 <h1 class="text-2xl font-semibold tracking-tight text-slate-900">{{ $submission->reference }}</h1>
                 <p class="mt-1 text-sm text-slate-500">{{ $submission->type->label() }} · {{ __('Créé le') }} {{ $submission->created_at->format('d/m/Y à H:i') }}</p>
             </div>
-            <x-admin.status-badge :status="$submission->status" />
+            <x-admin.dossier-state-badge :state="$dossierState" />
         </div>
     @endif
 

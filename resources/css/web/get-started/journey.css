@@ -111,6 +111,8 @@
 .my-project__badge { flex: none; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: #fff; padding: 4px 11px; border-radius: 999px; }
 .my-project__badge.is-active { background: var(--color-coral); }
 .my-project__badge.is-progress { background: var(--color-blue); }
+.my-project__badge.is-warn { background: #c98a1a; }
+.my-project__badge.is-bad { background: #c0392b; }
 .my-project__badge.is-cancelled { background: var(--color-ink-soft); }
 .my-project__ref { font-size: 13.5px; color: var(--color-ink-soft); }
 .project-steps { list-style: none; margin: 0 0 22px; padding: 0; display: flex; flex-direction: column; gap: 12px; }

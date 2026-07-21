@@ -396,13 +396,13 @@ function adminPaidDossier(int $serviceYear): Submission
     return $submission->fresh();
 }
 
-it('shows the renewal status badge in the dossiers list', function () {
+it('shows the derived dossier state (renewal-aware) in the dossiers list', function () {
     actingAs(User::factory()->create());
     adminPaidDossier((int) now()->year - 1); // paye l'an dernier -> a renouveler
 
     Livewire::test(SubmissionList::class)
-        ->assertSee('Renouvellement')
-        ->assertSee('En retard'); // 21 juillet : grace de janvier depassee
+        ->assertSee('État')
+        ->assertSee('En retard'); // 21 juillet : grace de janvier depassee -> etat "En retard"
 });
 
 it('filters the list down to dossiers needing renewal', function () {
@@ -412,9 +412,21 @@ it('filters the list down to dossiers needing renewal', function () {
     $upToDate->update(['company_name' => 'Freshpaid']);
 
     Livewire::test(SubmissionList::class)
-        ->set('renewal', 'due')
+        ->set('state', 'renewal')
         ->assertSee('Renewco')
         ->assertDontSee('Freshpaid');
+});
+
+it('filters the list to up-to-date active dossiers only', function () {
+    actingAs(User::factory()->create());
+    adminPaidDossier((int) now()->year - 1); // Renewco : a renouveler (exclu)
+    $upToDate = adminPaidDossier((int) now()->year); // a jour (inclus)
+    $upToDate->update(['company_name' => 'Freshpaid']);
+
+    Livewire::test(SubmissionList::class)
+        ->set('state', 'active')
+        ->assertSee('Freshpaid')
+        ->assertDontSee('Renewco');
 });
 
 it('shows the renewal section on the dossier detail', function () {

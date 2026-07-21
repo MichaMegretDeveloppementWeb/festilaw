@@ -6,6 +6,8 @@ namespace App\Services\Billing;
 
 use App\Enums\Billing\RenewalStatus;
 use App\Enums\Payment\PaymentStatus;
+use App\Enums\Submission\DossierState;
+use App\Enums\Submission\SubmissionStatus;
 use App\Models\Payment;
 use App\Models\Submission;
 use Carbon\CarbonImmutable;
@@ -25,10 +27,35 @@ final class RenewalService
 
         $years = $submission->payments
             ->filter(fn (Payment $p): bool => $p->status === PaymentStatus::Succeeded && $p->type->isSubscription())
-            ->map(fn (Payment $p): ?int => $p->service_year ?? $p->paid_at?->year)
+            ->map(fn (Payment $p): ?int => $p->service_year)
             ->filter();
 
         return $years->isEmpty() ? null : (int) $years->max();
+    }
+
+    /**
+     * Etat AFFICHE du dossier, entierement derive (statut de workflow + paiements + renouvellement). C'est
+     * l'etat unique montre et filtre au back-office et cote client, a la place du « Payé » brut.
+     */
+    public function state(Submission $submission, ?CarbonInterface $now = null): DossierState
+    {
+        if ($submission->status === SubmissionStatus::Cancelled) {
+            return DossierState::Cancelled;
+        }
+
+        if ($submission->status === SubmissionStatus::Completed) {
+            return DossierState::Completed;
+        }
+
+        if (! $submission->isActive()) {
+            return DossierState::InProgress;
+        }
+
+        return match ($this->status($submission, $now)) {
+            RenewalStatus::UpToDate => DossierState::Active,
+            RenewalStatus::Due => DossierState::RenewalDue,
+            RenewalStatus::Overdue => DossierState::RenewalOverdue,
+        };
     }
 
     /**

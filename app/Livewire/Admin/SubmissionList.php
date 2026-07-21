@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Livewire\Admin;
 
-use App\Enums\Billing\RenewalStatus;
 use App\Enums\Payment\PaymentStatus;
 use App\Enums\Payment\PaymentType;
+use App\Enums\Submission\DossierState;
 use App\Enums\Submission\SubmissionStatus;
 use App\Enums\Submission\SubmissionType;
 use App\Models\Submission;
@@ -34,15 +34,12 @@ class SubmissionList extends Component
     #[Url]
     public string $search = '';
 
+    /** Filtre etat de dossier DERIVE : '' (tous) ou une valeur de stateFilterOptions(). */
     #[Url]
-    public string $status = '';
+    public string $state = '';
 
     #[Url]
     public string $type = '';
-
-    /** Filtre renouvellement : '' (tous) ou 'due' (a renouveler ou en retard). */
-    #[Url]
-    public string $renewal = '';
 
     public function mount(): void
     {
@@ -54,17 +51,12 @@ class SubmissionList extends Component
         $this->resetPage();
     }
 
-    public function updatedStatus(): void
+    public function updatedState(): void
     {
         $this->resetPage();
     }
 
     public function updatedType(): void
-    {
-        $this->resetPage();
-    }
-
-    public function updatedRenewal(): void
     {
         $this->resetPage();
     }
@@ -85,9 +77,8 @@ class SubmissionList extends Component
                 fn ($query) => $query->where('type', SubmissionType::Contact),
                 fn ($query) => $query->whereIn('type', $dossierTypes),
             )
-            ->when(! $this->contactsMode && $this->status !== '', fn ($query) => $query->where('status', $this->status))
             ->when(! $this->contactsMode && $this->type !== '', fn ($query) => $query->where('type', $this->type))
-            ->when(! $this->contactsMode && $this->renewal === 'due', fn ($query) => $this->scopeNeedsRenewal($query, $currentYear))
+            ->when(! $this->contactsMode && $this->state !== '', fn ($query) => $this->scopeState($query, $this->state, $currentYear))
             ->when($this->search !== '', function ($query): void {
                 $term = '%'.$this->search.'%';
                 $query->where(function ($inner) use ($term): void {
@@ -104,16 +95,57 @@ class SubmissionList extends Component
 
         return view('livewire.admin.submission-list', [
             'submissions' => $submissions,
-            'statuses' => SubmissionStatus::cases(),
+            'stateFilters' => $this->stateFilterOptions(),
             'types' => $dossierTypes,
-            'renewalBadges' => $this->renewalBadges($submissions->getCollection(), $renewals),
+            'dossierStates' => $this->dossierStates($submissions->getCollection(), $renewals),
         ])->title(($this->contactsMode ? __('Prises de contact') : __('Dossiers')).' · Back-office Festilaw');
     }
 
     /**
-     * Restreint aux dossiers actifs dont l'abonnement n'est pas paye pour l'annee en cours
-     * (a renouveler ou en retard) : au moins un paiement d'abonnement reussi, mais aucun couvrant
-     * l'annee courante ou au-dela.
+     * Options du filtre d'etat (les etats "A renouveler" et "En retard" sont regroupes en un seul filtre :
+     * ils forment le meme ensemble a un instant donne ; la colonne affiche l'etat precis par ligne).
+     *
+     * @return array<string, string>
+     */
+    private function stateFilterOptions(): array
+    {
+        return [
+            DossierState::InProgress->value => DossierState::InProgress->label(),
+            DossierState::Active->value => DossierState::Active->label(),
+            'renewal' => __('À renouveler ou en retard'),
+            DossierState::Completed->value => DossierState::Completed->label(),
+            DossierState::Cancelled->value => DossierState::Cancelled->label(),
+        ];
+    }
+
+    /**
+     * Restreint la requete a l'etat derive demande, avec les MEMES regles que RenewalService (coherence
+     * filtre / colonne). "Actif" = souscription payee couvrant l'annee courante ; "A renouveler/en retard"
+     * = active mais annee courante non couverte ; "En cours" = pas encore active.
+     *
+     * @param  Builder<Submission>  $query
+     */
+    private function scopeState(Builder $query, string $state, int $year): void
+    {
+        $subscription = PaymentType::subscriptionCases();
+        // Meme regle que RenewalService::paidThroughYear (service_year fait autorite pour l'annee couverte).
+        $coversYear = fn ($p) => $p->where('status', PaymentStatus::Succeeded)->whereIn('type', $subscription)->where('service_year', '>=', $year);
+
+        match ($state) {
+            DossierState::InProgress->value => $query
+                ->whereNotIn('status', [SubmissionStatus::Completed, SubmissionStatus::Cancelled])
+                ->whereDoesntHave('payments', fn ($p) => $p->where('status', PaymentStatus::Succeeded)->whereIn('type', $subscription)),
+            DossierState::Active->value => $query->active()->whereHas('payments', $coversYear),
+            'renewal' => $this->scopeNeedsRenewal($query, $year),
+            DossierState::Completed->value => $query->where('status', SubmissionStatus::Completed),
+            DossierState::Cancelled->value => $query->where('status', SubmissionStatus::Cancelled),
+            default => null,
+        };
+    }
+
+    /**
+     * Dossiers actifs dont l'abonnement n'est pas paye pour l'annee courante (a renouveler ou en retard) :
+     * une souscription payee non remboursee, mais aucune couvrant l'annee courante ou au-dela.
      *
      * @param  Builder<Submission>  $query
      */
@@ -121,37 +153,24 @@ class SubmissionList extends Component
     {
         $subscription = PaymentType::subscriptionCases();
 
-        // active() = souscription payee non remboursee + non annule (whereHas succeeded subscription inclus).
         $query->active()
             ->whereDoesntHave('payments', fn ($p) => $p->where('status', PaymentStatus::Succeeded)->whereIn('type', $subscription)->where('service_year', '>=', $year));
     }
 
     /**
-     * Etat de renouvellement (label + severite) par dossier actif, pour le badge de la liste.
+     * Etat derive (label + severite) par ligne, pour la colonne de la liste.
      *
      * @param  Collection<int, Submission>  $submissions
-     * @return array<int, array{label: string, severity: string}>
+     * @return array<int, DossierState>
      */
-    private function renewalBadges($submissions, RenewalService $renewals): array
+    private function dossierStates($submissions, RenewalService $renewals): array
     {
-        $badges = [];
+        $states = [];
 
         foreach ($submissions as $submission) {
-            if (! $submission->type->hasOnlineJourney() || ! $submission->isActive()) {
-                continue;
-            }
-
-            $status = $renewals->status($submission);
-            $badges[$submission->id] = [
-                'label' => $status->label(),
-                'severity' => match ($status) {
-                    RenewalStatus::UpToDate => 'ok',
-                    RenewalStatus::Due => 'warn',
-                    RenewalStatus::Overdue => 'bad',
-                },
-            ];
+            $states[$submission->id] = $renewals->state($submission);
         }
 
-        return $badges;
+        return $states;
     }
 }
