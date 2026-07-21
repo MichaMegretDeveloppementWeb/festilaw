@@ -4,6 +4,7 @@ use App\Enums\Contract\SignatureStatus;
 use App\Enums\Payment\PaymentStatus;
 use App\Enums\Payment\PaymentType;
 use App\Enums\Submission\SubmissionStatus;
+use App\Enums\Submission\SubmissionType;
 use App\Models\Submission;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -13,9 +14,10 @@ use function Pest\Laravel\get;
 uses(RefreshDatabase::class);
 
 /** A paid ("active") dossier with a signed mandate, one document and a succeeded payment. */
-function activeStarterDossier(): Submission
+function activeStarterDossier(SubmissionType $type = SubmissionType::Starter, int $amountCents = 33300): Submission
 {
-    $submission = Submission::factory()->starter()->create([
+    $state = $type === SubmissionType::Pro ? 'pro' : 'starter';
+    $submission = Submission::factory()->{$state}()->create([
         'status' => SubmissionStatus::Paid,
         'resume_token' => 'mydossier',
         'resume_expires_at' => null,
@@ -36,7 +38,7 @@ function activeStarterDossier(): Submission
     ]);
     $submission->payments()->create([
         'type' => PaymentType::StarterSubscription,
-        'amount_cents' => 33300,
+        'amount_cents' => $amountCents,
         'currency' => 'EUR',
         'provider' => 'stripe',
         'provider_reference' => 'cs_1',
@@ -54,6 +56,7 @@ it('shows the active my-project space with reference, renewal date and downloads
         ->assertOk()
         ->assertSee('Active')
         ->assertSee($submission->reference)
+        ->assertSee('Creator Pack')
         ->assertSee('Next renewal')
         ->assertSee(now()->startOfYear()->addYear()->isoFormat('D MMMM YYYY')) // 1er janvier suivant
         ->assertSee('€333') // montant paye, affiche apres l'etape Payment
@@ -62,6 +65,17 @@ it('shows the active my-project space with reference, renewal date and downloads
         ->assertSee('Signed Responsible Person mandate')
         ->assertSee('Download')
         ->assertDontSee('Resume my project'); // rien a reprendre : c'est actif
+});
+
+it('shows the Pro pack label and annual price on an active Pro dossier', function () {
+    activeStarterDossier(SubmissionType::Pro, 120000);
+
+    get(route('my-project', ['dossier' => 'mydossier']))
+        ->assertOk()
+        ->assertSee('Active')
+        ->assertSee('Pro Pack')
+        ->assertSee('€1,200') // tarif annuel plein du pack Pro
+        ->assertDontSee('Creator Pack');
 });
 
 it('sends a paid dossier from the journey to its my-project space', function () {

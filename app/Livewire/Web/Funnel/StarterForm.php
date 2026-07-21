@@ -5,17 +5,27 @@ declare(strict_types=1);
 namespace App\Livewire\Web\Funnel;
 
 use App\Actions\Web\Starter\CreateStarterSubmissionAction;
+use App\Enums\Submission\SubmissionType;
 use App\Exceptions\BaseAppException;
 use App\Livewire\Concerns\HandlesUnexpectedErrors;
 use App\Livewire\Concerns\HasSpamProtection;
 use Illuminate\Support\Facades\Log;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Throwable;
 
+/**
+ * Formulaire d'ouverture de dossier, partage par Creator et Pro : memes champs, meme parcours
+ * self-service (le pack ne change que le prix et le libelle, cf. [[festilaw-contracts-and-renewal]]).
+ * Le pack est fige au montage (mount) et ne peut pas etre altere cote client.
+ */
 class StarterForm extends Component
 {
     use HandlesUnexpectedErrors;
     use HasSpamProtection;
+
+    #[Locked]
+    public string $type = 'starter';
 
     public string $company_name = '';
 
@@ -36,6 +46,17 @@ class StarterForm extends Component
 
     /** True when that existing dossier is an already-active (paid) subscription. */
     public bool $resentActive = false;
+
+    public function mount(string $type = 'starter'): void
+    {
+        $this->type = in_array($type, ['starter', 'pro'], true) ? $type : 'starter';
+    }
+
+    /** Pack ouvert par ce formulaire (source du prix/libelle affiches). */
+    public function packType(): SubmissionType
+    {
+        return SubmissionType::from($this->type);
+    }
 
     /** @return array<string, array<int, string>> */
     protected function rules(): array
@@ -84,7 +105,7 @@ class StarterForm extends Component
                 'last_name' => $this->last_name ?: null,
                 'email' => $this->email,
                 'website_url' => $this->website_url ?: null,
-            ]);
+            ], $this->packType());
         } catch (BaseAppException $e) {
             Log::error($e->getMessage(), ['exception' => $e]);
             $this->addError('form', __($e->getUserMessage()));
@@ -113,6 +134,8 @@ class StarterForm extends Component
 
     public function render()
     {
-        return view('livewire.web.funnel.starter-form');
+        return view('livewire.web.funnel.starter-form', [
+            'packLabel' => $this->packType()->label(),
+        ]);
     }
 }

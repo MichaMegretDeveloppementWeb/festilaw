@@ -8,7 +8,6 @@ use App\Data\Web\Starter\MyProjectData;
 use App\Data\Web\Starter\ProjectDocumentData;
 use App\Enums\Payment\PaymentStatus;
 use App\Enums\Submission\SubmissionStatus;
-use App\Enums\Submission\SubmissionType;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\Submission;
@@ -29,7 +28,7 @@ final class StarterProjectController extends Controller
 
     public function __invoke(Submission $dossier): View
     {
-        abort_unless($dossier->type === SubmissionType::Starter, 404);
+        abort_unless($dossier->type->hasOnlineJourney(), 404);
 
         $dossier->loadMissing(['contract', 'uploadedDocuments']);
         $status = $this->resolver->resolve($dossier);
@@ -49,6 +48,8 @@ final class StarterProjectController extends Controller
 
         $project = new MyProjectData(
             reference: (string) $dossier->reference,
+            packLabel: $dossier->type->label(),
+            annualCents: $dossier->type->annualCents(),
             signed: $signed,
             documentsDone: $status->missingDocuments === [],
             paid: $paid,

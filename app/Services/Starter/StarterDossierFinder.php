@@ -10,10 +10,11 @@ use App\Models\Submission;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Recherche de dossier STARTER par email (dedup + reprise). Centralise ici pour que la regle
- * "quel dossier surfacer pour un email" ne vive qu'a un seul endroit : la dedup de
- * CreateStarterSubmissionAction et le lien de reprise de AccessFileForm l'appellent, plutot que de
- * dupliquer la meme requete + ordonnancement.
+ * Recherche de dossier self-service par email (dedup + reprise), pour les packs a parcours en ligne
+ * (Creator ET Pro). Centralise ici pour que la regle "quel dossier surfacer pour un email" ne vive
+ * qu'a un seul endroit : la dedup de CreateStarterSubmissionAction et le lien de reprise de
+ * AccessFileForm l'appellent, plutot que de dupliquer la meme requete + ordonnancement. La dedup est
+ * cross-pack : un email n'a qu'un seul dossier en ligne a la fois (Creator ou Pro).
  */
 final class StarterDossierFinder
 {
@@ -63,7 +64,7 @@ final class StarterDossierFinder
     private function resumableFor(string $email): Builder
     {
         return Submission::query()
-            ->where('type', SubmissionType::Starter)
+            ->whereIn('type', [SubmissionType::Starter, SubmissionType::Pro])
             ->where('email', $email)
             ->resumable();
     }

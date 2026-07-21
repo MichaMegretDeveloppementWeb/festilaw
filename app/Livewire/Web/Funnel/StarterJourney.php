@@ -487,7 +487,7 @@ class StarterJourney extends Component
         $this->submission->loadMissing('contract');
 
         $reference = $this->submission->contract?->signed_at ?? now();
-        $annualCents = (int) config('festilaw.starter.amount_cents');
+        $annualCents = $this->submission->type->annualCents();
 
         return view('livewire.web.funnel.starter-journey', [
             'step' => $this->step(),
@@ -501,6 +501,7 @@ class StarterJourney extends Component
             'amountCents' => app(AnnualFeeProrator::class)->firstYearCents($annualCents, $reference),
             'annualCents' => $annualCents,
             'serviceYear' => (int) $reference->year,
+            'packLabel' => $this->submission->type->label(),
             'myProjectUrl' => route('my-project', ['dossier' => $this->submission->resume_token]),
         ]);
     }

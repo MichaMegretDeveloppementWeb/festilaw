@@ -6,7 +6,7 @@
             </div>
             <h3 class="funnel-success__title">{{ __('Check your inbox') }}</h3>
             @if ($resentActive)
-                <p class="funnel-success__text">{!! __('You already have an active Creator Pack subscription. We\'ve emailed your secure link to :email to view your file and download your documents.', ['email' => '<strong>'.e($email).'</strong>']) !!}</p>
+                <p class="funnel-success__text">{!! __('You already have an active subscription. We\'ve emailed your secure link to :email to view your file and download your documents.', ['email' => '<strong>'.e($email).'</strong>']) !!}</p>
             @else
                 <p class="funnel-success__text">{!! __('You already have an application in progress. We\'ve just emailed your secure link to :email so you can pick up right where you left off.', ['email' => '<strong>'.e($email).'</strong>']) !!}</p>
             @endif

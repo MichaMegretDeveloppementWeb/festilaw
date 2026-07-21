@@ -17,12 +17,13 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * Opens a STARTER (Creator Pack) file: creates the submission and its (unsigned) contract shell.
+ * Opens a self-service file (Creator OR Pro pack): creates the submission and its (unsigned) contract
+ * shell. Both packs share this same online journey; only the pack type (price/label) differs.
  *
- * Deduplicated by email: one open dossier per email address. If an unfinished, still-resumable dossier
- * already exists for this email, no second one is created · its resume link is re-sent instead (and the
- * visitor is NOT dropped into it, since the resume token is a capability URL). The outcome tells the
- * caller which case happened.
+ * Deduplicated by email across the online packs: one open dossier per email address. If an unfinished,
+ * still-resumable dossier already exists for this email, no second one is created · its resume link is
+ * re-sent instead (and the visitor is NOT dropped into it, since the resume token is a capability URL).
+ * The outcome tells the caller which case happened.
  *
  * @phpstan-type StarterData array{company_name: string, company_registration_number?: string|null, website_url?: string|null, first_name: string, last_name?: string|null, email: string, phone?: string|null, contract_fields?: array<string, mixed>}
  */
@@ -35,7 +36,7 @@ final readonly class CreateStarterSubmissionAction
     ) {}
 
     /** @param  StarterData  $data */
-    public function execute(array $data): StarterSubmissionOutcome
+    public function execute(array $data, SubmissionType $type = SubmissionType::Starter): StarterSubmissionOutcome
     {
         // 1. Deja client actif (souscription payee) : on le renvoie vers SON dossier, jamais vers une
         // nouvelle demarche ni un ancien dossier inacheve.
@@ -56,9 +57,9 @@ final readonly class CreateStarterSubmissionAction
         }
 
         // Deux ecritures (submission + contract) => transaction justifiee.
-        $submission = DB::transaction(function () use ($data): Submission {
+        $submission = DB::transaction(function () use ($data, $type): Submission {
             $submission = Submission::create([
-                'type' => SubmissionType::Starter,
+                'type' => $type,
                 'status' => SubmissionStatus::InProgress,
                 'locale' => app()->getLocale(),
                 'company_name' => $data['company_name'],
@@ -83,7 +84,10 @@ final readonly class CreateStarterSubmissionAction
 
         // Notification synchrone a Festilaw, apres commit (pas de file/worker) ; un echec est logue
         // sans casser le parcours. Puis on envoie au visiteur son lien de reprise.
-        $this->teamNotifier->notify(new FunnelNotification($submission, FunnelNotificationReason::CreatorSubmission));
+        $reason = $type === SubmissionType::Pro
+            ? FunnelNotificationReason::ProSubmission
+            : FunnelNotificationReason::CreatorSubmission;
+        $this->teamNotifier->notify(new FunnelNotification($submission, $reason));
         $this->sendResumeLink->execute($submission);
 
         return new StarterSubmissionOutcome($submission, isNew: true);

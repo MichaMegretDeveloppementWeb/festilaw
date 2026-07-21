@@ -25,12 +25,7 @@ final readonly class ContractPdfGenerator
         $isPro = $submission->type === SubmissionType::Pro;
         $locale = in_array($submission->locale, self::SUPPORTED_LOCALES, true) ? $submission->locale : 'en';
 
-        $feeEuros = intdiv(
-            $isPro
-                ? (int) config('festilaw.pro.amount_cents', 120000)
-                : (int) config('festilaw.starter.amount_cents', 33300),
-            100,
-        );
+        $feeEuros = intdiv($submission->type->annualCents(), 100);
 
         /** @var array<string, mixed> $fields */
         $fields = $submission->contract?->filled_fields ?? [];

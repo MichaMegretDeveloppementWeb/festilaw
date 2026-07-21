@@ -17,7 +17,7 @@
         <div class="my-project__inner">
             <header class="my-project__head">
                 <span class="eyebrow">{{ __('Your project') }}</span>
-                <h1 class="my-project__title">{{ __('Your') }} <span class="my-project__title-em">{{ __('Creator Pack') }}</span></h1>
+                <h1 class="my-project__title">{{ __('Your') }} <span class="my-project__title-em">{{ __($project->packLabel) }}</span></h1>
                 <p class="my-project__intro">{{ __('Your compliance project in one place. Keep this link private · it\'s your secure access, no account needed.') }}</p>
             </header>
 
@@ -67,7 +67,7 @@
                         <dl class="my-project__meta">
                             <div class="my-project__meta-row">
                                 <dt>{{ __('Plan') }}</dt>
-                                <dd>{{ __('Creator Pack') }} &middot; €333 / {{ __('year') }}</dd>
+                                <dd>{{ __($project->packLabel) }} &middot; €{{ number_format($project->annualCents / 100) }} / {{ __('year') }}</dd>
                             </div>
                             @if ($project->renewsAt)
                                 <div class="my-project__meta-row">

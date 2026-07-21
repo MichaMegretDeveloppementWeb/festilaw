@@ -1,10 +1,10 @@
 <?php
 
 use App\Actions\Web\Payment\MarkPaymentSucceededAction;
-use App\Actions\Web\Pro\CreateProSubmissionAction;
 use App\Actions\Web\Scale\CreateScaleSubmissionAction;
 use App\Actions\Web\Scale\RecordAppointmentAction;
 use App\Actions\Web\Scale\StartScaleAuditPaymentAction;
+use App\Actions\Web\Starter\CreateStarterSubmissionAction;
 use App\Data\Payment\CheckoutSessionData;
 use App\Enums\Appointment\AppointmentStatus;
 use App\Enums\Payment\PaymentType;
@@ -19,16 +19,20 @@ beforeEach(function () {
     config()->set('payment.enabled', ['fake']);
 });
 
-it('creates a PRO submission (redirected to WhatsApp) as New', function () {
+it('opens a PRO file into the same self-service journey as Creator', function () {
     Mail::fake();
 
-    $submission = app(CreateProSubmissionAction::class)->execute([
+    $outcome = app(CreateStarterSubmissionAction::class)->execute([
         'company_name' => 'Acme Goods',
+        'first_name' => 'Dana',
         'email' => 'acme@example.com',
-    ]);
+    ], SubmissionType::Pro);
 
-    expect($submission->type)->toBe(SubmissionType::Pro)
-        ->and($submission->status)->toBe(SubmissionStatus::New);
+    expect($outcome->isNew)->toBeTrue()
+        ->and($outcome->submission->type)->toBe(SubmissionType::Pro)
+        ->and($outcome->submission->status)->toBe(SubmissionStatus::InProgress)
+        ->and($outcome->submission->resume_token)->not->toBeNull()
+        ->and($outcome->submission->contract)->not->toBeNull();
 });
 
 it('runs the SCALE audit-then-appointment flow with the fake provider', function () {

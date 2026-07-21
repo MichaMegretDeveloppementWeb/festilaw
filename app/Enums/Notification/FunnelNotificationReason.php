@@ -7,7 +7,7 @@ namespace App\Enums\Notification;
 enum FunnelNotificationReason: string
 {
     case CreatorSubmission = 'creator_submission';
-    case ProEnquiry = 'pro_enquiry';
+    case ProSubmission = 'pro_submission';
     case ScaleAuditRequest = 'scale_audit_request';
     case PaymentReceived = 'payment_received';
 
@@ -15,7 +15,7 @@ enum FunnelNotificationReason: string
     {
         return match ($this) {
             self::CreatorSubmission => __('New Creator Pack submission'),
-            self::ProEnquiry => __('New Pro Pack enquiry'),
+            self::ProSubmission => __('New Pro Pack submission'),
             self::ScaleAuditRequest => __('New Scale Pack audit request'),
             self::PaymentReceived => __('Payment received'),
         };

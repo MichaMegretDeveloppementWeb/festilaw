@@ -41,11 +41,11 @@ return [
     ],
 
     /*
-     | Parcours PRO : cotisation annuelle (contrat Pack Pro) + numero WhatsApp Business (LV2).
+     | Parcours PRO : meme parcours en ligne self-service que Creator (cf. StarterJourney), seul le
+     | tarif annuel (contrat Pack Pro) change.
      */
     'pro' => [
         'amount_cents' => (int) env('FESTILAW_PRO_AMOUNT_CENTS', 120000),
-        'whatsapp_url' => env('FESTILAW_WHATSAPP_URL'),
     ],
 
     /*

@@ -39,11 +39,11 @@ final readonly class StartStarterPaymentAction
 
         // Ecriture unique : pas de transaction (cf. architecture-couches, pragmatisme).
         // Annee 1 au prorata (date de signature -> 31/12), cf. contrat. La reprise annuelle plein tarif
-        // sera geree separement (rappel + paiement depuis le dossier).
+        // sera geree separement (rappel + paiement depuis le dossier). Le tarif depend du pack (type).
         $payment = $submission->payments()->create([
             'type' => PaymentType::StarterSubscription,
             'amount_cents' => $this->prorator->firstYearCents(
-                (int) config('festilaw.starter.amount_cents'),
+                $submission->type->annualCents(),
                 $submission->contract?->signed_at ?? now(),
             ),
             'currency' => 'EUR',

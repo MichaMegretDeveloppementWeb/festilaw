@@ -148,7 +148,7 @@
 
             @if (! $paymentStarted)
                 {{-- Aucun paiement lance : le formulaire de paiement classique. --}}
-                <p class="journey-panel__text">{{ __('Your file is complete. Pay your Creator Pack subscription to activate your EU Responsible Person.') }}</p>
+                <p class="journey-panel__text">{{ __('Your file is complete. Pay your :pack subscription to activate your EU Responsible Person.', ['pack' => __($packLabel)]) }}</p>
                 <div class="journey-amount">
                     <span class="journey-amount__value">{{ $amount }}</span>
                     <span class="journey-amount__period">{{ __('due now') }}</span>
@@ -192,7 +192,7 @@
             <div class="funnel-success__icon">
                 <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
-            <h3 class="funnel-success__title">{{ __('Your Creator Pack is active.') }}</h3>
+            <h3 class="funnel-success__title">{{ __('Your :pack is active.', ['pack' => __($packLabel)]) }}</h3>
             <p class="funnel-success__text">{{ __('Your file is ready in your personal space, with your signed mandate and documents.') }}</p>
             <a href="{{ $myProjectUrl }}" class="btn btn--coral">{{ __('Go to my project') }}</a>
         </div>

@@ -21,4 +21,20 @@ enum SubmissionType: string
             self::Scale => 'Scale Pack',
         };
     }
+
+    /** Packs a cotisation annuelle empruntant le meme parcours en ligne self-service (signer -> payer). */
+    public function hasOnlineJourney(): bool
+    {
+        return in_array($this, [self::Starter, self::Pro], true);
+    }
+
+    /** Cotisation annuelle du pack, en centimes. Seuls Creator et Pro en ont une. */
+    public function annualCents(): int
+    {
+        return match ($this) {
+            self::Starter => (int) config('festilaw.starter.amount_cents', 33300),
+            self::Pro => (int) config('festilaw.pro.amount_cents', 120000),
+            default => throw new \LogicException("No annual fee for submission type {$this->value}."),
+        };
+    }
 }

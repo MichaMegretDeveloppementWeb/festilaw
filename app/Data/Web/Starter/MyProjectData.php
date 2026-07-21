@@ -15,6 +15,8 @@ final readonly class MyProjectData
     /** @param  list<ProjectDocumentData>  $documents */
     public function __construct(
         public string $reference,
+        public string $packLabel,
+        public int $annualCents,
         public bool $signed,
         public bool $documentsDone,
         public bool $paid,
