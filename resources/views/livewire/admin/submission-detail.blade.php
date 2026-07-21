@@ -117,6 +117,34 @@
                                 {{ __('Télécharger le mandat signé') }}
                             </a>
                         @endif
+
+                        {{-- Contrat contresigne par Festilaw (contre-signature manuelle, hors SignWell) --}}
+                        <div class="mt-4 border-t border-slate-100 pt-4">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Contrat contresigné') }}</p>
+                            @if ($submission->contract->countersigned_file_path)
+                                <a href="{{ route('admin.submissions.countersigned', ['submission' => $submission->id]) }}"
+                                    class="mt-2 inline-flex items-center gap-2 text-sm font-medium text-brand-700 hover:underline">
+                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    {{ __('Télécharger le contrat contresigné') }}
+                                </a>
+                                <p class="mt-1 text-xs text-slate-500">{{ __('Déposé le') }} {{ $submission->contract->countersigned_at?->format('d/m/Y H:i') }}</p>
+                            @endif
+
+                            <form wire:submit="uploadCountersigned" class="mt-3 space-y-2">
+                                <input type="file" wire:model="countersigned" accept="application/pdf"
+                                    class="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200">
+                                <div wire:loading wire:target="countersigned" class="text-xs text-slate-500">{{ __('Chargement du fichier...') }}</div>
+                                @error('countersigned') <p class="text-sm text-rose-600">{{ $message }}</p> @enderror
+                                <label class="flex items-center gap-2 text-sm text-slate-600">
+                                    <input type="checkbox" wire:model="notifyClientOnCountersign" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500/30">
+                                    {{ __('Notifier le client par email (PDF joint)') }}
+                                </label>
+                                <button type="submit" wire:loading.attr="disabled" wire:target="uploadCountersigned,countersigned"
+                                    class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:opacity-60">
+                                    {{ $submission->contract->countersigned_file_path ? __('Remplacer le contrat contresigné') : __('Ajouter le contrat contresigné') }}
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </section>
             @endif

@@ -49,6 +49,7 @@ final class StarterProjectController extends Controller
             ->all();
 
         $hasSignedMandate = $signed && (string) ($dossier->contract?->signed_file_path ?? '') !== '';
+        $hasCountersigned = (string) ($dossier->contract?->countersigned_file_path ?? '') !== '';
         $lastPayment = $paid ? $this->lastSuccessfulPayment($dossier) : null;
 
         $renewalStatus = $paid ? $this->renewals->status($dossier) : RenewalStatus::UpToDate;
@@ -72,6 +73,9 @@ final class StarterProjectController extends Controller
             resumeUrl: route('get-started.starter.journey', ['dossier' => $dossier->resume_token]),
             mandateDownloadUrl: $hasSignedMandate
                 ? route('get-started.starter.mandate', ['dossier' => $dossier->resume_token])
+                : null,
+            countersignedDownloadUrl: $hasCountersigned
+                ? route('get-started.starter.countersigned', ['dossier' => $dossier->resume_token])
                 : null,
             euRpAddress: $dossier->eu_rp_address ?: null,
             documents: $documents,

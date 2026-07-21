@@ -23,6 +23,8 @@ class Contract extends Model
         'signature_provider_reference',
         'signed_file_path',
         'signed_at',
+        'countersigned_file_path',
+        'countersigned_at',
     ];
 
     protected function casts(): array
@@ -31,6 +33,7 @@ class Contract extends Model
             'filled_fields' => 'array',
             'signature_status' => SignatureStatus::class,
             'signed_at' => 'datetime',
+            'countersigned_at' => 'datetime',
         ];
     }
 

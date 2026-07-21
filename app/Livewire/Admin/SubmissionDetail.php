@@ -8,6 +8,7 @@ use App\Actions\Admin\AddSubmissionNoteAction;
 use App\Actions\Admin\ChangeSubmissionStatusAction;
 use App\Actions\Admin\IssueResponsiblePersonAction;
 use App\Actions\Admin\SendAdminMessageAction;
+use App\Actions\Admin\UploadCountersignedContractAction;
 use App\Actions\Web\Starter\SendStarterResumeLinkAction;
 use App\Enums\Billing\RenewalStatus;
 use App\Enums\Submission\SubmissionStatus;
@@ -17,6 +18,7 @@ use App\Services\Billing\RenewalService;
 use Illuminate\View\View;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use Throwable;
 
 /**
@@ -26,6 +28,8 @@ use Throwable;
 #[Layout('layouts.admin')]
 class SubmissionDetail extends Component
 {
+    use WithFileUploads;
+
     public Submission $submission;
 
     public string $newStatus = '';
@@ -37,6 +41,12 @@ class SubmissionDetail extends Component
     public string $emailSubject = '';
 
     public string $emailBody = '';
+
+    /** Fichier PDF du contrat contresigne (upload temporaire). */
+    public $countersigned = null;
+
+    /** Prevenir le client par email au depot du contrat contresigne. */
+    public bool $notifyClientOnCountersign = true;
 
     public function mount(Submission $submission): void
     {
@@ -139,6 +149,33 @@ class SubmissionDetail extends Component
         $this->submission->refresh();
         $this->newStatus = $this->submission->status->value;
         $this->toast(__('Personne Responsable délivrée et client notifié.'));
+    }
+
+    public function uploadCountersigned(UploadCountersignedContractAction $upload): void
+    {
+        if ($this->submission->contract === null) {
+            $this->addError('countersigned', __('Ce dossier n\'a pas de contrat.'));
+
+            return;
+        }
+
+        $this->validate(
+            ['countersigned' => ['required', 'file', 'mimes:pdf', 'max:10240']],
+            [
+                'countersigned.required' => __('Sélectionnez le PDF du contrat contresigné.'),
+                'countersigned.mimes' => __('Le contrat contresigné doit être un fichier PDF.'),
+                'countersigned.max' => __('Le fichier ne peut pas dépasser 10 Mo.'),
+            ],
+        );
+
+        $path = $this->countersigned->storeAs('contracts/countersigned', $this->submission->id.'.pdf', 'local');
+
+        $upload->execute($this->submission, $path, $this->notifyClientOnCountersign);
+        $this->reset('countersigned');
+        $this->submission->load('contract');
+        $this->toast($this->notifyClientOnCountersign
+            ? __('Contrat contresigné ajouté et client notifié.')
+            : __('Contrat contresigné ajouté.'));
     }
 
     public function deleteDossier(): mixed

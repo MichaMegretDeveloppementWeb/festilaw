@@ -119,6 +119,13 @@
                                     <a class="dossier__download" href="{{ $project->mandateDownloadUrl }}">{{ __('Download') }}</a>
                                 </li>
                             @endif
+                            @if ($project->countersignedDownloadUrl)
+                                <li class="dossier__file">
+                                    <svg class="dossier__file-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                    <span class="dossier__file-name">{{ __('Countersigned contract') }}</span>
+                                    <a class="dossier__download" href="{{ $project->countersignedDownloadUrl }}">{{ __('Download') }}</a>
+                                </li>
+                            @endif
                             @foreach ($project->documents as $doc)
                                 <li class="dossier__file">
                                     <svg class="dossier__file-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>

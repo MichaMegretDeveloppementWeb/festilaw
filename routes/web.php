@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminCountersignedDownloadController;
 use App\Http\Controllers\Admin\AdminDocumentDownloadController;
 use App\Http\Controllers\Admin\AdminMandateDownloadController;
 use App\Http\Controllers\Admin\LogoutController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\Web\Funnel\GetStartedController;
 use App\Http\Controllers\Web\Funnel\ProController;
 use App\Http\Controllers\Web\Funnel\ScaleController;
 use App\Http\Controllers\Web\Funnel\StarterController;
+use App\Http\Controllers\Web\Funnel\StarterCountersignedDownloadController;
 use App\Http\Controllers\Web\Funnel\StarterDevPayController;
 use App\Http\Controllers\Web\Funnel\StarterDevSignController;
 use App\Http\Controllers\Web\Funnel\StarterDocumentDownloadController;
@@ -95,6 +97,7 @@ Route::prefix('get-started')->name('get-started.')->group(function () {
 
     // Espace "mon dossier" : telechargement du mandat signe et des documents (portes par le token).
     Route::get('/starter/{dossier}/mandate', StarterMandateDownloadController::class)->name('starter.mandate');
+    Route::get('/starter/{dossier}/countersigned', StarterCountersignedDownloadController::class)->name('starter.countersigned');
     Route::get('/starter/{dossier}/document/{document}', StarterDocumentDownloadController::class)->name('starter.document');
 
     // Completion des providers Fake (dev/local uniquement, bloquee en production) : ces routes
@@ -128,5 +131,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
             ->name('submissions.document')
             ->withoutScopedBindings();
         Route::get('/submissions/{submission:id}/mandate', AdminMandateDownloadController::class)->name('submissions.mandate');
+        Route::get('/submissions/{submission:id}/countersigned', AdminCountersignedDownloadController::class)->name('submissions.countersigned');
     });
 });

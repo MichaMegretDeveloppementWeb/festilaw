@@ -30,12 +30,15 @@ final readonly class MyProjectData
         public ?CarbonInterface $paidAt,
         public string $resumeUrl,
         public ?string $mandateDownloadUrl,
+        public ?string $countersignedDownloadUrl,
         public ?string $euRpAddress,
         public array $documents,
     ) {}
 
     public function hasDownloads(): bool
     {
-        return $this->mandateDownloadUrl !== null || $this->documents !== [];
+        return $this->mandateDownloadUrl !== null
+            || $this->countersignedDownloadUrl !== null
+            || $this->documents !== [];
     }
 }
