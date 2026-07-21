@@ -10,6 +10,7 @@ use App\Enums\Payment\PaymentStatus;
 use App\Enums\Submission\SubmissionStatus;
 use App\Enums\Submission\SubmissionType;
 use App\Http\Controllers\Controller;
+use App\Models\Payment;
 use App\Models\Submission;
 use App\Models\UploadedDocument;
 use App\Services\Web\Starter\StarterDossierResolver;
@@ -44,6 +45,7 @@ final class StarterProjectController extends Controller
             ->all();
 
         $hasSignedMandate = $signed && (string) ($dossier->contract?->signed_file_path ?? '') !== '';
+        $lastPayment = $paid ? $this->lastSuccessfulPayment($dossier) : null;
 
         $project = new MyProjectData(
             reference: (string) $dossier->reference,
@@ -51,7 +53,9 @@ final class StarterProjectController extends Controller
             documentsDone: $status->missingDocuments === [],
             paid: $paid,
             cancelled: $dossier->status === SubmissionStatus::Cancelled,
-            renewsAt: $paid ? $this->renewalDate($dossier) : null,
+            renewsAt: $this->renewalDate($lastPayment),
+            paidAmountCents: $lastPayment?->amount_cents,
+            paidAt: $lastPayment?->paid_at,
             resumeUrl: route('get-started.starter.journey', ['dossier' => $dossier->resume_token]),
             mandateDownloadUrl: $hasSignedMandate
                 ? route('get-started.starter.mandate', ['dossier' => $dossier->resume_token])
@@ -63,14 +67,22 @@ final class StarterProjectController extends Controller
         return view('web.my-project', ['project' => $project]);
     }
 
-    /** Annual pack: next renewal = the last successful payment + 1 year (recurring billing not set up yet). */
-    private function renewalDate(Submission $dossier): ?Carbon
+    /** Last successful payment on the dossier (most recent by pay date), or null if none. */
+    private function lastSuccessfulPayment(Submission $dossier): ?Payment
     {
-        $lastPaidAt = $dossier->payments()
+        return $dossier->payments()
             ->where('status', PaymentStatus::Succeeded)
             ->latest('paid_at')
-            ->value('paid_at');
+            ->first();
+    }
 
-        return $lastPaidAt?->copy()->addYear();
+    /**
+     * Next renewal date. A service year runs 1 January to 31 December, the first year is billed pro rata,
+     * and every following year is invoiced each January. So the next renewal is always 1 January of the
+     * year after the last successful payment, whatever the pay date within its year.
+     */
+    private function renewalDate(?Payment $lastPayment): ?Carbon
+    {
+        return $lastPayment?->paid_at?->copy()->startOfYear()->addYear();
     }
 }

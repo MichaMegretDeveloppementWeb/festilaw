@@ -59,7 +59,7 @@
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                                 @endif
                             </span>
-                            <span class="project-step__label">{{ __('Payment') }}</span>
+                            <span class="project-step__label">{{ __('Payment') }}@if ($project->paid && $project->paidAmountCents !== null) <span class="project-step__amount">(€{{ number_format($project->paidAmountCents / 100, $project->paidAmountCents % 100 === 0 ? 0 : 2) }}@if ($project->paidAt) &middot; {{ $project->paidAt->isoFormat('D MMMM YYYY') }}@endif)</span>@endif</span>
                         </li>
                     </ul>
 

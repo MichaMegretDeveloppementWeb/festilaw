@@ -79,6 +79,7 @@
 .journey-amount { display: flex; align-items: baseline; gap: 8px; }
 .journey-amount__value { font-family: var(--font-display); font-size: 40px; line-height: 1; color: var(--color-coral); }
 .journey-amount__period { font-size: 14px; color: var(--color-ink-soft); }
+.journey-amount__note { margin-top: 8px; font-size: 13px; line-height: 1.5; color: var(--color-ink-soft); }
 .journey-methods { display: flex; flex-direction: column; gap: 10px; }
 .journey-method { display: flex; align-items: center; gap: 10px; font-size: 15px; color: var(--color-ink); }
 
@@ -106,6 +107,7 @@
 .project-step__mark { flex: none; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--color-line); display: flex; align-items: center; justify-content: center; color: #fff; }
 .project-step.is-done { color: var(--color-ink); font-weight: 600; }
 .project-step.is-done .project-step__mark { background: var(--color-coral); border-color: var(--color-coral); }
+.project-step__amount { color: var(--color-ink-soft); font-weight: 400; }
 .my-project__resume-text, .my-project__note { color: var(--color-ink-soft); font-size: 14.5px; margin: 0 0 14px; }
 .my-project__meta { margin: 0 0 22px; padding: 0; }
 .my-project__meta-row { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 11px 0; border-bottom: 1px solid var(--color-line); }

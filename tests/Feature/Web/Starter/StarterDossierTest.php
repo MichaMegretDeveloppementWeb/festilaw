@@ -55,7 +55,9 @@ it('shows the active my-project space with reference, renewal date and downloads
         ->assertSee('Active')
         ->assertSee($submission->reference)
         ->assertSee('Next renewal')
-        ->assertSee(now()->addYear()->isoFormat('D MMMM YYYY'))
+        ->assertSee(now()->startOfYear()->addYear()->isoFormat('D MMMM YYYY')) // 1er janvier suivant
+        ->assertSee('€333') // montant paye, affiche apres l'etape Payment
+        ->assertSee(now()->isoFormat('D MMMM YYYY')) // date du paiement, dans les memes parentheses
         ->assertSee('Your documents')
         ->assertSee('Signed Responsible Person mandate')
         ->assertSee('Download')

@@ -20,6 +20,8 @@ final readonly class MyProjectData
         public bool $paid,
         public bool $cancelled,
         public ?Carbon $renewsAt,
+        public ?int $paidAmountCents,
+        public ?Carbon $paidAt,
         public string $resumeUrl,
         public ?string $mandateDownloadUrl,
         public ?string $euRpAddress,
