@@ -9,8 +9,8 @@ use App\Models\Payment;
 
 /**
  * Records a failed payment (called by the provider webhook, e.g. Stripe async_payment_failed). Only a
- * still-pending payment transitions to Failed · a succeeded one is never overwritten. The submission
- * stays "awaiting payment", so the buyer can start a fresh attempt.
+ * confirmable payment (Pending/Processing) transitions to Failed · a succeeded/refunded one is never
+ * overwritten. The submission stays "awaiting payment", so the buyer can start a fresh attempt.
  */
 final readonly class MarkPaymentFailedAction
 {
@@ -18,7 +18,7 @@ final readonly class MarkPaymentFailedAction
     {
         Payment::query()
             ->whereKey($payment->getKey())
-            ->where('status', PaymentStatus::Pending)
+            ->whereIn('status', PaymentStatus::confirmable())
             ->update(['status' => PaymentStatus::Failed]);
 
         return $payment->refresh();

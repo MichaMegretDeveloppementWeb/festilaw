@@ -110,6 +110,68 @@ it('marks a payment failed from a Stripe async_payment_failed webhook, leaving t
         ->and($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingPayment);
 });
 
+it('marks a payment processing from a completed-but-unpaid Stripe webhook (async method)', function () {
+    config()->set('payment.enabled', ['stripe']);
+    config()->set('payment.drivers.stripe', ['secret_key' => 'sk_test_x', 'webhook_secret' => 'whsec_x']);
+
+    $submission = Submission::factory()->starter()->create(['status' => SubmissionStatus::AwaitingPayment]);
+    $payment = $submission->payments()->create([
+        'type' => PaymentType::StarterSubscription,
+        'amount_cents' => 33300,
+        'currency' => 'EUR',
+        'provider' => 'stripe',
+        'provider_reference' => 'cs_1',
+        'status' => PaymentStatus::Pending,
+    ]);
+
+    $payload = json_encode([
+        'type' => 'checkout.session.completed',
+        'data' => ['object' => ['id' => 'cs_1', 'payment_status' => 'unpaid']],
+    ]);
+    $time = now()->timestamp;
+    $signature = hash_hmac('sha256', "{$time}.{$payload}", 'whsec_x');
+
+    $this->call('POST', '/webhooks/payment/stripe', [], [], [], [
+        'CONTENT_TYPE' => 'application/json',
+        'HTTP_STRIPE_SIGNATURE' => "t={$time},v1={$signature}",
+    ], $payload)->assertNoContent();
+
+    // Argent pas encore capture : le paiement passe "en cours", le dossier reste payable.
+    expect($payment->fresh()->status)->toBe(PaymentStatus::Processing)
+        ->and($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingPayment);
+});
+
+it('marks a succeeded payment refunded from a Stripe charge.refunded webhook', function () {
+    config()->set('payment.enabled', ['stripe']);
+    config()->set('payment.drivers.stripe', ['secret_key' => 'sk_test_x', 'webhook_secret' => 'whsec_x']);
+
+    $submission = Submission::factory()->starter()->create(['status' => SubmissionStatus::Paid]);
+    $payment = $submission->payments()->create([
+        'type' => PaymentType::StarterSubscription,
+        'amount_cents' => 33300,
+        'currency' => 'EUR',
+        'provider' => 'stripe',
+        'provider_reference' => 'cs_1',
+        'status' => PaymentStatus::Succeeded,
+        'paid_at' => now(),
+    ]);
+
+    // L'objet d'un charge.refunded est une Charge : on rapproche par notre payment_id (metadata).
+    $payload = json_encode([
+        'type' => 'charge.refunded',
+        'data' => ['object' => ['id' => 'ch_1', 'metadata' => ['payment_id' => (string) $payment->id]]],
+    ]);
+    $time = now()->timestamp;
+    $signature = hash_hmac('sha256', "{$time}.{$payload}", 'whsec_x');
+
+    $this->call('POST', '/webhooks/payment/stripe', [], [], [], [
+        'CONTENT_TYPE' => 'application/json',
+        'HTTP_STRIPE_SIGNATURE' => "t={$time},v1={$signature}",
+    ], $payload)->assertNoContent();
+
+    expect($payment->fresh()->status)->toBe(PaymentStatus::Refunded);
+});
+
 it('reconciles a Stripe webhook by our payment id when the provider reference does not match', function () {
     config()->set('payment.enabled', ['stripe']);
     config()->set('payment.drivers.stripe', ['secret_key' => 'sk_test_x', 'webhook_secret' => 'whsec_x']);
@@ -212,8 +274,15 @@ it('rejects a SignWell webhook with an invalid signature and leaves the contract
         ->and($submission->fresh()->status)->toBe(SubmissionStatus::InProgress);
 });
 
-it('acknowledges a webhook for an unknown reference without failing', function () {
-    postJson('/webhooks/payment/fake', ['provider_reference' => 'does-not-exist'])
+it('asks the provider to retry a paid webhook whose payment is not (yet) known', function () {
+    // Course creation/webhook : notre ligne peut ne pas exister encore. On repond 500 pour que le
+    // provider reessaie plus tard, plutot que de perdre silencieusement une confirmation de paiement.
+    postJson('/webhooks/payment/fake', ['provider_reference' => 'does-not-exist', 'paid' => true])
+        ->assertStatus(500);
+});
+
+it('acknowledges a non-actionable webhook for an unknown reference without failing', function () {
+    postJson('/webhooks/payment/fake', ['provider_reference' => 'does-not-exist', 'outcome' => 'unresolved'])
         ->assertNoContent();
 });
 

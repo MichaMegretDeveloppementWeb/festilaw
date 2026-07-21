@@ -114,14 +114,14 @@ final class StarterProjectController extends Controller
         // essai anterieur) et on confirme ceux reellement payes chez le provider.
         $pending = $dossier->payments()
             ->where('type', PaymentType::AnnualRenewal)
-            ->where('status', PaymentStatus::Pending)
+            ->whereIn('status', PaymentStatus::confirmable())
             ->get();
 
         foreach ($pending as $payment) {
             try {
                 $event = $gateways->get((string) $payment->provider)->checkStatus($payment);
 
-                if ($event->paid) {
+                if ($event->isPaid()) {
                     $markPaymentSucceeded->execute($payment, $event->providerReference);
                 }
             } catch (Throwable $e) {

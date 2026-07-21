@@ -1,6 +1,7 @@
 <?php
 
 use App\Data\Payment\CheckoutSessionData;
+use App\Enums\Payment\PaymentEventOutcome;
 use App\Enums\Payment\PaymentStatus;
 use App\Enums\Payment\PaymentType;
 use App\Exceptions\Payment\PaymentException;
@@ -79,7 +80,7 @@ it('confirms a paid checkout session via polling', function () {
 
     $event = app(StripePaymentGateway::class)->checkStatus($payment);
 
-    expect($event->paid)->toBeTrue()
+    expect($event->isPaid())->toBeTrue()
         ->and($event->providerReference)->toBe('cs_1');
 });
 
@@ -89,7 +90,7 @@ it('reports an unpaid checkout session as still pending', function () {
     $payment = stripePendingPayment();
     $payment->update(['provider_reference' => 'cs_1']);
 
-    expect(app(StripePaymentGateway::class)->checkStatus($payment)->paid)->toBeFalse();
+    expect(app(StripePaymentGateway::class)->checkStatus($payment)->isPaid())->toBeFalse();
 });
 
 it('returns the in-flight checkout url for an open session (resume reuse)', function () {
@@ -125,8 +126,8 @@ it('reports an async_payment_failed event as failed and not paid', function () {
         'data' => ['object' => ['id' => 'cs_1', 'payment_status' => 'unpaid']],
     ]));
 
-    expect($event->paid)->toBeFalse()
-        ->and($event->failed)->toBeTrue();
+    expect($event->isPaid())->toBeFalse()
+        ->and($event->isFailed())->toBeTrue();
 });
 
 it('carries our payment id (client_reference_id) for reconciliation', function () {
@@ -135,7 +136,7 @@ it('carries our payment id (client_reference_id) for reconciliation', function (
         'data' => ['object' => ['id' => 'cs_1', 'payment_status' => 'paid', 'client_reference_id' => '42']],
     ]));
 
-    expect($event->paid)->toBeTrue()
+    expect($event->isPaid())->toBeTrue()
         ->and($event->clientReference)->toBe('42');
 });
 
@@ -145,7 +146,7 @@ it('parses a valid Stripe webhook and reports the payment as paid', function () 
         'data' => ['object' => ['id' => 'cs_1', 'payment_status' => 'paid']],
     ]));
 
-    expect($event->paid)->toBeTrue()
+    expect($event->isPaid())->toBeTrue()
         ->and($event->providerReference)->toBe('cs_1');
 });
 
@@ -155,7 +156,7 @@ it('does not confirm a completed session whose payment_status is not paid', func
         'data' => ['object' => ['id' => 'cs_1', 'payment_status' => 'unpaid']],
     ]));
 
-    expect($event->paid)->toBeFalse();
+    expect($event->isPaid())->toBeFalse();
 });
 
 it('rejects a Stripe webhook with an invalid signature', function () {
@@ -183,4 +184,68 @@ it('throws a typed exception when Stripe is not configured', function () {
 
     expect(fn () => app(StripePaymentGateway::class)->createCheckout(stripePendingPayment()))
         ->toThrow(PaymentException::class);
+});
+
+it('treats a completed-but-unpaid session as an async payment in progress', function () {
+    $event = app(StripePaymentGateway::class)->parseWebhook(stripeWebhookRequest([
+        'type' => 'checkout.session.completed',
+        'data' => ['object' => ['id' => 'cs_1', 'payment_status' => 'unpaid']],
+    ]));
+
+    expect($event->outcome)->toBe(PaymentEventOutcome::Processing);
+});
+
+it('maps async_payment_succeeded to paid', function () {
+    $event = app(StripePaymentGateway::class)->parseWebhook(stripeWebhookRequest([
+        'type' => 'checkout.session.async_payment_succeeded',
+        'data' => ['object' => ['id' => 'cs_1', 'payment_status' => 'paid']],
+    ]));
+
+    expect($event->outcome)->toBe(PaymentEventOutcome::Paid);
+});
+
+it('maps an expired checkout session to expired', function () {
+    $event = app(StripePaymentGateway::class)->parseWebhook(stripeWebhookRequest([
+        'type' => 'checkout.session.expired',
+        'data' => ['object' => ['id' => 'cs_1', 'payment_status' => 'unpaid']],
+    ]));
+
+    expect($event->outcome)->toBe(PaymentEventOutcome::Expired);
+});
+
+it('maps a charge.refunded event to refunded and carries our payment id from the charge metadata', function () {
+    $event = app(StripePaymentGateway::class)->parseWebhook(stripeWebhookRequest([
+        'type' => 'charge.refunded',
+        'data' => ['object' => ['id' => 'ch_1', 'metadata' => ['payment_id' => '77']]],
+    ]));
+
+    expect($event->outcome)->toBe(PaymentEventOutcome::Refunded)
+        ->and($event->clientReference)->toBe('77');
+});
+
+it('maps a dispute (chargeback) to refunded', function () {
+    $event = app(StripePaymentGateway::class)->parseWebhook(stripeWebhookRequest([
+        'type' => 'charge.dispute.created',
+        'data' => ['object' => ['id' => 'ch_1', 'metadata' => ['payment_id' => '77']]],
+    ]));
+
+    expect($event->outcome)->toBe(PaymentEventOutcome::Refunded);
+});
+
+it('reports an expired session as expired when polling', function () {
+    Http::fake(['*/v1/checkout/sessions/*' => Http::response(['id' => 'cs_1', 'status' => 'expired', 'payment_status' => 'unpaid'])]);
+
+    $payment = stripePendingPayment();
+    $payment->update(['provider_reference' => 'cs_1']);
+
+    expect(app(StripePaymentGateway::class)->checkStatus($payment)->outcome)->toBe(PaymentEventOutcome::Expired);
+});
+
+it('reports a completed-but-unpaid session as processing when polling', function () {
+    Http::fake(['*/v1/checkout/sessions/*' => Http::response(['id' => 'cs_1', 'status' => 'complete', 'payment_status' => 'unpaid'])]);
+
+    $payment = stripePendingPayment();
+    $payment->update(['provider_reference' => 'cs_1']);
+
+    expect(app(StripePaymentGateway::class)->checkStatus($payment)->outcome)->toBe(PaymentEventOutcome::Processing);
 });

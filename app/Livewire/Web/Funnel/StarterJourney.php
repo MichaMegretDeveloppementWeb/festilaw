@@ -99,7 +99,7 @@ class StarterJourney extends Component
     private function pendingPayment(): ?Payment
     {
         return $this->submission->payments()
-            ->where('status', PaymentStatus::Pending)
+            ->whereIn('status', PaymentStatus::confirmable())
             ->whereNotNull('provider_reference')
             ->latest()
             ->first();
@@ -409,7 +409,7 @@ class StarterJourney extends Component
         }
 
         $event = $gateways->get($payment->provider)->checkStatus($payment);
-        if (! $event->paid) {
+        if (! $event->isPaid()) {
             return false;
         }
 

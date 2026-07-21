@@ -20,3 +20,9 @@ Schedule::command('festilaw:purge-abandoned-dossiers')->dailyAt('03:00')->withou
  | l'annee (anti-doublon via meta du dossier), donc sans risque a passer tous les jours.
  */
 Schedule::command('festilaw:process-renewals')->dailyAt('07:00')->withoutOverlapping();
+
+/*
+ | Reconciliation des paiements : filet ultime si le retour navigateur ET le webhook sont loupes.
+ | Re-interroge le provider pour les paiements en attente > 15 min et confirme les payes. Idempotent.
+ */
+Schedule::command('festilaw:reconcile-payments')->everyFifteenMinutes()->withoutOverlapping();

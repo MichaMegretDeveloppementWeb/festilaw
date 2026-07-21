@@ -234,16 +234,19 @@ désormais toutes avec filet `Throwable` → toast ; emails périphériques non 
 
 ---
 
-## 5. Questions métier à trancher (avec Laetitia)
+## 5. Décisions métier (tranchées avec Laetitia, 2026-07-21)
 
-1. **Dédup cross-pack.** Un client **déjà actif en Creator** doit-il pouvoir souscrire **Pro** en
-   self-service ? Aujourd'hui non (renvoyé vers son dossier Creator). Options : (a) dédup par
-   **(email, type)** ; (b) gérer un **upgrade** Creator→Pro ; (c) statu quo assumé.
-2. **Saut d'année.** Un client qui n'a pas payé l'an dernier et renouvelle : paie-t-il **seulement
-   l'année en cours** (comportement actuel) ou **rattrape** les années manquées ?
-3. **Upgrade de pack** au renouvellement : dans le périmètre ou hors-scope ?
-4. **Capability URL permanente.** On assume le lien permanent (modèle « sans compte »), ou on ajoute la
-   possibilité de **révoquer/régénérer** le lien (utile si un client transfère son email) ?
+1. **Upgrade de pack — RETENU comme feature.** Un client peut **upgrader Creator↔Pro**. Réalisable
+   **côté client** (depuis son espace dossier) **et côté admin** (l'admin déclenche l'upgrade et envoie
+   le **lien de paiement par mail** si le client le demande hors ligne). Reste **un dossier par
+   client** ; la dédup n'empêche donc que les doublons du même client, l'upgrade gère le changement de
+   pack + la facturation du nouveau plein tarif. → nouveau lot (P1 feature).
+2. **Saut d'année → l'année en cours uniquement.** On facture le plein tarif de l'année courante ; les
+   années non payées sont ignorées (le service avait lapsé). À documenter (commentaire + test).
+3. **Lien magique → régénéré à chaque demande.** Chaque envoi de lien (client via « retrouver mon
+   projet », ou admin via « renvoyer le lien ») **régénère le `resume_token`** → l'ancien lien est
+   invalidé. Plus de lien permanent, sécurité par construction, sans révocation manuelle. → intégré au
+   socle (petit lot).
 
 ---
 

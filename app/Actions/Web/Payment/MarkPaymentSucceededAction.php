@@ -28,10 +28,11 @@ final readonly class MarkPaymentSucceededAction
     public function execute(Payment $payment, ?string $providerReference = null): Payment
     {
         $processed = DB::transaction(function () use ($payment, $providerReference): bool {
-            // Update conditionnel atomique : seule la 1re livraison concurrente affecte une ligne.
+            // Update conditionnel atomique : seule la 1re livraison concurrente affecte une ligne, et
+            // seuls les etats confirmables transitionnent (un Refunded/Failed/Expired n'est jamais ecrase).
             $affected = Payment::query()
                 ->whereKey($payment->getKey())
-                ->where('status', '!=', PaymentStatus::Succeeded)
+                ->whereIn('status', PaymentStatus::confirmable())
                 ->update([
                     'status' => PaymentStatus::Succeeded,
                     'provider_reference' => $providerReference ?? $payment->provider_reference,

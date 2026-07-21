@@ -7,6 +7,7 @@ namespace App\Services\Payment;
 use App\Contracts\Payment\PaymentGatewayInterface;
 use App\Data\Payment\CheckoutSessionData;
 use App\Data\Payment\PaymentWebhookData;
+use App\Enums\Payment\PaymentEventOutcome;
 use App\Enums\Payment\PaymentStatus;
 use App\Enums\Payment\PaymentType;
 use App\Models\Payment;
@@ -75,7 +76,7 @@ final class FakePaymentGateway implements PaymentGatewayInterface
         // Reflete le statut reel : le Fake se complete via la route dev-pay, pas par polling.
         return new PaymentWebhookData(
             providerReference: (string) ($payment->provider_reference ?? ''),
-            paid: $payment->status === PaymentStatus::Succeeded,
+            outcome: $payment->status === PaymentStatus::Succeeded ? PaymentEventOutcome::Paid : PaymentEventOutcome::Unresolved,
         );
     }
 
@@ -84,9 +85,29 @@ final class FakePaymentGateway implements PaymentGatewayInterface
         // Dev: no signature to verify; read the reference (and optional outcome) from the payload.
         return new PaymentWebhookData(
             providerReference: (string) $request->input('provider_reference', ''),
-            paid: $request->boolean('paid', true),
-            failed: $request->boolean('failed', false),
+            outcome: $this->fakeOutcome($request),
             clientReference: $request->input('client_reference') !== null ? (string) $request->input('client_reference') : null,
         );
+    }
+
+    /** Dev payload → outcome: `outcome=paid|failed|processing|expired|refunded`, or the legacy paid/failed booleans. */
+    private function fakeOutcome(Request $request): PaymentEventOutcome
+    {
+        if ($request->filled('outcome')) {
+            return match ((string) $request->input('outcome')) {
+                'failed' => PaymentEventOutcome::Failed,
+                'processing' => PaymentEventOutcome::Processing,
+                'expired' => PaymentEventOutcome::Expired,
+                'refunded' => PaymentEventOutcome::Refunded,
+                'unresolved' => PaymentEventOutcome::Unresolved,
+                default => PaymentEventOutcome::Paid,
+            };
+        }
+
+        if ($request->boolean('failed')) {
+            return PaymentEventOutcome::Failed;
+        }
+
+        return $request->boolean('paid', true) ? PaymentEventOutcome::Paid : PaymentEventOutcome::Unresolved;
     }
 }

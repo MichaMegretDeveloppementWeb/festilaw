@@ -7,6 +7,7 @@ namespace App\Services\Payment;
 use App\Contracts\Payment\PaymentGatewayInterface;
 use App\Data\Payment\CheckoutSessionData;
 use App\Data\Payment\PaymentWebhookData;
+use App\Enums\Payment\PaymentEventOutcome;
 use App\Enums\Payment\PaymentType;
 use App\Exceptions\Payment\PaymentException;
 use App\Models\Payment;
@@ -66,6 +67,13 @@ final class StripePaymentGateway implements PaymentGatewayInterface
                 'metadata' => [
                     'payment_id' => (string) $payment->id,
                     'submission_reference' => (string) $submission->reference,
+                ],
+                // Propage notre id jusqu'au PaymentIntent/Charge : indispensable pour rapprocher un
+                // evenement charge.refunded / charge.dispute.created (dont l'objet n'est pas la session).
+                'payment_intent_data' => [
+                    'metadata' => [
+                        'payment_id' => (string) $payment->id,
+                    ],
                 ],
             ])->throw()->json();
         } catch (Throwable $e) {
@@ -143,7 +151,7 @@ final class StripePaymentGateway implements PaymentGatewayInterface
 
         $sessionId = (string) ($payment->provider_reference ?? '');
         if ($sessionId === '') {
-            return new PaymentWebhookData('', false);
+            return new PaymentWebhookData('', PaymentEventOutcome::Unresolved);
         }
 
         try {
@@ -154,7 +162,11 @@ final class StripePaymentGateway implements PaymentGatewayInterface
 
         return new PaymentWebhookData(
             providerReference: $sessionId,
-            paid: Arr::get($session, 'payment_status') === 'paid',
+            outcome: $this->sessionOutcome(
+                (string) Arr::get($session, 'status'),
+                (string) Arr::get($session, 'payment_status'),
+            ),
+            clientReference: ((string) Arr::get($session, 'client_reference_id', '')) ?: null,
         );
     }
 
@@ -164,19 +176,51 @@ final class StripePaymentGateway implements PaymentGatewayInterface
 
         $event = $this->verifiedEvent($request);
         $type = (string) Arr::get($event, 'type', '');
-        $session = (array) Arr::get($event, 'data.object', []);
+        $object = (array) Arr::get($event, 'data.object', []);
 
-        // On ne confirme que sur une session de checkout effectivement payee.
-        $paid = in_array($type, ['checkout.session.completed', 'checkout.session.async_payment_succeeded'], true)
-            && Arr::get($session, 'payment_status') === 'paid';
+        // Les evenements "charge" portent le remboursement/litige ; l'objet est une Charge, pas une
+        // session : on rapproche par notre payment_id propage dans payment_intent_data.metadata.
+        if ($type === 'charge.refunded' || $type === 'charge.dispute.created') {
+            return new PaymentWebhookData(
+                providerReference: (string) Arr::get($object, 'id', ''),
+                outcome: PaymentEventOutcome::Refunded,
+                clientReference: ((string) Arr::get($object, 'metadata.payment_id', '')) ?: null,
+            );
+        }
 
         return new PaymentWebhookData(
-            providerReference: (string) Arr::get($session, 'id', ''),
-            paid: $paid,
-            failed: $type === 'checkout.session.async_payment_failed',
+            providerReference: (string) Arr::get($object, 'id', ''),
+            outcome: $this->webhookOutcome($type, (string) Arr::get($object, 'payment_status')),
             // Notre payment id (envoye en client_reference_id) : rapprochement de secours.
-            clientReference: ((string) Arr::get($session, 'client_reference_id', '')) ?: null,
+            clientReference: ((string) Arr::get($object, 'client_reference_id', '')) ?: null,
         );
+    }
+
+    /**
+     * Maps a checkout.session webhook (type + payment_status) onto our normalized outcome. A completed
+     * session that is still unpaid is an async method in flight → Processing (confirmed later by
+     * async_payment_succeeded / _failed).
+     */
+    private function webhookOutcome(string $type, string $paymentStatus): PaymentEventOutcome
+    {
+        return match ($type) {
+            'checkout.session.completed' => $paymentStatus === 'paid' ? PaymentEventOutcome::Paid : PaymentEventOutcome::Processing,
+            'checkout.session.async_payment_succeeded' => PaymentEventOutcome::Paid,
+            'checkout.session.async_payment_failed' => PaymentEventOutcome::Failed,
+            'checkout.session.expired' => PaymentEventOutcome::Expired,
+            default => PaymentEventOutcome::Unresolved,
+        };
+    }
+
+    /** Maps a live checkout session (status + payment_status) onto our normalized outcome (for polling). */
+    private function sessionOutcome(string $status, string $paymentStatus): PaymentEventOutcome
+    {
+        return match (true) {
+            $paymentStatus === 'paid' => PaymentEventOutcome::Paid,
+            $status === 'expired' => PaymentEventOutcome::Expired,
+            $status === 'complete' => PaymentEventOutcome::Processing, // complete mais impaye = async en cours
+            default => PaymentEventOutcome::Unresolved, // 'open' : le client n'a pas fini
+        };
     }
 
     /**
