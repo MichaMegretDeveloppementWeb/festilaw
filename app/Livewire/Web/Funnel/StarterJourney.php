@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire\Web\Funnel;
 
+use App\Actions\Web\Payment\CheckPaymentStatusAction;
 use App\Actions\Web\Payment\MarkPaymentSucceededAction;
 use App\Actions\Web\Starter\MarkContractSignedAction;
 use App\Actions\Web\Starter\StartContractSigningAction;
@@ -100,6 +101,16 @@ class StarterJourney extends Component
     {
         return $this->submission->payments()
             ->whereIn('status', PaymentStatus::confirmable())
+            ->whereNotNull('provider_reference')
+            ->latest()
+            ->first();
+    }
+
+    /** The latest payment recorded as failed (for the "check with the provider" recovery before re-paying). */
+    private function latestFailedPayment(): ?Payment
+    {
+        return $this->submission->payments()
+            ->where('status', PaymentStatus::Failed)
             ->whereNotNull('provider_reference')
             ->latest()
             ->first();
@@ -347,6 +358,41 @@ class StarterJourney extends Component
         return $this->redirect($checkout->redirectUrl);
     }
 
+    /**
+     * "Verifier aupres du prestataire" sur un paiement echoue : re-interroge la source de verite avant de
+     * re-payer. Si le prestataire dit "paye", la fausse-echec est corrigee et le dossier active (evite un
+     * double-debit). Sinon, message clair : le client peut relancer (nouveau paiement, prorata recalcule).
+     */
+    public function recheckPayment(CheckPaymentStatusAction $checkPaymentStatus): void
+    {
+        if ($this->step() !== 'payment') {
+            return;
+        }
+
+        $payment = $this->latestFailedPayment();
+        if ($payment === null) {
+            return;
+        }
+
+        try {
+            $result = $checkPaymentStatus->execute($payment);
+        } catch (Throwable $e) {
+            $this->reportUnexpectedError($e, 'journey', 'STARTER payment recheck');
+
+            return;
+        }
+
+        $this->submission->refresh();
+
+        if ($result->corrected) {
+            session()->now('starter_status', 'paid');
+
+            return;
+        }
+
+        $this->addError('journey', __('Your payment is still not confirmed by the provider. You can safely try the payment again below.'));
+    }
+
     /** The in-flight checkout URL to reuse on resume, or null to start a fresh checkout. */
     private function existingCheckoutUrl(PaymentGatewayRegistry $gateways): ?string
     {
@@ -494,6 +540,7 @@ class StarterJourney extends Component
             'contractDeclined' => $this->submission->contract?->signature_status === SignatureStatus::Declined,
             'signatureStarted' => (string) ($this->submission->contract?->signature_provider_reference ?? '') !== '',
             'paymentStarted' => $this->pendingPayment() !== null,
+            'failedPayment' => $this->latestFailedPayment(),
             'paymentTimedOut' => $this->paymentChecks >= self::MAX_PAYMENT_POLLS,
             'requiredDocuments' => $this->requiredDocumentTypes(),
             'deposits' => $this->stagedDocuments(),

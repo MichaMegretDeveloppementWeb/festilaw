@@ -9,6 +9,7 @@ use App\Actions\Admin\ChangeSubmissionStatusAction;
 use App\Actions\Admin\IssueResponsiblePersonAction;
 use App\Actions\Admin\SendAdminMessageAction;
 use App\Actions\Admin\UploadCountersignedContractAction;
+use App\Actions\Web\Payment\CheckPaymentStatusAction;
 use App\Actions\Web\Starter\SendStarterResumeLinkAction;
 use App\Enums\Billing\RenewalStatus;
 use App\Enums\Submission\SubmissionStatus;
@@ -160,6 +161,38 @@ class SubmissionDetail extends Component
         $this->toast($this->isPaid()
             ? __('Lien du dossier renvoyé au client.')
             : __('Lien de reprise renvoyé au client.'));
+    }
+
+    /**
+     * Re-interroge le prestataire (Stripe...) pour un paiement du dossier, a la demande du support. Si le
+     * prestataire dit "paye", une fausse-echec est corrigee et le dossier reactive (source de verite).
+     */
+    public function recheckPayment(int $paymentId, CheckPaymentStatusAction $checkPaymentStatus): void
+    {
+        $payment = $this->submission->payments()->whereKey($paymentId)->first();
+        if ($payment === null) {
+            $this->toast(__('Paiement introuvable.'), 'error');
+
+            return;
+        }
+
+        try {
+            $result = $checkPaymentStatus->execute($payment);
+        } catch (Throwable $e) {
+            $this->reportAdminError($e, 'Admin recheck payment');
+
+            return;
+        }
+
+        $this->submission->refresh();
+
+        if ($result->corrected) {
+            $this->toast(__('Le prestataire confirme le paiement : paiement corrigé en « Réussi » et dossier réactivé.'));
+        } elseif ($result->confirmedPaid()) {
+            $this->toast(__('Le prestataire confirme que ce paiement est bien payé.'));
+        } else {
+            $this->toast(__('Le prestataire ne confirme pas ce paiement comme payé (aucune correction).'), 'error');
+        }
     }
 
     /** Dossier deja actif (souscription payee, non remboursee) : le lien mene a l'espace projet, pas a une reprise. */

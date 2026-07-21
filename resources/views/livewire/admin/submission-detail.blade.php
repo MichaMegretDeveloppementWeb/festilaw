@@ -218,18 +218,38 @@
                                     <th class="px-5 py-2.5">{{ __('Montant') }}</th>
                                     <th class="px-5 py-2.5">{{ __('Année') }}</th>
                                     <th class="px-5 py-2.5">{{ __('Statut') }}</th>
-                                    <th class="px-5 py-2.5">{{ __('Prestataire') }}</th>
+                                    <th class="px-5 py-2.5">{{ __('Référence') }}</th>
                                     <th class="px-5 py-2.5">{{ __('Payé le') }}</th>
+                                    <th class="px-5 py-2.5 text-right">{{ __('Action') }}</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100">
                                 @foreach ($submission->payments as $payment)
+                                    @php($settled = in_array($payment->status, [\App\Enums\Payment\PaymentStatus::Succeeded, \App\Enums\Payment\PaymentStatus::Refunded], true))
                                     <tr wire:key="pay-{{ $payment->id }}">
                                         <td class="px-5 py-2.5 font-medium text-slate-900">{{ number_format($payment->amount_cents / 100, 2, ',', ' ') }} {{ $payment->currency }}</td>
                                         <td class="px-5 py-2.5 text-slate-600">{{ $payment->service_year ?: '-' }}</td>
-                                        <td class="px-5 py-2.5 text-slate-600">{{ $payment->status->label() }}</td>
-                                        <td class="px-5 py-2.5 text-slate-600">{{ $payment->provider }}</td>
+                                        <td class="px-5 py-2.5">
+                                            <span @class([
+                                                'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold',
+                                                'bg-emerald-50 text-emerald-700' => $payment->status === \App\Enums\Payment\PaymentStatus::Succeeded,
+                                                'bg-red-50 text-red-700' => $payment->status === \App\Enums\Payment\PaymentStatus::Failed,
+                                                'bg-amber-50 text-amber-700' => in_array($payment->status, [\App\Enums\Payment\PaymentStatus::Pending, \App\Enums\Payment\PaymentStatus::Processing], true),
+                                                'bg-slate-100 text-slate-600' => in_array($payment->status, [\App\Enums\Payment\PaymentStatus::Expired, \App\Enums\Payment\PaymentStatus::Refunded], true),
+                                            ])>{{ $payment->status->label() }}</span>
+                                        </td>
+                                        <td class="px-5 py-2.5 font-mono text-xs text-slate-500">{{ $payment->provider }} · {{ $payment->provider_reference ?: '-' }}</td>
                                         <td class="px-5 py-2.5 text-slate-500">{{ $payment->paid_at?->format('d/m/Y H:i') ?: '-' }}</td>
+                                        <td class="px-5 py-2.5 text-right">
+                                            @unless ($settled)
+                                                <button type="button" wire:click="recheckPayment({{ $payment->id }})"
+                                                    wire:loading.attr="disabled" wire:target="recheckPayment({{ $payment->id }})"
+                                                    class="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-60">
+                                                    <span wire:loading.remove wire:target="recheckPayment({{ $payment->id }})">{{ __('Vérifier chez le prestataire') }}</span>
+                                                    <span wire:loading wire:target="recheckPayment({{ $payment->id }})">{{ __('Vérification…') }}</span>
+                                                </button>
+                                            @endunless
+                                        </td>
                                     </tr>
                                 @endforeach
                             </tbody>

@@ -25,14 +25,41 @@ final readonly class MarkPaymentSucceededAction
 {
     public function __construct(private TeamNotifier $teamNotifier) {}
 
+    /**
+     * Nominal confirmation (webhook, poll-on-return, cron de reconciliation) : conservateur, ne
+     * transitionne que depuis un etat confirmable (Pending/Processing).
+     */
     public function execute(Payment $payment, ?string $providerReference = null): Payment
     {
-        $processed = DB::transaction(function () use ($payment, $providerReference): bool {
+        return $this->confirm($payment, $providerReference, PaymentStatus::confirmable());
+    }
+
+    /**
+     * Re-interrogation DELIBEREE de la source de verite (bouton "verifier chez Stripe" sur un paiement
+     * echoue) : si le provider dit "paye", on corrige une fausse-echec. Autorise donc aussi Failed/Expired
+     * -> Succeeded, contrairement au chemin automatique. Jamais depuis Succeeded/Refunded (deja regles).
+     */
+    public function reconcile(Payment $payment, ?string $providerReference = null): Payment
+    {
+        return $this->confirm($payment, $providerReference, [
+            PaymentStatus::Pending,
+            PaymentStatus::Processing,
+            PaymentStatus::Failed,
+            PaymentStatus::Expired,
+        ]);
+    }
+
+    /**
+     * @param  array<int, PaymentStatus>  $fromStatuses
+     */
+    private function confirm(Payment $payment, ?string $providerReference, array $fromStatuses): Payment
+    {
+        $processed = DB::transaction(function () use ($payment, $providerReference, $fromStatuses): bool {
             // Update conditionnel atomique : seule la 1re livraison concurrente affecte une ligne, et
-            // seuls les etats confirmables transitionnent (un Refunded/Failed/Expired n'est jamais ecrase).
+            // seuls les etats sources autorises transitionnent (un Succeeded/Refunded n'est jamais ecrase).
             $affected = Payment::query()
                 ->whereKey($payment->getKey())
-                ->whereIn('status', PaymentStatus::confirmable())
+                ->whereIn('status', $fromStatuses)
                 ->update([
                     'status' => PaymentStatus::Succeeded,
                     'provider_reference' => $providerReference ?? $payment->provider_reference,

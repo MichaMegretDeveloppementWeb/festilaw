@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\Payment\PaymentStatus;
 use App\Enums\Payment\PaymentType;
 use App\Enums\Submission\SubmissionStatus;
 use App\Enums\Submission\SubmissionType;
@@ -13,8 +14,10 @@ use App\Mail\StarterResumeLink;
 use App\Models\Payment;
 use App\Models\Submission;
 use App\Models\User;
+use App\Services\Payment\PaymentGatewayRegistry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
 
@@ -136,6 +139,29 @@ it('changes a submission status from the detail screen', function () {
         ->assertHasNoErrors();
 
     expect($submission->fresh()->status)->toBe(SubmissionStatus::Completed);
+});
+
+it('re-queries a failed payment from the admin detail and corrects a false failure', function () {
+    config()->set('payment.enabled', ['stripe']);
+    config()->set('payment.drivers.stripe', ['secret_key' => 'sk_test_x', 'webhook_secret' => 'whsec_x']);
+    app()->forgetInstance(PaymentGatewayRegistry::class);
+    Mail::fake();
+    Http::fake(['*/v1/checkout/sessions/*' => Http::response(['id' => 'cs_1', 'status' => 'complete', 'payment_status' => 'paid'])]);
+
+    $submission = Submission::factory()->starter()->create(['status' => SubmissionStatus::AwaitingPayment]);
+    $payment = $submission->payments()->create([
+        'type' => PaymentType::StarterSubscription, 'amount_cents' => 33300, 'service_year' => 2026,
+        'currency' => 'EUR', 'provider' => 'stripe', 'provider_reference' => 'cs_1', 'status' => PaymentStatus::Failed,
+    ]);
+
+    actingAs(User::factory()->create());
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $submission])
+        ->call('recheckPayment', $payment->id)
+        ->assertHasNoErrors();
+
+    expect($payment->fresh()->status)->toBe(PaymentStatus::Succeeded)
+        ->and($submission->fresh()->status)->toBe(SubmissionStatus::Paid);
 });
 
 it('refuses to set the Paid status manually (it is derived from payments)', function () {
