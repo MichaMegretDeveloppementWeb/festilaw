@@ -61,7 +61,7 @@ final class StripePaymentGateway implements PaymentGatewayInterface
                     'price_data' => [
                         'currency' => strtolower((string) $payment->currency),
                         'unit_amount' => $payment->amount_cents,
-                        'product_data' => ['name' => 'Festilaw Creator Pack (12 months)'],
+                        'product_data' => ['name' => $this->lineItemName($payment)],
                     ],
                 ]],
                 'metadata' => [
@@ -80,6 +80,15 @@ final class StripePaymentGateway implements PaymentGatewayInterface
         }
 
         return new CheckoutSessionData(providerReference: $id, redirectUrl: $url);
+    }
+
+    /** Libelle de la ligne sur la page Stripe : pack + annee de service (ex. "Festilaw Pro Pack 2026"). */
+    private function lineItemName(Payment $payment): string
+    {
+        $pack = $payment->submission?->type->label() ?? 'Festilaw';
+        $year = $payment->service_year;
+
+        return 'Festilaw '.$pack.($year ? ' '.$year : '');
     }
 
     public function currentCheckoutUrl(Payment $payment): ?string
