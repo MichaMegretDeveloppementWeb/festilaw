@@ -76,6 +76,18 @@ it('corrects a false failure via the fake gateway sim reference (no external cal
         ->and($submission->fresh()->status)->toBe(SubmissionStatus::Paid);
 });
 
+it('reports the provider as unreachable when its gateway is not enabled', function () {
+    config()->set('payment.enabled', ['fake']); // stripe absent du registre
+    app()->forgetInstance(PaymentGatewayRegistry::class);
+    $payment = stripePaymentInStatus(PaymentStatus::Failed);
+
+    $result = app(CheckPaymentStatusAction::class)->execute($payment);
+
+    expect($result->reachable)->toBeFalse()
+        ->and($result->corrected)->toBeFalse()
+        ->and($payment->fresh()->status)->toBe(PaymentStatus::Failed);
+});
+
 it('does not re-query an already settled (succeeded) payment', function () {
     Http::fake();
     $payment = stripePaymentInStatus(PaymentStatus::Succeeded, SubmissionStatus::Paid);

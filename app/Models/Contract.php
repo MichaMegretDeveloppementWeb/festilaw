@@ -41,4 +41,14 @@ class Contract extends Model
     {
         return $this->belongsTo(Submission::class);
     }
+
+    /** Display name of the signature provider (for user-facing messages), e.g. "SignWell". */
+    public function signatureProviderLabel(): string
+    {
+        return match ((string) $this->signature_provider) {
+            'signwell' => 'SignWell',
+            'fake' => 'Fake',
+            default => ucfirst((string) $this->signature_provider),
+        };
+    }
 }

@@ -245,7 +245,7 @@
                                         wire:loading.attr="disabled" wire:target="recheckPayment({{ $payment->id }})"
                                         class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-60">
                                         <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
-                                        <span wire:loading.remove wire:target="recheckPayment({{ $payment->id }})">{{ __('Vérifier chez le prestataire') }}</span>
+                                        <span wire:loading.remove wire:target="recheckPayment({{ $payment->id }})">{{ __('Vérifier sur :provider', ['provider' => $payment->providerLabel()]) }}</span>
                                         <span wire:loading wire:target="recheckPayment({{ $payment->id }})">{{ __('Vérification…') }}</span>
                                     </button>
                                 </div>

@@ -17,6 +17,8 @@ final readonly class PaymentStatusCheckResult
         public PaymentEventOutcome $outcome,
         public bool $corrected,
         public ?string $providerReference,
+        /** False when the provider could not be queried (network error, unknown session, misconfig). */
+        public bool $reachable = true,
     ) {}
 
     /** The provider confirms the payment is paid (whether we just corrected it or it already was). */

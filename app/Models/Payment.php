@@ -43,4 +43,14 @@ class Payment extends Model
     {
         return $this->belongsTo(Submission::class);
     }
+
+    /** Display name of the payment provider (for user-facing messages), e.g. "Stripe". */
+    public function providerLabel(): string
+    {
+        return match ((string) $this->provider) {
+            'stripe' => 'Stripe',
+            'fake' => 'Fake',
+            default => ucfirst((string) $this->provider),
+        };
+    }
 }

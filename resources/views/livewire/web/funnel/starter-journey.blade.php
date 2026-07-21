@@ -150,9 +150,9 @@
                 {{-- Un paiement a ete note echoue : avant de re-payer, on propose de re-interroger le
                      prestataire (source de verite). S'il a en fait ete paye, on corrige sans double-debit. --}}
                 <div class="journey-note">
-                    <p>{{ __('Your last payment attempt (reference :ref) was recorded as failed. If you think it actually went through, check with the payment provider before paying again.', ['ref' => $failedPayment->provider_reference]) }}</p>
+                    <p>{{ __('Your last payment attempt (reference :ref) was recorded as failed. If you think it actually went through, check with :provider before paying again.', ['ref' => $failedPayment->provider_reference, 'provider' => $failedPayment->providerLabel()]) }}</p>
                     <button type="button" class="btn btn--outline-dark btn--sm" wire:click="recheckPayment" wire:loading.attr="disabled" wire:target="recheckPayment">
-                        <span wire:loading.remove wire:target="recheckPayment">{{ __('Check my payment with the provider') }}</span>
+                        <span wire:loading.remove wire:target="recheckPayment">{{ __('Check my payment on :provider', ['provider' => $failedPayment->providerLabel()]) }}</span>
                         <span wire:loading wire:target="recheckPayment">{{ __('Checking') }}&hellip;</span>
                     </button>
                 </div>

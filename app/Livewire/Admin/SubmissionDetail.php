@@ -185,13 +185,16 @@ class SubmissionDetail extends Component
         }
 
         $this->submission->refresh();
+        $provider = $payment->providerLabel();
 
-        if ($result->corrected) {
-            $this->toast(__('Le prestataire confirme le paiement : paiement corrigé en « Réussi » et dossier réactivé.'));
+        if (! $result->reachable) {
+            $this->toast(__(':provider n\'a pas pu être contacté pour ce paiement (session inconnue ou service indisponible). Réessayez plus tard.', ['provider' => $provider]), 'error');
+        } elseif ($result->corrected) {
+            $this->toast(__(':provider confirme le paiement : corrigé en « Réussi » et dossier réactivé.', ['provider' => $provider]));
         } elseif ($result->confirmedPaid()) {
-            $this->toast(__('Le prestataire confirme que ce paiement est bien payé.'));
+            $this->toast(__(':provider confirme que ce paiement est bien payé.', ['provider' => $provider]));
         } else {
-            $this->toast(__('Le prestataire ne confirme pas ce paiement comme payé (aucune correction).'), 'error');
+            $this->toast(__(':provider ne confirme pas ce paiement comme payé (aucune correction).', ['provider' => $provider]), 'error');
         }
     }
 

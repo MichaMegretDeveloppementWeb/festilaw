@@ -9,6 +9,8 @@ use App\Enums\Payment\PaymentEventOutcome;
 use App\Enums\Payment\PaymentStatus;
 use App\Models\Payment;
 use App\Services\Payment\PaymentGatewayRegistry;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * Re-queries the provider for the live status of a single payment (the "check with the provider now"
@@ -35,12 +37,20 @@ final readonly class CheckPaymentStatusAction
             );
         }
 
-        // Sans provider connu / sans reference, on ne peut rien re-interroger.
+        // Sans provider connu / sans reference, on ne peut rien re-interroger : provider "injoignable".
         if (! $this->gateways->has((string) $payment->provider) || (string) ($payment->provider_reference ?? '') === '') {
-            return new PaymentStatusCheckResult(PaymentEventOutcome::Unresolved, corrected: false, providerReference: $payment->provider_reference);
+            return new PaymentStatusCheckResult(PaymentEventOutcome::Unresolved, corrected: false, providerReference: $payment->provider_reference, reachable: false);
         }
 
-        $event = $this->gateways->get((string) $payment->provider)->checkStatus($payment);
+        try {
+            $event = $this->gateways->get((string) $payment->provider)->checkStatus($payment);
+        } catch (Throwable $e) {
+            // Echec de l'appel prestataire (reseau, session inconnue, config) : etat "injoignable" plutot
+            // qu'une erreur generique remontee a l'ecran. On trace le detail technique.
+            Log::channel('payments')->warning('Check status: provider query failed.', ['exception' => $e, 'payment' => $payment->id]);
+
+            return new PaymentStatusCheckResult(PaymentEventOutcome::Unresolved, corrected: false, providerReference: $payment->provider_reference, reachable: false);
+        }
 
         if ($event->isPaid()) {
             // Fausse-echec : le provider dit paye -> on corrige (Failed/Expired/Pending/Processing -> Succeeded).

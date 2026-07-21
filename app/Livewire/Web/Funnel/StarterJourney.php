@@ -127,8 +127,13 @@ class StarterJourney extends Component
                 $this->addError('journey', __('Your signature has not been recorded yet. If you have just signed, wait a few seconds and check again.'));
             }
         } catch (BaseAppException $e) {
+            // Echec de l'appel au prestataire de signature : message clair nommant le prestataire plutot
+            // que le message technique generique. Le detail technique part dans les logs.
             Log::error($e->getMessage(), ['exception' => $e]);
-            $this->addError('journey', __($e->getUserMessage()));
+            $provider = $this->submission->contract?->signatureProviderLabel();
+            $this->addError('journey', $provider
+                ? __('We could not reach :provider to check your signature right now. Please try again in a moment.', ['provider' => $provider])
+                : __('We could not check your signature right now. Please try again in a moment.'));
         } catch (Throwable $e) {
             $this->reportUnexpectedError($e, 'journey', 'STARTER signature confirmation');
         }
@@ -390,7 +395,15 @@ class StarterJourney extends Component
             return;
         }
 
-        $this->addError('journey', __('Your payment is still not confirmed by the provider. You can safely try the payment again below.'));
+        $provider = $payment->providerLabel();
+
+        if (! $result->reachable) {
+            $this->addError('journey', __('We could not reach :provider to check your payment right now. Please try again in a moment.', ['provider' => $provider]));
+
+            return;
+        }
+
+        $this->addError('journey', __('Your payment is still not confirmed by :provider. You can safely try the payment again below.', ['provider' => $provider]));
     }
 
     /** The in-flight checkout URL to reuse on resume, or null to start a fresh checkout. */
@@ -476,7 +489,10 @@ class StarterJourney extends Component
             SubmissionStatus::InProgress => 'sign',
             SubmissionStatus::AwaitingDocuments => 'documents',
             SubmissionStatus::AwaitingPayment => 'payment',
-            SubmissionStatus::Paid, SubmissionStatus::Completed => 'done',
+            // "Termine" seulement si le dossier est REELLEMENT actif : un dossier paye puis rembourse
+            // (statut stocke encore Paid, mais isActive() faux) doit revenir a l'etape paiement, sinon
+            // "mon projet" (derive de isActive) et le parcours se contredisent -> boucle de redirection.
+            SubmissionStatus::Paid, SubmissionStatus::Completed => $this->submission->isActive() ? 'done' : 'payment',
             SubmissionStatus::Cancelled => 'cancelled',
             default => 'sign',
         };
