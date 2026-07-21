@@ -70,6 +70,14 @@ class SubmissionDetail extends Component
             return;
         }
 
+        // « Payé » est derive des paiements (source de verite), jamais defini a la main : le forcer creerait
+        // un cache mensonger (statut Paye sans paiement reussi). Seul un dossier deja Paye peut le conserver.
+        if ($status === SubmissionStatus::Paid && $this->submission->status !== SubmissionStatus::Paid) {
+            $this->addError('newStatus', __('Le statut « Payé » découle des paiements et ne peut pas être défini manuellement.'));
+
+            return;
+        }
+
         try {
             $changeStatus->execute($this->submission, $status);
         } catch (Throwable $e) {
@@ -154,10 +162,30 @@ class SubmissionDetail extends Component
             : __('Lien de reprise renvoyé au client.'));
     }
 
-    /** Dossier deja actif (paye ou finalise) : le lien mene a l'espace projet, pas a une reprise. */
+    /** Dossier deja actif (souscription payee, non remboursee) : le lien mene a l'espace projet, pas a une reprise. */
     private function isPaid(): bool
     {
-        return in_array($this->submission->status, [SubmissionStatus::Paid, SubmissionStatus::Completed], true);
+        return $this->submission->isActive();
+    }
+
+    /**
+     * Statuts selectionnables par l'admin : tous sauf « Payé » (derive des paiements), plus le statut
+     * courant s'il est deja Payé, pour que le menu reflete l'etat reel sans permettre de le forcer.
+     *
+     * @return array<int, SubmissionStatus>
+     */
+    private function assignableStatuses(): array
+    {
+        $statuses = array_values(array_filter(
+            SubmissionStatus::cases(),
+            fn (SubmissionStatus $status): bool => $status !== SubmissionStatus::Paid,
+        ));
+
+        if ($this->submission->status === SubmissionStatus::Paid) {
+            array_unshift($statuses, SubmissionStatus::Paid);
+        }
+
+        return $statuses;
     }
 
     public function issueResponsiblePerson(IssueResponsiblePersonAction $issue): void
@@ -253,7 +281,7 @@ class SubmissionDetail extends Component
         }
 
         return view('livewire.admin.submission-detail', [
-            'statuses' => SubmissionStatus::cases(),
+            'statuses' => $this->assignableStatuses(),
             'isStarter' => $this->submission->type === SubmissionType::Starter,
             'isContact' => $isContact,
             'isPaid' => $this->isPaid(),

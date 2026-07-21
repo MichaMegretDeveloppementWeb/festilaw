@@ -18,12 +18,6 @@ use Illuminate\Database\Eloquent\Builder;
  */
 final class StarterDossierFinder
 {
-    /** Souscription active (deja payee). */
-    private const ACTIVE_STATUSES = [
-        SubmissionStatus::Paid,
-        SubmissionStatus::Completed,
-    ];
-
     /** Dossier "en cours" (non termine), du plus avance au moins avance. */
     private const OPEN_STATUSES = [
         SubmissionStatus::AwaitingPayment,
@@ -31,11 +25,14 @@ final class StarterDossierFinder
         SubmissionStatus::InProgress,
     ];
 
-    /** Le dossier actif (paye) le plus recent, encore resumable. */
+    /**
+     * Le dossier actif le plus recent, encore resumable. « Actif » est DERIVE des paiements (souscription
+     * payee non remboursee) : un client rembourse n'est plus actif et peut donc repartir a zero.
+     */
     public function latestActiveForEmail(string $email): ?Submission
     {
         return $this->resumableFor($email)
-            ->whereIn('status', self::ACTIVE_STATUSES)
+            ->active()
             ->latest()
             ->first();
     }
@@ -53,11 +50,7 @@ final class StarterDossierFinder
     /** Le dossier le plus pertinent (actif d'abord, sinon le plus avance) pour un lien de reprise. */
     public function mostRelevantResumableForEmail(string $email): ?Submission
     {
-        return $this->resumableFor($email)
-            ->whereIn('status', [...self::ACTIVE_STATUSES, ...self::OPEN_STATUSES])
-            ->orderByRaw("CASE status WHEN 'paid' THEN 0 WHEN 'completed' THEN 1 WHEN 'awaiting_payment' THEN 2 WHEN 'awaiting_documents' THEN 3 ELSE 4 END")
-            ->latest()
-            ->first();
+        return $this->latestActiveForEmail($email) ?? $this->latestOpenForEmail($email);
     }
 
     /** @return Builder<Submission> */

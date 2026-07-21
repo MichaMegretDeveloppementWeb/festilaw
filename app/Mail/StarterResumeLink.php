@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Mail;
 
-use App\Enums\Submission\SubmissionStatus;
 use App\Models\Submission;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -44,9 +43,9 @@ final class StarterResumeLink extends Mailable
         );
     }
 
-    /** The dossier is an already-active (paid) subscription rather than an unfinished application. */
+    /** The dossier is an already-active (paid, non-refunded) subscription rather than an unfinished application. */
     private function isActive(): bool
     {
-        return in_array($this->submission->status, [SubmissionStatus::Paid, SubmissionStatus::Completed], true);
+        return $this->submission->isActive();
     }
 }

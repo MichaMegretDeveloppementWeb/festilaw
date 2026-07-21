@@ -2,6 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Enums\Payment\PaymentStatus;
+use App\Enums\Payment\PaymentType;
 use App\Enums\Submission\SubmissionStatus;
 use App\Enums\Submission\SubmissionType;
 use App\Models\Submission;
@@ -58,5 +60,29 @@ class SubmissionFactory extends Factory
             'company_name' => fake()->company(),
             'message' => null,
         ]);
+    }
+
+    /**
+     * Dossier actif (souscription payee) : statut « Payé » ET un paiement d'abonnement reussi, pour que
+     * l'etat actif DERIVE (Submission::isActive()) soit vrai — un statut Paye sans paiement n'est plus
+     * suffisant. Le lien de reprise ne doit plus expirer (comportement de MarkPaymentSucceededAction).
+     */
+    public function paid(int $serviceYear = 2026): static
+    {
+        return $this->state(fn (): array => [
+            'status' => SubmissionStatus::Paid,
+            'resume_expires_at' => null,
+        ])->afterCreating(function (Submission $submission) use ($serviceYear): void {
+            $submission->payments()->create([
+                'type' => PaymentType::StarterSubscription,
+                'amount_cents' => 33300,
+                'service_year' => $serviceYear,
+                'currency' => 'EUR',
+                'provider' => 'fake',
+                'provider_reference' => 'fake_ref_'.Str::random(8),
+                'status' => PaymentStatus::Succeeded,
+                'paid_at' => now(),
+            ]);
+        });
     }
 }

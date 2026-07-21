@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\Submission\SubmissionStatus;
 use App\Livewire\Web\Funnel\AccessFileForm;
 use App\Mail\StarterResumeLink;
 use App\Models\Submission;
@@ -24,10 +23,8 @@ it('renders the access-my-project page', function () {
 });
 
 it('emails the file link when a dossier exists for the email', function () {
-    Submission::factory()->starter()->create([
+    Submission::factory()->starter()->paid()->create([
         'email' => 'buyer@example.com',
-        'status' => SubmissionStatus::Paid,
-        'resume_expires_at' => null,
     ]);
 
     Livewire::test(AccessFileForm::class)

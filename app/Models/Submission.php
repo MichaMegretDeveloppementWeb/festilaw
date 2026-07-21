@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\Payment\PaymentStatus;
+use App\Enums\Payment\PaymentType;
 use App\Enums\Submission\SubmissionStatus;
 use App\Enums\Submission\SubmissionType;
 use App\Observers\SubmissionObserver;
@@ -123,6 +125,46 @@ class Submission extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
+    }
+
+    /**
+     * Whether this is an active, paying customer's dossier — DERIVED from its payments, the single source
+     * of truth: at least one succeeded, non-refunded subscription payment (year 1 or a renewal), and not
+     * explicitly cancelled. A refund/chargeback (payment → Refunded) therefore deactivates the dossier on
+     * its own. The stored `status` (Paid/Completed/Cancelled) stays a workflow/display cache, never the
+     * authority on "is active". Uses the loaded payments relation when present to avoid an extra query.
+     */
+    public function isActive(): bool
+    {
+        if ($this->status === SubmissionStatus::Cancelled) {
+            return false;
+        }
+
+        if ($this->relationLoaded('payments')) {
+            return $this->payments->contains(
+                fn (Payment $payment): bool => $payment->status === PaymentStatus::Succeeded && $payment->type->isSubscription(),
+            );
+        }
+
+        return $this->payments()
+            ->where('status', PaymentStatus::Succeeded)
+            ->whereIn('type', PaymentType::subscriptionCases())
+            ->exists();
+    }
+
+    /**
+     * Active dossiers (query scope mirroring isActive()): a succeeded, non-refunded subscription payment,
+     * and not explicitly cancelled.
+     *
+     * @param  Builder<Submission>  $query
+     */
+    public function scopeActive(Builder $query): void
+    {
+        $query->where('status', '!=', SubmissionStatus::Cancelled)
+            ->whereHas('payments', function (Builder $inner): void {
+                $inner->where('status', PaymentStatus::Succeeded)
+                    ->whereIn('type', PaymentType::subscriptionCases());
+            });
     }
 
     public function appointment(): HasOne

@@ -131,11 +131,24 @@ it('changes a submission status from the detail screen', function () {
     actingAs(User::factory()->create());
 
     Livewire::test(SubmissionDetail::class, ['submission' => $submission])
-        ->set('newStatus', SubmissionStatus::Paid->value)
+        ->set('newStatus', SubmissionStatus::Completed->value)
         ->call('updateStatus')
         ->assertHasNoErrors();
 
-    expect($submission->fresh()->status)->toBe(SubmissionStatus::Paid);
+    expect($submission->fresh()->status)->toBe(SubmissionStatus::Completed);
+});
+
+it('refuses to set the Paid status manually (it is derived from payments)', function () {
+    $submission = Submission::factory()->starter()->create(['status' => SubmissionStatus::AwaitingPayment]);
+
+    actingAs(User::factory()->create());
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $submission])
+        ->set('newStatus', SubmissionStatus::Paid->value)
+        ->call('updateStatus')
+        ->assertHasErrors('newStatus');
+
+    expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingPayment);
 });
 
 it('adds an internal note attributed to the current admin', function () {
@@ -157,7 +170,7 @@ it('adds an internal note attributed to the current admin', function () {
 });
 
 it('labels the resend action as a dossier link once the dossier is paid', function () {
-    $paid = Submission::factory()->starter()->create(['status' => SubmissionStatus::Paid]);
+    $paid = Submission::factory()->starter()->paid()->create();
     $inProgress = Submission::factory()->starter()->create(['status' => SubmissionStatus::InProgress]);
 
     actingAs(User::factory()->create());

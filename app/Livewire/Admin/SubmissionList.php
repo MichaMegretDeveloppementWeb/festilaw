@@ -119,10 +119,10 @@ class SubmissionList extends Component
      */
     private function scopeNeedsRenewal(Builder $query, int $year): void
     {
-        $subscription = [PaymentType::StarterSubscription, PaymentType::AnnualRenewal];
+        $subscription = PaymentType::subscriptionCases();
 
-        $query->whereIn('status', [SubmissionStatus::Paid, SubmissionStatus::Completed])
-            ->whereHas('payments', fn ($p) => $p->where('status', PaymentStatus::Succeeded)->whereIn('type', $subscription))
+        // active() = souscription payee non remboursee + non annule (whereHas succeeded subscription inclus).
+        $query->active()
             ->whereDoesntHave('payments', fn ($p) => $p->where('status', PaymentStatus::Succeeded)->whereIn('type', $subscription)->where('service_year', '>=', $year));
     }
 
@@ -137,8 +137,7 @@ class SubmissionList extends Component
         $badges = [];
 
         foreach ($submissions as $submission) {
-            if (! $submission->type->hasOnlineJourney()
-                || ! in_array($submission->status, [SubmissionStatus::Paid, SubmissionStatus::Completed], true)) {
+            if (! $submission->type->hasOnlineJourney() || ! $submission->isActive()) {
                 continue;
             }
 

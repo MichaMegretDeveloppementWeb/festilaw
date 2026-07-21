@@ -54,7 +54,7 @@ final class StarterProjectController extends Controller
         $dossier->loadMissing(['contract', 'uploadedDocuments', 'payments']);
         $status = $this->resolver->resolve($dossier);
         $signed = $status->contractSigned;
-        $paid = in_array($dossier->status, [SubmissionStatus::Paid, SubmissionStatus::Completed], true);
+        $paid = $dossier->isActive();
 
         $documents = $dossier->uploadedDocuments
             ->map(fn (UploadedDocument $doc): ProjectDocumentData => new ProjectDocumentData(

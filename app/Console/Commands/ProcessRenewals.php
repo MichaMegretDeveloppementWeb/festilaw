@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Enums\Billing\RenewalStatus;
-use App\Enums\Submission\SubmissionStatus;
 use App\Enums\Submission\SubmissionType;
 use App\Mail\AdminRenewalDigest;
 use App\Mail\RenewalReminder;
@@ -58,7 +57,7 @@ final class ProcessRenewals extends Command
 
         Submission::query()
             ->whereIn('type', [SubmissionType::Starter, SubmissionType::Pro])
-            ->whereIn('status', [SubmissionStatus::Paid, SubmissionStatus::Completed])
+            ->active()
             ->with('payments')
             ->chunkById(100, function (Collection $dossiers) use ($now, $year, $dry, &$dueRows, &$overdueRows, &$clientReminders): void {
                 foreach ($dossiers as $dossier) {

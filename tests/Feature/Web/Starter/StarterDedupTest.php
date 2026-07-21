@@ -46,10 +46,8 @@ it('does not open a second dossier for the same email and re-sends the link inst
 });
 
 it('directs an already-active customer to their file instead of a new dossier', function () {
-    Submission::factory()->starter()->create([
+    Submission::factory()->starter()->paid()->create([
         'email' => 'maya@example.com',
-        'status' => SubmissionStatus::Paid,
-        'resume_expires_at' => null,
     ]);
 
     submitStarterForm('maya@example.com')

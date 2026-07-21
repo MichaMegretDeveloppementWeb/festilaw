@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Web\Funnel;
 
-use App\Enums\Submission\SubmissionStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Submission;
 use Illuminate\Http\RedirectResponse;
@@ -22,7 +21,7 @@ final class StarterJourneyController extends Controller
     {
         abort_unless($dossier->type->hasOnlineJourney(), 404);
 
-        if (in_array($dossier->status, [SubmissionStatus::Paid, SubmissionStatus::Completed], true)) {
+        if ($dossier->isActive()) {
             return redirect()->route('my-project', ['dossier' => $dossier->resume_token]);
         }
 

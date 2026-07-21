@@ -13,6 +13,16 @@ enum PaymentType: string
     /** Paiements de la cotisation annuelle de Personne Responsable (annee 1 + renouvellements). */
     public function isSubscription(): bool
     {
-        return in_array($this, [self::StarterSubscription, self::AnnualRenewal], true);
+        return in_array($this, self::subscriptionCases(), true);
+    }
+
+    /**
+     * Types d'abonnement (annee 1 + renouvellements), pour les requetes `whereIn('type', ...)`.
+     *
+     * @return array<int, self>
+     */
+    public static function subscriptionCases(): array
+    {
+        return [self::StarterSubscription, self::AnnualRenewal];
     }
 }
