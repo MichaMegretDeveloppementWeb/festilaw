@@ -38,6 +38,17 @@ Rien à faire ici, c'est juste pour situer.
 - Un **cron unique** (`schedule:run`, voir étape 5) déclenche toutes les tâches
   planifiées (rappels de renouvellement, purge RGPD).
 
+**Prérequis côté infrastructure** (indépendants du code, à avoir avant de
+commencer) :
+
+- Le domaine **`festilaw.com`** pointe bien vers l'hébergement (DNS configuré).
+- Le **certificat SSL/HTTPS** est actif pour `festilaw.com` (le site doit être
+  servi en `https://`, cadenas vert). Stripe et SignWell **exigent HTTPS** pour
+  les webhooks.
+- La **racine web** du domaine pointe sur le dossier **`public/`** du projet (et
+  non sur la racine du projet) — réglage standard Laravel, à vérifier dans le
+  panneau de l'hébergeur.
+
 ---
 
 ## 1. Le fichier `.env` de production
@@ -292,15 +303,23 @@ git pull            # (ou upload des fichiers selon la méthode de déploiement)
 # 2. Installer les dépendances PHP en version optimisée production
 composer install --no-dev --optimize-autoloader
 
-# 3. Installer et compiler les assets front (CSS/JS)
+# 3. Générer la clé de l'application — UNIQUEMENT à la toute première mise en prod
+php artisan key:generate
+#    ⚠️ Une seule fois. Une fois APP_KEY renseignée, ne JAMAIS relancer cette
+#    commande (elle remplacerait la clé et casserait sessions / données chiffrées).
+
+# 4. Installer et compiler les assets front (CSS/JS)
 npm install
 npm run build
 
-# 4. Appliquer les évolutions de base de données
+# 5. Sauvegarder la base AVANT de la faire évoluer (sécurité)
+#    -> export SQL depuis le panneau de l'hébergeur (phpMyAdmin), ou mysqldump.
+
+# 6. Appliquer les évolutions de base de données
 php artisan migrate --force
 #    (--force = accepter de tourner en production, sans confirmation interactive)
 
-# 5. Mettre en cache la config, les routes et les vues (performances)
+# 7. Mettre en cache la config, les routes et les vues (performances)
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
@@ -310,6 +329,12 @@ php artisan view:cache
 > `php artisan config:cache` (ou au minimum `php artisan config:clear`), sinon
 > l'ancienne configuration reste en cache et tes nouvelles clés ne sont pas prises
 > en compte. C'est **la cause n°1** de « j'ai mis la clé mais ça ne marche pas ».
+
+**Droits d'écriture (important en mutualisé).** Les dossiers `storage/` et
+`bootstrap/cache/` doivent être **accessibles en écriture** par le serveur web,
+sinon le site ne peut ni écrire ses logs, ni son cache, ni les fichiers uploadés,
+et affiche une erreur 500. Si besoin, régler les permissions via le panneau de
+l'hébergeur (ou `chmod -R ug+rwX storage bootstrap/cache`).
 
 Bon à savoir : les routes de **dev** (fausse signature, faux paiement) sont
 **automatiquement bloquées** hors environnement local — rien à désactiver
@@ -389,9 +414,13 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 
 Actions manuelles (hors `.env`) :
 
+- [ ] Domaine `festilaw.com` pointe sur l'hébergement + **SSL/HTTPS actif**
+- [ ] Racine web du domaine = dossier `public/` du projet
 - [ ] Compte Stripe activé (société + IBAN)
 - [ ] Webhook Stripe créé (`https://festilaw.com/webhooks/payment/stripe`, 3 événements) → `whsec_`
 - [ ] Webhook SignWell confirmé (`https://festilaw.com/webhooks/signature`)
 - [ ] Cron `schedule:run` activé chez l'hébergeur
-- [ ] Déploiement : `composer install --no-dev`, `npm run build`, `migrate --force`, caches
+- [ ] Sauvegarde de la base avant migration
+- [ ] Déploiement : `composer install --no-dev`, `key:generate` (1re fois), `npm run build`, `migrate --force`, caches
+- [ ] Droits d'écriture OK sur `storage/` et `bootstrap/cache/`
 - [ ] Recette : signature réelle + paiement réel (webhook 200) + email reçu OK
