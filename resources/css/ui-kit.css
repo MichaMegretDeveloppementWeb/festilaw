@@ -1,0 +1,15 @@
+/*
+ * Falcon UI Kit — Entrypoint CSS
+ *
+ * Ce fichier est le point d'entree CSS pour le back-office.
+ * Il charge Tailwind CSS, le plugin forms, la police DM Sans,
+ * et le preset du kit (dark mode, tokens, scrollbars).
+ *
+ * Utilisez @vite(['resources/css/ui-kit.css', 'resources/js/ui-kit.js'])
+ * dans votre layout back-office.
+ */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
+@import 'tailwindcss';
+@plugin '@tailwindcss/forms';
+@import '../../vendor/falcon/ui-kit/resources/css/preset.css';
+@source '../../vendor/falcon/ui-kit/resources/views/**/*.blade.php';

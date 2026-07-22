@@ -8,8 +8,15 @@
         "framework"
     ],
     "license": "MIT",
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/MichaMegretDeveloppementWeb/falcon-ui-kit.git"
+        }
+    ],
     "require": {
         "php": "^8.5",
+        "falcon/ui-kit": "^2.1",
         "barryvdh/laravel-dompdf": "^3.1",
         "laravel/framework": "^13.8",
         "laravel/tinker": "^3.0",
