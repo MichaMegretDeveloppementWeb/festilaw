@@ -533,3 +533,73 @@ it('ignores an unsupported display locale for the dossier language', function ()
 
     expect($submission->fresh()->locale)->toBe('en'); // inchange
 });
+
+/** A dossier at the payment step (documents done, signed) with the given documents already stored. */
+function dossierReviewingDocuments(): Submission
+{
+    $submission = openStarterDossier();
+    $submission->update(['status' => SubmissionStatus::AwaitingPayment]);
+    $submission->contract->update(['signature_status' => SignatureStatus::Signed, 'signed_file_path' => 'contracts/mandate.pdf']);
+    $submission->uploadedDocuments()->create([
+        'type' => 'technical_documentation', 'file_path' => "starter-documents/{$submission->reference}/tech.pdf",
+        'original_filename' => 'tech.pdf', 'mime_type' => 'application/pdf', 'size_bytes' => 5, 'uploaded_at' => now(),
+    ]);
+
+    return $submission;
+}
+
+it('shows download links (and a replace control) when reviewing completed steps', function () {
+    $submission = dossierReviewingDocuments();
+
+    Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
+        ->call('goToStep', 'documents')->assertSet('viewStep', 'documents')  // revue documents
+        ->assertSee('tech.pdf')->assertSee(__('Download'))->assertSee(__('Replace'));
+
+    Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
+        ->call('goToStep', 'sign')->assertSet('viewStep', 'sign')            // revue signature
+        ->assertSee(__('Signed mandate'))->assertSee(__('Download'));
+});
+
+it('lets the client replace a document while reviewing the completed documents step', function () {
+    Storage::fake('local');
+    $submission = dossierReviewingDocuments();
+
+    $oldPath = "starter-documents/{$submission->reference}/old.pdf";
+    Storage::disk('local')->put($oldPath, 'old-content');
+    $doc = $submission->uploadedDocuments()->create([
+        'type' => 'turnover_proof', 'file_path' => $oldPath, 'original_filename' => 'old.pdf',
+        'mime_type' => 'application/pdf', 'size_bytes' => 11, 'uploaded_at' => now(),
+    ]);
+
+    Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
+        ->call('goToStep', 'documents')
+        ->set('replacements.turnover_proof', UploadedFile::fake()->create('corrected.pdf', 40, 'application/pdf'))
+        ->call('replaceDocument', 'turnover_proof')
+        ->assertHasNoErrors();
+
+    $doc->refresh();
+    expect($doc->original_filename)->toBe('corrected.pdf')       // la piece a bien ete remplacee
+        ->and($doc->file_path)->not->toBe($oldPath);
+    Storage::disk('local')->assertMissing($oldPath);             // l'ancien fichier est supprime
+    Storage::disk('local')->assertExists($doc->file_path);       // le nouveau est stocke
+
+    // Le statut du dossier ne bouge pas : c'est une simple correction.
+    expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingPayment);
+});
+
+it('rejects an invalid replacement file and keeps the original document', function () {
+    Storage::fake('local');
+    $submission = dossierReviewingDocuments();
+    $doc = $submission->uploadedDocuments()->create([
+        'type' => 'turnover_proof', 'file_path' => "starter-documents/{$submission->reference}/ok.pdf",
+        'original_filename' => 'ok.pdf', 'mime_type' => 'application/pdf', 'size_bytes' => 5, 'uploaded_at' => now(),
+    ]);
+
+    Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
+        ->call('goToStep', 'documents')
+        ->set('replacements.turnover_proof', UploadedFile::fake()->create('too-big.pdf', 11000, 'application/pdf'))
+        ->call('replaceDocument', 'turnover_proof')
+        ->assertHasErrors('replacements.turnover_proof');
+
+    expect($doc->fresh()->original_filename)->toBe('ok.pdf'); // inchange
+});

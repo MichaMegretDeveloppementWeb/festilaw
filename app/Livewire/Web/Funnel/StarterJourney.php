@@ -7,6 +7,7 @@ namespace App\Livewire\Web\Funnel;
 use App\Actions\Web\Payment\CheckPaymentStatusAction;
 use App\Actions\Web\Payment\MarkPaymentSucceededAction;
 use App\Actions\Web\Starter\MarkContractSignedAction;
+use App\Actions\Web\Starter\ReplaceStarterDocumentAction;
 use App\Actions\Web\Starter\StartContractSigningAction;
 use App\Actions\Web\Starter\StartStarterPaymentAction;
 use App\Actions\Web\Starter\SubmitStarterDocumentsAction;
@@ -48,6 +49,9 @@ class StarterJourney extends Component
 
     /** @var array<string, TemporaryUploadedFile|null> Staged uploads keyed by document type value. */
     public array $documents = [];
+
+    /** @var array<string, TemporaryUploadedFile|null> Staged REPLACEMENT files (review step), keyed by document type value. */
+    public array $replacements = [];
 
     public string $paymentProvider = '';
 
@@ -342,6 +346,53 @@ class StarterJourney extends Component
         $this->submission->refresh();
     }
 
+    /** Discards a staged replacement file before it is confirmed. */
+    public function cancelReplacement(string $type): void
+    {
+        unset($this->replacements[$type]);
+    }
+
+    /**
+     * Replaces one already-uploaded document while reviewing the (completed) documents step: the visitor
+     * spotted a wrong file. Validates the staged replacement, swaps the stored file, keeps the parcours
+     * exactly where it is. Only a required document type that is already uploaded can be replaced.
+     */
+    public function replaceDocument(string $type, ReplaceStarterDocumentAction $replaceDocument): void
+    {
+        $docType = DocumentType::tryFrom($type);
+        if ($docType === null
+            || ! in_array($docType, $this->requiredDocumentTypes(), true)
+            || ! ($this->replacements[$type] ?? null) instanceof TemporaryUploadedFile) {
+            return;
+        }
+
+        $mimes = implode(',', $this->documentMimes());
+        $this->validate(
+            ["replacements.{$type}" => ['required', 'file', "mimes:{$mimes}", 'max:10240']],
+            [
+                "replacements.{$type}.mimes" => __('Accepted formats: PDF, JPG, PNG or WEBP.'),
+                "replacements.{$type}.max" => __('This file is too large (10 MB maximum).'),
+            ],
+        );
+
+        try {
+            $replaceDocument->execute($this->submission, $docType, $this->replacements[$type]);
+        } catch (BaseAppException $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            $this->addError("replacements.{$type}", __($e->getUserMessage()));
+
+            return;
+        } catch (Throwable $e) {
+            $this->reportUnexpectedError($e, "replacements.{$type}", 'STARTER document replace');
+
+            return;
+        }
+
+        unset($this->replacements[$type]);
+        $this->submission->load('uploadedDocuments');
+        session()->now('starter_status', 'document_replaced');
+    }
+
     public function pay(StartStarterPaymentAction $startStarterPayment, PaymentGatewayRegistry $gateways): mixed
     {
         if ($this->step() !== 'payment') {
@@ -569,8 +620,27 @@ class StarterJourney extends Component
      */
     private function stagedDocuments(): array
     {
+        return $this->stagedMeta($this->documents);
+    }
+
+    /**
+     * Display metadata for staged REPLACEMENT files (review step).
+     *
+     * @return array<string, array{name: string, size: int|null}>
+     */
+    private function stagedReplacements(): array
+    {
+        return $this->stagedMeta($this->replacements);
+    }
+
+    /**
+     * @param  array<string, mixed>  $files
+     * @return array<string, array{name: string, size: int|null}>
+     */
+    private function stagedMeta(array $files): array
+    {
         $meta = [];
-        foreach ($this->documents as $type => $file) {
+        foreach ($files as $type => $file) {
             if (! $file instanceof TemporaryUploadedFile) {
                 continue;
             }
@@ -596,11 +666,23 @@ class StarterJourney extends Component
         $displayStep = $this->displayStep();
         $currentStep = $this->step();
 
+        $token = $this->submission->resume_token;
+
         return view('livewire.web.funnel.starter-journey', [
             'step' => $displayStep,
             'currentStep' => $currentStep,
             'reviewing' => $displayStep !== $currentStep,
-            'reviewDocuments' => $this->submission->uploadedDocuments->map(fn ($d): string => $d->type->label())->all(),
+            // Revue documents : nom + telechargement + remplacement (on a pu se tromper de fichier).
+            'reviewDocuments' => $this->submission->uploadedDocuments->map(fn ($d): array => [
+                'type' => $d->type->value,
+                'label' => $d->type->label(),
+                'filename' => $d->original_filename,
+                'downloadUrl' => route('get-started.starter.document', ['dossier' => $token, 'document' => $d->getKey()]),
+            ])->all(),
+            'replacementsStaged' => $this->stagedReplacements(),
+            // Revue signature : telecharger le mandat signe (le fichier doit exister localement).
+            'mandateAvailable' => (string) ($this->submission->contract?->signed_file_path ?? '') !== '',
+            'mandateUrl' => route('get-started.starter.mandate', ['dossier' => $token]),
             'contractDeclined' => $this->submission->contract?->signature_status === SignatureStatus::Declined,
             'signatureStarted' => (string) ($this->submission->contract?->signature_provider_reference ?? '') !== '',
             'paymentStarted' => $this->pendingPayment() !== null,

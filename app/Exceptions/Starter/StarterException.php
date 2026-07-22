@@ -58,6 +58,14 @@ final class StarterException extends BaseAppException
         );
     }
 
+    public static function documentNotFound(int $submissionId, string $documentType): self
+    {
+        return new self(
+            technicalMessage: "STARTER submission [{$submissionId}] has no [{$documentType}] document to replace.",
+            userMessage: 'This document could not be found. Please refresh the page and try again.',
+        );
+    }
+
     /** @param  list<string>  $missingTypes */
     public static function documentsMissing(int $submissionId, array $missingTypes): self
     {

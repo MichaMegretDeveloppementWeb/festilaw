@@ -2,10 +2,10 @@
     @php
         $flash = session('starter_status');
     @endphp
-    @if ($flash === 'signed' || $flash === 'paid')
+    @if (in_array($flash, ['signed', 'paid', 'document_replaced'], true))
         <div class="journey-flash">
             <svg class="journey-flash__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            <span>{{ $flash === 'signed' ? __('Mandate signed. Next: upload your documents.') : __('Payment received. Your file is complete.') }}</span>
+            <span>{{ $flash === 'signed' ? __('Mandate signed. Next: upload your documents.') : ($flash === 'paid' ? __('Payment received. Your file is complete.') : __('Document replaced.')) }}</span>
         </div>
     @endif
 
@@ -43,17 +43,65 @@
             @if ($step === 'sign')
                 <h2 class="journey-panel__title">{{ __('Sign your Responsible Person mandate') }}</h2>
                 <p class="journey-panel__text">{{ __('You have already signed your Responsible Person mandate. This step is done.') }}</p>
+                @if ($mandateAvailable)
+                    <div class="journey-review-docs">
+                        <div class="journey-review-doc">
+                            <div class="dropzone-file">
+                                <svg class="dropzone-file__icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                <div class="dropzone-file__meta"><span class="dropzone-file__name">{{ __('Signed mandate') }}</span></div>
+                            </div>
+                            <div class="journey-review-doc__actions">
+                                <a href="{{ $mandateUrl }}" class="btn btn--outline-dark btn--sm">{{ __('Download') }}</a>
+                            </div>
+                        </div>
+                    </div>
+                @endif
             @elseif ($step === 'documents')
                 <h2 class="journey-panel__title">{{ __('Upload your documents') }}</h2>
-                <p class="journey-panel__text">{{ __('You have already uploaded your documents:') }}</p>
-                <ul class="journey-review-list">
-                    @foreach ($reviewDocuments as $label)
-                        <li>{{ $label }}</li>
+                <p class="journey-panel__text">{{ __('Your documents are saved. Download one to check it, or replace it if you uploaded the wrong file.') }}</p>
+                <div class="journey-review-docs">
+                    @foreach ($reviewDocuments as $doc)
+                        @php $staged = $replacementsStaged[$doc['type']] ?? null; @endphp
+                        <div class="journey-review-doc" wire:key="review-doc-{{ $doc['type'] }}">
+                            <div class="journey-review-doc__label">{{ $doc['label'] }}</div>
+                            @if ($staged)
+                                <div class="dropzone-file">
+                                    <svg class="dropzone-file__icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                    <div class="dropzone-file__meta">
+                                        <span class="dropzone-file__name">{{ $staged['name'] }}</span>
+                                        @if ($staged['size'] !== null)
+                                            <span class="dropzone-file__size">{{ number_format($staged['size'] / 1024, 0) }} KB · {{ __('new file, not saved yet') }}</span>
+                                        @endif
+                                    </div>
+                                </div>
+                                <div class="journey-review-doc__actions">
+                                    <button type="button" class="btn btn--coral btn--sm" wire:click="replaceDocument('{{ $doc['type'] }}')" wire:loading.attr="disabled" wire:target="replaceDocument('{{ $doc['type'] }}')">
+                                        <span wire:loading.remove wire:target="replaceDocument('{{ $doc['type'] }}')">{{ __('Confirm replacement') }}</span>
+                                        <span wire:loading wire:target="replaceDocument('{{ $doc['type'] }}')">{{ __('Saving') }}&hellip;</span>
+                                    </button>
+                                    <button type="button" class="btn btn--outline-dark btn--sm" wire:click="cancelReplacement('{{ $doc['type'] }}')">{{ __('Cancel') }}</button>
+                                </div>
+                            @else
+                                <div class="dropzone-file">
+                                    <svg class="dropzone-file__icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                    <div class="dropzone-file__meta"><span class="dropzone-file__name">{{ $doc['filename'] }}</span></div>
+                                </div>
+                                <div class="journey-review-doc__actions">
+                                    <a href="{{ $doc['downloadUrl'] }}" class="btn btn--outline-dark btn--sm">{{ __('Download') }}</a>
+                                    <label class="btn btn--outline-dark btn--sm journey-review-doc__replace">
+                                        <span wire:loading.remove wire:target="replacements.{{ $doc['type'] }}">{{ __('Replace') }}</span>
+                                        <span wire:loading wire:target="replacements.{{ $doc['type'] }}">{{ __('Uploading') }}&hellip;</span>
+                                        <input type="file" wire:model="replacements.{{ $doc['type'] }}" accept="{{ $acceptAttr }}">
+                                    </label>
+                                </div>
+                            @endif
+                            @error("replacements.{$doc['type']}") <p class="dropzone-field__error">{{ $message }}</p> @enderror
+                        </div>
                     @endforeach
-                </ul>
+                </div>
             @endif
             <div class="journey-review">
-                <span>{{ __('Read-only · this step is complete.') }}</span>
+                <span>{{ __('This step is complete · you can go back to the current step any time.') }}</span>
                 <button type="button" class="btn btn--outline-dark btn--sm" wire:click="goToStep('{{ $currentStep }}')">{{ __('Back to the current step') }}</button>
             </div>
         </div>
