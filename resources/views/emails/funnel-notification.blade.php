@@ -12,4 +12,6 @@
             @endif
         </table>
     </x-mail.panel>
+
+    <x-mail.button :url="$dossierUrl">{{ __('View in the back-office') }}</x-mail.button>
 </x-mail.layout>

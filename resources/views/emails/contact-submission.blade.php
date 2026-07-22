@@ -16,5 +16,7 @@
     <x-mail.text><strong style="color:#0B1E45;">{{ __('Message') }}</strong></x-mail.text>
     <x-mail.text><span style="white-space:pre-wrap;">{{ $submission->message }}</span></x-mail.text>
 
+    <x-mail.button :url="$dossierUrl">{{ __('View in the back-office') }}</x-mail.button>
+
     <x-mail.text :muted="true" size="12.5px">{{ __('Reference') }}: {{ $submission->reference }}</x-mail.text>
 </x-mail.layout>

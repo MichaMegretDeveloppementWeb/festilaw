@@ -30,6 +30,9 @@ class ContactSubmissionReceived extends Mailable
     {
         return new Content(
             view: 'emails.contact-submission',
+            with: [
+                'dossierUrl' => route('admin.submissions.show', ['submission' => $this->submission->id]),
+            ],
         );
     }
 }

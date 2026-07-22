@@ -33,6 +33,8 @@ final class FunnelNotification extends Mailable
 
     public function content(): Content
     {
-        return new Content(view: 'emails.funnel-notification');
+        return new Content(view: 'emails.funnel-notification', with: [
+            'dossierUrl' => route('admin.submissions.show', ['submission' => $this->submission->id]),
+        ]);
     }
 }
