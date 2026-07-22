@@ -30,8 +30,29 @@ final readonly class MarkPaymentRefundedAction
                 'submission' => $payment->submission_id,
                 'provider' => $payment->provider,
             ]);
+
+            $this->invalidateDeadDossierLink($payment);
         }
 
         return $payment->refresh();
+    }
+
+    /**
+     * Un dossier rembourse (qui n'est plus actif du tout apres ce remboursement) ne doit pas garder un
+     * lien magique immortel pointant vers l'etape paiement : on l'expire. Le client rembourse repart
+     * ainsi sur un dossier neuf (la dedup par email exclut deja les dossiers non actifs). On ne touche
+     * rien si un autre paiement (ex. un renouvellement) maintient le dossier actif.
+     */
+    private function invalidateDeadDossierLink(Payment $payment): void
+    {
+        $submission = $payment->submission()->first();
+
+        if ($submission === null || $submission->isActive()) {
+            return;
+        }
+
+        if ($submission->resume_expires_at === null || $submission->resume_expires_at->isFuture()) {
+            $submission->update(['resume_expires_at' => now()]);
+        }
     }
 }
