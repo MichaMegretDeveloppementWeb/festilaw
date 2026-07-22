@@ -178,12 +178,26 @@ final class StripePaymentGateway implements PaymentGatewayInterface
         $type = (string) Arr::get($event, 'type', '');
         $object = (array) Arr::get($event, 'data.object', []);
 
-        // Les evenements "charge" portent le remboursement/litige ; l'objet est une Charge, pas une
-        // session : on rapproche par notre payment_id propage dans payment_intent_data.metadata.
-        if ($type === 'charge.refunded' || $type === 'charge.dispute.created') {
+        // Remboursement reel : l'objet est une Charge, pas une session — on rapproche par notre payment_id
+        // propage dans les metadata.
+        if ($type === 'charge.refunded') {
             return new PaymentWebhookData(
                 providerReference: (string) Arr::get($object, 'id', ''),
                 outcome: PaymentEventOutcome::Refunded,
+                clientReference: ((string) Arr::get($object, 'metadata.payment_id', '')) ?: null,
+            );
+        }
+
+        // Litige (chargeback) : ce N'EST PAS un remboursement. A l'OUVERTURE les fonds sont seulement
+        // retenus et le litige peut etre gagne : on ne coupe donc rien (Unresolved). On ne desactive le
+        // dossier que si le litige est PERDU (fonds definitivement repris). Un litige gagne ne desactive
+        // jamais la couverture — rien a "reactiver" puisqu'on n'a rien coupe.
+        if ($type === 'charge.dispute.created' || $type === 'charge.dispute.closed') {
+            $lost = $type === 'charge.dispute.closed' && (string) Arr::get($object, 'status', '') === 'lost';
+
+            return new PaymentWebhookData(
+                providerReference: (string) Arr::get($object, 'id', ''),
+                outcome: $lost ? PaymentEventOutcome::Refunded : PaymentEventOutcome::Unresolved,
                 clientReference: ((string) Arr::get($object, 'metadata.payment_id', '')) ?: null,
             );
         }
