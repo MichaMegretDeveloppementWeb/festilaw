@@ -1,6 +1,6 @@
 <p>{{ __('Hello') }}{{ $submission->first_name ? ' '.$submission->first_name : '' }},</p>
 
-<p>{{ __('Your payment is confirmed and your Festilaw Creator Pack is now active. We\'ll issue your official EU Responsible Person address and email it to you within 24 hours.') }}</p>
+<p>{{ __('Your payment is confirmed and your Festilaw :pack is now active. We\'ll issue your official EU Responsible Person address and email it to you within 24 hours.', ['pack' => __($submission->type->label())]) }}</p>
 
 <p>{{ __('You can view your file and download your signed mandate and documents any time:') }}</p>
 

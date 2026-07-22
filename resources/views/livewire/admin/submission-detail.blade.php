@@ -327,7 +327,7 @@
                 </section>
             @endunless
 
-            @if ($isStarter)
+            @if ($isOnlineJourney)
                 <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
                     <div class="border-b border-slate-100 px-5 py-3.5">
                         <h2 class="text-sm font-semibold text-slate-900">{{ __('Personne Responsable UE') }}</h2>
@@ -355,7 +355,7 @@
                         <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>
                         {{ $isContact ? __('Répondre par email') : __('Envoyer un email') }}
                     </button>
-                    @if ($isStarter && $submission->resume_token)
+                    @if ($isOnlineJourney && $submission->resume_token)
                         <button type="button" wire:click="resendLink" wire:target="resendLink" wire:loading.attr="disabled"
                             class="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-60">
                             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>

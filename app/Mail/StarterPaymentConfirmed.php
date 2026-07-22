@@ -11,9 +11,9 @@ use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * Sent to the buyer once their STARTER payment is confirmed. Doubles as the safety net for slow async
- * payment methods: even if the buyer left the page, they learn their Creator Pack is active. Dispatched
- * resiliently from MarkPaymentSucceededAction (a failure is logged, never breaks the confirmation).
+ * Sent to the buyer once their self-service payment is confirmed (Creator OR Pro). Doubles as the safety
+ * net for slow async payment methods: even if the buyer left the page, they learn their pack is active.
+ * Dispatched resiliently from MarkPaymentSucceededAction (a failure is logged, never breaks confirmation).
  */
 final class StarterPaymentConfirmed extends Mailable
 {
@@ -23,7 +23,7 @@ final class StarterPaymentConfirmed extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: __('Your Festilaw Creator Pack is active'));
+        return new Envelope(subject: __('Your Festilaw :pack is active', ['pack' => __($this->submission->type->label())]));
     }
 
     public function content(): Content

@@ -148,7 +148,8 @@ class SubmissionDetail extends Component
 
     public function resendLink(SendStarterResumeLinkAction $sendLink): void
     {
-        if ($this->submission->type !== SubmissionType::Starter || (string) $this->submission->resume_token === '') {
+        // Ouvert a tous les parcours self-service (Creator ET Pro), pas au seul Starter.
+        if (! $this->submission->type->hasOnlineJourney() || (string) $this->submission->resume_token === '') {
             return;
         }
 
@@ -339,7 +340,7 @@ class SubmissionDetail extends Component
         return view('livewire.admin.submission-detail', [
             'dossierState' => $renewals->state($this->submission),
             'statuses' => $this->assignableStatuses(),
-            'isStarter' => $this->submission->type === SubmissionType::Starter,
+            'isOnlineJourney' => $this->submission->type->hasOnlineJourney(),
             'isContact' => $isContact,
             'isPaid' => $this->isPaid(),
             'renewal' => $renewal,

@@ -378,6 +378,33 @@ it('refuses to issue the RP when required documents are missing', function () {
     Mail::assertNotSent(StarterResponsiblePersonIssued::class);
 });
 
+it('issues the RP for a Pro dossier too (self-service, like Creator)', function () {
+    Mail::fake();
+    $submission = Submission::factory()->pro()->paid()->create();
+
+    actingAs(User::factory()->create());
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $submission])
+        ->set('rpAddress', 'Festilaw SAS, 1 rue de l\'Europe, Paris')
+        ->call('issueResponsiblePerson')
+        ->assertHasNoErrors();
+
+    expect($submission->fresh()->status)->toBe(SubmissionStatus::Completed);
+    Mail::assertSent(StarterResponsiblePersonIssued::class, fn ($mail) => $mail->hasTo($submission->email));
+});
+
+it('resends the resume link to a Pro client too', function () {
+    Mail::fake();
+    $submission = Submission::factory()->pro()->create();
+
+    actingAs(User::factory()->create());
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $submission])
+        ->call('resendLink');
+
+    Mail::assertSent(StarterResumeLink::class, fn ($mail) => $mail->hasTo($submission->email));
+});
+
 it('presents a contact as an inquiry, not a dossier', function () {
     $contact = Submission::factory()->create([
         'type' => SubmissionType::Contact,

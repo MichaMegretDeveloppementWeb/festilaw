@@ -25,7 +25,7 @@ final class StarterResumeLink extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(subject: $this->isActive()
-            ? __('Your Festilaw Creator Pack')
+            ? __('Your Festilaw :pack', ['pack' => __($this->submission->type->label())])
             : __('Continue your Festilaw application'));
     }
 

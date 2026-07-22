@@ -48,10 +48,17 @@ class SubmissionFactory extends Factory
 
     public function pro(): static
     {
+        // PRO partage le meme parcours self-service en ligne que Creator : meme mise en place que starter()
+        // (statut en cours + lien de reprise), au type pres.
         return $this->state(fn (): array => [
             'type' => SubmissionType::Pro,
+            'status' => SubmissionStatus::InProgress,
             'company_name' => fake()->company(),
+            'last_name' => fake()->lastName(),
+            'website_url' => 'https://'.fake()->domainName(),
             'message' => null,
+            'resume_token' => Str::random(48),
+            'resume_expires_at' => now()->addDays(30),
         ]);
     }
 
