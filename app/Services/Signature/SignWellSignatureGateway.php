@@ -196,7 +196,7 @@ final class SignWellSignatureGateway implements SignatureGatewayInterface
         return $path;
     }
 
-    /** Maps a SignWell document status to the provider-agnostic outcome (detection only — no download). */
+    /** Maps a SignWell document status to the provider-agnostic outcome (detection only · no download). */
     private function resultFor(string $documentId, string $status): SignatureWebhookData
     {
         return new SignatureWebhookData(

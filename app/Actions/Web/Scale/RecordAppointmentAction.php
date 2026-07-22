@@ -22,6 +22,11 @@ final readonly class RecordAppointmentAction
 {
     public function execute(Submission $submission, ?string $googleEventReference = null): Appointment
     {
+        // Un dossier annule ne prend pas de rendez-vous (garde au bord, comme le paiement de l'audit).
+        if ($submission->status === SubmissionStatus::Cancelled) {
+            throw ScaleException::dossierCancelled($submission->id);
+        }
+
         // Reserver n'a de sens qu'une fois l'audit paye (garde metier au bord).
         if ($submission->payments()
             ->where('type', PaymentType::ScaleAudit)
@@ -44,7 +49,12 @@ final readonly class RecordAppointmentAction
                 'status' => AppointmentStatus::Requested,
             ]);
 
-            $submission->update(['status' => SubmissionStatus::InProgress]);
+            // N'avance le statut que depuis un etat pre-terminal : ne retrograde jamais un dossier deja
+            // Termine (prestation livree) ni ne reactive un Annule (deja bloque au-dessus).
+            Submission::query()
+                ->whereKey($submission->id)
+                ->whereNotIn('status', [SubmissionStatus::Cancelled, SubmissionStatus::Completed])
+                ->update(['status' => SubmissionStatus::InProgress]);
 
             return $appointment;
         });

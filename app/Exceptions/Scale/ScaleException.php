@@ -23,4 +23,12 @@ final class ScaleException extends BaseAppException
             userMessage: 'Please pay the €75 audit fee before booking your consultation.',
         );
     }
+
+    public static function dossierCancelled(int $submissionId): self
+    {
+        return new self(
+            technicalMessage: "SCALE submission [{$submissionId}] is cancelled: refusing the audit payment / booking.",
+            userMessage: 'This file has been cancelled. Please contact us if you need help.',
+        );
+    }
 }

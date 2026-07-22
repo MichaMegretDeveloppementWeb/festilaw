@@ -30,7 +30,7 @@ interface SignatureGatewayInterface
 
     /**
      * Poll the provider for the current signature status of the contract (used to confirm completion
-     * when the signer returns, without relying on a webhook). Detection only — the signed PDF is fetched
+     * when the signer returns, without relying on a webhook). Detection only · the signed PDF is fetched
      * separately (downloadSignedDocument) so a repeated poll never re-downloads.
      */
     public function checkStatus(Contract $contract): SignatureWebhookData;

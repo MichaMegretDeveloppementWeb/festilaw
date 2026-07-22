@@ -17,7 +17,7 @@ use Throwable;
  * Finalise un dossier STARTER : enregistre l'adresse de Personne Responsable UE delivree, passe le
  * dossier a "termine", et previent le client par email (envoi non bloquant, dans sa langue). La
  * Personne Responsable est le livrable : on ne la delivre (ni ne notifie le client) que si le dossier
- * est reellement pret — paiement actif, mandat signe, toutes les pieces deposees.
+ * est reellement pret · paiement actif, mandat signe, toutes les pieces deposees.
  */
 final readonly class IssueResponsiblePersonAction
 {

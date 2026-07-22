@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Log;
  * Records a refund or chargeback on a previously successful payment: Succeeded → Refunded. Only a
  * succeeded payment transitions (idempotent on redelivery; never touches a non-succeeded row). The
  * dossier's active state is *derived* from its non-refunded succeeded subscription payments, so writing
- * Refunded here is what deactivates it — no separate submission write. Logged at warning level because a
+ * Refunded here is what deactivates it · no separate submission write. Logged at warning level because a
  * refund/chargeback is exceptional and support-relevant.
  */
 final readonly class MarkPaymentRefundedAction

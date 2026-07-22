@@ -22,7 +22,7 @@ enum SignatureStatus: string
     }
 
     /**
-     * States from which a signature outcome may still be recorded — the only source of a Signed/Declined/
+     * States from which a signature outcome may still be recorded · the only source of a Signed/Declined/
      * Expired transition. A restart (new signing session) resets a Declined/Expired contract to Pending.
      *
      * @return array<int, self>

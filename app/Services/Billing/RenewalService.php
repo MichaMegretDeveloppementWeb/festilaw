@@ -50,7 +50,7 @@ final class RenewalService
 
         // "Prestation livree" (RP delivree -> statut Completed) et "abonnement a renouveler" sont deux
         // axes ORTHOGONAUX : un dossier termine continue de se renouveler chaque annee. On derive donc le
-        // renouvellement EN PREMIER ; "Termine" ne s'affiche que lorsque le dossier est a jour — sinon il
+        // renouvellement EN PREMIER ; "Termine" ne s'affiche que lorsque le dossier est a jour · sinon il
         // doit rester visible en "a renouveler / en retard" (sans quoi un client servi qui doit renouveler
         // disparaitrait des vues operationnelles alors que ProcessRenewals le relance).
         return match ($this->status($submission, $now)) {

@@ -11,7 +11,7 @@ use App\Models\Payment;
  * Records that a checkout session expired without payment (buyer abandoned): confirmable → Expired.
  * Distinct from Failed (a decline) for back-office clarity. The submission stays "awaiting payment";
  * a retry creates a fresh payment. Only a confirmable payment transitions (never overwrites a settled
- * state — a session that expires *after* an async success must not undo the payment).
+ * state · a session that expires *after* an async success must not undo the payment).
  */
 final readonly class MarkPaymentExpiredAction
 {

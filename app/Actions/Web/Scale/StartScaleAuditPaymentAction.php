@@ -7,6 +7,7 @@ namespace App\Actions\Web\Scale;
 use App\Data\Payment\CheckoutSessionData;
 use App\Enums\Payment\PaymentStatus;
 use App\Enums\Payment\PaymentType;
+use App\Enums\Submission\SubmissionStatus;
 use App\Exceptions\Scale\ScaleException;
 use App\Models\Submission;
 use App\Services\Payment\PaymentGatewayRegistry;
@@ -24,6 +25,12 @@ final readonly class StartScaleAuditPaymentAction
 
     public function execute(Submission $submission, string $providerKey): CheckoutSessionData
     {
+        // Un dossier annule ne paie pas d'audit : garde au bord (le POST reste atteignable avec un token
+        // valide meme si l'UI masque le bouton). Reactiver un dossier annule ne passe que par le menu admin.
+        if ($submission->status === SubmissionStatus::Cancelled) {
+            throw ScaleException::dossierCancelled($submission->id);
+        }
+
         // Audit deja regle : rien a repayer (le dossier passe alors a la reservation).
         if ($submission->payments()
             ->where('type', PaymentType::ScaleAudit)

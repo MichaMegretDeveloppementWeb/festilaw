@@ -97,7 +97,7 @@ class Submission extends Model
 
     /**
      * Rotates the resume token to a fresh unguessable value. Called on every magic-link request (client
-     * find-my-file or admin resend) so the emailed link is always the only valid one — a previously sent
+     * find-my-file or admin resend) so the emailed link is always the only valid one · a previously sent
      * link can no longer be reused, which removes the whole class of stale/leaked-link problems.
      */
     public function regenerateResumeToken(): void
@@ -139,7 +139,7 @@ class Submission extends Model
     }
 
     /**
-     * Whether this is an active, paying customer's dossier — DERIVED from its payments, the single source
+     * Whether this is an active, paying customer's dossier · DERIVED from its payments, the single source
      * of truth: at least one succeeded, non-refunded subscription payment (year 1 or a renewal), and not
      * explicitly cancelled. A refund/chargeback (payment → Refunded) therefore deactivates the dossier on
      * its own. The stored `status` (Paid/Completed/Cancelled) stays a workflow/display cache, never the

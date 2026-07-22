@@ -261,6 +261,17 @@ it('does NOT deactivate on a PARTIAL charge.refunded (coverage stays, handled ma
     expect($event->outcome)->toBe(PaymentEventOutcome::Unresolved);
 });
 
+it('treats a fully-refunded charge as Refunded even when the refunded flag is false (amount reconciliation)', function () {
+    // amount_refunded >= amount alors que le booleen refunded n'est pas (encore) a true : c'est bien un
+    // remboursement integral -> Refunded.
+    $event = app(StripePaymentGateway::class)->parseWebhook(stripeWebhookRequest([
+        'type' => 'charge.refunded',
+        'data' => ['object' => ['id' => 'ch_1', 'refunded' => false, 'amount' => 33300, 'amount_refunded' => 33300, 'metadata' => ['payment_id' => '77']]],
+    ]));
+
+    expect($event->outcome)->toBe(PaymentEventOutcome::Refunded);
+});
+
 it('does NOT deactivate on a dispute being opened (funds only held, may be won)', function () {
     $event = app(StripePaymentGateway::class)->parseWebhook(stripeWebhookRequest([
         'type' => 'charge.dispute.created',

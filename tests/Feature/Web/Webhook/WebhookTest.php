@@ -5,6 +5,7 @@ use App\Enums\Contract\SignatureStatus;
 use App\Enums\Payment\PaymentStatus;
 use App\Enums\Payment\PaymentType;
 use App\Enums\Submission\SubmissionStatus;
+use App\Mail\ScaleAuditConfirmed;
 use App\Mail\StarterPaymentConfirmed;
 use App\Models\Contract;
 use App\Models\Submission;
@@ -82,6 +83,34 @@ it('confirms a payment from a Stripe webhook and emails the buyer in their local
         StarterPaymentConfirmed::class,
         fn (StarterPaymentConfirmed $mail) => $mail->hasTo($submission->email) && $mail->locale === 'fr',
     );
+});
+
+it('confirms a SCALE audit from a Stripe webhook, advancing the dossier to in-progress (not the subscription "paid")', function () {
+    // Le webhook signe est la source de verite en prod : on verifie que l'audit SCALE y est bien traite
+    // comme un audit (statut "en cours", pas "Paye" d'abonnement) et declenche l'email dedie.
+    $submission = Submission::factory()->scale()->create([
+        'resume_token' => 'scaletok', 'resume_expires_at' => now()->addDays(30), 'email' => 'bigco@example.com',
+    ]);
+    $payment = $submission->payments()->create([
+        'type' => PaymentType::ScaleAudit,
+        'amount_cents' => 7500,
+        'currency' => 'EUR',
+        'provider' => 'stripe',
+        'provider_reference' => 'cs_scale_wh',
+        'status' => PaymentStatus::Pending,
+    ]);
+
+    postStripeWebhook([
+        'type' => 'checkout.session.completed',
+        'data' => ['object' => ['id' => 'cs_scale_wh', 'payment_status' => 'paid']],
+    ])->assertNoContent();
+
+    expect($payment->fresh()->status)->toBe(PaymentStatus::Succeeded)
+        ->and($submission->fresh()->status)->toBe(SubmissionStatus::InProgress)
+        ->and($submission->fresh()->isActive())->toBeFalse();
+
+    Mail::assertSent(ScaleAuditConfirmed::class, fn (ScaleAuditConfirmed $mail) => $mail->hasTo('bigco@example.com'));
+    Mail::assertNotSent(StarterPaymentConfirmed::class);
 });
 
 it('confirms a payment from a valid Stripe webhook', function () {

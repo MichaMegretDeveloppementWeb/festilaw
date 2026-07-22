@@ -9,7 +9,7 @@ use App\Models\Contract;
 
 /**
  * Records that the signer declined (or the sender canceled) the document: Pending → Declined. Only a
- * confirmable (Pending) contract transitions — a signed one is never overwritten. The submission stays
+ * confirmable (Pending) contract transitions · a signed one is never overwritten. The submission stays
  * "in progress" (the sign step) so the client can start a fresh signing session; a banner surfaces the
  * refusal. No longer leaves the contract stuck "pending" forever.
  */

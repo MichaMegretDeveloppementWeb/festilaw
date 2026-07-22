@@ -440,6 +440,17 @@ it('lets an admin record the confirmed Scale consultation slot and advance its s
         ->and($appointment->scheduled_at->format('Y-m-d H:i'))->toBe('2026-09-01 14:30');
 });
 
+it('refuses to update an appointment on a dossier that has none', function () {
+    $submission = Submission::factory()->scale()->create();
+
+    actingAs(User::factory()->create());
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $submission])
+        ->set('apptStatus', AppointmentStatus::Scheduled->value)
+        ->call('updateAppointment')
+        ->assertHasErrors('apptStatus');
+});
+
 it('presents a contact as an inquiry, not a dossier', function () {
     $contact = Submission::factory()->create([
         'type' => SubmissionType::Contact,

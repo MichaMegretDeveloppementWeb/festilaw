@@ -31,7 +31,7 @@ final class PurgeAbandonedDossiers extends Command
         $deleted = 0;
 
         // Meme perimetre que le parcours client : tout type a parcours en ligne (STARTER et PRO), pas
-        // seulement STARTER — sinon les fichiers prives des dossiers PRO abandonnes sont conserves sans fin.
+        // seulement STARTER · sinon les fichiers prives des dossiers PRO abandonnes sont conserves sans fin.
         $onlineTypes = array_values(array_filter(
             SubmissionType::cases(),
             fn (SubmissionType $type): bool => $type->hasOnlineJourney(),

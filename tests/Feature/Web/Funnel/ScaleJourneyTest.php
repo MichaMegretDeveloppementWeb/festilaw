@@ -65,12 +65,12 @@ it('opens a SCALE dossier with a magic link, emails it and lands the visitor in 
     Mail::assertSent(ScaleSpaceLink::class, fn ($mail) => $mail->hasTo('bigco@example.com'));
 });
 
-it('shows the pay step on the Scale space when the audit is unpaid', function () {
+it('shows the pay step (pay form) on the Scale space when the audit is unpaid', function () {
     scaleDossier();
 
     get(route('get-started.scale.space', ['dossier' => 'scaletok']))
         ->assertOk()
-        ->assertSee('audit'); // libelle "Pay ... audit"
+        ->assertSee(route('get-started.scale.pay', ['dossier' => 'scaletok'])); // l'action du formulaire de paiement
 });
 
 it('404s the Scale space for a non-Scale dossier', function () {
@@ -165,4 +165,57 @@ it('refuses to start a second audit payment once the audit is paid', function ()
         ->assertSessionHas('scale_error');
 
     expect(Payment::where('type', PaymentType::ScaleAudit)->count())->toBe(1);
+});
+
+it('refuses to pay the audit on a cancelled Scale dossier', function () {
+    fakeStripeCreate();
+    $dossier = scaleDossier();
+    $dossier->update(['status' => SubmissionStatus::Cancelled]);
+
+    post(route('get-started.scale.pay', ['dossier' => 'scaletok']))
+        ->assertRedirect(route('get-started.scale.space', ['dossier' => 'scaletok']))
+        ->assertSessionHas('scale_error');
+
+    expect(Payment::where('type', PaymentType::ScaleAudit)->count())->toBe(0);
+});
+
+it('refuses to book on a cancelled Scale dossier even when the audit was paid', function () {
+    $dossier = scaleDossier();
+    Payment::factory()->succeeded()->for($dossier)->create(['type' => PaymentType::ScaleAudit, 'provider_reference' => 'cs_scale']);
+    $dossier->update(['status' => SubmissionStatus::Cancelled]);
+
+    post(route('get-started.scale.book', ['dossier' => 'scaletok']))
+        ->assertRedirect(route('get-started.scale.space', ['dossier' => 'scaletok']))
+        ->assertSessionHas('scale_error');
+
+    expect($dossier->appointment()->count())->toBe(0)
+        ->and($dossier->fresh()->status)->toBe(SubmissionStatus::Cancelled);
+});
+
+it('does not downgrade a completed Scale dossier when a booking is recorded', function () {
+    $dossier = scaleDossier();
+    Payment::factory()->succeeded()->for($dossier)->create(['type' => PaymentType::ScaleAudit, 'provider_reference' => 'cs_scale']);
+    $dossier->update(['status' => SubmissionStatus::Completed]);
+
+    post(route('get-started.scale.book', ['dossier' => 'scaletok']))->assertRedirect();
+
+    // Le rendez-vous est bien enregistre, mais "Termine" n'est jamais retrograde en "en cours".
+    expect($dossier->appointment()->count())->toBe(1)
+        ->and($dossier->fresh()->status)->toBe(SubmissionStatus::Completed);
+});
+
+it('renders the cancelled state on the Scale space (no pay or book form)', function () {
+    $dossier = scaleDossier();
+    $dossier->update(['status' => SubmissionStatus::Cancelled]);
+
+    get(route('get-started.scale.space', ['dossier' => 'scaletok']))
+        ->assertOk()
+        ->assertSee('cancelled')
+        ->assertDontSee(route('get-started.scale.pay', ['dossier' => 'scaletok']));
+});
+
+it('404s an expired Scale space link (capability binding)', function () {
+    Submission::factory()->scale()->create(['resume_token' => 'expiredtok', 'resume_expires_at' => now()->subDay()]);
+
+    get(route('get-started.scale.space', ['dossier' => 'expiredtok']))->assertNotFound();
 });

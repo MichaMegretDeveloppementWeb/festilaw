@@ -15,7 +15,7 @@ use Throwable;
 /**
  * Records a completed signature (called by the signature webhook, the return poll, or reconciliation).
  * Idempotent AND concurrency-safe: only the first delivery transitions the state (confirmable → Signed),
- * and the signed PDF is downloaded ONCE — never on a replay (a contract that is no longer Pending returns
+ * and the signed PDF is downloaded ONCE · never on a replay (a contract that is no longer Pending returns
  * immediately, before any download). Advances the submission to "awaiting documents".
  */
 final readonly class MarkContractSignedAction
@@ -24,7 +24,7 @@ final readonly class MarkContractSignedAction
 
     public function execute(Contract $contract, ?string $providerReference = null): Contract
     {
-        // Replay / etat non-confirmable : rien a faire — et surtout aucun re-telechargement du PDF.
+        // Replay / etat non-confirmable : rien a faire · et surtout aucun re-telechargement du PDF.
         if (! in_array($contract->signature_status, SignatureStatus::confirmable(), true)) {
             return $contract;
         }

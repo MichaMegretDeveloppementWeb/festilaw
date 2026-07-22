@@ -26,7 +26,7 @@ enum PaymentStatus: string
     }
 
     /**
-     * States from which the payment can still become paid — the only states an incoming "succeeded"
+     * States from which the payment can still become paid · the only states an incoming "succeeded"
      * event may transition. Guards the state machine against a late event overwriting a terminal state
      * (a Refunded payment must never flip back to Succeeded).
      *
