@@ -3,8 +3,10 @@
 use App\Http\Middleware\EnsureProductionIsConfigured;
 use App\Services\System\ProductionSafetyService;
 use Illuminate\Http\Request;
+use Illuminate\Mail\Transport\ResendTransport;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 use function Pest\Laravel\get;
 
@@ -54,6 +56,17 @@ it('flags an incomplete production configuration as unfit for production', funct
         ->and(implode("\n", $violations))->toContain('SignWell')
         ->and(implode("\n", $violations))->toContain('MAIL_MAILER')
         ->and(implode("\n", $violations))->toContain('APP_DEBUG');
+});
+
+it('accepts Resend as a production mail transport and can build it (native SDK installed)', function () {
+    cleanProductionConfig();
+    config()->set('mail.default', 'resend');
+    config()->set('services.resend.key', 're_test_dummy');
+
+    // "resend" n'est pas un transport simule : la checklist prod l'accepte.
+    expect(app(ProductionSafetyService::class)->violations())->toBe([]);
+    // Et le SDK Resend est bien installe : le transport se construit.
+    expect(Mail::mailer('resend')->getSymfonyTransport())->toBeInstanceOf(ResendTransport::class);
 });
 
 it('passes a clean production configuration', function () {
