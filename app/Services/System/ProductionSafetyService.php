@@ -8,7 +8,8 @@ namespace App\Services\System;
  * Verifie que la configuration est apte a la production : liste ce qui, s'il etait deploye tel quel,
  * ferait tourner le site en simulation (faux prestataires) ou fuiter des informations. Service de
  * calcul pur (lit la config, aucune ecriture) : la commande festilaw:check-production l'affiche pour la
- * checklist go-live, et le middleware EnsureProductionIsConfigured l'applique (fail-closed) en prod.
+ * checklist go-live (code de sortie non nul si manquements), et le middleware EnsureProductionIsConfigured
+ * l'utilise pour tracer un avertissement NON bloquant en prod.
  */
 final class ProductionSafetyService
 {
