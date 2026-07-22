@@ -71,10 +71,16 @@ final readonly class MarkPaymentSucceededAction
             }
 
             // Le dossier devient l'espace "mon dossier" du client : son lien de reprise ne doit plus expirer.
-            $payment->submission()->update([
-                'status' => SubmissionStatus::Paid,
-                'resume_expires_at' => null,
-            ]);
+            // On n'avance vers "Paye" que depuis un etat pre-actif : jamais reactiver un dossier Annule
+            // (reactivation silencieuse par un webhook tardif) ni retrograder un dossier Termine (Termine
+            // et renouvellement sont orthogonaux, cf. chantier #1). Un changement de statut sur un dossier
+            // annule ne passe que par le menu admin, jamais par ce chemin automatique.
+            $payment->submission()
+                ->whereNotIn('status', [SubmissionStatus::Cancelled, SubmissionStatus::Completed])
+                ->update([
+                    'status' => SubmissionStatus::Paid,
+                    'resume_expires_at' => null,
+                ]);
 
             return true;
         });
@@ -104,6 +110,12 @@ final readonly class MarkPaymentSucceededAction
 
         $submission = $payment->submission;
         if ($submission === null || (string) $submission->email === '') {
+            return;
+        }
+
+        // Dossier reste Annule (le garde ci-dessus ne l'a pas reactive) : ne pas confirmer au client
+        // un service qui n'est pas actif. L'equipe est tout de meme notifiee (argent recu = actionnable).
+        if ($submission->status === SubmissionStatus::Cancelled) {
             return;
         }
 

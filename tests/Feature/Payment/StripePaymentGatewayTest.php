@@ -213,14 +213,23 @@ it('maps an expired checkout session to expired', function () {
     expect($event->outcome)->toBe(PaymentEventOutcome::Expired);
 });
 
-it('maps a charge.refunded event to refunded and carries our payment id from the charge metadata', function () {
+it('maps a FULL charge.refunded event to refunded and carries our payment id from the charge metadata', function () {
     $event = app(StripePaymentGateway::class)->parseWebhook(stripeWebhookRequest([
         'type' => 'charge.refunded',
-        'data' => ['object' => ['id' => 'ch_1', 'metadata' => ['payment_id' => '77']]],
+        'data' => ['object' => ['id' => 'ch_1', 'refunded' => true, 'amount' => 33300, 'amount_refunded' => 33300, 'metadata' => ['payment_id' => '77']]],
     ]));
 
     expect($event->outcome)->toBe(PaymentEventOutcome::Refunded)
         ->and($event->clientReference)->toBe('77');
+});
+
+it('does NOT deactivate on a PARTIAL charge.refunded (coverage stays, handled manually)', function () {
+    $event = app(StripePaymentGateway::class)->parseWebhook(stripeWebhookRequest([
+        'type' => 'charge.refunded',
+        'data' => ['object' => ['id' => 'ch_1', 'refunded' => false, 'amount' => 33300, 'amount_refunded' => 1000, 'metadata' => ['payment_id' => '77']]],
+    ]));
+
+    expect($event->outcome)->toBe(PaymentEventOutcome::Unresolved);
 });
 
 it('does NOT deactivate on a dispute being opened (funds only held, may be won)', function () {

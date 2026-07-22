@@ -192,9 +192,10 @@ it('marks a succeeded payment refunded from a Stripe charge.refunded webhook', f
     ]);
 
     // L'objet d'un charge.refunded est une Charge : on rapproche par notre payment_id (metadata).
+    // Remboursement INTEGRAL (refunded=true) : desactive le dossier (un partiel ne coupe rien).
     $payload = json_encode([
         'type' => 'charge.refunded',
-        'data' => ['object' => ['id' => 'ch_1', 'metadata' => ['payment_id' => (string) $payment->id]]],
+        'data' => ['object' => ['id' => 'ch_1', 'refunded' => true, 'amount' => 33300, 'amount_refunded' => 33300, 'metadata' => ['payment_id' => (string) $payment->id]]],
     ]);
     $time = now()->timestamp;
     $signature = hash_hmac('sha256', "{$time}.{$payload}", 'whsec_x');

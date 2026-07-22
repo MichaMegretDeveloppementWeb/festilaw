@@ -8,6 +8,7 @@ use App\Data\Payment\CheckoutSessionData;
 use App\Enums\Contract\SignatureStatus;
 use App\Enums\Payment\PaymentStatus;
 use App\Enums\Payment\PaymentType;
+use App\Enums\Submission\SubmissionStatus;
 use App\Exceptions\Starter\StarterException;
 use App\Models\Submission;
 use App\Services\Billing\RenewalService;
@@ -30,6 +31,13 @@ final readonly class StartRenewalPaymentAction
 
     public function execute(Submission $submission, string $providerKey): CheckoutSessionData
     {
+        // Un dossier annule ne se renouvelle pas : on refuse au bord (seul chemin serveur qui cree un
+        // checkout de renouvellement). Verifie AVANT dueYear pour donner un message clair quelle que soit
+        // l'annee couverte. Reactiver un dossier annule ne passe que par le menu admin, pas par un lien.
+        if ($submission->status === SubmissionStatus::Cancelled) {
+            throw StarterException::dossierCancelled($submission->id);
+        }
+
         $dueYear = $this->renewals->dueYear($submission);
 
         if ($dueYear === null) {

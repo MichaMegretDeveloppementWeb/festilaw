@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\Contract\SignatureStatus;
 use App\Enums\Payment\PaymentStatus;
 use App\Enums\Payment\PaymentType;
 use App\Enums\Submission\SubmissionStatus;
@@ -280,9 +281,33 @@ it('shows admin validation errors in French', function () {
         ->assertSee('Le contenu de la note est obligatoire.');
 });
 
+/** A complete, active STARTER dossier ready for RP issuance (succeeded payment + signed mandate + docs). */
+function completeActiveDossier(): Submission
+{
+    return Submission::factory()->starter()->paid()->create();
+}
+
+/** An active STARTER dossier (succeeded subscription payment) but no signed mandate / documents yet. */
+function activeStarterDossierWithoutMandate(): Submission
+{
+    $submission = Submission::factory()->starter()->create(['status' => SubmissionStatus::Paid]);
+    $submission->payments()->create([
+        'type' => PaymentType::StarterSubscription,
+        'amount_cents' => 33300,
+        'service_year' => (int) now()->year,
+        'currency' => 'EUR',
+        'provider' => 'stripe',
+        'provider_reference' => 'cs_'.$submission->id,
+        'status' => PaymentStatus::Succeeded,
+        'paid_at' => now(),
+    ]);
+
+    return $submission->fresh();
+}
+
 it('issues the EU responsible person address, completes the dossier and emails the client', function () {
     Mail::fake();
-    $submission = Submission::factory()->starter()->create(['status' => SubmissionStatus::Paid]);
+    $submission = completeActiveDossier();
 
     actingAs(User::factory()->create());
 
@@ -296,6 +321,61 @@ it('issues the EU responsible person address, completes the dossier and emails t
     expect($submission->eu_rp_address)->toContain('rue de l');
 
     Mail::assertSent(StarterResponsiblePersonIssued::class, fn ($mail) => $mail->hasTo($submission->email));
+});
+
+it('refuses to issue the RP when the dossier has no active payment', function () {
+    Mail::fake();
+    // Statut « Payé » en cache mais aucun paiement réussi : le dossier n'est pas actif.
+    $submission = Submission::factory()->starter()->create(['status' => SubmissionStatus::Paid]);
+
+    actingAs(User::factory()->create());
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $submission])
+        ->set('rpAddress', 'Festilaw SAS, Paris')
+        ->call('issueResponsiblePerson')
+        ->assertDispatched('admin-toast', type: 'error');
+
+    expect($submission->fresh()->status)->toBe(SubmissionStatus::Paid);
+    Mail::assertNotSent(StarterResponsiblePersonIssued::class);
+});
+
+it('refuses to issue the RP when the mandate is not signed', function () {
+    Mail::fake();
+    $submission = activeStarterDossierWithoutMandate();
+
+    actingAs(User::factory()->create());
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $submission])
+        ->set('rpAddress', 'Festilaw SAS, Paris')
+        ->call('issueResponsiblePerson')
+        ->assertDispatched('admin-toast', type: 'error');
+
+    expect($submission->fresh()->status)->toBe(SubmissionStatus::Paid);
+    Mail::assertNotSent(StarterResponsiblePersonIssued::class);
+});
+
+it('refuses to issue the RP when required documents are missing', function () {
+    Mail::fake();
+    $submission = activeStarterDossierWithoutMandate();
+    // Mandat signé mais aucune pièce déposée.
+    $submission->contract()->create([
+        'filled_fields' => [],
+        'signature_status' => SignatureStatus::Signed,
+        'signature_provider' => 'stripe',
+        'signature_provider_reference' => 'doc_'.$submission->id,
+        'signed_file_path' => 'contracts/'.$submission->id.'.pdf',
+        'signed_at' => now(),
+    ]);
+
+    actingAs(User::factory()->create());
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $submission->fresh()])
+        ->set('rpAddress', 'Festilaw SAS, Paris')
+        ->call('issueResponsiblePerson')
+        ->assertDispatched('admin-toast', type: 'error');
+
+    expect($submission->fresh()->status)->toBe(SubmissionStatus::Paid);
+    Mail::assertNotSent(StarterResponsiblePersonIssued::class);
 });
 
 it('presents a contact as an inquiry, not a dossier', function () {

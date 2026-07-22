@@ -15,6 +15,7 @@ use App\Enums\Billing\RenewalStatus;
 use App\Enums\Contract\SignatureStatus;
 use App\Enums\Submission\SubmissionStatus;
 use App\Enums\Submission\SubmissionType;
+use App\Exceptions\BaseAppException;
 use App\Livewire\Concerns\HandlesAdminErrors;
 use App\Models\Submission;
 use App\Services\Billing\RenewalService;
@@ -191,7 +192,11 @@ class SubmissionDetail extends Component
         if (! $result->reachable) {
             $this->toast(__(':provider n\'a pas pu être contacté pour ce paiement (session inconnue ou service indisponible). Réessayez plus tard.', ['provider' => $provider]), 'error');
         } elseif ($result->corrected) {
-            $this->toast(__(':provider confirme le paiement : corrigé en « Réussi » et dossier réactivé.', ['provider' => $provider]));
+            // Sur un dossier annule, le paiement est corrige mais le dossier n'est PAS reactive (seul le
+            // menu admin le peut) : ne pas annoncer une reactivation qui n'a pas eu lieu.
+            $this->toast($this->submission->isActive()
+                ? __(':provider confirme le paiement : corrigé en « Réussi » et dossier réactivé.', ['provider' => $provider])
+                : __(':provider confirme le paiement : corrigé en « Réussi ». Le dossier reste annulé.', ['provider' => $provider]));
         } elseif ($result->confirmedPaid()) {
             $this->toast(__(':provider confirme que ce paiement est bien payé.', ['provider' => $provider]));
         } else {
@@ -237,6 +242,12 @@ class SubmissionDetail extends Component
 
         try {
             $issue->execute($this->submission, $this->rpAddress);
+        } catch (BaseAppException $e) {
+            // Precondition metier non remplie (pas paye / mandat non signe / pieces manquantes) : message
+            // clair a l'admin, aucun email envoye, dossier inchange.
+            $this->toast(__($e->getUserMessage()), 'error');
+
+            return;
         } catch (Throwable $e) {
             $this->reportAdminError($e, 'Admin issue Responsible Person');
 

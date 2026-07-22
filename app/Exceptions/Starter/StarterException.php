@@ -25,6 +25,14 @@ final class StarterException extends BaseAppException
         );
     }
 
+    public static function dossierCancelled(int $submissionId): self
+    {
+        return new self(
+            technicalMessage: "Submission [{$submissionId}] is cancelled: refusing to start a renewal payment.",
+            userMessage: 'This file has been cancelled and can no longer be renewed. Please contact us.',
+        );
+    }
+
     public static function renewalInProgress(int $submissionId): self
     {
         return new self(

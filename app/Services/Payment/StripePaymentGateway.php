@@ -179,11 +179,17 @@ final class StripePaymentGateway implements PaymentGatewayInterface
         $object = (array) Arr::get($event, 'data.object', []);
 
         // Remboursement reel : l'objet est une Charge, pas une session — on rapproche par notre payment_id
-        // propage dans les metadata.
+        // propage dans les metadata. Stripe emet charge.refunded pour un remboursement PARTIEL comme TOTAL ;
+        // on ne desactive le dossier que sur un remboursement INTEGRAL. Un remboursement partiel (geste
+        // commercial, ajustement) ne coupe pas la couverture -> Unresolved (aucun effet), traite a la main.
         if ($type === 'charge.refunded') {
+            $amount = (int) Arr::get($object, 'amount', 0);
+            $refunded = (int) Arr::get($object, 'amount_refunded', 0);
+            $fullyRefunded = (bool) Arr::get($object, 'refunded', false) || ($amount > 0 && $refunded >= $amount);
+
             return new PaymentWebhookData(
                 providerReference: (string) Arr::get($object, 'id', ''),
-                outcome: PaymentEventOutcome::Refunded,
+                outcome: $fullyRefunded ? PaymentEventOutcome::Refunded : PaymentEventOutcome::Unresolved,
                 clientReference: ((string) Arr::get($object, 'metadata.payment_id', '')) ?: null,
             );
         }
