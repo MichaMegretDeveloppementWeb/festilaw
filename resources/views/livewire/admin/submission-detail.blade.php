@@ -89,26 +89,32 @@
                             </div>
                         </dl>
                         @if ($submission->contract->signed_file_path)
-                            <a href="{{ route('admin.submissions.mandate', ['submission' => $submission->id]) }}"
-                                class="mt-3 inline-flex items-center gap-2 text-[13px] font-medium text-primary hover:underline">
-                                <x-ui.icon name="arrow-down-tray" class="h-4 w-4" />
-                                {{ __('Télécharger le mandat signé') }}
-                            </a>
+                            <x-admin.document-item class="mt-3"
+                                :title="__('Mandat signé')"
+                                :subtitle="$submission->contract->signed_at ? __('Signé le').' '.$submission->contract->signed_at->format('d/m/Y') : __('Document PDF')"
+                                :download-url="route('admin.submissions.mandate', ['submission' => $submission->id])" />
                         @endif
 
                         {{-- Contrat contresigne par Festilaw (contre-signature manuelle, hors SignWell) --}}
+                        @php
+                            $hasCountersigned = (bool) $submission->contract->countersigned_file_path;
+                        @endphp
                         <div class="mt-4 border-t border-subtle pt-4">
                             <p class="text-[11px] font-semibold uppercase tracking-wide text-muted">{{ __('Contrat contresigné') }}</p>
-                            @if ($submission->contract->countersigned_file_path)
-                                <a href="{{ route('admin.submissions.countersigned', ['submission' => $submission->id]) }}"
-                                    class="mt-2 inline-flex items-center gap-2 text-[13px] font-medium text-primary hover:underline">
-                                    <x-ui.icon name="arrow-down-tray" class="h-4 w-4" />
-                                    {{ __('Télécharger le contrat contresigné') }}
-                                </a>
-                                <p class="mt-1 text-[12px] text-muted">{{ __('Déposé le') }} {{ $submission->contract->countersigned_at?->format('d/m/Y H:i') }}</p>
+
+                            @if ($hasCountersigned)
+                                <x-admin.document-item class="mt-2"
+                                    :title="__('Contrat contresigné')"
+                                    :subtitle="__('Déposé le').' '.$submission->contract->countersigned_at?->format('d/m/Y à H:i')"
+                                    :download-url="route('admin.submissions.countersigned', ['submission' => $submission->id])" />
+                            @else
+                                <p class="mt-1 text-[12px] text-muted">{{ __('Aucun contrat contresigné déposé pour le moment.') }}</p>
                             @endif
 
-                            <form wire:submit="uploadCountersigned" class="mt-3 space-y-3">
+                            <form wire:submit="uploadCountersigned" class="mt-4 space-y-3">
+                                <p class="text-[12px] font-medium text-secondary">
+                                    {{ $hasCountersigned ? __('Remplacer le document par un nouveau PDF') : __('Déposer le contrat contresigné') }}
+                                </p>
                                 {{-- Zone glisser-deposer + selecteur, compatible Livewire (wire:model sur l'input cache). --}}
                                 <div x-data="{ dragging: false, name: null }"
                                     @dragover.prevent="dragging = true" @dragleave.prevent="dragging = false"
@@ -120,17 +126,17 @@
                                         <div>
                                             <x-ui.icon name="document-arrow-up" class="mx-auto h-9 w-9 text-gray-300 dark:text-gray-600" stroke-width="1" />
                                             <div class="mt-3 text-[13px]">
-                                                <button type="button" @click="$refs.cs.click()" class="font-medium text-primary underline-offset-2 hover:underline">{{ __('Choisir un fichier') }}</button>
+                                                <button type="button" @click="$refs.cs.click()" class="font-medium text-primary underline-offset-2 hover:underline">{{ __('Choisir un PDF') }}</button>
                                                 <span class="text-muted"> {{ __('ou glisser-déposer') }}</span>
                                             </div>
-                                            <p class="mt-1 text-[11px] text-muted">{{ __('PDF jusqu\'à 10 Mo') }}</p>
+                                            <p class="mt-1 text-[11px] text-muted">{{ $hasCountersigned ? __('Le document actuel sera remplacé · PDF, 10 Mo max') : __('PDF jusqu\'à 10 Mo') }}</p>
                                         </div>
                                     </template>
                                     <template x-if="name">
                                         <div class="flex items-center justify-center gap-x-2 text-[13px]">
-                                            <x-ui.icon name="check-circle" class="h-5 w-5 text-emerald-500" />
-                                            <span class="text-secondary" x-text="name"></span>
-                                            <button type="button" @click="name = null; $refs.cs.value = null" class="text-muted hover:text-secondary"><x-ui.icon name="x-mark" class="h-4 w-4" /></button>
+                                            <x-ui.icon name="document-text" class="h-5 w-5 text-emerald-500" />
+                                            <span class="font-medium text-primary" x-text="name"></span>
+                                            <button type="button" @click="name = null; $refs.cs.value = null" class="text-muted hover:text-secondary" aria-label="{{ __('Retirer') }}"><x-ui.icon name="x-mark" class="h-4 w-4" /></button>
                                         </div>
                                     </template>
                                 </div>
@@ -138,7 +144,7 @@
                                 @error('countersigned') <p class="text-[12px] text-red-500">{{ $message }}</p> @enderror
                                 <x-ui.checkbox id="notify-countersign" wire:model="notifyClientOnCountersign" label="{{ __('Notifier le client par email (PDF joint)') }}" />
                                 <x-ui.button type="submit" :loading="true" target="uploadCountersigned,countersigned">
-                                    {{ $submission->contract->countersigned_file_path ? __('Remplacer le contrat contresigné') : __('Ajouter le contrat contresigné') }}
+                                    {{ $hasCountersigned ? __('Remplacer le contrat contresigné') : __('Ajouter le contrat contresigné') }}
                                 </x-ui.button>
                             </form>
                         </div>
@@ -156,17 +162,14 @@
                         @if ($submission->uploadedDocuments->isEmpty())
                             <p class="text-[13px] text-secondary">{{ __('Aucune pièce téléversée.') }}</p>
                         @else
-                            <ul class="divide-y divide-subtle">
+                            <div class="space-y-2">
                                 @foreach ($submission->uploadedDocuments as $doc)
-                                    <li wire:key="doc-{{ $doc->id }}" class="flex items-center gap-3 py-2.5 text-[13px] first:pt-0 last:pb-0">
-                                        <x-ui.icon name="document" class="h-5 w-5 shrink-0 text-muted" />
-                                        <span class="font-medium text-primary">{{ $doc->type->label() }}</span>
-                                        <span class="truncate text-muted">· {{ $doc->original_filename }}</span>
-                                        <a href="{{ route('admin.submissions.document', ['submission' => $submission->id, 'document' => $doc->id]) }}"
-                                            class="ml-auto shrink-0 font-medium text-primary hover:underline">{{ __('Télécharger') }}</a>
-                                    </li>
+                                    <x-admin.document-item wire:key="doc-{{ $doc->id }}"
+                                        :title="$doc->type->label()"
+                                        :subtitle="$doc->original_filename"
+                                        :download-url="route('admin.submissions.document', ['submission' => $submission->id, 'document' => $doc->id])" />
                                 @endforeach
-                            </ul>
+                            </div>
                         @endif
                     </div>
                 </section>
