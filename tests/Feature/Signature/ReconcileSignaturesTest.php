@@ -52,3 +52,25 @@ it('dry run writes nothing', function () {
 
     expect(Contract::where('signature_status', SignatureStatus::Signed)->count())->toBe(0);
 });
+
+it('backfills the signed PDF of an already-signed contract whose file was never downloaded', function () {
+    // Une signature confirmee dont le telechargement du PDF a echoue une fois : le contrat est "signe"
+    // mais sans fichier local, et n'est plus repris par les transitions (Signed n'est plus confirmable).
+    $gateway = Mockery::mock(SignatureGatewayInterface::class);
+    $gateway->shouldReceive('key')->andReturn('fake');
+    $gateway->shouldReceive('downloadSignedDocument')->once()->andReturn('contracts/backfilled.pdf');
+    app()->instance(SignatureGatewayInterface::class, $gateway);
+
+    $contract = Contract::factory()->for(Submission::factory()->starter())->create([
+        'signature_status' => SignatureStatus::Signed,
+        'signature_provider' => 'fake',
+        'signature_provider_reference' => 'doc_'.fake()->uuid(),
+        'signed_file_path' => null,
+    ]);
+
+    $this->artisan('festilaw:reconcile-signatures')
+        ->expectsOutputToContain('PDF rattrapes : 1')
+        ->assertOk();
+
+    expect($contract->fresh()->signed_file_path)->toBe('contracts/backfilled.pdf');
+});

@@ -12,6 +12,7 @@ use App\Actions\Admin\UploadCountersignedContractAction;
 use App\Actions\Web\Payment\CheckPaymentStatusAction;
 use App\Actions\Web\Starter\SendStarterResumeLinkAction;
 use App\Enums\Billing\RenewalStatus;
+use App\Enums\Contract\SignatureStatus;
 use App\Enums\Submission\SubmissionStatus;
 use App\Enums\Submission\SubmissionType;
 use App\Livewire\Concerns\HandlesAdminErrors;
@@ -251,6 +252,14 @@ class SubmissionDetail extends Component
     {
         if ($this->submission->contract === null) {
             $this->addError('countersigned', __('Ce dossier n\'a pas de contrat.'));
+
+            return;
+        }
+
+        // On ne contresigne que ce que le client a signe : refuser un depot sur un mandat non signe
+        // (en attente / refuse / expire), sinon on notifierait un client d'un contrat jamais signe.
+        if ($this->submission->contract->signature_status !== SignatureStatus::Signed) {
+            $this->addError('countersigned', __('Le client doit d\'abord signer le mandat avant de pouvoir déposer le contrat contresigné.'));
 
             return;
         }

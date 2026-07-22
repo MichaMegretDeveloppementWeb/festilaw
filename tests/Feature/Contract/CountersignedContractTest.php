@@ -82,6 +82,27 @@ it('rejects a non-pdf counter-signed upload', function () {
         ->assertHasErrors('countersigned');
 });
 
+it('refuses a counter-signed upload when the client has not signed the mandate yet', function () {
+    Storage::fake('local');
+    Mail::fake();
+    actingAs(User::factory()->create());
+
+    // Dossier dont le mandat est encore EN ATTENTE (client n'a pas signe).
+    $dossier = Submission::factory()->starter()->create(['email' => 'client@example.com']);
+    $dossier->contract()->create(['signature_status' => SignatureStatus::Pending, 'filled_fields' => []]);
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $dossier->fresh()])
+        ->set('countersigned', UploadedFile::fake()->create('contract.pdf', 200, 'application/pdf'))
+        ->set('notifyClientOnCountersign', true)
+        ->call('uploadCountersigned')
+        ->assertHasErrors('countersigned');
+
+    // Rien n'a ete stocke ni notifie.
+    Storage::disk('local')->assertMissing('contracts/countersigned/'.$dossier->id.'.pdf');
+    expect($dossier->contract->fresh()->countersigned_file_path)->toBeNull();
+    Mail::assertNothingSent();
+});
+
 it('shows the counter-signed contract to the client and streams it', function () {
     Storage::fake('local');
     $dossier = dossierWithContract();

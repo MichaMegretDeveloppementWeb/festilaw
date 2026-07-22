@@ -78,9 +78,51 @@ final class ReconcileSignatures extends Command
                 }
             });
 
-        $this->info('Contrats verifies : '.$checked.' · signes : '.$signed.' · ranges (refuse/expire) : '.$settled.($dry ? ' [DRY-RUN]' : ''));
+        $repaired = $this->backfillMissingSignedPdfs($dry);
+
+        $this->info('Contrats verifies : '.$checked.' · signes : '.$signed.' · ranges (refuse/expire) : '.$settled.' · PDF rattrapes : '.$repaired.($dry ? ' [DRY-RUN]' : ''));
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Rattrapage : un contrat SIGNE dont le PDF n'a pas pu etre telecharge a la confirmation (echec
+     * transitoire) reste "signe" mais sans fichier local, et n'est plus re-tente par les transitions
+     * (Signed n'est plus confirmable). On re-telecharge ici le fichier manquant, sans toucher au statut.
+     */
+    private function backfillMissingSignedPdfs(bool $dry): int
+    {
+        $repaired = 0;
+
+        Contract::query()
+            ->where('signature_status', SignatureStatus::Signed)
+            ->whereNull('signed_file_path')
+            ->whereNotNull('signature_provider_reference')
+            ->where('signature_provider', $this->gateway->key())
+            ->chunkById(100, function (Collection $contracts) use ($dry, &$repaired): void {
+                foreach ($contracts as $contract) {
+                    if ($dry) {
+                        $repaired++;
+
+                        continue;
+                    }
+
+                    try {
+                        $contract = $this->markContractSigned->backfillSignedDocument($contract);
+                    } catch (Throwable $e) {
+                        Log::channel('signature')->warning('Reconcile: signed PDF backfill failed.', ['exception' => $e, 'contract' => $contract->id]);
+
+                        continue;
+                    }
+
+                    if ($contract->signed_file_path !== null) {
+                        $repaired++;
+                        Log::channel('signature')->notice('Signature.pdf_backfilled', ['contract' => $contract->id]);
+                    }
+                }
+            });
+
+        return $repaired;
     }
 
     private function confirmSigned(Contract $contract, string $providerReference, bool $dry, int &$signed): void

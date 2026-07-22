@@ -30,8 +30,8 @@ final readonly class MarkContractSignedAction
         }
 
         // Le PDF signe existe deja chez le prestataire : on le recupere avant la bascule. Un echec de
-        // telechargement est peripherique (le document reste recuperable) : on trace sans bloquer la
-        // confirmation, le fichier local pourra etre re-recupere ensuite.
+        // telechargement est peripherique (la signature a bien eu lieu) : on trace sans bloquer la
+        // confirmation, et la reconciliation rattrape le fichier manquant (backfillSignedDocument).
         $signedFilePath = $this->fetchSignedDocument($contract);
 
         DB::transaction(function () use ($contract, $signedFilePath, $providerReference): void {
@@ -51,6 +51,30 @@ final readonly class MarkContractSignedAction
 
             $contract->submission()->update(['status' => SubmissionStatus::AwaitingDocuments]);
         });
+
+        return $contract->refresh();
+    }
+
+    /**
+     * Rattrape le PDF signe d'un contrat DEJA signe dont le fichier local n'a pas pu etre telecharge au
+     * moment de la confirmation (echec transitoire du prestataire). La signature ayant eu lieu, on ne
+     * retouche NI le statut NI le parcours : on ne fait que re-telecharger le fichier manquant. Idempotent
+     * (no-op si le fichier est deja la, si le contrat n'est pas signe, ou sans reference prestataire) et
+     * silencieux (aucun evenement : le contrat est deja signe). Appele par la reconciliation.
+     */
+    public function backfillSignedDocument(Contract $contract): Contract
+    {
+        if ($contract->signature_status !== SignatureStatus::Signed
+            || $contract->signed_file_path !== null
+            || $contract->signature_provider_reference === null) {
+            return $contract;
+        }
+
+        $signedFilePath = $this->fetchSignedDocument($contract);
+
+        if ($signedFilePath !== null) {
+            $contract->updateQuietly(['signed_file_path' => $signedFilePath]);
+        }
 
         return $contract->refresh();
     }
