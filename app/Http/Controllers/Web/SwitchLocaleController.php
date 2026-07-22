@@ -21,6 +21,13 @@ final class SwitchLocaleController extends Controller
             $request->session()->put('locale', $locale);
         }
 
-        return redirect()->back(fallback: route('home'));
+        // Retour SAME-ORIGIN uniquement : le Referer est controle par le visiteur, on ne redirige
+        // jamais vers un hote externe (pas d'open redirect). A defaut, on renvoie a l'accueil.
+        $previous = url()->previous();
+        $target = str_starts_with($previous, $request->schemeAndHttpHost().'/') || $previous === $request->schemeAndHttpHost()
+            ? $previous
+            : route('home');
+
+        return redirect()->to($target);
     }
 }

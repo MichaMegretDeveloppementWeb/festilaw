@@ -418,6 +418,16 @@ it('returns 404 when the token belongs to a non-STARTER submission', function ()
 
 it('blocks the fake dev completion routes in production', function () {
     $submission = openStarterDossier();
+    // Config production VALIDE : sinon le garde fail-closed (EnsureProductionIsConfigured) 503 avant
+    // meme d'atteindre la route. Ici on veut isoler le blocage des routes dev (404), pas le garde.
+    config()->set('payment.enabled', ['stripe']);
+    config()->set('payment.drivers.stripe.secret_key', 'sk_live_x');
+    config()->set('payment.drivers.stripe.webhook_secret', 'whsec_x');
+    config()->set('signature.default', 'signwell');
+    config()->set('signature.drivers.signwell.api_key', 'key_x');
+    config()->set('signature.drivers.signwell.test_mode', false);
+    config()->set('mail.default', 'smtp');
+    config()->set('app.debug', false);
     app()->instance('env', 'production');
 
     get(route('get-started.starter.dev-sign', ['dossier' => $submission->resume_token]))
