@@ -27,7 +27,11 @@ export default defineConfig({
                 'resources/css/web/get-started/journey.css',
                 'resources/css/web/contact/index.css',
                 'resources/css/web/legal/index.css',
-                'resources/css/web/errors/index.css',, 'resources/css/ui-kit.css', 'resources/js/ui-kit.js'],
+                'resources/css/web/errors/index.css',
+                // Back-office : design system Falcon UI Kit (Tailwind + preset + composants).
+                'resources/css/ui-kit.css',
+                'resources/js/ui-kit.js',
+            ],
             refresh: true,
         }),
     ],

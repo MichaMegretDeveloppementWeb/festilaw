@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" class="h-full bg-page">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,11 +9,12 @@
 
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
 
+    @uiKitHead
+    @vite(['resources/css/ui-kit.css', 'resources/css/admin.css', 'resources/js/ui-kit.js'])
     @livewireStyles
-    @vite('resources/css/admin.css')
     @stack('styles')
 </head>
-<body class="min-h-screen bg-slate-50 text-slate-800 antialiased">
+<body class="h-full text-primary antialiased">
     @auth
         @php($routeSubmission = request()->route('submission'))
         @php($viewingContact = $routeSubmission instanceof \App\Models\Submission && $routeSubmission->type === \App\Enums\Submission\SubmissionType::Contact)
@@ -23,67 +24,67 @@
         @php($isDossiers = request()->routeIs('admin.submissions.*') && ! $viewingContact)
 
         <div x-data="{ mobileOpen: false }" @keydown.escape.window="mobileOpen = false" class="md:hidden">
-            <div x-show="mobileOpen" x-cloak x-transition.opacity @click="mobileOpen = false" class="fixed inset-0 z-30 bg-slate-900/20"></div>
+            <div x-show="mobileOpen" x-cloak x-transition.opacity @click="mobileOpen = false" class="fixed inset-0 z-30 bg-gray-900/20"></div>
 
-            <div class="sticky top-0 z-40 border-b border-slate-200 bg-white">
+            <div class="sticky top-0 z-40 border-b border-base bg-surface">
                 <div class="flex items-center justify-between px-4 py-3">
                     <a href="{{ route('admin.submissions.index') }}" class="flex items-center gap-2">
-                        <span class="flex h-7 w-7 items-center justify-center rounded-md bg-brand-500 text-sm font-bold text-white">F</span>
-                        <span class="text-sm font-semibold text-slate-900">Festilaw</span>
-                        <span class="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Admin</span>
+                        <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-900 text-sm font-bold text-white">F</span>
+                        <span class="text-[13px] font-semibold text-primary">Festilaw</span>
+                        <span class="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary">Admin</span>
                     </a>
                     <button type="button" @click="mobileOpen = ! mobileOpen" :aria-expanded="mobileOpen" aria-label="{{ __('Menu') }}"
-                        class="-mr-1.5 rounded-lg p-1.5 text-slate-600 transition hover:bg-slate-100">
-                        <svg x-show="! mobileOpen" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-                        <svg x-show="mobileOpen" x-cloak class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        class="-mr-1.5 rounded-lg p-1.5 text-secondary transition hover:bg-elevated">
+                        <x-ui.icon x-show="! mobileOpen" name="bars-3" class="h-6 w-6" />
+                        <x-ui.icon x-show="mobileOpen" x-cloak name="x-mark" class="h-6 w-6" />
                     </button>
                 </div>
-                <div x-show="mobileOpen" x-cloak x-transition class="absolute inset-x-0 top-full z-40 border-t border-slate-200 bg-white px-3 py-3 shadow-lg">
+                <div x-show="mobileOpen" x-cloak x-transition class="absolute inset-x-0 top-full z-40 border-t border-base bg-surface px-3 py-3">
                     <nav class="space-y-1">
                         <a href="{{ route('admin.submissions.index') }}" @click="mobileOpen = false" @class([
-                            'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium',
-                            'bg-brand-50 text-brand-700' => $isDossiers,
-                            'text-slate-600 hover:bg-slate-100' => ! $isDossiers,
+                            'flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium',
+                            'bg-gray-100 text-gray-900' => $isDossiers,
+                            'text-secondary hover:bg-elevated hover:text-primary' => ! $isDossiers,
                         ])>
-                            <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v4H4z"/><path d="M4 10h16v10H4z"/><path d="M9 14h6"/></svg>
+                            <x-ui.icon name="rectangle-stack" class="h-[18px] w-[18px]" />
                             {{ __('Dossiers') }}
                         </a>
                         <a href="{{ route('admin.contacts.index') }}" @click="mobileOpen = false" @class([
-                            'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium',
-                            'bg-brand-50 text-brand-700' => $isContacts,
-                            'text-slate-600 hover:bg-slate-100' => ! $isContacts,
+                            'flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium',
+                            'bg-gray-100 text-gray-900' => $isContacts,
+                            'text-secondary hover:bg-elevated hover:text-primary' => ! $isContacts,
                         ])>
-                            <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>
+                            <x-ui.icon name="envelope" class="h-[18px] w-[18px]" />
                             {{ __('Prises de contact') }}
                         </a>
                         <a href="{{ route('admin.quiz.index') }}" @click="mobileOpen = false" @class([
-                            'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium',
-                            'bg-brand-50 text-brand-700' => $isQuiz,
-                            'text-slate-600 hover:bg-slate-100' => ! $isQuiz,
+                            'flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium',
+                            'bg-gray-100 text-gray-900' => $isQuiz,
+                            'text-secondary hover:bg-elevated hover:text-primary' => ! $isQuiz,
                         ])>
-                            <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/><circle cx="12" cy="12" r="10"/></svg>
+                            <x-ui.icon name="question-mark-circle" class="h-[18px] w-[18px]" />
                             {{ __('Quiz') }}
                         </a>
                         <a href="{{ route('home') }}" target="_blank" rel="noopener" @click="mobileOpen = false"
-                            class="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">
-                            <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                            class="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-secondary hover:bg-elevated hover:text-primary">
+                            <x-ui.icon name="arrow-top-right-on-square" class="h-[18px] w-[18px]" />
                             {{ __('Voir le site public') }}
                         </a>
                     </nav>
-                    <div class="mt-3 border-t border-slate-200 pt-3">
+                    <div class="mt-3 border-t border-base pt-3">
                         <a href="{{ route('admin.profile') }}" @click="mobileOpen = false" @class([
-                            'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium',
-                            'bg-brand-50 text-brand-700' => $isProfile,
-                            'text-slate-600 hover:bg-slate-100' => ! $isProfile,
+                            'flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium',
+                            'bg-gray-100 text-gray-900' => $isProfile,
+                            'text-secondary hover:bg-elevated hover:text-primary' => ! $isProfile,
                         ])>
-                            <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            <x-ui.icon name="user-circle" class="h-[18px] w-[18px]" />
                             {{ __('Mon compte') }}
                         </a>
-                        <div class="mb-2 mt-1 px-3 text-xs text-slate-500">{{ auth()->user()->email }}</div>
+                        <div class="mb-2 mt-1 px-3 text-[12px] text-muted">{{ auth()->user()->email }}</div>
                         <form method="POST" action="{{ route('admin.logout') }}">
                             @csrf
-                            <button type="submit" class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">
-                                <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                            <button type="submit" class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-secondary hover:bg-elevated hover:text-primary">
+                                <x-ui.icon name="arrow-right-start-on-rectangle" class="h-[18px] w-[18px]" />
                                 {{ __('Se déconnecter') }}
                             </button>
                         </form>
@@ -92,57 +93,57 @@
             </div>
         </div>
 
-        <aside class="admin-sidebar fixed inset-y-0 left-0 z-30 hidden flex-col overflow-hidden border-r border-slate-200 bg-white md:flex">
-            <div class="admin-navitem flex h-16 items-center gap-2 border-b border-slate-200">
-                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-500 text-sm font-bold text-white">F</span>
-                <span class="admin-navlabel text-[15px] font-semibold tracking-tight text-slate-900">Festilaw</span>
-                <span class="admin-navlabel rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Admin</span>
+        <aside class="admin-sidebar fixed inset-y-0 left-0 z-30 hidden flex-col overflow-hidden border-r border-base bg-surface md:flex">
+            <div class="admin-navitem flex h-16 items-center gap-2 border-b border-base">
+                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-900 text-sm font-bold text-white">F</span>
+                <span class="admin-navlabel text-[15px] font-semibold tracking-tight text-primary">Festilaw</span>
+                <span class="admin-navlabel rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary">Admin</span>
             </div>
             <nav class="flex-1 space-y-1 py-3">
                 <a href="{{ route('admin.submissions.index') }}" @class([
-                    'admin-navitem flex items-center gap-2.5 rounded-lg py-2 text-sm font-medium transition',
-                    'bg-brand-50 text-brand-700' => $isDossiers,
-                    'text-slate-600 hover:bg-slate-100 hover:text-slate-900' => ! $isDossiers,
+                    'admin-navitem flex items-center gap-2.5 rounded-lg py-2 text-[13px] font-medium transition',
+                    'bg-gray-100 text-gray-900' => $isDossiers,
+                    'text-secondary hover:bg-elevated hover:text-primary' => ! $isDossiers,
                 ])>
-                    <svg class="h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v4H4z"/><path d="M4 10h16v10H4z"/><path d="M9 14h6"/></svg>
+                    <x-ui.icon name="rectangle-stack" class="h-[18px] w-[18px] shrink-0" />
                     <span class="admin-navlabel">{{ __('Dossiers') }}</span>
                 </a>
                 <a href="{{ route('admin.contacts.index') }}" @class([
-                    'admin-navitem flex items-center gap-2.5 rounded-lg py-2 text-sm font-medium transition',
-                    'bg-brand-50 text-brand-700' => $isContacts,
-                    'text-slate-600 hover:bg-slate-100 hover:text-slate-900' => ! $isContacts,
+                    'admin-navitem flex items-center gap-2.5 rounded-lg py-2 text-[13px] font-medium transition',
+                    'bg-gray-100 text-gray-900' => $isContacts,
+                    'text-secondary hover:bg-elevated hover:text-primary' => ! $isContacts,
                 ])>
-                    <svg class="h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>
+                    <x-ui.icon name="envelope" class="h-[18px] w-[18px] shrink-0" />
                     <span class="admin-navlabel">{{ __('Prises de contact') }}</span>
                 </a>
                 <a href="{{ route('admin.quiz.index') }}" @class([
-                    'admin-navitem flex items-center gap-2.5 rounded-lg py-2 text-sm font-medium transition',
-                    'bg-brand-50 text-brand-700' => $isQuiz,
-                    'text-slate-600 hover:bg-slate-100 hover:text-slate-900' => ! $isQuiz,
+                    'admin-navitem flex items-center gap-2.5 rounded-lg py-2 text-[13px] font-medium transition',
+                    'bg-gray-100 text-gray-900' => $isQuiz,
+                    'text-secondary hover:bg-elevated hover:text-primary' => ! $isQuiz,
                 ])>
-                    <svg class="h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/><circle cx="12" cy="12" r="10"/></svg>
+                    <x-ui.icon name="question-mark-circle" class="h-[18px] w-[18px] shrink-0" />
                     <span class="admin-navlabel">{{ __('Quiz') }}</span>
                 </a>
             </nav>
-            <div class="mt-auto border-t border-slate-200 py-3">
+            <div class="mt-auto border-t border-base py-3">
                 <a href="{{ route('admin.profile') }}" @class([
-                    'admin-navitem flex items-center gap-2.5 rounded-lg py-2 text-sm font-medium transition',
-                    'bg-brand-50 text-brand-700' => $isProfile,
-                    'text-slate-600 hover:bg-slate-100 hover:text-slate-900' => ! $isProfile,
+                    'admin-navitem flex items-center gap-2.5 rounded-lg py-2 text-[13px] font-medium transition',
+                    'bg-gray-100 text-gray-900' => $isProfile,
+                    'text-secondary hover:bg-elevated hover:text-primary' => ! $isProfile,
                 ])>
-                    <svg class="h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    <x-ui.icon name="user-circle" class="h-[18px] w-[18px] shrink-0" />
                     <span class="admin-navlabel">{{ __('Mon compte') }}</span>
                 </a>
                 <a href="{{ route('home') }}" target="_blank" rel="noopener"
-                    class="admin-navitem flex items-center gap-2.5 rounded-lg py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900">
-                    <svg class="h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    class="admin-navitem flex items-center gap-2.5 rounded-lg py-2 text-[13px] font-medium text-secondary transition hover:bg-elevated hover:text-primary">
+                    <x-ui.icon name="arrow-top-right-on-square" class="h-[18px] w-[18px] shrink-0" />
                     <span class="admin-navlabel">{{ __('Voir le site public') }}</span>
                 </a>
-                <div class="admin-navlabel px-3 py-1.5 text-xs text-slate-500" title="{{ auth()->user()->email }}">{{ auth()->user()->email }}</div>
+                <div class="admin-navlabel px-3 py-1.5 text-[12px] text-muted" title="{{ auth()->user()->email }}">{{ auth()->user()->email }}</div>
                 <form method="POST" action="{{ route('admin.logout') }}">
                     @csrf
-                    <button type="submit" class="admin-navitem flex w-full items-center gap-2.5 rounded-lg py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900">
-                        <svg class="h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    <button type="submit" class="admin-navitem flex w-full items-center gap-2.5 rounded-lg py-2 text-[13px] font-medium text-secondary transition hover:bg-elevated hover:text-primary">
+                        <x-ui.icon name="arrow-right-start-on-rectangle" class="h-[18px] w-[18px] shrink-0" />
                         <span class="admin-navlabel">{{ __('Se déconnecter') }}</span>
                     </button>
                 </form>
@@ -150,7 +151,7 @@
         </aside>
 
         <div class="admin-content">
-            <main class="mx-auto max-w-7xl px-4 py-6 md:px-8 md:py-8">
+            <main class="mx-auto max-w-[90em] px-4 py-6 sm:px-6 sm:py-8">
                 {{ $slot ?? '' }}
                 @yield('content')
             </main>
@@ -193,20 +194,19 @@
         x-show="show"
         x-transition.opacity.duration.200ms
         x-cloak
-        class="fixed bottom-6 right-6 z-50 w-[320px] max-w-[calc(100vw-3rem)] overflow-hidden rounded-lg border border-slate-200 bg-white py-3.5 pl-4 pr-10 shadow-lg"
-        :class="type === 'error' ? 'border-l-4 border-l-rose-500' : 'border-l-4 border-l-emerald-500'"
+        class="fixed bottom-6 right-6 z-50 w-[320px] max-w-[calc(100vw-3rem)] overflow-hidden rounded-xl border border-base bg-surface py-3.5 pl-4 pr-10 shadow-lg"
+        :class="type === 'error' ? 'border-l-4 border-l-red-500' : 'border-l-4 border-l-emerald-500'"
         role="status"
         aria-live="polite"
         style="display: none;"
     >
-        <p class="text-sm font-medium text-slate-800" x-text="msg"></p>
-        <button type="button" class="absolute right-2 top-2 text-slate-400 transition hover:text-slate-600" @click="show = false" aria-label="{{ __('Fermer') }}">
-            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        <p class="text-[13px] font-medium text-primary" x-text="msg"></p>
+        <button type="button" class="absolute right-2 top-2 text-muted transition hover:text-secondary" @click="show = false" aria-label="{{ __('Fermer') }}">
+            <x-ui.icon name="x-mark" class="h-4 w-4" />
         </button>
-        <span class="absolute bottom-0 left-0 h-0.5 w-full origin-left" :class="type === 'error' ? 'bg-rose-500' : 'bg-emerald-500'" x-ref="bar"></span>
+        <span class="absolute bottom-0 left-0 h-0.5 w-full origin-left" :class="type === 'error' ? 'bg-red-500' : 'bg-emerald-500'" x-ref="bar"></span>
     </div>
 
-    @vite('resources/js/app.js')
     @livewireScripts
 </body>
 </html>

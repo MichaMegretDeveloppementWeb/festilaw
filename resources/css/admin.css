@@ -1,28 +1,16 @@
-/* Back-office Festilaw : Tailwind (utilise UNIQUEMENT ici). Palette neutre slate + accent bleu de
-   marque. L'espace public reste en CSS modulaire pur (aucun @import "tailwindcss"). */
-@import "tailwindcss";
+/* Back-office Festilaw : regles de shell NON-Tailwind uniquement. Tout le style (couleurs, tokens,
+   composants) vient du design system Falcon UI Kit via ui-kit.css. Ce fichier ne contient donc PAS de
+   @import "tailwindcss" (sinon double instance) : seulement la sidebar responsive, x-cloak et le toast. */
 
-@theme {
-    --color-brand-50: #eeeefe;
-    --color-brand-100: #e2e2fd;
-    --color-brand-200: #c8c9fb;
-    --color-brand-300: #a6a7f7;
-    --color-brand-400: #8384f5;
-    --color-brand-500: #696bf2;
-    --color-brand-600: #5254e6;
-    --color-brand-700: #4243c9;
-    --color-brand-800: #3738a3;
-}
-
-/* Alpine : masquer les elements pilotes par x-show avant l'hydratation */
+/* Alpine : masquer les elements x-show avant hydratation */
 [x-cloak] { display: none !important; }
 
 /* Toast : barre de temps restant (animation one-shot relancee en JS a chaque affichage) */
 @keyframes admin-toast-bar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 
 /* Sidebar responsive.
-   - Mobile (<768px) : la sidebar est masquee, on passe par un menu burger (cf. layout).
-   - Moyen (>=768px) : rail d'icones replie, qui se DEPLOIE au survol PAR-DESSUS le contenu.
+   - Mobile (<768px) : sidebar masquee, menu burger (cf. layout).
+   - Moyen (>=768px) : rail d'icones replie qui se DEPLOIE au survol par-dessus le contenu.
    - Grand (>=1024px) : sidebar deployee en permanence. */
 .admin-navlabel { white-space: nowrap; }
 
@@ -31,7 +19,7 @@
     .admin-content { padding-left: 4rem; }
     .admin-navlabel { display: none; }
     .admin-navitem { justify-content: center; padding-left: .5rem; padding-right: .5rem; }
-    .admin-sidebar:hover { width: 15rem; box-shadow: 0 12px 34px -8px rgba(15, 23, 42, .18); }
+    .admin-sidebar:hover { width: 15rem; box-shadow: 0 12px 34px -8px rgba(17, 24, 39, .16); }
     .admin-sidebar:hover .admin-navlabel { display: inline; }
     .admin-sidebar:hover .admin-navitem { justify-content: flex-start; padding-left: .75rem; padding-right: .75rem; }
 }

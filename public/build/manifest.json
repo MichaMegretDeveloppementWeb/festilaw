@@ -1,11 +1,20 @@
 {
   "resources/css/admin.css": {
-    "file": "assets/admin-CKMFtk_q.css",
+    "file": "assets/admin-DZZPcf4b.css",
     "name": "admin",
     "names": [
       "admin.css"
     ],
     "src": "resources/css/admin.css",
+    "isEntry": true
+  },
+  "resources/css/ui-kit.css": {
+    "file": "assets/ui-kit-D6Sug4iv.css",
+    "name": "ui-kit",
+    "names": [
+      "ui-kit.css"
+    ],
+    "src": "resources/css/ui-kit.css",
     "isEntry": true
   },
   "resources/css/web.css": {
@@ -120,6 +129,12 @@
     "file": "assets/app-BvRk9kiK.js",
     "name": "app",
     "src": "resources/js/app.js",
+    "isEntry": true
+  },
+  "resources/js/ui-kit.js": {
+    "file": "assets/ui-kit-DGC2G-_5.js",
+    "name": "ui-kit",
+    "src": "resources/js/ui-kit.js",
     "isEntry": true
   },
   "resources/js/web.js": {
