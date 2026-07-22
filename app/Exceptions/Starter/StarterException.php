@@ -25,6 +25,14 @@ final class StarterException extends BaseAppException
         );
     }
 
+    public static function renewalInProgress(int $submissionId): self
+    {
+        return new self(
+            technicalMessage: "Submission [{$submissionId}] already has a renewal payment awaiting confirmation: refusing to start a second one.",
+            userMessage: 'Your renewal is being confirmed · please wait a moment before trying again.',
+        );
+    }
+
     public static function contractMissing(int $submissionId): self
     {
         return new self(

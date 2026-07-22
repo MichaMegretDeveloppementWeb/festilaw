@@ -44,8 +44,20 @@ final readonly class StartRenewalPaymentAction
             throw StarterException::dossierIncomplete($submission->id);
         }
 
-        // Reprise : un paiement de renouvellement deja en cours -> reutiliser sa session plutot que d'en
-        // creer une 2e (anti double-debit, crucial notamment sur un double clic).
+        // Anti double-debit (moyens asynchrones type Klarna/Bancontact) : un renouvellement deja engage
+        // cote prestataire et en attente de reglement (Processing) n'a pas de session reutilisable, mais
+        // il ne faut SURTOUT pas en creer un second — il pourrait aboutir en meme temps. On invite a
+        // patienter plutot que de risquer deux prelevements pour la meme annee.
+        if ($submission->payments()
+            ->where('type', PaymentType::AnnualRenewal)
+            ->where('status', PaymentStatus::Processing)
+            ->exists()
+        ) {
+            throw StarterException::renewalInProgress($submission->id);
+        }
+
+        // Reprise : un paiement de renouvellement deja en cours (Pending) -> reutiliser sa session plutot
+        // que d'en creer une 2e (anti double-debit, crucial notamment sur un double clic).
         $existing = $this->existingRenewalCheckout($submission);
         if ($existing !== null) {
             return $existing;

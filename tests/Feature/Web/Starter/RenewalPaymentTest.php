@@ -60,6 +60,23 @@ it('reuses the pending renewal checkout instead of creating a duplicate (anti do
     expect(Payment::where('type', PaymentType::AnnualRenewal)->count())->toBe(1);
 });
 
+it('refuses a second renewal while one is awaiting async confirmation (anti double-debit)', function () {
+    $dossier = renewableDossier(now()->year - 1);
+    // Un renouvellement asynchrone (Klarna/Bancontact) engage cote prestataire, en attente de reglement.
+    Payment::factory()->for($dossier)->create([
+        'type' => PaymentType::AnnualRenewal,
+        'service_year' => now()->year,
+        'status' => PaymentStatus::Processing,
+    ]);
+
+    post(route('get-started.starter.renew', ['dossier' => 'renewme']))
+        ->assertRedirect(route('my-project', ['dossier' => 'renewme']))
+        ->assertSessionHas('renewal_error');
+
+    // Aucun 2e renouvellement cree : toujours le seul paiement Processing.
+    expect(Payment::where('type', PaymentType::AnnualRenewal)->count())->toBe(1);
+});
+
 it('charges the full Pro fee on a Pro renewal', function () {
     renewableDossier(now()->year - 1, 'pro');
 
