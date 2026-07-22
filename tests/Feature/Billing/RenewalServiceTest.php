@@ -84,12 +84,18 @@ it('derives the displayed dossier state from workflow + payments + renewal', fun
     expect($service->state(paidDossier(2025), $jan))->toBe(DossierState::RenewalDue)
         ->and($service->state(paidDossier(2025), $mar))->toBe(DossierState::RenewalOverdue);
 
-    // Annule / termine : prioritaires sur le renouvellement.
+    // Annule : prioritaire sur tout le reste.
     $cancelled = paidDossier(2025);
     $cancelled->update(['status' => SubmissionStatus::Cancelled]);
     expect($service->state($cancelled->fresh(), $mar))->toBe(DossierState::Cancelled);
 
-    $completed = paidDossier(2025);
-    $completed->update(['status' => SubmissionStatus::Completed]);
-    expect($service->state($completed->fresh(), $mar))->toBe(DossierState::Completed);
+    // "Termine" (RP delivree) et renouvellement sont ORTHOGONAUX : "Termine" ne s'affiche que si le
+    // dossier est a jour ; un dossier termine mais non renouvele reste "a renouveler / en retard".
+    $completedUpToDate = paidDossier(2026);
+    $completedUpToDate->update(['status' => SubmissionStatus::Completed]);
+    expect($service->state($completedUpToDate->fresh(), $mar))->toBe(DossierState::Completed);
+
+    $completedOverdue = paidDossier(2025);
+    $completedOverdue->update(['status' => SubmissionStatus::Completed]);
+    expect($service->state($completedOverdue->fresh(), $mar))->toBe(DossierState::RenewalOverdue);
 });

@@ -429,14 +429,15 @@ it('filters the list to up-to-date active dossiers only', function () {
         ->assertDontSee('Renewco');
 });
 
-it('never files a completed dossier under the active or renewal filters', function () {
+it('files a completed dossier by its renewal status (a served client due for renewal stays visible)', function () {
     actingAs(User::factory()->create());
 
-    // Un dossier TERMINE conserve son paiement d'abonnement : il passe donc active(), mais son etat
-    // affiche est "Termine" (prioritaire). Il ne doit apparaitre que sous le filtre "Termine".
-    $completedCurrent = adminPaidDossier((int) now()->year); // couvre l'annee -> tenterait "Actif"
+    // "Termine" (RP delivree) et "a renouveler" sont orthogonaux. Un dossier termine A JOUR s'affiche
+    // "Termine" ; un dossier termine DU doit rester visible sous "A renouveler" (sinon un client servi
+    // relance par ProcessRenewals disparaitrait du back-office). Jamais sous "Actif" (badge = Termine).
+    $completedCurrent = adminPaidDossier((int) now()->year); // couvre l'annee -> "Termine"
     $completedCurrent->update(['status' => SubmissionStatus::Completed, 'company_name' => 'DoneThisYear']);
-    $completedOld = adminPaidDossier((int) now()->year - 1); // ne couvre pas -> tenterait "a renouveler"
+    $completedOld = adminPaidDossier((int) now()->year - 1); // ne couvre pas -> "a renouveler"
     $completedOld->update(['status' => SubmissionStatus::Completed, 'company_name' => 'DoneLastYear']);
 
     Livewire::test(SubmissionList::class)
@@ -444,11 +445,11 @@ it('never files a completed dossier under the active or renewal filters', functi
         ->assertDontSee('DoneThisYear')
         ->assertDontSee('DoneLastYear')
         ->set('state', 'renewal')
+        ->assertSee('DoneLastYear')       // termine mais du -> reste visible en renouvellement
         ->assertDontSee('DoneThisYear')
-        ->assertDontSee('DoneLastYear')
         ->set('state', 'completed')
-        ->assertSee('DoneThisYear')
-        ->assertSee('DoneLastYear');
+        ->assertSee('DoneThisYear')       // termine et a jour
+        ->assertDontSee('DoneLastYear');
 });
 
 it('shows the renewal section on the dossier detail', function () {
