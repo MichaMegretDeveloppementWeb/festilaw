@@ -1,24 +1,21 @@
 <div x-data="{ emailOpen: false }" @email-sent.window="emailOpen = false">
-    <nav class="mb-4 flex items-center gap-1.5 text-sm text-slate-500">
-        <a href="{{ $isContact ? route('admin.contacts.index') : route('admin.submissions.index') }}" class="transition hover:text-slate-700">{{ $isContact ? __('Prises de contact') : __('Dossiers') }}</a>
-        <svg class="h-3.5 w-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-        <span class="font-medium text-slate-700">{{ $isContact ? __('Prise de contact') : $submission->reference }}</span>
+    <nav class="mb-4 flex items-center gap-1.5 text-[13px] text-muted">
+        <a href="{{ $isContact ? route('admin.contacts.index') : route('admin.submissions.index') }}" class="transition hover:text-primary">{{ $isContact ? __('Prises de contact') : __('Dossiers') }}</a>
+        <x-ui.icon name="chevron-right" class="h-3.5 w-3.5 text-muted" />
+        <span class="font-medium text-secondary">{{ $isContact ? __('Prise de contact') : $submission->reference }}</span>
     </nav>
 
     @if ($isContact)
         <div class="mb-6">
-            <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">
-                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>
-                {{ __('Prise de contact') }}
-            </span>
-            <h1 class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">{{ $submission->first_name ?: __('Contact sans nom') }}</h1>
-            <p class="mt-1 text-sm text-slate-500">{{ __('Reçue le') }} {{ $submission->created_at->format('d/m/Y à H:i') }} · {{ __('via le formulaire de contact') }} · {{ __('Réf.') }} {{ $submission->reference }}</p>
+            <x-ui.badge color="amber" dot>{{ __('Prise de contact') }}</x-ui.badge>
+            <h1 class="mt-2 text-2xl font-semibold tracking-tight text-primary">{{ $submission->first_name ?: __('Contact sans nom') }}</h1>
+            <p class="mt-1 text-[13px] text-secondary">{{ __('Reçue le') }} {{ $submission->created_at->format('d/m/Y à H:i') }} · {{ __('via le formulaire de contact') }} · {{ __('Réf.') }} {{ $submission->reference }}</p>
         </div>
     @else
         <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
             <div>
-                <h1 class="text-2xl font-semibold tracking-tight text-slate-900">{{ $submission->reference }}</h1>
-                <p class="mt-1 text-sm text-slate-500">{{ $submission->type->label() }} · {{ __('Créé le') }} {{ $submission->created_at->format('d/m/Y à H:i') }}</p>
+                <h1 class="text-2xl font-semibold tracking-tight text-primary">{{ $submission->reference }}</h1>
+                <p class="mt-1 text-[13px] text-secondary">{{ $submission->type->label() }} · {{ __('Créé le') }} {{ $submission->created_at->format('d/m/Y à H:i') }}</p>
             </div>
             <x-admin.dossier-state-badge :state="$dossierState" />
         </div>
@@ -26,123 +23,123 @@
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div class="space-y-6 lg:col-span-2">
-            <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
-                <div class="border-b border-slate-100 px-5 py-3.5">
-                    <h2 class="text-sm font-semibold text-slate-900">{{ $isContact ? __('Coordonnées') : __('Client') }}</h2>
+            <section class="rounded-xl border border-base bg-surface">
+                <div class="border-b border-subtle px-5 py-3.5">
+                    <h2 class="text-[13px] font-semibold text-primary">{{ $isContact ? __('Coordonnées') : __('Client') }}</h2>
                 </div>
                 <div class="px-5 py-2">
-                    <dl class="divide-y divide-slate-100 text-sm">
-                        @if ($isContact)
+                    <dl class="divide-y divide-subtle text-[13px]">
+                        @php
+                            $rows = $isContact
+                                ? [
+                                    [__('Nom'), $submission->first_name ?: '-', false],
+                                    [__('Email'), $submission->email, true],
+                                    [__('Site web'), $submission->website_url ?: '-', false],
+                                    [__('Langue'), strtoupper((string) $submission->locale), false],
+                                ]
+                                : [
+                                    [__('Entreprise'), $submission->company_name ?: '-', false],
+                                    [__('Contact'), trim(($submission->first_name ?? '').' '.($submission->last_name ?? '')) ?: '-', false],
+                                    [__('Email'), $submission->email, true],
+                                    [__('Téléphone'), $submission->phone ?: '-', false],
+                                    [__('Site web'), $submission->website_url ?: '-', false],
+                                    [__('N° immatriculation'), $submission->company_registration_number ?: '-', false],
+                                    [__('Langue du dossier'), strtoupper((string) $submission->locale), false],
+                                ];
+                        @endphp
+                        @foreach ($rows as [$label, $value, $isEmail])
                             <div class="flex items-start justify-between gap-4 py-2.5">
-                                <dt class="text-slate-500">{{ __('Nom') }}</dt>
-                                <dd class="text-right font-medium text-slate-900">{{ $submission->first_name ?: '-' }}</dd>
+                                <dt class="text-muted">{{ $label }}</dt>
+                                @if ($isEmail)
+                                    <dd class="text-right font-medium"><a href="mailto:{{ $value }}" class="text-gray-900 hover:underline dark:text-gray-100">{{ $value }}</a></dd>
+                                @else
+                                    <dd class="text-right font-medium text-primary">{{ $value }}</dd>
+                                @endif
                             </div>
-                            <div class="flex items-start justify-between gap-4 py-2.5">
-                                <dt class="text-slate-500">{{ __('Email') }}</dt>
-                                <dd class="text-right font-medium text-brand-700"><a href="mailto:{{ $submission->email }}" class="hover:underline">{{ $submission->email }}</a></dd>
-                            </div>
-                            <div class="flex items-start justify-between gap-4 py-2.5">
-                                <dt class="text-slate-500">{{ __('Site web') }}</dt>
-                                <dd class="text-right font-medium text-slate-900">{{ $submission->website_url ?: '-' }}</dd>
-                            </div>
-                            <div class="flex items-start justify-between gap-4 py-2.5">
-                                <dt class="text-slate-500">{{ __('Langue') }}</dt>
-                                <dd class="text-right font-medium text-slate-900">{{ strtoupper((string) $submission->locale) }}</dd>
-                            </div>
-                        @else
-                            <div class="flex items-start justify-between gap-4 py-2.5">
-                                <dt class="text-slate-500">{{ __('Entreprise') }}</dt>
-                                <dd class="text-right font-medium text-slate-900">{{ $submission->company_name ?: '-' }}</dd>
-                            </div>
-                            <div class="flex items-start justify-between gap-4 py-2.5">
-                                <dt class="text-slate-500">{{ __('Contact') }}</dt>
-                                <dd class="text-right font-medium text-slate-900">{{ trim(($submission->first_name ?? '').' '.($submission->last_name ?? '')) ?: '-' }}</dd>
-                            </div>
-                            <div class="flex items-start justify-between gap-4 py-2.5">
-                                <dt class="text-slate-500">{{ __('Email') }}</dt>
-                                <dd class="text-right font-medium text-brand-700"><a href="mailto:{{ $submission->email }}" class="hover:underline">{{ $submission->email }}</a></dd>
-                            </div>
-                            <div class="flex items-start justify-between gap-4 py-2.5">
-                                <dt class="text-slate-500">{{ __('Téléphone') }}</dt>
-                                <dd class="text-right font-medium text-slate-900">{{ $submission->phone ?: '-' }}</dd>
-                            </div>
-                            <div class="flex items-start justify-between gap-4 py-2.5">
-                                <dt class="text-slate-500">{{ __('Site web') }}</dt>
-                                <dd class="text-right font-medium text-slate-900">{{ $submission->website_url ?: '-' }}</dd>
-                            </div>
-                            <div class="flex items-start justify-between gap-4 py-2.5">
-                                <dt class="text-slate-500">{{ __('N° immatriculation') }}</dt>
-                                <dd class="text-right font-medium text-slate-900">{{ $submission->company_registration_number ?: '-' }}</dd>
-                            </div>
-                            <div class="flex items-start justify-between gap-4 py-2.5">
-                                <dt class="text-slate-500">{{ __('Langue du dossier') }}</dt>
-                                <dd class="text-right font-medium text-slate-900">{{ strtoupper((string) $submission->locale) }}</dd>
-                            </div>
-                        @endif
+                        @endforeach
                     </dl>
                 </div>
             </section>
 
             @if ($submission->message)
-                <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
-                    <div class="border-b border-slate-100 px-5 py-3.5">
-                        <h2 class="text-sm font-semibold text-slate-900">{{ __('Message') }}</h2>
+                <section class="rounded-xl border border-base bg-surface">
+                    <div class="border-b border-subtle px-5 py-3.5">
+                        <h2 class="text-[13px] font-semibold text-primary">{{ __('Message') }}</h2>
                     </div>
                     <div class="p-5">
-                        <p class="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{{ $submission->message }}</p>
+                        <p class="whitespace-pre-wrap text-[13px] leading-relaxed text-secondary">{{ $submission->message }}</p>
                     </div>
                 </section>
             @endif
 
             @if ($submission->contract)
-                <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
-                    <div class="border-b border-slate-100 px-5 py-3.5">
-                        <h2 class="text-sm font-semibold text-slate-900">{{ __('Mandat / signature') }}</h2>
+                <section class="rounded-xl border border-base bg-surface">
+                    <div class="border-b border-subtle px-5 py-3.5">
+                        <h2 class="text-[13px] font-semibold text-primary">{{ __('Mandat / signature') }}</h2>
                     </div>
                     <div class="px-5 py-2">
-                        <dl class="divide-y divide-slate-100 text-sm">
+                        <dl class="divide-y divide-subtle text-[13px]">
                             <div class="flex items-center justify-between gap-4 py-2.5">
-                                <dt class="text-slate-500">{{ __('Statut de signature') }}</dt>
-                                <dd class="font-medium text-slate-900">{{ $submission->contract->signature_status->label() }}</dd>
+                                <dt class="text-muted">{{ __('Statut de signature') }}</dt>
+                                <dd class="font-medium text-primary">{{ $submission->contract->signature_status->label() }}</dd>
                             </div>
                             <div class="flex items-center justify-between gap-4 py-2.5">
-                                <dt class="text-slate-500">{{ __('Prestataire') }}</dt>
-                                <dd class="font-medium text-slate-900">{{ $submission->contract->signature_provider ?: '-' }}</dd>
+                                <dt class="text-muted">{{ __('Prestataire') }}</dt>
+                                <dd class="font-medium text-primary">{{ $submission->contract->signature_provider ?: '-' }}</dd>
                             </div>
                         </dl>
                         @if ($submission->contract->signed_file_path)
                             <a href="{{ route('admin.submissions.mandate', ['submission' => $submission->id]) }}"
-                                class="mt-3 inline-flex items-center gap-2 text-sm font-medium text-brand-700 hover:underline">
-                                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                class="mt-3 inline-flex items-center gap-2 text-[13px] font-medium text-primary hover:underline">
+                                <x-ui.icon name="arrow-down-tray" class="h-4 w-4" />
                                 {{ __('Télécharger le mandat signé') }}
                             </a>
                         @endif
 
                         {{-- Contrat contresigne par Festilaw (contre-signature manuelle, hors SignWell) --}}
-                        <div class="mt-4 border-t border-slate-100 pt-4">
-                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Contrat contresigné') }}</p>
+                        <div class="mt-4 border-t border-subtle pt-4">
+                            <p class="text-[11px] font-semibold uppercase tracking-wide text-muted">{{ __('Contrat contresigné') }}</p>
                             @if ($submission->contract->countersigned_file_path)
                                 <a href="{{ route('admin.submissions.countersigned', ['submission' => $submission->id]) }}"
-                                    class="mt-2 inline-flex items-center gap-2 text-sm font-medium text-brand-700 hover:underline">
-                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    class="mt-2 inline-flex items-center gap-2 text-[13px] font-medium text-primary hover:underline">
+                                    <x-ui.icon name="arrow-down-tray" class="h-4 w-4" />
                                     {{ __('Télécharger le contrat contresigné') }}
                                 </a>
-                                <p class="mt-1 text-xs text-slate-500">{{ __('Déposé le') }} {{ $submission->contract->countersigned_at?->format('d/m/Y H:i') }}</p>
+                                <p class="mt-1 text-[12px] text-muted">{{ __('Déposé le') }} {{ $submission->contract->countersigned_at?->format('d/m/Y H:i') }}</p>
                             @endif
 
-                            <form wire:submit="uploadCountersigned" class="mt-3 space-y-2">
-                                <input type="file" wire:model="countersigned" accept="application/pdf"
-                                    class="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200">
-                                <div wire:loading wire:target="countersigned" class="text-xs text-slate-500">{{ __('Chargement du fichier...') }}</div>
-                                @error('countersigned') <p class="text-sm text-rose-600">{{ $message }}</p> @enderror
-                                <label class="flex items-center gap-2 text-sm text-slate-600">
-                                    <input type="checkbox" wire:model="notifyClientOnCountersign" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500/30">
-                                    {{ __('Notifier le client par email (PDF joint)') }}
-                                </label>
-                                <button type="submit" wire:loading.attr="disabled" wire:target="uploadCountersigned,countersigned"
-                                    class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:opacity-60">
+                            <form wire:submit="uploadCountersigned" class="mt-3 space-y-3">
+                                {{-- Zone glisser-deposer + selecteur, compatible Livewire (wire:model sur l'input cache). --}}
+                                <div x-data="{ dragging: false, name: null }"
+                                    @dragover.prevent="dragging = true" @dragleave.prevent="dragging = false"
+                                    @drop.prevent="dragging = false; $refs.cs.files = $event.dataTransfer.files; $refs.cs.dispatchEvent(new Event('change', { bubbles: true })); name = $event.dataTransfer.files[0]?.name"
+                                    :class="dragging ? 'border-gray-400 bg-elevated' : 'border-base hover:border-gray-300'"
+                                    class="rounded-lg border-2 border-dashed px-6 py-8 text-center transition-colors">
+                                    <input type="file" x-ref="cs" wire:model="countersigned" accept="application/pdf" class="sr-only" @change="name = $refs.cs.files[0]?.name">
+                                    <template x-if="!name">
+                                        <div>
+                                            <x-ui.icon name="document-arrow-up" class="mx-auto h-9 w-9 text-gray-300 dark:text-gray-600" stroke-width="1" />
+                                            <div class="mt-3 text-[13px]">
+                                                <button type="button" @click="$refs.cs.click()" class="font-medium text-primary underline-offset-2 hover:underline">{{ __('Choisir un fichier') }}</button>
+                                                <span class="text-muted"> {{ __('ou glisser-déposer') }}</span>
+                                            </div>
+                                            <p class="mt-1 text-[11px] text-muted">{{ __('PDF jusqu\'à 10 Mo') }}</p>
+                                        </div>
+                                    </template>
+                                    <template x-if="name">
+                                        <div class="flex items-center justify-center gap-x-2 text-[13px]">
+                                            <x-ui.icon name="check-circle" class="h-5 w-5 text-emerald-500" />
+                                            <span class="text-secondary" x-text="name"></span>
+                                            <button type="button" @click="name = null; $refs.cs.value = null" class="text-muted hover:text-secondary"><x-ui.icon name="x-mark" class="h-4 w-4" /></button>
+                                        </div>
+                                    </template>
+                                </div>
+                                <div wire:loading wire:target="countersigned" class="text-[12px] text-muted">{{ __('Chargement du fichier...') }}</div>
+                                @error('countersigned') <p class="text-[12px] text-red-500">{{ $message }}</p> @enderror
+                                <x-ui.checkbox id="notify-countersign" wire:model="notifyClientOnCountersign" label="{{ __('Notifier le client par email (PDF joint)') }}" />
+                                <x-ui.button type="submit" :loading="true" target="uploadCountersigned,countersigned">
                                     {{ $submission->contract->countersigned_file_path ? __('Remplacer le contrat contresigné') : __('Ajouter le contrat contresigné') }}
-                                </button>
+                                </x-ui.button>
                             </form>
                         </div>
                     </div>
@@ -150,23 +147,23 @@
             @endif
 
             @unless ($isContact)
-                <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
-                    <div class="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
-                        <h2 class="text-sm font-semibold text-slate-900">{{ __('Pièces') }}</h2>
-                        <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">{{ $submission->uploadedDocuments->count() }}</span>
+                <section class="rounded-xl border border-base bg-surface">
+                    <div class="flex items-center justify-between border-b border-subtle px-5 py-3.5">
+                        <h2 class="text-[13px] font-semibold text-primary">{{ __('Pièces') }}</h2>
+                        <x-ui.badge color="gray">{{ $submission->uploadedDocuments->count() }}</x-ui.badge>
                     </div>
                     <div class="p-5">
                         @if ($submission->uploadedDocuments->isEmpty())
-                            <p class="text-sm text-slate-500">{{ __('Aucune pièce téléversée.') }}</p>
+                            <p class="text-[13px] text-secondary">{{ __('Aucune pièce téléversée.') }}</p>
                         @else
-                            <ul class="divide-y divide-slate-100">
+                            <ul class="divide-y divide-subtle">
                                 @foreach ($submission->uploadedDocuments as $doc)
-                                    <li wire:key="doc-{{ $doc->id }}" class="flex items-center gap-3 py-2.5 text-sm first:pt-0 last:pb-0">
-                                        <svg class="h-5 w-5 shrink-0 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                                        <span class="font-medium text-slate-800">{{ $doc->type->label() }}</span>
-                                        <span class="truncate text-slate-400">· {{ $doc->original_filename }}</span>
+                                    <li wire:key="doc-{{ $doc->id }}" class="flex items-center gap-3 py-2.5 text-[13px] first:pt-0 last:pb-0">
+                                        <x-ui.icon name="document" class="h-5 w-5 shrink-0 text-muted" />
+                                        <span class="font-medium text-primary">{{ $doc->type->label() }}</span>
+                                        <span class="truncate text-muted">· {{ $doc->original_filename }}</span>
                                         <a href="{{ route('admin.submissions.document', ['submission' => $submission->id, 'document' => $doc->id]) }}"
-                                            class="ml-auto shrink-0 font-medium text-brand-700 hover:underline">{{ __('Télécharger') }}</a>
+                                            class="ml-auto shrink-0 font-medium text-primary hover:underline">{{ __('Télécharger') }}</a>
                                     </li>
                                 @endforeach
                             </ul>
@@ -176,151 +173,130 @@
             @endunless
 
             @if ($renewal)
-                <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
-                    <div class="border-b border-slate-100 px-5 py-3.5">
-                        <h2 class="text-sm font-semibold text-slate-900">{{ __('Renouvellement') }}</h2>
+                <section class="rounded-xl border border-base bg-surface">
+                    <div class="border-b border-subtle px-5 py-3.5">
+                        <h2 class="text-[13px] font-semibold text-primary">{{ __('Renouvellement') }}</h2>
                     </div>
                     <div class="px-5 py-2">
-                        <dl class="divide-y divide-slate-100 text-sm">
+                        <dl class="divide-y divide-subtle text-[13px]">
                             <div class="flex items-center justify-between gap-4 py-2.5">
-                                <dt class="text-slate-500">{{ __('État') }}</dt>
-                                <dd>
-                                    <span @class([
-                                        'inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold',
-                                        'bg-emerald-50 text-emerald-700' => $renewal['severity'] === 'ok',
-                                        'bg-amber-50 text-amber-700' => $renewal['severity'] === 'warn',
-                                        'bg-red-50 text-red-700' => $renewal['severity'] === 'bad',
-                                    ])>{{ $renewal['label'] }}</span>
-                                </dd>
+                                <dt class="text-muted">{{ __('État') }}</dt>
+                                <dd><x-ui.badge :color="['ok' => 'emerald', 'warn' => 'amber', 'bad' => 'red'][$renewal['severity']] ?? 'gray'" dot>{{ $renewal['label'] }}</x-ui.badge></dd>
                             </div>
                             <div class="flex items-center justify-between gap-4 py-2.5">
-                                <dt class="text-slate-500">{{ __('Payé jusqu\'à l\'année') }}</dt>
-                                <dd class="font-medium text-slate-900">{{ $renewal['paidThroughYear'] ?? '-' }}</dd>
+                                <dt class="text-muted">{{ __('Payé jusqu\'à l\'année') }}</dt>
+                                <dd class="font-medium text-primary">{{ $renewal['paidThroughYear'] ?? '-' }}</dd>
                             </div>
                             <div class="flex items-center justify-between gap-4 py-2.5">
-                                <dt class="text-slate-500">{{ __('Prochain renouvellement') }}</dt>
-                                <dd class="font-medium text-slate-900">{{ $renewal['nextRenewalDate']?->format('d/m/Y') ?? '-' }}</dd>
+                                <dt class="text-muted">{{ __('Prochain renouvellement') }}</dt>
+                                <dd class="font-medium text-primary">{{ $renewal['nextRenewalDate']?->format('d/m/Y') ?? '-' }}</dd>
                             </div>
                         </dl>
                     </div>
                 </section>
             @endif
 
-            {{-- Toujours affichee (meme sans paiement) pour que l'etat soit clair. Cartes plutot qu'un
-                 tableau : lisible et sans debordement, s'adapte au mobile. --}}
-            <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
-                <div class="border-b border-slate-100 px-5 py-3.5">
-                    <h2 class="text-sm font-semibold text-slate-900">{{ __('Paiements') }}</h2>
+            {{-- Toujours affichee (meme sans paiement) pour que l'etat soit clair. --}}
+            <section class="rounded-xl border border-base bg-surface">
+                <div class="border-b border-subtle px-5 py-3.5">
+                    <h2 class="text-[13px] font-semibold text-primary">{{ __('Paiements') }}</h2>
                 </div>
                 <div class="space-y-3 p-5">
                     @forelse ($submission->payments as $payment)
-                        @php($settled = in_array($payment->status, [\App\Enums\Payment\PaymentStatus::Succeeded, \App\Enums\Payment\PaymentStatus::Refunded], true))
-                        <div wire:key="pay-{{ $payment->id }}" class="rounded-lg border border-slate-200 p-4">
+                        @php
+                            $settled = in_array($payment->status, [\App\Enums\Payment\PaymentStatus::Succeeded, \App\Enums\Payment\PaymentStatus::Refunded], true);
+                            $payColor = match ($payment->status) {
+                                \App\Enums\Payment\PaymentStatus::Succeeded => 'emerald',
+                                \App\Enums\Payment\PaymentStatus::Failed => 'red',
+                                \App\Enums\Payment\PaymentStatus::Pending, \App\Enums\Payment\PaymentStatus::Processing => 'amber',
+                                default => 'gray',
+                            };
+                        @endphp
+                        <div wire:key="pay-{{ $payment->id }}" class="rounded-lg border border-base p-4">
                             <div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
                                 <div>
-                                    <p class="font-semibold text-slate-900">{{ number_format($payment->amount_cents / 100, 2, ',', ' ') }} {{ $payment->currency }}</p>
-                                    <p class="mt-0.5 text-xs text-slate-500">{{ $payment->type->label() }}{{ $payment->service_year ? ' · '.$payment->service_year : '' }}</p>
+                                    <p class="font-semibold text-primary">{{ number_format($payment->amount_cents / 100, 2, ',', ' ') }} {{ $payment->currency }}</p>
+                                    <p class="mt-0.5 text-[12px] text-muted">{{ $payment->type->label() }}{{ $payment->service_year ? ' · '.$payment->service_year : '' }}</p>
                                 </div>
-                                <span @class([
-                                    'inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-semibold',
-                                    'bg-emerald-50 text-emerald-700' => $payment->status === \App\Enums\Payment\PaymentStatus::Succeeded,
-                                    'bg-red-50 text-red-700' => $payment->status === \App\Enums\Payment\PaymentStatus::Failed,
-                                    'bg-amber-50 text-amber-700' => in_array($payment->status, [\App\Enums\Payment\PaymentStatus::Pending, \App\Enums\Payment\PaymentStatus::Processing], true),
-                                    'bg-slate-100 text-slate-600' => in_array($payment->status, [\App\Enums\Payment\PaymentStatus::Expired, \App\Enums\Payment\PaymentStatus::Refunded], true),
-                                ])>{{ $payment->status->label() }}</span>
+                                <x-ui.badge :color="$payColor" dot>{{ $payment->status->label() }}</x-ui.badge>
                             </div>
-                            <dl class="mt-3 grid grid-cols-1 gap-x-4 gap-y-1.5 text-xs sm:grid-cols-2">
+                            <dl class="mt-3 grid grid-cols-1 gap-x-4 gap-y-1.5 text-[12px] sm:grid-cols-2">
                                 <div class="flex justify-between gap-3 sm:block">
-                                    <dt class="text-slate-400">{{ __('Référence') }}</dt>
-                                    <dd class="break-all text-right font-mono text-slate-600 sm:mt-0.5 sm:text-left">{{ $payment->provider }} · {{ $payment->provider_reference ?: '—' }}</dd>
+                                    <dt class="text-muted">{{ __('Référence') }}</dt>
+                                    <dd class="break-all text-right font-mono text-secondary sm:mt-0.5 sm:text-left">{{ $payment->provider }} · {{ $payment->provider_reference ?: '—' }}</dd>
                                 </div>
                                 <div class="flex justify-between gap-3 sm:block">
-                                    <dt class="text-slate-400">{{ __('Payé le') }}</dt>
-                                    <dd class="text-right text-slate-600 sm:mt-0.5 sm:text-left">{{ $payment->paid_at?->format('d/m/Y à H:i') ?: '—' }}</dd>
+                                    <dt class="text-muted">{{ __('Payé le') }}</dt>
+                                    <dd class="text-right text-secondary sm:mt-0.5 sm:text-left">{{ $payment->paid_at?->format('d/m/Y à H:i') ?: '—' }}</dd>
                                 </div>
                             </dl>
                             @unless ($settled)
-                                <div class="mt-3 border-t border-slate-100 pt-3">
-                                    <button type="button" wire:click="recheckPayment({{ $payment->id }})"
-                                        wire:loading.attr="disabled" wire:target="recheckPayment({{ $payment->id }})"
-                                        class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-60">
-                                        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
-                                        <span wire:loading.remove wire:target="recheckPayment({{ $payment->id }})">{{ __('Vérifier sur :provider', ['provider' => $payment->providerLabel()]) }}</span>
-                                        <span wire:loading wire:target="recheckPayment({{ $payment->id }})">{{ __('Vérification…') }}</span>
-                                    </button>
+                                <div class="mt-3 border-t border-subtle pt-3">
+                                    <x-ui.button variant="secondary" size="compact" wire:click="recheckPayment({{ $payment->id }})" :loading="true" target="recheckPayment({{ $payment->id }})">
+                                        <x-ui.icon name="arrow-path" class="h-3.5 w-3.5" />
+                                        {{ __('Vérifier sur :provider', ['provider' => $payment->providerLabel()]) }}
+                                    </x-ui.button>
                                 </div>
                             @endunless
                         </div>
                     @empty
-                        <p class="text-sm text-slate-500">{{ __('Aucun paiement enregistré pour ce dossier.') }}</p>
+                        <p class="text-[13px] text-secondary">{{ __('Aucun paiement enregistré pour ce dossier.') }}</p>
                     @endforelse
                 </div>
             </section>
 
             @if ($isScale)
-                <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
-                    <div class="border-b border-slate-100 px-5 py-3.5">
-                        <h2 class="text-sm font-semibold text-slate-900">{{ __('Audit Scale') }}</h2>
+                <section class="rounded-xl border border-base bg-surface">
+                    <div class="border-b border-subtle px-5 py-3.5">
+                        <h2 class="text-[13px] font-semibold text-primary">{{ __('Audit Scale') }}</h2>
                     </div>
                     <div class="px-5 py-4">
                         @if ($scaleAuditPaid)
-                            <span class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">{{ __('Audit 75 € payé · à déduire du devis final') }}</span>
+                            <x-ui.badge color="emerald" ring>{{ __('Audit 75 € payé · à déduire du devis final') }}</x-ui.badge>
                         @else
-                            <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">{{ __('Audit non payé') }}</span>
+                            <x-ui.badge color="gray" ring>{{ __('Audit non payé') }}</x-ui.badge>
                         @endif
                     </div>
                 </section>
             @endif
 
             @if ($submission->appointment)
-                <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
-                    <div class="border-b border-slate-100 px-5 py-3.5">
-                        <h2 class="text-sm font-semibold text-slate-900">{{ __('Rendez-vous') }}</h2>
+                <section class="rounded-xl border border-base bg-surface">
+                    <div class="border-b border-subtle px-5 py-3.5">
+                        <h2 class="text-[13px] font-semibold text-primary">{{ __('Rendez-vous') }}</h2>
                     </div>
-                    <div class="px-5 py-4">
-                        <form wire:submit="updateAppointment" class="space-y-3">
-                            <div>
-                                <label for="appt-scheduled" class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Créneau confirmé') }}</label>
-                                <input type="datetime-local" id="appt-scheduled" wire:model="apptScheduledAt"
-                                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30">
-                                @error('apptScheduledAt') <p class="mt-1 text-sm text-rose-600">{{ $message }}</p> @enderror
-                            </div>
-                            <div>
-                                <label for="appt-status" class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">{{ __('Statut') }}</label>
-                                <select id="appt-status" wire:model="apptStatus"
-                                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30">
-                                    @foreach ($appointmentStatuses as $status)
-                                        <option value="{{ $status->value }}">{{ $status->label() }}</option>
-                                    @endforeach
-                                </select>
-                                @error('apptStatus') <p class="mt-1 text-sm text-rose-600">{{ $message }}</p> @enderror
-                            </div>
-                            <button type="submit" wire:loading.attr="disabled" wire:target="updateAppointment"
-                                class="w-full rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:opacity-60">{{ __('Enregistrer le rendez-vous') }}</button>
+                    <div class="p-5">
+                        <form wire:submit="updateAppointment" class="space-y-4">
+                            <x-ui.form-group label="{{ __('Créneau confirmé') }}" for="appt-scheduled" :error="$errors->first('apptScheduledAt')">
+                                <x-ui.input type="datetime-local" id="appt-scheduled" wire:model="apptScheduledAt" :error="$errors->has('apptScheduledAt')" />
+                            </x-ui.form-group>
+                            <x-ui.form-group label="{{ __('Statut') }}" for="appt-status" :error="$errors->first('apptStatus')">
+                                <x-ui.select id="appt-status" wire:model="apptStatus" :options="collect($appointmentStatuses)->mapWithKeys(fn ($s) => [$s->value => $s->label()])->all()" :error="$errors->has('apptStatus')" />
+                            </x-ui.form-group>
+                            <x-ui.button type="submit" :loading="true" target="updateAppointment" class="w-full justify-center">{{ __('Enregistrer le rendez-vous') }}</x-ui.button>
                         </form>
                     </div>
                 </section>
             @endif
 
-            <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
-                <div class="border-b border-slate-100 px-5 py-3.5">
-                    <h2 class="text-sm font-semibold text-slate-900">{{ __('Notes internes') }}</h2>
+            <section class="rounded-xl border border-base bg-surface">
+                <div class="border-b border-subtle px-5 py-3.5">
+                    <h2 class="text-[13px] font-semibold text-primary">{{ __('Notes internes') }}</h2>
                 </div>
                 <div class="p-5">
                     <form wire:submit="addNote" class="mb-5">
-                        <textarea wire:model="noteBody" rows="3" placeholder="{{ __('Ajouter une note de suivi...') }}"
-                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30"></textarea>
-                        @error('noteBody') <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p> @enderror
-                        <button type="submit" wire:loading.attr="disabled" wire:target="addNote"
-                            class="mt-2.5 rounded-lg bg-slate-800 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-900 disabled:opacity-60">{{ __('Ajouter la note') }}</button>
+                        <x-ui.form-group :error="$errors->first('noteBody')">
+                            <x-ui.textarea wire:model="noteBody" rows="3" placeholder="{{ __('Ajouter une note de suivi...') }}" :error="$errors->has('noteBody')" />
+                        </x-ui.form-group>
+                        <x-ui.button type="submit" :loading="true" target="addNote" size="compact" class="mt-2.5">{{ __('Ajouter la note') }}</x-ui.button>
                     </form>
                     @forelse ($submission->notes as $note)
-                        <div class="border-t border-slate-100 py-3 first:border-t-0 first:pt-0" wire:key="note-{{ $note->id }}">
-                            <div class="mb-1 text-xs text-slate-400">{{ $note->author?->name ?: __('Équipe') }} · {{ $note->created_at->format('d/m/Y à H:i') }}</div>
-                            <div class="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{{ $note->body }}</div>
+                        <div class="border-t border-subtle py-3 first:border-t-0 first:pt-0" wire:key="note-{{ $note->id }}">
+                            <div class="mb-1 text-[12px] text-muted">{{ $note->author?->name ?: __('Équipe') }} · {{ $note->created_at->format('d/m/Y à H:i') }}</div>
+                            <div class="whitespace-pre-wrap text-[13px] leading-relaxed text-secondary">{{ $note->body }}</div>
                         </div>
                     @empty
-                        <p class="text-sm text-slate-500">{{ __('Aucune note pour le moment.') }}</p>
+                        <p class="text-[13px] text-secondary">{{ __('Aucune note pour le moment.') }}</p>
                     @endforelse
                 </div>
             </section>
@@ -328,114 +304,90 @@
 
         <aside class="space-y-6 lg:sticky lg:top-8 lg:self-start">
             @unless ($isContact)
-                <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
-                    <div class="border-b border-slate-100 px-5 py-3.5">
-                        <h2 class="text-sm font-semibold text-slate-900">{{ __('Statut du dossier') }}</h2>
+                <section class="rounded-xl border border-base bg-surface">
+                    <div class="border-b border-subtle px-5 py-3.5">
+                        <h2 class="text-[13px] font-semibold text-primary">{{ __('Statut du dossier') }}</h2>
                     </div>
                     <div class="p-5">
                         <form wire:submit="updateStatus">
-                            <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500" for="new-status">{{ __('Changer le statut') }}</label>
-                            <select id="new-status" wire:model="newStatus"
-                                class="mb-3 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30">
-                                @foreach ($statuses as $s)
-                                    <option value="{{ $s->value }}">{{ $s->label() }}</option>
-                                @endforeach
-                            </select>
-                            <button type="submit" wire:loading.attr="disabled" wire:target="updateStatus"
-                                class="w-full rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:opacity-60">
-                                <span wire:loading.remove wire:target="updateStatus">{{ __('Enregistrer le statut') }}</span>
-                                <span wire:loading wire:target="updateStatus">{{ __('Enregistrement') }}&hellip;</span>
-                            </button>
-                            @error('newStatus') <p class="mt-2 text-sm text-rose-600">{{ $message }}</p> @enderror
+                            <x-ui.form-group label="{{ __('Changer le statut') }}" for="new-status" class="mb-3" :error="$errors->first('newStatus')">
+                                <x-ui.select id="new-status" wire:model="newStatus" :options="collect($statuses)->mapWithKeys(fn ($s) => [$s->value => $s->label()])->all()" :error="$errors->has('newStatus')" />
+                            </x-ui.form-group>
+                            <x-ui.button type="submit" :loading="true" target="updateStatus" class="w-full justify-center">{{ __('Enregistrer le statut') }}</x-ui.button>
                         </form>
                     </div>
                 </section>
             @endunless
 
             @if ($isOnlineJourney)
-                <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
-                    <div class="border-b border-slate-100 px-5 py-3.5">
-                        <h2 class="text-sm font-semibold text-slate-900">{{ __('Personne Responsable UE') }}</h2>
+                <section class="rounded-xl border border-base bg-surface">
+                    <div class="border-b border-subtle px-5 py-3.5">
+                        <h2 class="text-[13px] font-semibold text-primary">{{ __('Personne Responsable UE') }}</h2>
                     </div>
                     <div class="p-5">
                         <form wire:submit="issueResponsiblePerson">
-                            <label class="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500" for="rp-address">{{ __('Adresse délivrée') }}</label>
-                            <textarea id="rp-address" wire:model="rpAddress" rows="3" placeholder="{{ __('Adresse officielle de représentation dans l\'UE...') }}"
-                                class="mb-3 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30"></textarea>
-                            <button type="submit" wire:loading.attr="disabled" wire:target="issueResponsiblePerson"
-                                class="w-full rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:opacity-60">{{ __('Émettre et terminer') }}</button>
-                            @error('rpAddress') <p class="mt-2 text-sm text-rose-600">{{ $message }}</p> @enderror
+                            <x-ui.form-group label="{{ __('Adresse délivrée') }}" for="rp-address" class="mb-3" :error="$errors->first('rpAddress')">
+                                <x-ui.textarea id="rp-address" wire:model="rpAddress" rows="3" placeholder="{{ __('Adresse officielle de représentation dans l\'UE...') }}" :error="$errors->has('rpAddress')" />
+                            </x-ui.form-group>
+                            <x-ui.button type="submit" :loading="true" target="issueResponsiblePerson" class="w-full justify-center">{{ __('Émettre et terminer') }}</x-ui.button>
                         </form>
                     </div>
                 </section>
             @endif
 
-            <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
-                <div class="border-b border-slate-100 px-5 py-3.5">
-                    <h2 class="text-sm font-semibold text-slate-900">{{ __('Actions') }}</h2>
+            <section class="rounded-xl border border-base bg-surface">
+                <div class="border-b border-subtle px-5 py-3.5">
+                    <h2 class="text-[13px] font-semibold text-primary">{{ __('Actions') }}</h2>
                 </div>
                 <div class="space-y-2.5 p-5">
-                    <button type="button" @click="emailOpen = true"
-                        class="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
-                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>
+                    <x-ui.button variant="secondary" @click="emailOpen = true" class="w-full justify-center">
+                        <x-ui.icon name="envelope" class="h-4 w-4" />
                         {{ $isContact ? __('Répondre par email') : __('Envoyer un email') }}
-                    </button>
+                    </x-ui.button>
                     @if ($isOnlineJourney && $submission->resume_token)
-                        <button type="button" wire:click="resendLink" wire:target="resendLink" wire:loading.attr="disabled"
-                            class="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-60">
-                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+                        <x-ui.button variant="secondary" wire:click="resendLink" :loading="true" target="resendLink" class="w-full justify-center">
+                            <x-ui.icon name="arrow-path" class="h-4 w-4" />
                             {{ $isPaid ? __('Renvoyer le lien du dossier') : __('Renvoyer le lien de reprise') }}
-                        </button>
+                        </x-ui.button>
                     @endif
                 </div>
             </section>
 
-            <section class="rounded-xl border border-rose-200 bg-rose-50/50 shadow-sm">
-                <div class="border-b border-rose-100 px-5 py-3.5">
-                    <h2 class="text-sm font-semibold text-rose-700">{{ __('Zone sensible') }}</h2>
+            <section class="rounded-xl border border-red-100 bg-red-50/40 dark:border-red-500/20 dark:bg-red-500/10">
+                <div class="border-b border-red-100 px-5 py-3.5 dark:border-red-500/20">
+                    <h2 class="text-[13px] font-semibold text-red-700 dark:text-red-400">{{ __('Zone sensible') }}</h2>
                 </div>
                 <div class="p-5">
-                    <button type="button" wire:click="deleteDossier"
+                    <x-ui.button variant="danger" wire:click="deleteDossier"
                         wire:confirm="{{ $isContact ? __('Supprimer définitivement cette prise de contact ? Action irréversible.') : __('Supprimer définitivement ce dossier et tous ses fichiers ? Action irréversible.') }}"
-                        class="w-full rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700">{{ $isContact ? __('Supprimer la prise de contact') : __('Supprimer le dossier') }}</button>
-                    <p class="mt-2 text-xs text-rose-600/80">{{ $isContact ? __('La prise de contact sera définitivement effacée (RGPD).') : __('Le dossier et tous ses fichiers seront définitivement effacés (RGPD).') }}</p>
+                        class="w-full justify-center">{{ $isContact ? __('Supprimer la prise de contact') : __('Supprimer le dossier') }}</x-ui.button>
+                    <p class="mt-2 text-[12px] text-red-600/80 dark:text-red-400/80">{{ $isContact ? __('La prise de contact sera définitivement effacée (RGPD).') : __('Le dossier et tous ses fichiers seront définitivement effacés (RGPD).') }}</p>
                 </div>
             </section>
         </aside>
     </div>
 
     <div x-show="emailOpen" x-cloak class="fixed inset-0 z-40 flex items-center justify-center p-4" @keydown.escape.window="emailOpen = false" style="display: none;">
-        <div class="absolute inset-0 bg-slate-900/40" @click="emailOpen = false" x-show="emailOpen" x-transition.opacity></div>
-        <div class="relative w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl" x-show="emailOpen" x-transition
+        <div class="absolute inset-0 bg-gray-900/40" @click="emailOpen = false" x-show="emailOpen" x-transition.opacity></div>
+        <div class="relative w-full max-w-lg rounded-xl border border-base bg-surface p-6 shadow-2xl" x-show="emailOpen" x-transition
             role="dialog" aria-modal="true" aria-labelledby="email-modal-title">
             <div class="mb-1 flex items-start justify-between gap-4">
-                <h2 class="text-base font-semibold text-slate-900" id="email-modal-title">{{ $isContact ? __('Répondre au message') : __('Envoyer un email au client') }}</h2>
-                <button type="button" class="text-slate-400 transition hover:text-slate-600" @click="emailOpen = false" aria-label="{{ __('Fermer') }}">
-                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <h2 class="text-base font-semibold text-primary" id="email-modal-title">{{ $isContact ? __('Répondre au message') : __('Envoyer un email au client') }}</h2>
+                <button type="button" class="text-muted transition hover:text-secondary" @click="emailOpen = false" aria-label="{{ __('Fermer') }}">
+                    <x-ui.icon name="x-mark" class="h-5 w-5" />
                 </button>
             </div>
-            <p class="mb-5 text-sm text-slate-500">{{ __('À :') }} <span class="font-medium text-slate-700">{{ $submission->email }}</span></p>
+            <p class="mb-5 text-[13px] text-secondary">{{ __('À :') }} <span class="font-medium text-primary">{{ $submission->email }}</span></p>
             <form wire:submit="sendEmail" class="space-y-4">
-                <div>
-                    <label class="mb-1.5 block text-sm font-medium text-slate-700" for="email-subject">{{ __('Objet') }}</label>
-                    <input id="email-subject" type="text" wire:model="emailSubject"
-                        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30">
-                    @error('emailSubject') <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p> @enderror
-                </div>
-                <div>
-                    <label class="mb-1.5 block text-sm font-medium text-slate-700" for="email-body">{{ __('Message') }}</label>
-                    <textarea id="email-body" wire:model="emailBody" rows="7"
-                        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30"></textarea>
-                    @error('emailBody') <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p> @enderror
-                </div>
+                <x-ui.form-group label="{{ __('Objet') }}" for="email-subject" :error="$errors->first('emailSubject')">
+                    <x-ui.input id="email-subject" type="text" wire:model="emailSubject" :error="$errors->has('emailSubject')" />
+                </x-ui.form-group>
+                <x-ui.form-group label="{{ __('Message') }}" for="email-body" :error="$errors->first('emailBody')">
+                    <x-ui.textarea id="email-body" wire:model="emailBody" rows="7" :error="$errors->has('emailBody')" />
+                </x-ui.form-group>
                 <div class="flex justify-end gap-2.5 pt-1">
-                    <button type="button" @click="emailOpen = false"
-                        class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">{{ __('Annuler') }}</button>
-                    <button type="submit" wire:loading.attr="disabled" wire:target="sendEmail"
-                        class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:opacity-60">
-                        <span wire:loading.remove wire:target="sendEmail">{{ __('Envoyer') }}</span>
-                        <span wire:loading wire:target="sendEmail">{{ __('Envoi') }}&hellip;</span>
-                    </button>
+                    <x-ui.button variant="ghost" @click="emailOpen = false">{{ __('Annuler') }}</x-ui.button>
+                    <x-ui.button type="submit" :loading="true" target="sendEmail">{{ __('Envoyer') }}</x-ui.button>
                 </div>
             </form>
         </div>
