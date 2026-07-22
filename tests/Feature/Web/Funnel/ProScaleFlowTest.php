@@ -1,6 +1,5 @@
 <?php
 
-use App\Actions\Web\Scale\CreateScaleSubmissionAction;
 use App\Actions\Web\Starter\CreateStarterSubmissionAction;
 use App\Enums\Submission\SubmissionStatus;
 use App\Enums\Submission\SubmissionType;
@@ -25,17 +24,5 @@ it('opens a PRO file into the same self-service journey as Creator', function ()
         ->and($outcome->submission->contract)->not->toBeNull();
 });
 
-it('opens a SCALE audit request', function () {
-    Mail::fake();
-
-    $submission = app(CreateScaleSubmissionAction::class)->execute([
-        'company_name' => 'Bigco',
-        'email' => 'bigco@example.com',
-    ]);
-
-    expect($submission->type)->toBe(SubmissionType::Scale)
-        ->and($submission->status)->toBe(SubmissionStatus::New);
-
-    // Le paiement de l'audit (75 EUR) et la prise de rendez-vous sont construits et testes de bout en
-    // bout au chantier SCALE (checkout idempotent + URLs de retour propres a Scale + garde du RDV).
-});
+// Le parcours SCALE complet (creation + audit 75 EUR idempotent + URLs de retour Scale + confirmation
+// serveur + prise de rendez-vous) est teste de bout en bout dans ScaleJourneyTest.

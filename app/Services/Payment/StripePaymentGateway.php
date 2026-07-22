@@ -109,6 +109,14 @@ final class StripePaymentGateway implements PaymentGatewayInterface
             return [$base.'?renewal_return=1', $base.'?renewal_cancelled=1'];
         }
 
+        // Audit SCALE : retour vers l'espace Scale (paiement puis reservation), porte par le token du
+        // dossier Scale. Sans cette branche, l'audit retombait sur la journey STARTER (P0-01).
+        if ($payment->type === PaymentType::ScaleAudit) {
+            $base = route('get-started.scale.space', ['dossier' => $token]);
+
+            return [$base.'?audit_return=1', $base.'?audit_cancelled=1'];
+        }
+
         $base = route('get-started.starter.journey', ['dossier' => $token]);
 
         return [$base.'?payment_return=1', $base.'?payment_cancelled=1'];

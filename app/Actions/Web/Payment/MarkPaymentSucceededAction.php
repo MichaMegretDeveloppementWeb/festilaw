@@ -6,8 +6,10 @@ namespace App\Actions\Web\Payment;
 
 use App\Enums\Notification\FunnelNotificationReason;
 use App\Enums\Payment\PaymentStatus;
+use App\Enums\Payment\PaymentType;
 use App\Enums\Submission\SubmissionStatus;
 use App\Mail\FunnelNotification;
+use App\Mail\ScaleAuditConfirmed;
 use App\Mail\StarterPaymentConfirmed;
 use App\Models\Payment;
 use App\Services\Notification\TeamNotifier;
@@ -70,15 +72,20 @@ final readonly class MarkPaymentSucceededAction
                 return false;
             }
 
-            // Le dossier devient l'espace "mon dossier" du client : son lien de reprise ne doit plus expirer.
-            // On n'avance vers "Paye" que depuis un etat pre-actif : jamais reactiver un dossier Annule
-            // (reactivation silencieuse par un webhook tardif) ni retrograder un dossier Termine (Termine
-            // et renouvellement sont orthogonaux, cf. chantier #1). Un changement de statut sur un dossier
-            // annule ne passe que par le menu admin, jamais par ce chemin automatique.
+            // Le dossier devient l'espace du client : son lien de reprise ne doit plus expirer. On n'avance
+            // que depuis un etat pre-actif : jamais reactiver un dossier Annule (reactivation silencieuse
+            // par un webhook tardif) ni retrograder un dossier Termine (Termine et renouvellement sont
+            // orthogonaux, cf. chantier #1). Un changement de statut sur un dossier annule ne passe que par
+            // le menu admin. L'audit SCALE n'est PAS un abonnement : il avance le dossier "en cours"
+            // (consultation a reserver), sans la semantique "Paye" de la cotisation RP.
+            $targetStatus = $payment->type === PaymentType::ScaleAudit
+                ? SubmissionStatus::InProgress
+                : SubmissionStatus::Paid;
+
             $payment->submission()
                 ->whereNotIn('status', [SubmissionStatus::Cancelled, SubmissionStatus::Completed])
                 ->update([
-                    'status' => SubmissionStatus::Paid,
+                    'status' => $targetStatus,
                     'resume_expires_at' => null,
                 ]);
 
@@ -98,33 +105,34 @@ final readonly class MarkPaymentSucceededAction
     }
 
     /**
-     * Confirmation email to the buyer (subscription payments: year 1 AND renewals) · also the safety
-     * net for slow async payments. Peripheral side effect: a failure is logged but never breaks the
-     * confirmation.
+     * Confirmation email to the buyer, chosen by payment type: subscription (year 1 + renewals) ->
+     * StarterPaymentConfirmed ; SCALE audit -> ScaleAuditConfirmed. Also the safety net for slow async
+     * payments. Peripheral side effect: a failure is logged but never breaks the confirmation. Never sent
+     * on a dossier left cancelled (we don't tell a cancelled client their service is live).
      */
     private function emailBuyerConfirmation(Payment $payment): void
     {
-        if (! $payment->type->isSubscription()) {
-            return;
-        }
-
         $submission = $payment->submission;
-        if ($submission === null || (string) $submission->email === '') {
+        if ($submission === null || (string) $submission->email === '' || $submission->status === SubmissionStatus::Cancelled) {
             return;
         }
 
-        // Dossier reste Annule (le garde ci-dessus ne l'a pas reactive) : ne pas confirmer au client
-        // un service qui n'est pas actif. L'equipe est tout de meme notifiee (argent recu = actionnable).
-        if ($submission->status === SubmissionStatus::Cancelled) {
+        $mailable = match (true) {
+            $payment->type->isSubscription() => new StarterPaymentConfirmed($submission),
+            $payment->type === PaymentType::ScaleAudit => new ScaleAuditConfirmed($submission),
+            default => null,
+        };
+
+        if ($mailable === null) {
             return;
         }
 
         try {
             Mail::to($submission->email)
                 ->locale($submission->locale ?: config('app.locale'))
-                ->send(new StarterPaymentConfirmed($submission));
+                ->send($mailable);
         } catch (Throwable $e) {
-            Log::error('Failed to send the STARTER payment confirmation email.', [
+            Log::error('Failed to send the payment confirmation email.', [
                 'exception' => $e,
                 'submission' => $submission->id,
             ]);

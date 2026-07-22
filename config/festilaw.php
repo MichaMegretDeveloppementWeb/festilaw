@@ -64,6 +64,8 @@ return [
     'scale' => [
         'audit_amount_cents' => (int) env('FESTILAW_SCALE_AUDIT_CENTS', 7500),
         'calendar_url' => env('FESTILAW_SCALE_CALENDAR_URL', 'https://calendar.app.google/w8ZejYQLkZfgAo3F7'),
+        // Duree de validite du lien magique de l'espace Scale (jours).
+        'resume_ttl_days' => (int) env('FESTILAW_SCALE_RESUME_TTL_DAYS', 30),
     ],
 
 ];

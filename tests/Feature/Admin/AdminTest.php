@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\Appointment\AppointmentStatus;
 use App\Enums\Contract\SignatureStatus;
 use App\Enums\Payment\PaymentStatus;
 use App\Enums\Payment\PaymentType;
@@ -403,6 +404,40 @@ it('resends the resume link to a Pro client too', function () {
         ->call('resendLink');
 
     Mail::assertSent(StarterResumeLink::class, fn ($mail) => $mail->hasTo($submission->email));
+});
+
+it('shows the Scale audit deduction badge once the 75 EUR audit is paid', function () {
+    $submission = Submission::factory()->scale()->create();
+    $submission->payments()->create([
+        'type' => PaymentType::ScaleAudit, 'amount_cents' => 7500, 'currency' => 'EUR',
+        'provider' => 'stripe', 'provider_reference' => 'cs_scale', 'status' => PaymentStatus::Succeeded, 'paid_at' => now(),
+    ]);
+
+    actingAs(User::factory()->create());
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $submission])
+        ->assertSee('à déduire du devis');
+});
+
+it('lets an admin record the confirmed Scale consultation slot and advance its status', function () {
+    $submission = Submission::factory()->scale()->create();
+    $submission->payments()->create([
+        'type' => PaymentType::ScaleAudit, 'amount_cents' => 7500, 'currency' => 'EUR',
+        'provider' => 'stripe', 'provider_reference' => 'cs_scale', 'status' => PaymentStatus::Succeeded, 'paid_at' => now(),
+    ]);
+    $submission->appointment()->create(['status' => AppointmentStatus::Requested]);
+
+    actingAs(User::factory()->create());
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $submission])
+        ->set('apptScheduledAt', '2026-09-01T14:30')
+        ->set('apptStatus', AppointmentStatus::Scheduled->value)
+        ->call('updateAppointment')
+        ->assertHasNoErrors();
+
+    $appointment = $submission->appointment->fresh();
+    expect($appointment->status)->toBe(AppointmentStatus::Scheduled)
+        ->and($appointment->scheduled_at->format('Y-m-d H:i'))->toBe('2026-09-01 14:30');
 });
 
 it('presents a contact as an inquiry, not a dossier', function () {

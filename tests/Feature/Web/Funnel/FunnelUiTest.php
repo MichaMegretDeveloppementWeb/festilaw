@@ -56,17 +56,18 @@ it('opens a PRO file through the same journey (self-service)', function () {
     $component->assertRedirect(route('get-started.starter.journey', ['dossier' => $submission->resume_token]));
 });
 
-it('requests a SCALE audit from the form', function () {
+it('requests a SCALE audit from the form and redirects into the space', function () {
     Mail::fake();
 
-    Livewire::test(ScaleForm::class)
+    $component = Livewire::test(ScaleForm::class)
         ->set('company_name', 'Bigco')
         ->set('email', 'bigco@example.com')
         ->call('submit')
-        ->assertHasNoErrors()
-        ->assertSet('sent', true);
+        ->assertHasNoErrors();
 
-    expect(Submission::where('type', SubmissionType::Scale)->count())->toBe(1);
+    $submission = Submission::where('type', SubmissionType::Scale)->sole();
+    expect($submission->resume_token)->not->toBeNull();
+    $component->assertRedirect(route('get-started.scale.space', ['dossier' => $submission->resume_token]));
 });
 
 it('validates the required fields on the funnel forms', function () {

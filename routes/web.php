@@ -10,7 +10,10 @@ use App\Http\Controllers\Web\Contact\ContactController;
 use App\Http\Controllers\Web\ExcludedProducts\ExcludedProductsController;
 use App\Http\Controllers\Web\Funnel\GetStartedController;
 use App\Http\Controllers\Web\Funnel\ProController;
+use App\Http\Controllers\Web\Funnel\ScaleAuditPaymentController;
+use App\Http\Controllers\Web\Funnel\ScaleBookingController;
 use App\Http\Controllers\Web\Funnel\ScaleController;
+use App\Http\Controllers\Web\Funnel\ScaleSpaceController;
 use App\Http\Controllers\Web\Funnel\StarterController;
 use App\Http\Controllers\Web\Funnel\StarterCountersignedDownloadController;
 use App\Http\Controllers\Web\Funnel\StarterDocumentDownloadController;
@@ -85,6 +88,11 @@ Route::prefix('get-started')->name('get-started.')->group(function () {
     Route::get('/', GetStartedController::class)->name('index');
     Route::get('/pro', ProController::class)->name('pro');
     Route::get('/scale', ScaleController::class)->name('scale');
+
+    // Espace SCALE (magic link, porte par le token) : payer l'audit 75 EUR puis reserver la visio.
+    Route::get('/scale/{dossier}', ScaleSpaceController::class)->name('scale.space');
+    Route::post('/scale/{dossier}/pay', ScaleAuditPaymentController::class)->name('scale.pay');
+    Route::post('/scale/{dossier}/book', ScaleBookingController::class)->name('scale.book');
 
     // Parcours STARTER : page d'ouverture, puis dossier resumable via son token ({dossier}).
     Route::get('/starter', StarterController::class)->name('starter');

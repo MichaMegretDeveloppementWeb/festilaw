@@ -36,7 +36,7 @@ class ScaleForm extends Component
         $this->validate();
 
         try {
-            $action->execute($this->funnelData());
+            $submission = $action->execute($this->funnelData());
         } catch (BaseAppException $e) {
             Log::error($e->getMessage(), ['exception' => $e]);
             $this->addError('form', __($e->getUserMessage()));
@@ -49,7 +49,12 @@ class ScaleForm extends Component
         }
 
         $this->resetContactFields();
-        $this->sent = true;
+
+        // On enchaine directement sur l'espace SCALE (payer l'audit puis reserver) ; le token vaut acces.
+        // Le lien est aussi envoye par email pour revenir plus tard.
+        $this->redirectRoute('get-started.scale.space', [
+            'dossier' => $submission->resume_token,
+        ], navigate: true);
     }
 
     public function render()

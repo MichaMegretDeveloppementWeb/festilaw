@@ -8,18 +8,25 @@ use App\Actions\Admin\AddSubmissionNoteAction;
 use App\Actions\Admin\ChangeSubmissionStatusAction;
 use App\Actions\Admin\IssueResponsiblePersonAction;
 use App\Actions\Admin\SendAdminMessageAction;
+use App\Actions\Admin\UpdateAppointmentAction;
 use App\Actions\Admin\UploadCountersignedContractAction;
 use App\Actions\Web\Payment\CheckPaymentStatusAction;
 use App\Actions\Web\Starter\SendStarterResumeLinkAction;
+use App\Enums\Appointment\AppointmentStatus;
 use App\Enums\Billing\RenewalStatus;
 use App\Enums\Contract\SignatureStatus;
+use App\Enums\Payment\PaymentStatus;
+use App\Enums\Payment\PaymentType;
 use App\Enums\Submission\SubmissionStatus;
 use App\Enums\Submission\SubmissionType;
 use App\Exceptions\BaseAppException;
 use App\Livewire\Concerns\HandlesAdminErrors;
+use App\Models\Payment;
 use App\Models\Submission;
 use App\Services\Billing\RenewalService;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -54,6 +61,12 @@ class SubmissionDetail extends Component
     /** Prevenir le client par email au depot du contrat contresigne. */
     public bool $notifyClientOnCountersign = true;
 
+    /** Creneau confirme du rendez-vous SCALE (datetime-local), saisi par Festilaw. */
+    public string $apptScheduledAt = '';
+
+    /** Statut du rendez-vous SCALE (Demande / Programme / Termine / Annule). */
+    public string $apptStatus = '';
+
     public function mount(Submission $submission): void
     {
         $this->submission = $submission->load([
@@ -61,6 +74,11 @@ class SubmissionDetail extends Component
         ]);
         $this->newStatus = $this->submission->status->value;
         $this->rpAddress = (string) $this->submission->eu_rp_address;
+
+        if ($this->submission->appointment !== null) {
+            $this->apptScheduledAt = $this->submission->appointment->scheduled_at?->format('Y-m-d\TH:i') ?? '';
+            $this->apptStatus = $this->submission->appointment->status->value;
+        }
     }
 
     public function updateStatus(ChangeSubmissionStatusAction $changeStatus): void
@@ -301,6 +319,53 @@ class SubmissionDetail extends Component
             : __('Contrat contresigné ajouté.'));
     }
 
+    /**
+     * Rendez-vous SCALE : Festilaw saisit le creneau confirme (aucun webhook agenda Google) et fait
+     * avancer le statut (Demande -> Programme -> Termine / Annule).
+     */
+    public function updateAppointment(UpdateAppointmentAction $updateAppointment): void
+    {
+        if ($this->submission->appointment === null) {
+            $this->addError('apptStatus', __('Ce dossier n\'a pas de rendez-vous.'));
+
+            return;
+        }
+
+        $validated = $this->validate([
+            'apptScheduledAt' => ['nullable', 'date'],
+            'apptStatus' => ['required', Rule::enum(AppointmentStatus::class)],
+        ], [
+            'apptStatus.required' => __('Le statut du rendez-vous est obligatoire.'),
+        ]);
+
+        $scheduledAt = ($validated['apptScheduledAt'] ?? '') !== ''
+            ? CarbonImmutable::parse($validated['apptScheduledAt'])
+            : null;
+
+        try {
+            $updateAppointment->execute(
+                $this->submission->appointment,
+                $scheduledAt,
+                AppointmentStatus::from($validated['apptStatus']),
+            );
+        } catch (Throwable $e) {
+            $this->reportAdminError($e, 'Admin update appointment');
+
+            return;
+        }
+
+        $this->submission->load('appointment');
+        $this->toast(__('Rendez-vous mis à jour.'));
+    }
+
+    /** Un dossier SCALE dont l'audit (75 EUR) est paye : le badge "a deduire du devis" s'affiche. */
+    private function scaleAuditPaid(): bool
+    {
+        return $this->submission->payments->contains(
+            fn (Payment $payment): bool => $payment->type === PaymentType::ScaleAudit && $payment->status === PaymentStatus::Succeeded,
+        );
+    }
+
     public function deleteDossier(): mixed
     {
         $isContact = $this->submission->type === SubmissionType::Contact;
@@ -344,6 +409,9 @@ class SubmissionDetail extends Component
             'isContact' => $isContact,
             'isPaid' => $this->isPaid(),
             'renewal' => $renewal,
+            'isScale' => $this->submission->type === SubmissionType::Scale,
+            'scaleAuditPaid' => $this->scaleAuditPaid(),
+            'appointmentStatuses' => AppointmentStatus::cases(),
         ])->title(($isContact ? __('Prise de contact') : __('Dossier')).' '.$this->submission->reference.' · Festilaw');
     }
 
