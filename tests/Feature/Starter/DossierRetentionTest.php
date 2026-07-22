@@ -47,6 +47,11 @@ it('purges abandoned expired dossiers but keeps paid and still-fresh ones', func
         'status' => SubmissionStatus::InProgress,
         'resume_expires_at' => now()->subDays(200),
     ]);
+    // PRO partage le meme parcours en ligne : un PRO abandonne doit etre purge comme un STARTER.
+    $abandonedPro = Submission::factory()->pro()->create([
+        'status' => SubmissionStatus::AwaitingPayment,
+        'resume_expires_at' => now()->subDays(200),
+    ]);
     $paid = Submission::factory()->starter()->create([
         'status' => SubmissionStatus::Paid,
         'resume_expires_at' => now()->subDays(200),
@@ -59,6 +64,7 @@ it('purges abandoned expired dossiers but keeps paid and still-fresh ones', func
     artisan('festilaw:purge-abandoned-dossiers')->assertSuccessful();
 
     expect(Submission::find($abandoned->id))->toBeNull()
+        ->and(Submission::find($abandonedPro->id))->toBeNull()
         ->and(Submission::find($paid->id))->not->toBeNull()
         ->and(Submission::find($fresh->id))->not->toBeNull();
 });
