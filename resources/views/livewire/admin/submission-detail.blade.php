@@ -214,7 +214,9 @@
                 </section>
             @endif
 
-            {{-- Toujours affichee (meme sans paiement) pour que l'etat soit clair. --}}
+            {{-- Paiements : jamais pour une prise de contact ; pour un dossier, affichee meme sans paiement
+                 (pour que l'etat soit clair). --}}
+            @unless ($isContact)
             <section class="rounded-xl border border-base bg-surface">
                 <div class="border-b border-subtle px-5 py-3.5">
                     <h2 class="text-[13px] font-semibold text-primary">{{ __('Paiements') }}</h2>
@@ -262,6 +264,7 @@
                     @endforelse
                 </div>
             </section>
+            @endunless
 
             @if ($isScale)
                 <section class="rounded-xl border border-base bg-surface">

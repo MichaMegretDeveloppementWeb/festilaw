@@ -696,3 +696,21 @@ it('reports an error and keeps the file empty when the provider still has no PDF
 
     expect($submission->contract->fresh()->signed_file_path)->toBeNull();
 });
+
+it('does not show a payments section on a contact detail', function () {
+    actingAs(User::factory()->create());
+    $contact = Submission::factory()->create([
+        'type' => SubmissionType::Contact, 'first_name' => 'Zoe', 'email' => 'zoe@example.com', 'message' => 'Bonjour',
+    ]);
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $contact])
+        ->assertSee(__('Coordonnées'))     // c'est bien une prise de contact
+        ->assertDontSee(__('Paiements'));  // pas de section paiement
+});
+
+it('shows the payments section on a real dossier detail', function () {
+    actingAs(User::factory()->create());
+
+    Livewire::test(SubmissionDetail::class, ['submission' => Submission::factory()->starter()->create()])
+        ->assertSee(__('Paiements'));
+});
