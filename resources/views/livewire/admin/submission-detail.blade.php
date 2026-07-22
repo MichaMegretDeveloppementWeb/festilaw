@@ -93,6 +93,21 @@
                                 :title="__('Mandat signé')"
                                 :subtitle="$submission->contract->signed_at ? __('Signé le').' '.$submission->contract->signed_at->format('d/m/Y') : __('Document PDF')"
                                 :download-url="route('admin.submissions.mandate', ['submission' => $submission->id])" />
+                        @elseif ($submission->contract->signature_status === \App\Enums\Contract\SignatureStatus::Signed)
+                            {{-- Mandat signe mais PDF local absent (echec transitoire du prestataire) : recuperation manuelle immediate. --}}
+                            <div class="mt-3 flex flex-col gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-amber-900/40 dark:bg-amber-950/30">
+                                <div class="flex items-start gap-2.5">
+                                    <x-ui.icon name="exclamation-triangle" class="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+                                    <div>
+                                        <p class="text-[13px] font-medium text-primary">{{ __('Mandat signé, PDF manquant') }}</p>
+                                        <p class="text-[12px] text-muted">{{ __('La signature a bien eu lieu mais le PDF n\'a pas pu être téléchargé. Récupérez-le maintenant.') }}</p>
+                                    </div>
+                                </div>
+                                <x-ui.button variant="secondary" size="compact" wire:click="recoverSignedMandate" :loading="true" target="recoverSignedMandate" class="shrink-0">
+                                    <x-ui.icon name="arrow-down-tray" class="h-3.5 w-3.5" />
+                                    {{ __('Récupérer le PDF signé') }}
+                                </x-ui.button>
+                            </div>
                         @endif
 
                         {{-- Contrat contresigne par Festilaw (contre-signature manuelle, hors SignWell) --}}

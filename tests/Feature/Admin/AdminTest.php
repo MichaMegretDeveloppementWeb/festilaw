@@ -1,5 +1,6 @@
 <?php
 
+use App\Contracts\Signature\SignatureGatewayInterface;
 use App\Enums\Appointment\AppointmentStatus;
 use App\Enums\Contract\SignatureStatus;
 use App\Enums\Payment\PaymentStatus;
@@ -13,6 +14,7 @@ use App\Livewire\Admin\SubmissionList;
 use App\Mail\AdminMessageToClient;
 use App\Mail\StarterResponsiblePersonIssued;
 use App\Mail\StarterResumeLink;
+use App\Models\Contract;
 use App\Models\Payment;
 use App\Models\Submission;
 use App\Models\User;
@@ -623,4 +625,74 @@ it('shows the renewal section on the dossier detail', function () {
         ->assertSee('Renouvellement')
         ->assertSee('Payé jusqu\'à l\'année')
         ->assertSee((string) (now()->year - 1)); // annee payee
+});
+
+/** A signed contract whose signed PDF was never downloaded (transient provider failure at signing time). */
+function dossierWithSignedMandateMissingPdf(): Submission
+{
+    $submission = Submission::factory()->starter()->create(['status' => SubmissionStatus::AwaitingDocuments]);
+    Contract::factory()->for($submission)->create([
+        'signature_status' => SignatureStatus::Signed,
+        'signature_provider' => 'signwell',
+        'signature_provider_reference' => 'doc_'.fake()->uuid(),
+        'signed_file_path' => null,
+        'signed_at' => now(),
+    ]);
+
+    return $submission->fresh();
+}
+
+it('offers a recovery button when the mandate is signed but its PDF is missing', function () {
+    actingAs(User::factory()->create());
+
+    Livewire::test(SubmissionDetail::class, ['submission' => dossierWithSignedMandateMissingPdf()])
+        ->assertSee('Mandat signé, PDF manquant')
+        ->assertSee('Récupérer le PDF signé');
+});
+
+it('does not offer the recovery button once the signed PDF is present', function () {
+    actingAs(User::factory()->create());
+    $submission = Submission::factory()->starter()->create();
+    Contract::factory()->for($submission)->create([
+        'signature_status' => SignatureStatus::Signed,
+        'signed_file_path' => 'contracts/existing.pdf',
+        'signed_at' => now(),
+    ]);
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $submission->fresh()])
+        ->assertDontSee('Mandat signé, PDF manquant')
+        ->assertSee('Mandat signé'); // le document, pas l'alerte
+});
+
+it('re-downloads the signed PDF from the recovery button', function () {
+    $gateway = Mockery::mock(SignatureGatewayInterface::class);
+    $gateway->shouldReceive('key')->andReturn('signwell');
+    $gateway->shouldReceive('downloadSignedDocument')->once()->andReturn('contracts/recovered.pdf');
+    app()->instance(SignatureGatewayInterface::class, $gateway);
+
+    actingAs(User::factory()->create());
+    $submission = dossierWithSignedMandateMissingPdf();
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $submission])
+        ->call('recoverSignedMandate')
+        ->assertHasNoErrors()
+        ->assertDispatched('admin-toast');
+
+    expect($submission->contract->fresh()->signed_file_path)->toBe('contracts/recovered.pdf');
+});
+
+it('reports an error and keeps the file empty when the provider still has no PDF', function () {
+    $gateway = Mockery::mock(SignatureGatewayInterface::class);
+    $gateway->shouldReceive('key')->andReturn('signwell');
+    $gateway->shouldReceive('downloadSignedDocument')->once()->andReturnNull();
+    app()->instance(SignatureGatewayInterface::class, $gateway);
+
+    actingAs(User::factory()->create());
+    $submission = dossierWithSignedMandateMissingPdf();
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $submission])
+        ->call('recoverSignedMandate')
+        ->assertDispatched('admin-toast', type: 'error');
+
+    expect($submission->contract->fresh()->signed_file_path)->toBeNull();
 });

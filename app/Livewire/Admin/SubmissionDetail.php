@@ -11,6 +11,7 @@ use App\Actions\Admin\SendAdminMessageAction;
 use App\Actions\Admin\UpdateAppointmentAction;
 use App\Actions\Admin\UploadCountersignedContractAction;
 use App\Actions\Web\Payment\CheckPaymentStatusAction;
+use App\Actions\Web\Starter\MarkContractSignedAction;
 use App\Actions\Web\Starter\SendStarterResumeLinkAction;
 use App\Enums\Appointment\AppointmentStatus;
 use App\Enums\Billing\RenewalStatus;
@@ -317,6 +318,38 @@ class SubmissionDetail extends Component
         $this->toast($this->notifyClientOnCountersign
             ? __('Contrat contresigné ajouté et client notifié.')
             : __('Contrat contresigné ajouté.'));
+    }
+
+    /**
+     * Rattrapage manuel du PDF d'un mandat DEJA signe dont le fichier local est manquant (echec transitoire
+     * du prestataire au moment de la signature : le PDF fusionne n'etait pas encore pret). Re-telecharge le
+     * fichier sans toucher NI au statut NI au parcours. Complement immediat de la reconciliation automatique
+     * (festilaw:reconcile-signatures), pour le support qui constate "signe mais pas de document".
+     */
+    public function recoverSignedMandate(MarkContractSignedAction $markSigned): void
+    {
+        $contract = $this->submission->contract;
+
+        // Ne s'applique qu'a un mandat signe sans PDF local : sinon rien a rattraper.
+        if ($contract === null
+            || $contract->signature_status !== SignatureStatus::Signed
+            || $contract->signed_file_path !== null) {
+            return;
+        }
+
+        try {
+            $markSigned->backfillSignedDocument($contract);
+        } catch (Throwable $e) {
+            $this->reportAdminError($e, 'Admin recover signed mandate');
+
+            return;
+        }
+
+        $this->submission->load('contract');
+
+        $this->toast($this->submission->contract->signed_file_path !== null
+            ? __('Mandat signé récupéré.')
+            : __('Le PDF signé n\'a pas pu être récupéré (le prestataire ne l\'a pas encore fourni). Réessayez dans quelques instants.'), $this->submission->contract->signed_file_path !== null ? 'success' : 'error');
     }
 
     /**
