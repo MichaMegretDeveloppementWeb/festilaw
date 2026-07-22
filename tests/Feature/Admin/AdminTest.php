@@ -429,6 +429,28 @@ it('filters the list to up-to-date active dossiers only', function () {
         ->assertDontSee('Renewco');
 });
 
+it('never files a completed dossier under the active or renewal filters', function () {
+    actingAs(User::factory()->create());
+
+    // Un dossier TERMINE conserve son paiement d'abonnement : il passe donc active(), mais son etat
+    // affiche est "Termine" (prioritaire). Il ne doit apparaitre que sous le filtre "Termine".
+    $completedCurrent = adminPaidDossier((int) now()->year); // couvre l'annee -> tenterait "Actif"
+    $completedCurrent->update(['status' => SubmissionStatus::Completed, 'company_name' => 'DoneThisYear']);
+    $completedOld = adminPaidDossier((int) now()->year - 1); // ne couvre pas -> tenterait "a renouveler"
+    $completedOld->update(['status' => SubmissionStatus::Completed, 'company_name' => 'DoneLastYear']);
+
+    Livewire::test(SubmissionList::class)
+        ->set('state', 'active')
+        ->assertDontSee('DoneThisYear')
+        ->assertDontSee('DoneLastYear')
+        ->set('state', 'renewal')
+        ->assertDontSee('DoneThisYear')
+        ->assertDontSee('DoneLastYear')
+        ->set('state', 'completed')
+        ->assertSee('DoneThisYear')
+        ->assertSee('DoneLastYear');
+});
+
 it('shows the renewal section on the dossier detail', function () {
     actingAs(User::factory()->create());
     $dossier = adminPaidDossier((int) now()->year - 1);

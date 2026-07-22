@@ -135,7 +135,7 @@ class SubmissionList extends Component
             DossierState::InProgress->value => $query
                 ->whereNotIn('status', [SubmissionStatus::Completed, SubmissionStatus::Cancelled])
                 ->whereDoesntHave('payments', fn ($p) => $p->where('status', PaymentStatus::Succeeded)->whereIn('type', $subscription)),
-            DossierState::Active->value => $query->active()->whereHas('payments', $coversYear),
+            DossierState::Active->value => $query->active()->where('status', '!=', SubmissionStatus::Completed)->whereHas('payments', $coversYear),
             'renewal' => $this->scopeNeedsRenewal($query, $year),
             DossierState::Completed->value => $query->where('status', SubmissionStatus::Completed),
             DossierState::Cancelled->value => $query->where('status', SubmissionStatus::Cancelled),
@@ -154,6 +154,7 @@ class SubmissionList extends Component
         $subscription = PaymentType::subscriptionCases();
 
         $query->active()
+            ->where('status', '!=', SubmissionStatus::Completed) // un dossier termine a son propre etat (badge "Termine"), jamais "a renouveler"
             ->whereDoesntHave('payments', fn ($p) => $p->where('status', PaymentStatus::Succeeded)->whereIn('type', $subscription)->where('service_year', '>=', $year));
     }
 
