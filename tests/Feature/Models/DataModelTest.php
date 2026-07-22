@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\Document\DocumentType;
 use App\Enums\Payment\PaymentStatus;
 use App\Enums\Submission\SubmissionStatus;
 use App\Enums\Submission\SubmissionType;
@@ -26,7 +27,11 @@ it('wires every submission relation with correct casts', function () {
 
     QuizResult::factory()->for($submission)->create();
     Contract::factory()->for($submission)->signed()->create();
-    UploadedDocument::factory()->for($submission)->count(2)->create();
+    // Une piece par type (contrainte d'unicite (submission_id, type)).
+    UploadedDocument::factory()->for($submission)->count(2)->sequence(
+        ['type' => DocumentType::TurnoverProof],
+        ['type' => DocumentType::TechnicalDocumentation],
+    )->create();
     Payment::factory()->for($submission)->succeeded()->create();
     Appointment::factory()->for($submission)->create();
 

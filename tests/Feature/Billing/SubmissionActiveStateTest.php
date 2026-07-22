@@ -19,7 +19,7 @@ function dossierWithPayment(PaymentStatus $status, PaymentType $type = PaymentTy
         'service_year' => 2026,
         'currency' => 'EUR',
         'provider' => 'stripe',
-        'provider_reference' => 'ref',
+        'provider_reference' => 'ref-'.uniqid('', true), // reference unique par paiement (contrainte d'unicite)
         'status' => $status,
         'paid_at' => $status === PaymentStatus::Succeeded ? now() : null,
     ]);

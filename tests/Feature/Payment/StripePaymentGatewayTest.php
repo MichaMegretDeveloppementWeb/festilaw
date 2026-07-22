@@ -72,6 +72,16 @@ it('creates a Stripe Checkout session and returns the hosted url', function () {
         && str_contains($req->body(), '33300'));
 });
 
+it('sends a stable Idempotency-Key on the checkout POST (a retry cannot create a second session)', function () {
+    Http::fake(['*/v1/checkout/sessions' => Http::response(['id' => 'cs_test_1', 'url' => 'https://checkout.stripe.com/c/pay/cs_test_1'])]);
+
+    $payment = stripePendingPayment();
+    app(StripePaymentGateway::class)->createCheckout($payment);
+
+    Http::assertSent(fn ($req) => str_ends_with($req->url(), '/v1/checkout/sessions')
+        && $req->hasHeader('Idempotency-Key', 'checkout-'.$payment->id));
+});
+
 it('confirms a paid checkout session via polling', function () {
     Http::fake(['*/v1/checkout/sessions/*' => Http::response(['id' => 'cs_1', 'payment_status' => 'paid'])]);
 

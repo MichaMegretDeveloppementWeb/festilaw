@@ -50,7 +50,10 @@ final class StripePaymentGateway implements PaymentGatewayInterface
         [$successUrl, $cancelUrl] = $this->returnUrls($payment);
 
         try {
-            $session = $this->api()->asForm()->post('/checkout/sessions', [
+            // Idempotency-Key stable par ligne Payment : si Stripe cree la session mais que la reponse se
+            // perd (timeout) et que le client HTTP rejoue le POST (->retry), Stripe renvoie la MEME session
+            // au lieu d'en creer une seconde (anti double-debit).
+            $session = $this->api()->withHeaders(['Idempotency-Key' => 'checkout-'.$payment->id])->asForm()->post('/checkout/sessions', [
                 'mode' => 'payment',
                 'client_reference_id' => (string) $payment->id,
                 'customer_email' => (string) $submission->email,
