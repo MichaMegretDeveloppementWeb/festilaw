@@ -179,6 +179,16 @@ it('refuses to set the Paid status manually (it is derived from payments)', func
     expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingPayment);
 });
 
+it('orders the dossier status menu by workflow step, keeping Paid in place (not first)', function () {
+    $submission = Submission::factory()->starter()->paid()->create(); // dossier déjà « Payé »
+
+    actingAs(User::factory()->create());
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $submission])
+        ->assertViewHas('statuses', fn (array $statuses): bool => array_map(fn (SubmissionStatus $s): string => $s->value, $statuses)
+            === ['new', 'in_progress', 'awaiting_documents', 'awaiting_payment', 'paid', 'completed', 'cancelled']);
+});
+
 it('adds an internal note attributed to the current admin', function () {
     $submission = Submission::factory()->starter()->create();
     $admin = User::factory()->create();

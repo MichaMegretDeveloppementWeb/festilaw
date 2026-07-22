@@ -30,4 +30,21 @@ enum SubmissionStatus: string
             self::Cancelled => __('Annulé'),
         };
     }
+
+    /**
+     * Rang dans le workflow, du plus tot au plus tard : sert a trier le menu de statut du back-office
+     * par ordre d'etape (plus logique qu'un ordre arbitraire).
+     */
+    public function sortOrder(): int
+    {
+        return match ($this) {
+            self::New => 1,
+            self::InProgress => 2,
+            self::AwaitingDocuments => 3,
+            self::AwaitingPayment => 4,
+            self::Paid => 5,
+            self::Completed => 6,
+            self::Cancelled => 7,
+        };
+    }
 }

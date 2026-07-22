@@ -1,7 +1,9 @@
 <?php
 
+use App\Enums\Payment\PaymentType;
 use App\Enums\Submission\SubmissionStatus;
 use App\Models\Contract;
+use App\Models\Payment;
 use App\Models\Submission;
 use App\Models\UploadedDocument;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -67,4 +69,25 @@ it('purges abandoned expired dossiers but keeps paid and still-fresh ones', func
         ->and(Submission::find($abandonedPro->id))->toBeNull()
         ->and(Submission::find($paid->id))->not->toBeNull()
         ->and(Submission::find($fresh->id))->not->toBeNull();
+});
+
+it('purges an abandoned SCALE audit request but keeps one whose audit was paid', function () {
+    // Demande d'audit soumise puis abandonnee (statut Nouveau, jamais payee), lien expire depuis longtemps.
+    $abandonedScale = Submission::factory()->scale()->create([
+        'status' => SubmissionStatus::New,
+        'resume_token' => 'scaleabandon',
+        'resume_expires_at' => now()->subDays(200),
+    ]);
+    // Audit paye : meme avec un lien expire, la garde "aucun paiement reussi" protege le dossier.
+    $paidScale = Submission::factory()->scale()->create([
+        'status' => SubmissionStatus::InProgress,
+        'resume_token' => 'scalepaid',
+        'resume_expires_at' => now()->subDays(200),
+    ]);
+    Payment::factory()->succeeded()->for($paidScale)->create(['type' => PaymentType::ScaleAudit, 'provider_reference' => 'cs_scale']);
+
+    artisan('festilaw:purge-abandoned-dossiers')->assertSuccessful();
+
+    expect(Submission::find($abandonedScale->id))->toBeNull()
+        ->and(Submission::find($paidScale->id))->not->toBeNull();
 });

@@ -231,22 +231,22 @@ class SubmissionDetail extends Component
 
     /**
      * Statuts selectionnables par l'admin : tous sauf « Payé » (derive des paiements), plus le statut
-     * courant s'il est deja Payé, pour que le menu reflete l'etat reel sans permettre de le forcer.
+     * courant s'il est deja Payé, pour que le menu reflete l'etat reel sans permettre de le forcer. Tries
+     * par ordre d'etape du workflow (« Payé » reste a sa place, il ne remonte pas en tete du menu).
      *
      * @return array<int, SubmissionStatus>
      */
     private function assignableStatuses(): array
     {
-        $statuses = array_values(array_filter(
+        $statuses = array_filter(
             SubmissionStatus::cases(),
-            fn (SubmissionStatus $status): bool => $status !== SubmissionStatus::Paid,
-        ));
+            fn (SubmissionStatus $status): bool => $status !== SubmissionStatus::Paid
+                || $this->submission->status === SubmissionStatus::Paid,
+        );
 
-        if ($this->submission->status === SubmissionStatus::Paid) {
-            array_unshift($statuses, SubmissionStatus::Paid);
-        }
+        usort($statuses, fn (SubmissionStatus $a, SubmissionStatus $b): int => $a->sortOrder() <=> $b->sortOrder());
 
-        return $statuses;
+        return array_values($statuses);
     }
 
     public function issueResponsiblePerson(IssueResponsiblePersonAction $issue): void
