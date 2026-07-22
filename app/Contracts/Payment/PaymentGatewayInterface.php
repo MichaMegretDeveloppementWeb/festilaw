@@ -16,7 +16,7 @@ use Illuminate\Http\Request;
  */
 interface PaymentGatewayInterface
 {
-    /** Identifier of the provider (e.g. 'stripe', 'paypal', 'fake'). */
+    /** Identifier of the provider (e.g. 'stripe', 'paypal'). */
     public function key(): string;
 
     /** Human label shown at checkout (e.g. 'Card', 'PayPal'). */

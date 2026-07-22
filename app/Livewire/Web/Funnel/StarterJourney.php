@@ -30,8 +30,8 @@ use Throwable;
 
 /**
  * Multi-step STARTER dossier, driven by the submission status (source of truth): sign the mandate,
- * drop the required documents, pay. Signing and payment redirect out to the provider (Fake by
- * default) and come back to this same screen. Documents are staged in the component (drag & drop)
+ * drop the required documents, pay. Signing (SignWell) and payment (Stripe) redirect out to the
+ * provider and come back to this same screen. Documents are staged in the component (drag & drop)
  * and only persisted when the visitor confirms with a single action; the step is always recomputed
  * from the database.
  */
@@ -182,8 +182,8 @@ class StarterJourney extends Component
         $markContractSigned->execute($contract, $event->providerReference);
         $this->submission->refresh();
 
-        // Bandeau de succes, comme le retour "fake" (StarterDevSignController) mais cote Livewire :
-        // now() = visible dans ce re-render uniquement, sans fuiter a l'interaction suivante.
+        // Bandeau de succes de la signature (cote Livewire) : now() = visible dans ce re-render
+        // uniquement, sans fuiter a l'interaction suivante.
         session()->now('starter_status', 'signed');
 
         return true;

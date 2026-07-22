@@ -24,9 +24,9 @@ it('never follows an external referer on the language switch (no open redirect)'
         ->assertRedirect(route('home'));
 });
 
-it('flags a dev/fake production configuration as unfit for production', function () {
-    config()->set('payment.enabled', ['fake']);
-    config()->set('signature.default', 'fake');
+it('flags an incomplete production configuration as unfit for production', function () {
+    config()->set('payment.enabled', []);       // Stripe non actif
+    config()->set('signature.default', 'none');  // SignWell non actif
     config()->set('mail.default', 'log');
     config()->set('app.debug', true);
 
@@ -53,7 +53,7 @@ it('passes a clean production configuration', function () {
 });
 
 it('fails the go-live check command when the configuration is unfit', function () {
-    config()->set('payment.enabled', ['fake']);
+    config()->set('payment.enabled', []); // Stripe non actif
 
     $this->artisan('festilaw:check-production')->assertFailed();
 });

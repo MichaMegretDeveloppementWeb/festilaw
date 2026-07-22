@@ -6,7 +6,10 @@ use App\Enums\Submission\SubmissionStatus;
 use App\Models\Contract;
 use App\Models\Payment;
 use App\Models\Submission;
+use App\Services\Payment\PaymentGatewayRegistry;
+use App\Services\Payment\StripePaymentGateway;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 
@@ -15,7 +18,15 @@ use function Pest\Laravel\post;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    config()->set('payment.enabled', ['fake']);
+    config()->set('payment.enabled', ['stripe']);
+    config()->set('payment.drivers.stripe', ['secret_key' => 'sk_test_x', 'webhook_secret' => 'whsec_x']);
+    app()->forgetInstance(PaymentGatewayRegistry::class);
+    app()->forgetInstance(StripePaymentGateway::class);
+    // Checkout Stripe bouchonne : creation (POST) et reprise de session ouverte (GET par id).
+    Http::fake([
+        '*/v1/checkout/sessions/*' => Http::response(['id' => 'cs_renew', 'status' => 'open', 'url' => 'https://checkout.stripe.test/cs_renew']),
+        '*/v1/checkout/sessions' => Http::response(['id' => 'cs_renew', 'url' => 'https://checkout.stripe.test/cs_renew']),
+    ]);
     Mail::fake();
 });
 

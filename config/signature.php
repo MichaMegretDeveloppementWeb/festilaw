@@ -5,10 +5,9 @@ declare(strict_types=1);
 return [
 
     /*
-     | Provider de signature actif (un seul a la fois). Par defaut 'fake' : aucun appel externe,
-     | le tunnel fonctionne sans cle. Passer a 'signwell' quand la cle API est fournie.
+     | Provider de signature actif (un seul a la fois). SignWell est le seul prestataire integre.
      */
-    'default' => env('SIGNATURE_DRIVER', 'fake'),
+    'default' => env('SIGNATURE_DRIVER', 'signwell'),
 
     'drivers' => [
 
@@ -26,11 +25,6 @@ return [
             // Mode test : documents gratuits, aucun email. Mettre false en prod.
             'test_mode' => (bool) env('SIGNWELL_TEST_MODE', true),
         ],
-    ],
-
-    'fake' => [
-        // URL de retour du faux parcours de signature (branchee sur la route de dev plus tard).
-        'signing_url' => env('SIGNATURE_FAKE_SIGNING_URL'),
     ],
 
 ];

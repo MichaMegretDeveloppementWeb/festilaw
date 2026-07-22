@@ -13,8 +13,7 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * Garde-fou fail-closed : en PRODUCTION, si la configuration est apte a simuler ou falsifier un
  * paiement/une signature (faux prestataires, mode test, mail simule, debug...), on refuse de servir la
- * requete (503) plutot que d'encaisser en simulation. Global : couvre aussi le webhook fake. Hors
- * production, on ne fait rien (dev/test tournent en fake par design).
+ * requete (503) plutot que d'encaisser avec une configuration inapte. Hors production, on ne fait rien.
  */
 final class EnsureProductionIsConfigured
 {

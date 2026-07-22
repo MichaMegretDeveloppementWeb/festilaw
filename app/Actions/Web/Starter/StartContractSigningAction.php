@@ -12,8 +12,8 @@ use App\Models\Submission;
 use Illuminate\Support\Facades\Cache;
 
 /**
- * Starts the electronic signature of a STARTER contract via the configured provider (Fake by default),
- * and stores the provider reference so the incoming webhook can be matched back.
+ * Starts the electronic signature of a STARTER contract via the configured provider (SignWell), and
+ * stores the provider reference so the incoming webhook can be matched back.
  *
  * Anti-double-document: an atomic cache lock serialises two concurrent starts (a double-click), so a
  * race can never create two documents at the provider. Inside the lock we re-check for an in-flight,

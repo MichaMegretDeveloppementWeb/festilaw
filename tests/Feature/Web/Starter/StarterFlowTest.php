@@ -6,6 +6,7 @@ use App\Actions\Web\Starter\MarkContractSignedAction;
 use App\Actions\Web\Starter\StartContractSigningAction;
 use App\Actions\Web\Starter\StartStarterPaymentAction;
 use App\Actions\Web\Starter\SubmitStarterDocumentsAction;
+use App\Contracts\Signature\SignatureGatewayInterface;
 use App\Data\Payment\CheckoutSessionData;
 use App\Data\Signature\SigningSessionData;
 use App\Enums\Payment\PaymentStatus;
@@ -17,24 +18,39 @@ use App\Mail\FunnelNotification;
 use App\Models\Contract;
 use App\Models\Submission;
 use App\Services\Billing\AnnualFeeProrator;
+use App\Services\Payment\PaymentGatewayRegistry;
+use App\Services\Payment\StripePaymentGateway;
 use App\Services\Web\Starter\StarterDossierResolver;
 use Illuminate\Contracts\Filesystem\Factory as FilesystemFactory;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    config()->set('payment.enabled', ['fake']);
-    config()->set('signature.default', 'fake');
+    config()->set('payment.enabled', ['stripe']);
+    config()->set('payment.drivers.stripe', ['secret_key' => 'sk_test_x', 'webhook_secret' => 'whsec_x']);
+    config()->set('signature.default', 'signwell');
+    config()->set('signature.drivers.signwell', ['api_key' => 'testkey', 'api_base_url' => 'https://www.signwell.com/api/v1', 'test_mode' => true]);
     config()->set('festilaw.starter.required_documents', ['turnover_proof', 'technical_documentation']);
+    app()->forgetInstance(PaymentGatewayRegistry::class);
+    app()->forgetInstance(StripePaymentGateway::class);
+    app()->forgetInstance(SignatureGatewayInterface::class);
 });
 
-it('walks the STARTER happy path end-to-end with the fake providers', function () {
+it('walks the STARTER happy path end-to-end', function () {
     Mail::fake();
+    // Prestataires bouchonnes : la signature (createSigningSession) sans HTTP, le checkout Stripe via Http::fake.
+    $signature = Mockery::mock(SignatureGatewayInterface::class);
+    $signature->shouldReceive('key')->andReturn('signwell');
+    $signature->shouldReceive('createSigningSession')->andReturn(new SigningSessionData('doc_stub', 'https://signwell.test/sign'));
+    $signature->shouldReceive('downloadSignedDocument')->andReturnNull();
+    app()->instance(SignatureGatewayInterface::class, $signature);
+    Http::fake(['*/v1/checkout/sessions' => Http::response(['id' => 'cs_stub', 'url' => 'https://checkout.stripe.test/cs_stub'])]);
 
     // 1. Open the file (submission + unsigned contract).
     $outcome = app(CreateStarterSubmissionAction::class)->execute([
@@ -52,10 +68,10 @@ it('walks the STARTER happy path end-to-end with the fake providers', function (
         ->and($submission->contract)->not->toBeNull();
 
     // 2. Paying before the dossier is complete is blocked (typed invariant, not a 422).
-    expect(fn () => app(StartStarterPaymentAction::class)->execute($submission->fresh(), 'fake'))
+    expect(fn () => app(StartStarterPaymentAction::class)->execute($submission->fresh(), 'stripe'))
         ->toThrow(StarterException::class);
 
-    // 3. Sign the contract (fake provider) then confirm via the webhook action.
+    // 3. Sign the contract then confirm via the webhook action.
     $session = app(StartContractSigningAction::class)->execute($submission->fresh());
     expect($session)->toBeInstanceOf(SigningSessionData::class);
 
@@ -82,8 +98,8 @@ it('walks the STARTER happy path end-to-end with the fake providers', function (
         expect($document->size_bytes)->toBeGreaterThan(0);
     }
 
-    // 5. Start the payment (fake) -> pending payment + checkout session.
-    $checkout = app(StartStarterPaymentAction::class)->execute($submission->fresh(), 'fake');
+    // 5. Start the payment (Stripe) -> pending payment + checkout session.
+    $checkout = app(StartStarterPaymentAction::class)->execute($submission->fresh(), 'stripe');
     expect($checkout)->toBeInstanceOf(CheckoutSessionData::class);
 
     // Annee 1 au prorata de la date de signature (cf. contrat), pas le tarif plein.
@@ -93,7 +109,7 @@ it('walks the STARTER happy path end-to-end with the fake providers', function (
     $payment = $submission->fresh()->payments->first();
     expect($payment->status)->toBe(PaymentStatus::Pending)
         ->and($payment->amount_cents)->toBe($expectedCents)
-        ->and($payment->provider)->toBe('fake');
+        ->and($payment->provider)->toBe('stripe');
 
     // 6. Payment webhook confirms -> paid.
     app(MarkPaymentSucceededAction::class)->execute($payment->fresh(), 'pay_ref_456');
@@ -111,7 +127,7 @@ it('is idempotent when a payment webhook is redelivered', function () {
         'type' => PaymentType::StarterSubscription,
         'amount_cents' => 33300,
         'currency' => 'EUR',
-        'provider' => 'fake',
+        'provider' => 'stripe',
         'status' => PaymentStatus::Succeeded,
         'paid_at' => now(),
     ]);

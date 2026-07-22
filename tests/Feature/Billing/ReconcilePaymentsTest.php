@@ -5,14 +5,18 @@ use App\Models\Payment;
 use App\Models\Submission;
 use App\Services\Payment\PaymentGatewayRegistry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    // Le registre est un singleton lu a la construction. Comme .env de test peut porter
-    // PAYMENT_PROVIDERS=stripe, on force le rebuild sur 'fake' apres avoir change la config.
-    config()->set('payment.enabled', ['fake']);
+    // Le registre est un singleton lu a la construction : on force le rebuild sur stripe.
+    config()->set('payment.enabled', ['stripe']);
+    config()->set('payment.drivers.stripe', ['secret_key' => 'sk_test_x', 'webhook_secret' => 'whsec_x']);
     app()->forgetInstance(PaymentGatewayRegistry::class);
+    // Toute re-interrogation Stripe repond "session ouverte, impayee" (Unresolved) : le paiement est
+    // verifie mais rien n'est confirme.
+    Http::fake(['*/v1/checkout/sessions/*' => Http::response(['id' => 'cs_x', 'status' => 'open', 'payment_status' => 'unpaid'])]);
 });
 
 /** A pending payment with the given overrides, attached to a fresh dossier. */
@@ -23,7 +27,7 @@ function pendingPayment(array $attrs = []): Payment
 
     $payment = Payment::factory()->for(Submission::factory()->starter())->create(array_merge([
         'status' => PaymentStatus::Pending,
-        'provider' => 'fake',
+        'provider' => 'stripe',
         'provider_reference' => 'cs_test_'.fake()->uuid(),
     ], $attrs));
 

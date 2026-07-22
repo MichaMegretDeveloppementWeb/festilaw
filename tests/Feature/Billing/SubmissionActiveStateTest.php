@@ -18,7 +18,7 @@ function dossierWithPayment(PaymentStatus $status, PaymentType $type = PaymentTy
         'amount_cents' => 33300,
         'service_year' => 2026,
         'currency' => 'EUR',
-        'provider' => 'fake',
+        'provider' => 'stripe',
         'provider_reference' => 'ref',
         'status' => $status,
         'paid_at' => $status === PaymentStatus::Succeeded ? now() : null,

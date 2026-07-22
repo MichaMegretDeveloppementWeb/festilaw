@@ -13,8 +13,6 @@ use App\Http\Controllers\Web\Funnel\ProController;
 use App\Http\Controllers\Web\Funnel\ScaleController;
 use App\Http\Controllers\Web\Funnel\StarterController;
 use App\Http\Controllers\Web\Funnel\StarterCountersignedDownloadController;
-use App\Http\Controllers\Web\Funnel\StarterDevPayController;
-use App\Http\Controllers\Web\Funnel\StarterDevSignController;
 use App\Http\Controllers\Web\Funnel\StarterDocumentDownloadController;
 use App\Http\Controllers\Web\Funnel\StarterJourneyController;
 use App\Http\Controllers\Web\Funnel\StarterMandateDownloadController;
@@ -99,11 +97,6 @@ Route::prefix('get-started')->name('get-started.')->group(function () {
     Route::get('/starter/{dossier}/mandate', StarterMandateDownloadController::class)->name('starter.mandate');
     Route::get('/starter/{dossier}/countersigned', StarterCountersignedDownloadController::class)->name('starter.countersigned');
     Route::get('/starter/{dossier}/document/{document}', StarterDocumentDownloadController::class)->name('starter.document');
-
-    // Completion des providers Fake (dev/local uniquement, bloquee en production) : ces routes
-    // rejouent ce que ferait le webhook du vrai provider, puis renvoient au dossier.
-    Route::get('/starter/{dossier}/dev/sign', StarterDevSignController::class)->name('starter.dev-sign');
-    Route::get('/starter/{dossier}/dev/pay', StarterDevPayController::class)->name('starter.dev-pay');
 });
 
 // Espace client "mon projet" (le hub du dossier a tout stade), separe du parcours. Magic link.

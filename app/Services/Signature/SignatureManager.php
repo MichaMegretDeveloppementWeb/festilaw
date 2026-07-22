@@ -19,11 +19,6 @@ final class SignatureManager extends Manager
         return (string) $this->config->get('signature.default');
     }
 
-    public function createFakeDriver(): SignatureGatewayInterface
-    {
-        return new FakeSignatureGateway;
-    }
-
     public function createSignwellDriver(): SignatureGatewayInterface
     {
         return new SignWellSignatureGateway(

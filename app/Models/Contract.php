@@ -47,7 +47,6 @@ class Contract extends Model
     {
         return match ((string) $this->signature_provider) {
             'signwell' => 'SignWell',
-            'fake' => 'Fake',
             default => ucfirst((string) $this->signature_provider),
         };
     }

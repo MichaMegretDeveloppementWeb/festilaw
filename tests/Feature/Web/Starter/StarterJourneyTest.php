@@ -14,6 +14,8 @@ use App\Exceptions\Signature\SignatureException;
 use App\Livewire\Web\Funnel\StarterJourney;
 use App\Models\Contract;
 use App\Models\Submission;
+use App\Services\Payment\PaymentGatewayRegistry;
+use App\Services\Payment\StripePaymentGateway;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
@@ -28,9 +30,14 @@ use function Pest\Laravel\get;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    config()->set('payment.enabled', ['fake']);
-    config()->set('signature.default', 'fake');
+    config()->set('payment.enabled', ['stripe']);
+    config()->set('payment.drivers.stripe', ['secret_key' => 'sk_test_x', 'webhook_secret' => 'whsec_x']);
+    config()->set('signature.default', 'signwell');
+    config()->set('signature.drivers.signwell', ['api_key' => 'testkey', 'api_base_url' => 'https://www.signwell.com/api/v1', 'test_mode' => true]);
     config()->set('festilaw.starter.required_documents', ['turnover_proof', 'technical_documentation']);
+    app()->forgetInstance(PaymentGatewayRegistry::class);
+    app()->forgetInstance(StripePaymentGateway::class);
+    app()->forgetInstance(SignatureGatewayInterface::class);
     Mail::fake();
 });
 
@@ -83,8 +90,14 @@ function bindSignatureGateway(bool $signed): void
     });
 }
 
-it('walks the STARTER journey end-to-end through the UI and the fake dev routes', function () {
+it('walks the STARTER journey end-to-end through the UI', function () {
     Storage::fake('local');
+    bindSignatureGateway(signed: true); // le prestataire de signature confirmera au retour
+    Http::fake([
+        '*/v1/checkout/sessions/*' => Http::response(['id' => 'cs_1', 'status' => 'complete', 'payment_status' => 'paid', 'url' => 'https://checkout.stripe.test/cs_1']),
+        '*/v1/checkout/sessions' => Http::response(['id' => 'cs_1', 'url' => 'https://checkout.stripe.test/cs_1']),
+    ]);
+
     $submission = openStarterDossier();
     $token = $submission->resume_token;
 
@@ -94,21 +107,22 @@ it('walks the STARTER journey end-to-end through the UI and the fake dev routes'
         ->assertSeeLivewire(StarterJourney::class)
         ->assertSee('Sign your Responsible Person mandate');
 
-    // Clicking "sign" captures the mandate details, starts the fake signing session and redirects.
+    // Clicking "sign" captures the mandate details, starts the signing session and redirects out.
     Livewire::test(StarterJourney::class, ['submission' => $submission])
         ->set('incorporationPlace', 'Toronto, Canada')
         ->set('foundingYear', '2015')
         ->set('activity', 'handmade ceramics')
         ->call('sign')
-        ->assertRedirect(route('get-started.starter.dev-sign', ['dossier' => $token]));
+        ->assertRedirect('https://example.com/sign');
 
-    // The dev-sign route stands in for the provider webhook: contract signed -> awaiting documents.
-    get(route('get-started.starter.dev-sign', ['dossier' => $token]))
-        ->assertRedirect(route('get-started.starter.journey', ['dossier' => $token]));
+    // On return, the provider reports the signature complete -> awaiting documents.
+    Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
+        ->call('confirmSignature')
+        ->assertHasNoErrors();
     expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingDocuments);
 
     // Step 2 - drop both required documents and submit in one go; the dossier then becomes awaiting payment.
-    $component = Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
+    Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
         ->set('documents.turnover_proof', UploadedFile::fake()->create('turnover.pdf', 120, 'application/pdf'))
         ->set('documents.technical_documentation', UploadedFile::fake()->create('tech.pdf', 120, 'application/pdf'))
         ->call('submitDocuments')
@@ -122,20 +136,18 @@ it('walks the STARTER journey end-to-end through the UI and the fake dev routes'
         Storage::disk('local')->assertExists($document->file_path);
     }
 
-    // Step 3 - pay: creates a pending payment and redirects to the dev-pay route.
-    $component->call('pay')
-        ->assertRedirect(route('get-started.starter.dev-pay', ['dossier' => $token]));
-
+    // Step 3 - pay: creates a pending payment and redirects out to the Stripe checkout.
+    Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
+        ->call('pay')
+        ->assertRedirect('https://checkout.stripe.test/cs_1');
     expect($submission->fresh()->payments()->where('status', PaymentStatus::Pending)->count())->toBe(1);
 
-    // The dev-pay route stands in for the provider webhook: payment succeeded -> paid, land on my file.
-    get(route('get-started.starter.dev-pay', ['dossier' => $token]))
+    // On return, Stripe reports the session paid -> paid, land on the my-project space.
+    Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
+        ->call('pollPayment')
         ->assertRedirect(route('my-project', ['dossier' => $token]));
     expect($submission->fresh()->status)->toBe(SubmissionStatus::Paid);
 
-    // The paid dossier now lives in its "my file" space (the journey redirects there).
-    get(route('get-started.starter.journey', ['dossier' => $token]))
-        ->assertRedirect(route('my-project', ['dossier' => $token]));
     get(route('my-project', ['dossier' => $token]))
         ->assertOk()
         ->assertSee('Your documents');
@@ -188,16 +200,17 @@ it('auto-confirms on resume a signature already completed at the provider (brows
 });
 
 it('reuses the in-flight signing session on resume instead of creating a second one', function () {
-    // Fake driver: a session already exists (provider_reference set), the contract is not signed yet.
+    // Une session existe deja (provider_reference pose), le contrat n'est pas encore signe.
+    bindSignatureGateway(signed: false);
     $submission = openStarterDossier();
-    $submission->contract->update(['signature_provider' => 'fake', 'signature_provider_reference' => 'fake_existing']);
+    $submission->contract->update(['signature_provider' => 'stub', 'signature_provider_reference' => 'existing_ref']);
 
     Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
         ->call('sign')
-        ->assertRedirect(route('get-started.starter.dev-sign', ['dossier' => $submission->resume_token]));
+        ->assertRedirect('https://example.com/sign');
 
     // The reference was not overwritten: no second session/document was created.
-    expect($submission->fresh()->contract->signature_provider_reference)->toBe('fake_existing');
+    expect($submission->fresh()->contract->signature_provider_reference)->toBe('existing_ref');
 });
 
 it('requires the mandate details before starting the signature', function () {
@@ -214,13 +227,15 @@ it('requires the mandate details before starting the signature', function () {
 it('saves the mandate details to the contract before signing', function () {
     $submission = openStarterDossier();
 
+    bindSignatureGateway(signed: false);
+
     Livewire::test(StarterJourney::class, ['submission' => $submission])
         ->set('incorporationPlace', 'Toronto, Canada')
         ->set('foundingYear', '2015')
         ->set('activity', 'the design and sale of ceramics')
         ->call('sign')
         ->assertHasNoErrors()
-        ->assertRedirect(route('get-started.starter.dev-sign', ['dossier' => $submission->resume_token]));
+        ->assertRedirect('https://example.com/sign');
 
     expect($submission->fresh()->contract->filled_fields)->toMatchArray([
         'incorporation_place' => 'Toronto, Canada',
@@ -266,6 +281,10 @@ it('shows the first year prorated to the signature date on the payment step', fu
 });
 
 it('charges the first year prorated from the signature date', function () {
+    Http::fake([
+        '*/v1/checkout/sessions/*' => Http::response(['id' => 'cs_p', 'status' => 'open', 'url' => 'https://checkout.stripe.test/cs_p']),
+        '*/v1/checkout/sessions' => Http::response(['id' => 'cs_p', 'url' => 'https://checkout.stripe.test/cs_p']),
+    ]);
     $submission = openStarterDossier();
     $submission->update(['status' => SubmissionStatus::AwaitingPayment]);
     $submission->contract->update(['signature_status' => SignatureStatus::Signed, 'signed_at' => Carbon::create(2026, 7, 15)]);
@@ -413,26 +432,6 @@ it('returns 404 when the token belongs to a non-STARTER submission', function ()
     ]);
 
     get(route('get-started.starter.journey', ['dossier' => 'contact-token-xyz']))
-        ->assertNotFound();
-});
-
-it('blocks the fake dev completion routes in production', function () {
-    $submission = openStarterDossier();
-    // Config production VALIDE : sinon le garde fail-closed (EnsureProductionIsConfigured) 503 avant
-    // meme d'atteindre la route. Ici on veut isoler le blocage des routes dev (404), pas le garde.
-    config()->set('payment.enabled', ['stripe']);
-    config()->set('payment.drivers.stripe.secret_key', 'sk_live_x');
-    config()->set('payment.drivers.stripe.webhook_secret', 'whsec_x');
-    config()->set('signature.default', 'signwell');
-    config()->set('signature.drivers.signwell.api_key', 'key_x');
-    config()->set('signature.drivers.signwell.test_mode', false);
-    config()->set('mail.default', 'smtp');
-    config()->set('app.debug', false);
-    app()->instance('env', 'production');
-
-    get(route('get-started.starter.dev-sign', ['dossier' => $submission->resume_token]))
-        ->assertNotFound();
-    get(route('get-started.starter.dev-pay', ['dossier' => $submission->resume_token]))
         ->assertNotFound();
 });
 

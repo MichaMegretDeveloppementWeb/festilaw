@@ -49,7 +49,6 @@ class Payment extends Model
     {
         return match ((string) $this->provider) {
             'stripe' => 'Stripe',
-            'fake' => 'Fake',
             default => ucfirst((string) $this->provider),
         };
     }

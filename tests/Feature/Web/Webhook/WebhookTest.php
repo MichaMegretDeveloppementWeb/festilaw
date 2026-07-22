@@ -1,5 +1,6 @@
 <?php
 
+use App\Contracts\Signature\SignatureGatewayInterface;
 use App\Enums\Contract\SignatureStatus;
 use App\Enums\Payment\PaymentStatus;
 use App\Enums\Payment\PaymentType;
@@ -7,22 +8,56 @@ use App\Enums\Submission\SubmissionStatus;
 use App\Mail\StarterPaymentConfirmed;
 use App\Models\Contract;
 use App\Models\Submission;
+use App\Services\Payment\PaymentGatewayRegistry;
+use App\Services\Payment\StripePaymentGateway;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Testing\TestResponse;
 
 use function Pest\Laravel\postJson;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    config()->set('payment.enabled', ['fake']);
-    config()->set('signature.default', 'fake');
+    config()->set('payment.enabled', ['stripe']);
+    config()->set('payment.drivers.stripe', ['secret_key' => 'sk_test_x', 'webhook_secret' => 'whsec_x']);
+    config()->set('signature.default', 'signwell');
+    config()->set('signature.drivers.signwell', ['api_key' => 'testkey', 'api_base_url' => 'https://www.signwell.com/api/v1', 'test_mode' => true]);
+    // Les gateways sont des singletons lus a la construction : les oublier apres avoir pose la config.
+    app()->forgetInstance(PaymentGatewayRegistry::class);
+    app()->forgetInstance(StripePaymentGateway::class);
+    app()->forgetInstance(SignatureGatewayInterface::class);
     Mail::fake();
 });
 
-it('confirms a payment from the fake payment webhook and emails the buyer in their locale', function () {
+/** POSTs a Stripe-signed payment webhook (body signed with the test webhook secret). */
+function postStripeWebhook(array $payload): TestResponse
+{
+    $body = json_encode($payload, JSON_THROW_ON_ERROR);
+    $time = now()->timestamp;
+    $signature = hash_hmac('sha256', "{$time}.{$body}", 'whsec_x');
+
+    return test()->call('POST', '/webhooks/payment/stripe', [], [], [], [
+        'CONTENT_TYPE' => 'application/json',
+        'HTTP_STRIPE_SIGNATURE' => "t={$time},v1={$signature}",
+    ], $body);
+}
+
+/** POSTs a SignWell-signed signature webhook (HMAC over "{type}@{time}"), reporting the given status. */
+function postSignwellWebhook(string $type, string $documentId, string $status): TestResponse
+{
+    $time = 1689332249;
+    $hash = hash_hmac('sha256', "{$type}@{$time}", 'testkey');
+
+    return postJson('/webhooks/signature', [
+        'event' => ['type' => $type, 'time' => $time, 'hash' => $hash],
+        'data' => ['object' => ['id' => $documentId, 'status' => $status]],
+    ]);
+}
+
+it('confirms a payment from a Stripe webhook and emails the buyer in their locale', function () {
     // La locale du client est portee par le dossier : le webhook n'a aucun contexte de locale,
     // l'email de confirmation doit quand meme partir dans la langue du client.
     $submission = Submission::factory()->starter()->create(['locale' => 'fr']);
@@ -30,14 +65,14 @@ it('confirms a payment from the fake payment webhook and emails the buyer in the
         'type' => PaymentType::StarterSubscription,
         'amount_cents' => 33300,
         'currency' => 'EUR',
-        'provider' => 'fake',
-        'provider_reference' => 'fake_ref_1',
+        'provider' => 'stripe',
+        'provider_reference' => 'cs_1',
         'status' => PaymentStatus::Pending,
     ]);
 
-    postJson('/webhooks/payment/fake', [
-        'provider_reference' => 'fake_ref_1',
-        'paid' => true,
+    postStripeWebhook([
+        'type' => 'checkout.session.completed',
+        'data' => ['object' => ['id' => 'cs_1', 'payment_status' => 'paid']],
     ])->assertNoContent();
 
     expect($payment->fresh()->status)->toBe(PaymentStatus::Succeeded)
@@ -202,54 +237,30 @@ it('reconciles a Stripe webhook by our payment id when the provider reference do
         ->and($submission->fresh()->status)->toBe(SubmissionStatus::Paid);
 });
 
-it('marks a contract signed from the fake signature webhook', function () {
-    $submission = Submission::factory()->starter()->create();
-    $contract = Contract::factory()->for($submission)->create([
-        'signature_status' => SignatureStatus::Pending,
-        'signature_provider' => 'fake',
-        'signature_provider_reference' => 'sig_ref_1',
-    ]);
-
-    postJson('/webhooks/signature', [
-        'provider_reference' => 'sig_ref_1',
-        'signed' => true,
-        'signed_file_path' => 'private/contracts/signed.pdf',
-    ])->assertNoContent();
-
-    expect($contract->fresh()->signature_status)->toBe(SignatureStatus::Signed)
-        ->and($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingDocuments);
-});
-
-it('marks a contract declined from the fake signature webhook, leaving the dossier signable', function () {
+it('marks a contract declined from a SignWell webhook, leaving the dossier signable', function () {
     $submission = Submission::factory()->starter()->create(['status' => SubmissionStatus::InProgress]);
     $contract = Contract::factory()->for($submission)->create([
         'signature_status' => SignatureStatus::Pending,
-        'signature_provider' => 'fake',
-        'signature_provider_reference' => 'sig_ref_dec',
+        'signature_provider' => 'signwell',
+        'signature_provider_reference' => 'DOC_DEC',
     ]);
 
-    postJson('/webhooks/signature', [
-        'provider_reference' => 'sig_ref_dec',
-        'outcome' => 'declined',
-    ])->assertNoContent();
+    postSignwellWebhook('document_declined', 'DOC_DEC', 'Declined')->assertNoContent();
 
     // Plus jamais bloque en "en attente" : refus persiste, le dossier reste au stade signature.
     expect($contract->fresh()->signature_status)->toBe(SignatureStatus::Declined)
         ->and($submission->fresh()->status)->toBe(SubmissionStatus::InProgress);
 });
 
-it('marks a contract expired from the fake signature webhook', function () {
+it('marks a contract expired from a SignWell webhook', function () {
     $submission = Submission::factory()->starter()->create(['status' => SubmissionStatus::InProgress]);
     $contract = Contract::factory()->for($submission)->create([
         'signature_status' => SignatureStatus::Pending,
-        'signature_provider' => 'fake',
-        'signature_provider_reference' => 'sig_ref_exp',
+        'signature_provider' => 'signwell',
+        'signature_provider_reference' => 'DOC_EXP',
     ]);
 
-    postJson('/webhooks/signature', [
-        'provider_reference' => 'sig_ref_exp',
-        'outcome' => 'expired',
-    ])->assertNoContent();
+    postSignwellWebhook('document_expired', 'DOC_EXP', 'Expired')->assertNoContent();
 
     expect($contract->fresh()->signature_status)->toBe(SignatureStatus::Expired);
 });
@@ -311,17 +322,22 @@ it('rejects a SignWell webhook with an invalid signature and leaves the contract
 it('asks the provider to retry a paid webhook whose payment is not (yet) known', function () {
     // Course creation/webhook : notre ligne peut ne pas exister encore. On repond 500 pour que le
     // provider reessaie plus tard, plutot que de perdre silencieusement une confirmation de paiement.
-    postJson('/webhooks/payment/fake', ['provider_reference' => 'does-not-exist', 'paid' => true])
-        ->assertStatus(500);
+    postStripeWebhook([
+        'type' => 'checkout.session.completed',
+        'data' => ['object' => ['id' => 'cs_unknown', 'payment_status' => 'paid']],
+    ])->assertStatus(500);
 });
 
 it('acknowledges a non-actionable webhook for an unknown reference without failing', function () {
-    postJson('/webhooks/payment/fake', ['provider_reference' => 'does-not-exist', 'outcome' => 'unresolved'])
-        ->assertNoContent();
+    // Evenement non actionnable (type non gere) pour une reference inconnue : on acquitte (204).
+    postStripeWebhook([
+        'type' => 'payment_intent.created',
+        'data' => ['object' => ['id' => 'pi_unknown']],
+    ])->assertNoContent();
 });
 
 it('returns 400 when the targeted payment provider is not enabled', function () {
-    config()->set('payment.enabled', ['fake']); // stripe absent
+    config()->set('payment.enabled', []); // stripe absent du registre
 
     postJson('/webhooks/payment/stripe', ['provider_reference' => 'x'])
         ->assertStatus(400);

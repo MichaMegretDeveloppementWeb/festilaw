@@ -1,49 +1,25 @@
 <?php
 
-use App\Data\Payment\CheckoutSessionData;
 use App\Exceptions\Payment\PaymentException;
-use App\Models\Payment;
-use App\Services\Payment\FakePaymentGateway;
 use App\Services\Payment\PaymentGatewayRegistry;
 use App\Services\Payment\StripePaymentGateway;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-it('enables only the fake provider by default', function () {
-    config()->set('payment.enabled', ['fake']);
+it('keeps only the providers enabled by config', function () {
+    config()->set('payment.enabled', ['stripe']);
 
     $registry = app(PaymentGatewayRegistry::class);
 
-    expect($registry->all())->toHaveKey('fake')
-        ->and($registry->has('stripe'))->toBeFalse()
-        ->and($registry->get('fake'))->toBeInstanceOf(FakePaymentGateway::class)
-        ->and($registry->options())->toHaveKey('fake');
-});
-
-it('lets several providers coexist and be picked by key', function () {
-    config()->set('payment.enabled', ['fake', 'stripe']);
-
-    $registry = app(PaymentGatewayRegistry::class);
-
-    expect($registry->all())->toHaveKeys(['fake', 'stripe'])
+    expect($registry->has('stripe'))->toBeTrue()
         ->and($registry->get('stripe'))->toBeInstanceOf(StripePaymentGateway::class)
-        ->and($registry->get('fake'))->toBeInstanceOf(FakePaymentGateway::class);
+        ->and($registry->has('paypal'))->toBeFalse()
+        ->and($registry->options())->toHaveKey('stripe');
 });
 
 it('throws when asking for a provider that is not enabled', function () {
-    config()->set('payment.enabled', ['fake']);
+    config()->set('payment.enabled', ['stripe']);
 
     app(PaymentGatewayRegistry::class)->get('paypal');
 })->throws(PaymentException::class);
-
-it('creates a checkout with the fake provider without any external call', function () {
-    config()->set('payment.enabled', ['fake']);
-    $payment = Payment::factory()->create();
-
-    $session = app(PaymentGatewayRegistry::class)->get('fake')->createCheckout($payment);
-
-    expect($session)->toBeInstanceOf(CheckoutSessionData::class)
-        ->and($session->providerReference)->toStartWith('fake_')
-        ->and($session->redirectUrl)->not->toBeEmpty();
-});

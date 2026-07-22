@@ -15,7 +15,7 @@ use Illuminate\Http\Request;
  */
 interface SignatureGatewayInterface
 {
-    /** Identifier of the active provider (e.g. 'signwell', 'fake'). */
+    /** Identifier of the active provider (e.g. 'signwell'). */
     public function key(): string;
 
     /** Start a signing session for the given contract and return where the signer must go. */
@@ -40,8 +40,8 @@ interface SignatureGatewayInterface
 
     /**
      * Fetch and store the signed document (with audit trail) for a completed contract, returning its
-     * stored path (null if the provider has no downloadable file, e.g. the Fake driver). Called once by
-     * MarkContractSignedAction on the actual Pending → Signed transition — never on a replay.
+     * stored path (null if the download failed and can be retried later). Called once by
+     * MarkContractSignedAction on the actual Pending -> Signed transition, never on a replay.
      */
     public function downloadSignedDocument(Contract $contract): ?string;
 }
