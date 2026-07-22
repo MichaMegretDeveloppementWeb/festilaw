@@ -10,6 +10,7 @@ use App\Actions\Web\Starter\MarkContractSignedAction;
 use App\Actions\Web\Starter\StartContractSigningAction;
 use App\Actions\Web\Starter\StartStarterPaymentAction;
 use App\Actions\Web\Starter\SubmitStarterDocumentsAction;
+use App\Actions\Web\SyncDossierLocaleAction;
 use App\Contracts\Signature\SignatureGatewayInterface;
 use App\Enums\Contract\SignatureStatus;
 use App\Enums\Document\DocumentType;
@@ -69,8 +70,12 @@ class StarterJourney extends Component
 
     public string $activity = '';
 
-    public function mount(Submission $submission, PaymentGatewayRegistry $gateways): void
+    public function mount(Submission $submission, PaymentGatewayRegistry $gateways, SyncDossierLocaleAction $syncLocale): void
     {
+        // La langue d'affichage courante devient celle du dossier (la derniere utilisee gagne · un
+        // changement de langue recharge cette page, donc rejoue mount).
+        $syncLocale->execute($submission);
+
         $this->submission = $submission;
         $this->paymentOptions = $gateways->options();
         $this->paymentProvider = (string) array_key_first($this->paymentOptions);

@@ -513,3 +513,23 @@ it('locks review navigation to a not-yet-reached step', function () {
     Livewire::test(StarterJourney::class, ['submission' => $submission])
         ->call('goToStep', 'payment')->assertSet('viewStep', null);         // etape future -> ignoree
 });
+
+it('adopts the last display language used as the dossier locale on each journey load', function () {
+    $submission = Submission::factory()->starter()->create(['status' => SubmissionStatus::InProgress, 'locale' => 'en']);
+
+    app()->setLocale('fr'); // le visiteur bascule en francais pendant le parcours
+
+    Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()]);
+
+    expect($submission->fresh()->locale)->toBe('fr'); // le dossier suit la derniere langue
+});
+
+it('ignores an unsupported display locale for the dossier language', function () {
+    $submission = Submission::factory()->starter()->create(['status' => SubmissionStatus::InProgress, 'locale' => 'en']);
+
+    app()->setLocale('de'); // langue non supportee -> ignoree
+
+    Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()]);
+
+    expect($submission->fresh()->locale)->toBe('en'); // inchange
+});
