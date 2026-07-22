@@ -20,9 +20,9 @@
             <td align="center" style="padding:32px 16px;">
                 <table role="presentation" width="640" cellpadding="0" cellspacing="0" border="0" style="width:640px; max-width:640px;">
                     <tr>
-                        <td style="padding:2px 6px 18px;">
+                        <td align="center" style="padding:2px 6px 20px; text-align:center;">
                             <a href="{{ config('app.url') }}" style="text-decoration:none;">
-                                <img src="{{ asset('logo-festilaw.jpg') }}" width="130" alt="Festilaw" style="display:block; width:130px; max-width:130px; height:auto; border:0; outline:none; color:#0B1E45; font-family:Georgia,'Times New Roman',serif; font-size:22px; font-weight:700; letter-spacing:0.3px;">
+                                <img src="{{ asset('logo-festilaw.png') }}" width="104" alt="Festilaw" style="display:block; margin:0 auto; width:104px; max-width:104px; height:auto; border:0; outline:none; color:#0B1E45; font-family:Georgia,'Times New Roman',serif; font-size:22px; font-weight:700; letter-spacing:0.3px;">
                             </a>
                         </td>
                     </tr>
