@@ -607,5 +607,11 @@
     "View my project": "Voir mon projet",
     "Thank you for trusting Festilaw.": "Merci de votre confiance.",
     "See excluded products": "Voir les produits exclus",
-    "View in the back-office": "Voir dans le back-office"
+    "View in the back-office": "Voir dans le back-office",
+    "Signed mandate": "Mandat signé",
+    "Your documents are saved. Download one to check it, or replace it if you uploaded the wrong file.": "Vos documents sont enregistrés. Téléchargez-en un pour le vérifier, ou remplacez-le si vous vous êtes trompé de fichier.",
+    "Replace": "Remplacer",
+    "new file, not saved yet": "nouveau fichier, pas encore enregistré",
+    "This step is done · go back to the current step to continue.": "Cette étape est terminée · revenez à l'étape en cours pour continuer.",
+    "Document replaced.": "Document remplacé."
 }
