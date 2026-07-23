@@ -31,6 +31,7 @@ use App\Http\Controllers\Web\Webhook\PaymentWebhookController;
 use App\Http\Controllers\Web\Webhook\SignatureWebhookController;
 use App\Livewire\Admin\AdminProfile;
 use App\Livewire\Admin\LoginForm;
+use App\Livewire\Admin\PricingSettings;
 use App\Livewire\Admin\QuizResultList;
 use App\Livewire\Admin\SubmissionDetail;
 use App\Livewire\Admin\SubmissionList;
@@ -127,6 +128,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/contacts', SubmissionList::class)->name('contacts.index');
         Route::get('/quiz', QuizResultList::class)->name('quiz.index');
         Route::get('/profile', AdminProfile::class)->name('profile');
+        Route::get('/settings', PricingSettings::class)->name('settings');
         Route::get('/submissions/{submission:id}', SubmissionDetail::class)->name('submissions.show');
         Route::get('/submissions/{submission:id}/documents/{document:id}', AdminDocumentDownloadController::class)
             ->name('submissions.document')

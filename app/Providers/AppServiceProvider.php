@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Models\Submission;
+use App\Services\Billing\PackPricingService;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
@@ -15,7 +16,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Singleton : memoise les surcharges de prix pour la requete (cf. SubmissionType::annualCents()).
+        $this->app->singleton(PackPricingService::class);
     }
 
     /**

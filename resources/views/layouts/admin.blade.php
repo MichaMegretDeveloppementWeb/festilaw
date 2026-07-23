@@ -19,6 +19,7 @@
         @php($routeSubmission = request()->route('submission'))
         @php($viewingContact = $routeSubmission instanceof \App\Models\Submission && $routeSubmission->type === \App\Enums\Submission\SubmissionType::Contact)
         @php($isProfile = request()->routeIs('admin.profile'))
+        @php($isSettings = request()->routeIs('admin.settings'))
         @php($isQuiz = request()->routeIs('admin.quiz.*'))
         @php($isContacts = request()->routeIs('admin.contacts.*') || $viewingContact)
         @php($isDossiers = request()->routeIs('admin.submissions.*') && ! $viewingContact)
@@ -64,6 +65,14 @@
                         ])>
                             <x-ui.icon name="question-mark-circle" class="h-[18px] w-[18px]" />
                             {{ __('Quiz') }}
+                        </a>
+                        <a href="{{ route('admin.settings') }}" @click="mobileOpen = false" @class([
+                            'flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium',
+                            'bg-gray-100 text-gray-900' => $isSettings,
+                            'text-secondary hover:bg-elevated hover:text-primary' => ! $isSettings,
+                        ])>
+                            <x-ui.icon name="currency-euro" class="h-[18px] w-[18px]" />
+                            {{ __('Tarifs') }}
                         </a>
                         <a href="{{ route('home') }}" target="_blank" rel="noopener" @click="mobileOpen = false"
                             class="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-secondary hover:bg-elevated hover:text-primary">
@@ -123,6 +132,14 @@
                 ])>
                     <x-ui.icon name="question-mark-circle" class="h-[18px] w-[18px] shrink-0" />
                     <span class="admin-navlabel">{{ __('Quiz') }}</span>
+                </a>
+                <a href="{{ route('admin.settings') }}" @class([
+                    'admin-navitem flex items-center gap-2.5 rounded-lg py-2 text-[13px] font-medium transition',
+                    'bg-gray-100 text-gray-900' => $isSettings,
+                    'text-secondary hover:bg-elevated hover:text-primary' => ! $isSettings,
+                ])>
+                    <x-ui.icon name="currency-euro" class="h-[18px] w-[18px] shrink-0" />
+                    <span class="admin-navlabel">{{ __('Tarifs') }}</span>
                 </a>
             </nav>
             <div class="mt-auto border-t border-base py-3">

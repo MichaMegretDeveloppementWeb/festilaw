@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Enums\Submission;
 
+use App\Services\Billing\PackPricingService;
+
 enum SubmissionType: string
 {
     case Contact = 'contact';
@@ -29,11 +31,15 @@ enum SubmissionType: string
     }
 
     /** Cotisation annuelle du pack, en centimes. Seuls Creator et Pro en ont une. */
+    /**
+     * Effective annual price in cents. Resolved through PackPricingService so an admin override (set in
+     * the back-office) takes precedence over the config default, everywhere at once (payment, proration,
+     * display, renewal, contract PDF).
+     */
     public function annualCents(): int
     {
         return match ($this) {
-            self::Starter => (int) config('festilaw.starter.amount_cents', 33300),
-            self::Pro => (int) config('festilaw.pro.amount_cents', 120000),
+            self::Starter, self::Pro => app(PackPricingService::class)->annualCents($this),
             default => throw new \LogicException("No annual fee for submission type {$this->value}."),
         };
     }
