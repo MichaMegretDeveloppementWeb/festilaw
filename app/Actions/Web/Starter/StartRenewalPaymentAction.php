@@ -71,6 +71,11 @@ final readonly class StartRenewalPaymentAction
             return $existing;
         }
 
+        // Garde : un provider inconnu (l'entree vient du POST, potentiellement forgee) retombe sur le
+        // provider par defaut plutot que de lever une erreur opaque.
+        if (! $this->gateways->has($providerKey)) {
+            $providerKey = (string) array_key_first($this->gateways->options());
+        }
         $gateway = $this->gateways->get($providerKey);
 
         // Plein tarif du pack (aucun prorata sur les renouvellements), pour l'annee de service due.

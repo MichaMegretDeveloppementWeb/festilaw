@@ -11,6 +11,7 @@ use App\Enums\Submission\SubmissionStatus;
 use App\Exceptions\Scale\ScaleException;
 use App\Models\Appointment;
 use App\Models\Submission;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -43,20 +44,27 @@ final readonly class RecordAppointmentAction
             return $existing;
         }
 
-        return DB::transaction(function () use ($submission, $googleEventReference): Appointment {
-            $appointment = $submission->appointment()->create([
-                'google_event_reference' => $googleEventReference,
-                'status' => AppointmentStatus::Requested,
-            ]);
+        try {
+            return DB::transaction(function () use ($submission, $googleEventReference): Appointment {
+                $appointment = $submission->appointment()->create([
+                    'google_event_reference' => $googleEventReference,
+                    'status' => AppointmentStatus::Requested,
+                ]);
 
-            // N'avance le statut que depuis un etat pre-terminal : ne retrograde jamais un dossier deja
-            // Termine (prestation livree) ni ne reactive un Annule (deja bloque au-dessus).
-            Submission::query()
-                ->whereKey($submission->id)
-                ->whereNotIn('status', [SubmissionStatus::Cancelled, SubmissionStatus::Completed])
-                ->update(['status' => SubmissionStatus::InProgress]);
+                // N'avance le statut que depuis un etat pre-terminal : ne retrograde jamais un dossier deja
+                // Termine (prestation livree) ni ne reactive un Annule (deja bloque au-dessus).
+                Submission::query()
+                    ->whereKey($submission->id)
+                    ->whereNotIn('status', [SubmissionStatus::Cancelled, SubmissionStatus::Completed])
+                    ->update(['status' => SubmissionStatus::InProgress]);
 
-            return $appointment;
-        });
+                return $appointment;
+            });
+        } catch (UniqueConstraintViolationException $e) {
+            // Course : deux clics quasi simultanes ont franchi le test ci-dessus ; la contrainte unique
+            // (submission_id) bloque le doublon. On retourne le rendez-vous cree par l'autre appel plutot
+            // que de laisser remonter une erreur alors que la reservation a bien eu lieu.
+            return $submission->appointment()->first() ?? throw $e;
+        }
     }
 }

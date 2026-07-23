@@ -613,5 +613,8 @@
     "Replace": "Remplacer",
     "new file, not saved yet": "nouveau fichier, pas encore enregistré",
     "This step is done · go back to the current step to continue.": "Cette étape est terminée · revenez à l'étape en cours pour continuer.",
-    "Document replaced.": "Document remplacé."
+    "Document replaced.": "Document remplacé.",
+    "Confirm": "Confirmer",
+    "Cancel": "Annuler",
+    "Your GPSR Responsible Person in the EU": "Votre Personne Responsable GPSR dans l'UE"
 }
