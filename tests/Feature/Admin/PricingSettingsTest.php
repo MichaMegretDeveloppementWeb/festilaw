@@ -66,6 +66,27 @@ it('rejects a price below 1 euro', function () {
     expect(Setting::where('key', 'pricing.starter_annual_cents')->exists())->toBeFalse();
 });
 
+it('reflects the admin price on the public marketing pages', function () {
+    Setting::create(['key' => 'pricing.starter_annual_cents', 'value' => '4200']); // 42 €
+    Setting::create(['key' => 'pricing.pro_annual_cents', 'value' => '8800']);      // 88 €
+    app(PackPricingService::class)->forget();
+
+    // Page tarifs : la carte (&euro;42), la FAQ (42 EUR) et le JSON-LD refletent le nouveau prix.
+    get(route('pricing'))
+        ->assertOk()
+        ->assertSee('&euro;42', false)       // carte (entite HTML)
+        ->assertSee('42 EUR')                // FAQ
+        ->assertSee('88 EUR')
+        ->assertDontSee('&euro;333', false)  // plus l'ancien tarif en dur
+        ->assertDontSee('333 EUR');
+
+    // Page "choisir un pack" : prix en € litteral.
+    get(route('get-started.index'))
+        ->assertOk()
+        ->assertSee('€42')
+        ->assertSee('€88');
+});
+
 it('reverts to the real price by saving it again', function () {
     actingAs(User::factory()->create());
     Setting::create(['key' => 'pricing.starter_annual_cents', 'value' => '100']); // etait a 1 EUR

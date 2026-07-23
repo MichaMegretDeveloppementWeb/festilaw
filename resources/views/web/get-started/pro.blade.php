@@ -28,7 +28,7 @@
 
                     <x-funnel.summary
                         :plan="__('Pro Pack')"
-                        :price="__('€1,200 / year')"
+                        :price="'€'.number_format($proAnnualCents / 100).' / '.__('year')"
                         :scope="__('10 to 100 products')"
                         :included="[
                             __('Everything in the Creator Pack'),

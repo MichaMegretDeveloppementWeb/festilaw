@@ -8,7 +8,7 @@
             <div class="pricing__card">
                 <h3 class="pricing__name">{{ __('Creator Pack') }}</h3>
                 <p class="pricing__desc">{{ __('Small creators, up to 9 products.') }}</p>
-                <div class="pricing__amount">&euro;333</div>
+                <div class="pricing__amount">&euro;{{ number_format($creatorAnnualCents / 100) }}</div>
                 <div class="pricing__period">{{ __('per year') }}</div>
                 <a href="{{ route('get-started.starter') }}" class="btn btn--outline-dark pricing__cta">{{ __('Choose Creator') }}</a>
             </div>
@@ -16,7 +16,7 @@
                 <span class="pricing__badge">{{ __('Most popular') }}</span>
                 <h3 class="pricing__name">{{ __('Pro Pack') }}</h3>
                 <p class="pricing__desc">{{ __('Growing brands, 10 to 100 products.') }}</p>
-                <div class="pricing__amount">&euro;1,200</div>
+                <div class="pricing__amount">&euro;{{ number_format($proAnnualCents / 100) }}</div>
                 <div class="pricing__period">{{ __('per year') }}</div>
                 <a href="{{ route('get-started.pro') }}" class="btn btn--coral pricing__cta">{{ __('Choose Pro') }}</a>
             </div>

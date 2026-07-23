@@ -11,7 +11,7 @@
     $faqItems = [
         ['q' => __('How does Festilaw work?'), 'a' => __('You choose the plan that fits your size, complete a short form, sign your mandate online, upload the required documents, and pay securely. We then provide your official EU Responsible Person address and your signed mandate, typically within 24 hours.')],
         ['q' => __('How fast do I get my mandate?'), 'a' => __('Our promise is a mandate and EU Responsible Person address within 24 hours of your file being complete.')],
-        ['q' => __('How much does it cost? Are there hidden per-SKU fees?'), 'a' => __('Our pricing is public and flat, with no hidden per-SKU fees: Creator Pack at 333 EUR per year (up to 9 products), Pro Pack at 1,200 EUR per year (10 to 100 products), and Scale Pack on request (100+ products).')],
+        ['q' => __('How much does it cost? Are there hidden per-SKU fees?'), 'a' => __('Our pricing is public and flat, with no hidden per-SKU fees: Creator Pack at :creator EUR per year (up to 9 products), Pro Pack at :pro EUR per year (10 to 100 products), and Scale Pack on request (100+ products).', ['creator' => number_format($creatorAnnualCents / 100), 'pro' => number_format($proAnnualCents / 100)])],
         ['q' => __('What do you need from me?'), 'a' => __('For the Creator plan: your company details, proof that you meet the plan\'s eligibility, and your product technical documentation or test reports.')],
         ['q' => __('Will this keep my Etsy, Amazon or Shopify shop open?'), 'a' => __('Our role is to make you compliant so your listings meet GPSR requirements and stay online. Marketplaces increasingly require a Responsible Person; we provide the official EU details you need to display.')],
         ['q' => __('Is my data safe?'), 'a' => __('Yes. We handle your data in line with the GDPR, use secure payment and secure document storage, and only collect what is needed to provide the service.')],
@@ -24,8 +24,8 @@
             'provider' => ['@type' => 'Organization', 'name' => config('app.name')],
             'areaServed' => 'EU',
             'offers' => [
-                ['@type' => 'Offer', 'name' => 'Creator Pack', 'price' => '333', 'priceCurrency' => 'EUR'],
-                ['@type' => 'Offer', 'name' => 'Pro Pack', 'price' => '1200', 'priceCurrency' => 'EUR'],
+                ['@type' => 'Offer', 'name' => 'Creator Pack', 'price' => (string) intdiv($creatorAnnualCents, 100), 'priceCurrency' => 'EUR'],
+                ['@type' => 'Offer', 'name' => 'Pro Pack', 'price' => (string) intdiv($proAnnualCents, 100), 'priceCurrency' => 'EUR'],
             ],
         ],
         [

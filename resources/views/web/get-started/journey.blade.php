@@ -34,7 +34,7 @@
 
                     <x-funnel.summary
                         :plan="__($packLabel)"
-                        :price="$isPro ? __('€1,200 / year') : __('€333 / year')"
+                        :price="'€'.number_format(($isPro ? $proAnnualCents : $creatorAnnualCents) / 100).' / '.__('year')"
                         :scope="$isPro ? __('10 to 100 products') : __('up to 9 products')"
                         :included="$isPro
                             ? [

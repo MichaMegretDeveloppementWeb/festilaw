@@ -28,7 +28,7 @@
 
                     <x-funnel.summary
                         :plan="__('Creator Pack')"
-                        :price="__('€333 / year')"
+                        :price="'€'.number_format($creatorAnnualCents / 100).' / '.__('year')"
                         :scope="__('up to 9 products')"
                         :included="[
                             __('Your official EU Responsible Person address'),

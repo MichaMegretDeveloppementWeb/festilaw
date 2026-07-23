@@ -42,7 +42,7 @@
                         <span class="start-path__name">{{ __('Creator Pack') }}</span>
                         <span class="start-path__who">{{ __('Small creators · up to 9 products') }}</span>
                     </span>
-                    <span class="start-path__price">€333<span class="start-path__per">/{{ __('year') }}</span></span>
+                    <span class="start-path__price">€{{ number_format($creatorAnnualCents / 100) }}<span class="start-path__per">/{{ __('year') }}</span></span>
                     <span class="start-path__go">{{ __('Start') }}
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                     </span>
@@ -54,7 +54,7 @@
                         <span class="start-path__name">{{ __('Pro Pack') }}</span>
                         <span class="start-path__who">{{ __('Growing brands · 10 to 100 products') }}</span>
                     </span>
-                    <span class="start-path__price">€1,200<span class="start-path__per">/{{ __('year') }}</span></span>
+                    <span class="start-path__price">€{{ number_format($proAnnualCents / 100) }}<span class="start-path__per">/{{ __('year') }}</span></span>
                     <span class="start-path__go">{{ __('Start') }}
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                     </span>
