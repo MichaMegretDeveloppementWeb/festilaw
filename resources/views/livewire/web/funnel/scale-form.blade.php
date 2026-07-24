@@ -17,15 +17,22 @@
                 <input type="text" id="scf-hp" wire:model="hp" tabindex="-1" autocomplete="off">
             </div>
 
+            <div class="funnel-form__field">
+                <label for="scf-company">{{ __('Company') }}</label>
+                <input type="text" id="scf-company" wire:model="company_name" placeholder="{{ __('Your company') }}">
+                @error('company_name') <span class="funnel-form__error">{{ $message }}</span> @enderror
+            </div>
+
             <div class="funnel-form__row funnel-form__row--two">
                 <div class="funnel-form__field">
-                    <label for="scf-company">{{ __('Company') }}</label>
-                    <input type="text" id="scf-company" wire:model="company_name" placeholder="{{ __('Your company') }}">
-                    @error('company_name') <span class="funnel-form__error">{{ $message }}</span> @enderror
+                    <label for="scf-first">{{ __('First name') }}</label>
+                    <input type="text" id="scf-first" wire:model="first_name" autocomplete="given-name" placeholder="{{ __('First name') }}">
+                    @error('first_name') <span class="funnel-form__error">{{ $message }}</span> @enderror
                 </div>
                 <div class="funnel-form__field">
-                    <label for="scf-name">{{ __('Your name') }} <span class="funnel-form__optional">{{ __('(optional)') }}</span></label>
-                    <input type="text" id="scf-name" wire:model="first_name" autocomplete="given-name" placeholder="{{ __('First name') }}">
+                    <label for="scf-last">{{ __('Last name') }}</label>
+                    <input type="text" id="scf-last" wire:model="last_name" autocomplete="family-name" placeholder="{{ __('Last name') }}">
+                    @error('last_name') <span class="funnel-form__error">{{ $message }}</span> @enderror
                 </div>
             </div>
 

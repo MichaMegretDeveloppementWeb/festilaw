@@ -49,8 +49,9 @@
                     @error('first_name') <span class="funnel-form__error">{{ $message }}</span> @enderror
                 </div>
                 <div class="funnel-form__field">
-                    <label for="sf-last">{{ __('Last name') }} <span class="funnel-form__optional">{{ __('(optional)') }}</span></label>
+                    <label for="sf-last">{{ __('Last name') }}</label>
                     <input type="text" id="sf-last" wire:model="last_name" autocomplete="family-name" placeholder="{{ __('Last name') }}">
+                    @error('last_name') <span class="funnel-form__error">{{ $message }}</span> @enderror
                 </div>
             </div>
 

@@ -55,6 +55,7 @@ it('opens a SCALE dossier with a magic link, emails it and lands the visitor in 
     Livewire::test(ScaleForm::class)
         ->set('company_name', 'Bigco')
         ->set('first_name', 'Dana')
+        ->set('last_name', 'Rivera')
         ->set('email', 'bigco@example.com')
         ->call('submit')
         ->assertRedirect();

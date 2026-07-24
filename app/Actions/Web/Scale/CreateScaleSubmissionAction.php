@@ -21,7 +21,7 @@ use Throwable;
  * they pay the audit fee and book the consultation. The resume_token is the space's access key (magic
  * link), emailed so they can return on any device without an account. Notifies the team of the request.
  *
- * @phpstan-type ScaleData array{company_name: string, email: string, first_name?: string|null, website_url?: string|null, phone?: string|null, eu_sales_countries?: array<int, string>|null, product_types?: string|null}
+ * @phpstan-type ScaleData array{company_name: string, email: string, first_name: string, last_name: string, website_url?: string|null, phone?: string|null, eu_sales_countries?: array<int, string>|null, product_types?: string|null}
  */
 final readonly class CreateScaleSubmissionAction
 {
@@ -38,6 +38,7 @@ final readonly class CreateScaleSubmissionAction
             'company_name' => $data['company_name'],
             'email' => $data['email'],
             'first_name' => $data['first_name'] ?? null,
+            'last_name' => $data['last_name'] ?? null,
             'website_url' => $data['website_url'] ?? null,
             'phone' => $data['phone'] ?? null,
             'eu_sales_countries' => $data['eu_sales_countries'] ?? null,

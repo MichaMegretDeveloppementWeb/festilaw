@@ -29,6 +29,7 @@ it('opens a STARTER file and redirects into the journey', function () {
     $component = Livewire::test(StarterForm::class)
         ->set('company_name', 'Wildthread')
         ->set('first_name', 'Maya')
+        ->set('last_name', 'Thornton')
         ->set('email', 'maya@example.com')
         ->call('submit')
         ->assertHasNoErrors();
@@ -45,6 +46,7 @@ it('opens a PRO file through the same journey (self-service)', function () {
     $component = Livewire::test(StarterForm::class, ['type' => 'pro'])
         ->set('company_name', 'Acme Goods')
         ->set('first_name', 'Dana')
+        ->set('last_name', 'Rivera')
         ->set('email', 'acme@example.com')
         ->call('submit')
         ->assertHasNoErrors();
@@ -61,6 +63,8 @@ it('requests a SCALE audit from the form and redirects into the space', function
 
     $component = Livewire::test(ScaleForm::class)
         ->set('company_name', 'Bigco')
+        ->set('first_name', 'Dana')
+        ->set('last_name', 'Rivera')
         ->set('email', 'bigco@example.com')
         ->call('submit')
         ->assertHasNoErrors();
@@ -71,7 +75,7 @@ it('requests a SCALE audit from the form and redirects into the space', function
 });
 
 it('validates the required fields on the funnel forms', function () {
-    Livewire::test(ScaleForm::class)->call('submit')->assertHasErrors(['company_name', 'email']);
-    Livewire::test(StarterForm::class)->call('submit')->assertHasErrors(['company_name', 'first_name', 'email']);
-    Livewire::test(StarterForm::class, ['type' => 'pro'])->call('submit')->assertHasErrors(['company_name', 'first_name', 'email']);
+    Livewire::test(ScaleForm::class)->call('submit')->assertHasErrors(['company_name', 'first_name', 'last_name', 'email']);
+    Livewire::test(StarterForm::class)->call('submit')->assertHasErrors(['company_name', 'first_name', 'last_name', 'email']);
+    Livewire::test(StarterForm::class, ['type' => 'pro'])->call('submit')->assertHasErrors(['company_name', 'first_name', 'last_name', 'email']);
 });

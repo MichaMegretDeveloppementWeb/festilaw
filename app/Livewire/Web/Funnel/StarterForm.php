@@ -65,7 +65,7 @@ class StarterForm extends Component
             'company_name' => ['required', 'string', 'max:180'],
             'company_registration_number' => ['nullable', 'string', 'max:60'],
             'first_name' => ['required', 'string', 'max:120'],
-            'last_name' => ['nullable', 'string', 'max:120'],
+            'last_name' => ['required', 'string', 'max:120'],
             'email' => ['required', 'email', 'max:180'],
             'website_url' => ['nullable', 'url', 'max:200'],
         ];
@@ -77,6 +77,7 @@ class StarterForm extends Component
         return [
             'company_name.required' => __('Please tell us your company name.'),
             'first_name.required' => __('Please tell us your first name.'),
+            'last_name.required' => __('Please tell us your last name.'),
             'email.required' => __('We need your email to continue.'),
             'email.email' => __('This email address looks invalid.'),
             'website_url.url' => __('Please enter a valid URL (including https://).'),
@@ -102,7 +103,7 @@ class StarterForm extends Component
                 'company_name' => $this->company_name,
                 'company_registration_number' => $this->company_registration_number ?: null,
                 'first_name' => $this->first_name,
-                'last_name' => $this->last_name ?: null,
+                'last_name' => $this->last_name,
                 'email' => $this->email,
                 'website_url' => $this->website_url ?: null,
             ], $this->packType());

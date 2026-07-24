@@ -20,6 +20,7 @@ function submitStarterForm(string $email)
     return Livewire::test(StarterForm::class)
         ->set('company_name', 'Wildthread')
         ->set('first_name', 'Maya')
+        ->set('last_name', 'Thornton')
         ->set('email', $email)
         ->call('submit');
 }
