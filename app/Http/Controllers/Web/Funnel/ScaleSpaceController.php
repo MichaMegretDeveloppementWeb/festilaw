@@ -15,7 +15,7 @@ use Illuminate\View\View;
 
 /**
  * The client's SCALE space (magic link, capability URL). The hub for a SCALE dossier: pay the 75 EUR
- * audit, then book the 45-minute consultation. Reached by its {dossier} token binding. On return from the
+ * audit, then book the consultation. Reached by its {dossier} token binding. On return from the
  * checkout it confirms the audit server-side (the signed webhook stays the source of truth in production).
  */
 final class ScaleSpaceController extends Controller

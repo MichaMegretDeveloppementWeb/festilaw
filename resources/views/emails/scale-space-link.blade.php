@@ -3,7 +3,7 @@
 
     <x-mail.text>{{ __('Hello') }}{{ $submission->first_name ? ' '.$submission->first_name : '' }},</x-mail.text>
 
-    <x-mail.text>{{ __('Thanks for requesting a Festilaw Scale audit. Here is your secure link to pay the €75 audit fee and book your 45-minute consultation:') }}</x-mail.text>
+    <x-mail.text>{{ __('Thanks for requesting a Festilaw Scale audit. Here is your secure link to pay the €75 audit fee and book your consultation:') }}</x-mail.text>
 
     <x-mail.button :url="$spaceUrl">{{ __('Open my Scale audit') }}</x-mail.button>
 

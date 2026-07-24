@@ -3,7 +3,7 @@
 
     <x-mail.text>{{ __('Hello') }}{{ $submission->first_name ? ' '.$submission->first_name : '' }},</x-mail.text>
 
-    <x-mail.text>{{ __('Your €75 Scale audit payment is confirmed. The next step is to book your 45-minute video consultation:') }}</x-mail.text>
+    <x-mail.text>{{ __('Your €75 Scale audit payment is confirmed. The next step is to book your video consultation:') }}</x-mail.text>
 
     <x-mail.button :url="$spaceUrl">{{ __('Book my consultation') }}</x-mail.button>
 
