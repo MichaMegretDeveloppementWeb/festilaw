@@ -59,6 +59,16 @@ return [
     ],
 
     /*
+     | Plancher d'encaissement : montant minimum (centimes) qu'un prestataire accepte de prelever
+     | (Stripe ~0,50 € en EUR). Le prorata de l'annee 1 ne descend jamais sous ce seuil, sinon le
+     | checkout echoue de facon opaque. Ne mord en pratique que sur un tarif de test tres bas ;
+     | l'usage normal (Creator/Pro) reste tres au-dessus.
+     */
+    'payment' => [
+        'min_charge_cents' => (int) env('FESTILAW_MIN_CHARGE_CENTS', 50),
+    ],
+
+    /*
      | Parcours SCALE : paiement de l'audit (deduit du contrat final) + agenda de reservation.
      */
     'scale' => [

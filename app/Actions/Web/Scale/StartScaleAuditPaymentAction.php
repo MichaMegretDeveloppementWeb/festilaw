@@ -11,6 +11,7 @@ use App\Enums\Submission\SubmissionStatus;
 use App\Exceptions\Scale\ScaleException;
 use App\Models\Submission;
 use App\Services\Payment\PaymentGatewayRegistry;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -40,33 +41,37 @@ final readonly class StartScaleAuditPaymentAction
             throw ScaleException::auditAlreadyPaid($submission->id);
         }
 
-        // Reprise : reutiliser un checkout d'audit deja en cours plutot que d'en creer un second
-        // (anti double-debit, crucial sur un double clic ou un moyen asynchrone).
-        $existing = $this->existingAuditCheckout($submission);
-        if ($existing !== null) {
-            return $existing;
-        }
+        // Verrou anti double-debit : serialise deux paiements concurrents (double clic / deux onglets) pour
+        // ce dossier. Le verrou (table cache_locks) ne tient AUCUNE transaction DB pendant l'appel HTTP au
+        // prestataire ; il serialise seulement les demarrages. 15s de bail, 10s d'attente.
+        return Cache::lock('checkout:'.$submission->getKey(), 15)->block(10, function () use ($submission, $providerKey): CheckoutSessionData {
+            // Reprise : reutiliser un checkout d'audit deja en cours plutot que d'en creer un second
+            // (anti double-debit, crucial sur un double clic ou un moyen asynchrone).
+            $existing = $this->existingAuditCheckout($submission);
+            if ($existing !== null) {
+                return $existing;
+            }
 
-        // Garde : un provider inconnu (l'entree vient du POST, potentiellement forgee) retombe sur le
-        // provider par defaut plutot que de lever une erreur opaque.
-        if (! $this->gateways->has($providerKey)) {
-            $providerKey = (string) array_key_first($this->gateways->options());
-        }
-        $gateway = $this->gateways->get($providerKey);
+            // Garde : un provider inconnu (l'entree vient du POST, potentiellement forgee) retombe sur le
+            // provider par defaut plutot que de lever une erreur opaque.
+            if (! $this->gateways->has($providerKey)) {
+                $providerKey = (string) array_key_first($this->gateways->options());
+            }
+            $gateway = $this->gateways->get($providerKey);
 
-        // Ecriture unique : pas de transaction.
-        $payment = $submission->payments()->create([
-            'type' => PaymentType::ScaleAudit,
-            'amount_cents' => (int) config('festilaw.scale.audit_amount_cents'),
-            'currency' => 'EUR',
-            'provider' => $gateway->key(),
-            'status' => PaymentStatus::Pending,
-        ]);
+            $payment = $submission->payments()->create([
+                'type' => PaymentType::ScaleAudit,
+                'amount_cents' => (int) config('festilaw.scale.audit_amount_cents'),
+                'currency' => 'EUR',
+                'provider' => $gateway->key(),
+                'status' => PaymentStatus::Pending,
+            ]);
 
-        $session = $gateway->createCheckout($payment);
-        $payment->update(['provider_reference' => $session->providerReference]);
+            $session = $gateway->createCheckout($payment);
+            $payment->update(['provider_reference' => $session->providerReference]);
 
-        return $session;
+            return $session;
+        });
     }
 
     /** The in-flight audit checkout to reuse on resume, or null if none / not reusable. */

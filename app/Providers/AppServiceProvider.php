@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Enums\Submission\SubmissionType;
 use App\Models\Submission;
+use App\Services\Billing\AnnualFeeProrator;
 use App\Services\Billing\PackPricingService;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
@@ -20,6 +21,12 @@ class AppServiceProvider extends ServiceProvider
     {
         // Singleton : memoise les surcharges de prix pour la requete (cf. SubmissionType::annualCents()).
         $this->app->singleton(PackPricingService::class);
+
+        // Le prorata de l'annee 1 recoit le plancher d'encaissement (config) pour ne jamais tomber sous le
+        // minimum du prestataire (Stripe ~0,50 €) sur un tarif de test tres bas.
+        $this->app->bind(AnnualFeeProrator::class, static fn (): AnnualFeeProrator => new AnnualFeeProrator(
+            (int) config('festilaw.payment.min_charge_cents', 50),
+        ));
     }
 
     /**

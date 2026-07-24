@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Web\Starter\CreateStarterSubmissionAction;
+use App\Actions\Web\Starter\StartStarterPaymentAction;
 use App\Contracts\Signature\SignatureGatewayInterface;
 use App\Data\Signature\SignatureWebhookData;
 use App\Data\Signature\SigningSessionData;
@@ -381,6 +382,37 @@ it('reuses the in-flight checkout on resume instead of creating a second charge'
 
     // Un seul paiement : aucune nouvelle session/charge creee.
     expect($submission->fresh()->payments()->count())->toBe(1);
+});
+
+it('reuses the in-flight checkout at the action level too (anti double-debit backstop)', function () {
+    config()->set('payment.enabled', ['stripe']);
+    config()->set('payment.drivers.stripe', ['secret_key' => 'sk_test_x', 'webhook_secret' => 'whsec_x']);
+    // Creation (POST) et reprise d'une session ouverte (GET par id) bouchonnees.
+    Http::fake([
+        '*/v1/checkout/sessions/*' => Http::response(['id' => 'cs_1', 'status' => 'open', 'url' => 'https://checkout.stripe.com/c/pay/cs_1']),
+        '*/v1/checkout/sessions' => Http::response(['id' => 'cs_1', 'url' => 'https://checkout.stripe.com/c/pay/cs_1']),
+    ]);
+
+    // Dossier complet (signe + deux pieces requises) pret a payer, sans paiement encore.
+    $submission = openStarterDossier();
+    $submission->update(['status' => SubmissionStatus::AwaitingPayment]);
+    $submission->contract->update(['signature_status' => SignatureStatus::Signed, 'signed_file_path' => 'contracts/mandate.pdf']);
+    foreach (['turnover_proof', 'technical_documentation'] as $type) {
+        $submission->uploadedDocuments()->create([
+            'type' => $type, 'file_path' => "starter-documents/{$submission->reference}/{$type}.pdf",
+            'original_filename' => "{$type}.pdf", 'mime_type' => 'application/pdf', 'size_bytes' => 5, 'uploaded_at' => now(),
+        ]);
+    }
+    $submission = $submission->fresh();
+
+    // Deux demarrages qui franchissent le garde composant (course reelle) : le premier cree le checkout,
+    // le second entre dans le verrou, retrouve le paiement en vol et le reutilise -> aucune 2e session/charge.
+    $first = app(StartStarterPaymentAction::class)->execute($submission, 'stripe');
+    $second = app(StartStarterPaymentAction::class)->execute($submission, 'stripe');
+
+    expect($first->redirectUrl)->toBe('https://checkout.stripe.com/c/pay/cs_1')
+        ->and($second->redirectUrl)->toBe('https://checkout.stripe.com/c/pay/cs_1')
+        ->and($submission->fresh()->payments()->count())->toBe(1);
 });
 
 it('rejects an oversized document on submit', function () {

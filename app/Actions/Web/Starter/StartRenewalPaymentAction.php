@@ -13,6 +13,7 @@ use App\Exceptions\Starter\StarterException;
 use App\Models\Submission;
 use App\Services\Billing\RenewalService;
 use App\Services\Payment\PaymentGatewayRegistry;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -64,34 +65,39 @@ final readonly class StartRenewalPaymentAction
             throw StarterException::renewalInProgress($submission->id);
         }
 
-        // Reprise : un paiement de renouvellement deja en cours (Pending) -> reutiliser sa session plutot
-        // que d'en creer une 2e (anti double-debit, crucial notamment sur un double clic).
-        $existing = $this->existingRenewalCheckout($submission);
-        if ($existing !== null) {
-            return $existing;
-        }
+        // Verrou anti double-debit : serialise deux paiements concurrents (double clic / deux onglets) pour
+        // ce dossier. Le verrou (table cache_locks) ne tient AUCUNE transaction DB pendant l'appel HTTP au
+        // prestataire ; il serialise seulement les demarrages. 15s de bail, 10s d'attente.
+        return Cache::lock('checkout:'.$submission->getKey(), 15)->block(10, function () use ($submission, $providerKey, $dueYear): CheckoutSessionData {
+            // Reprise : un paiement de renouvellement deja en cours (Pending) -> reutiliser sa session plutot
+            // que d'en creer une 2e (anti double-debit, crucial notamment sur un double clic).
+            $existing = $this->existingRenewalCheckout($submission);
+            if ($existing !== null) {
+                return $existing;
+            }
 
-        // Garde : un provider inconnu (l'entree vient du POST, potentiellement forgee) retombe sur le
-        // provider par defaut plutot que de lever une erreur opaque.
-        if (! $this->gateways->has($providerKey)) {
-            $providerKey = (string) array_key_first($this->gateways->options());
-        }
-        $gateway = $this->gateways->get($providerKey);
+            // Garde : un provider inconnu (l'entree vient du POST, potentiellement forgee) retombe sur le
+            // provider par defaut plutot que de lever une erreur opaque.
+            if (! $this->gateways->has($providerKey)) {
+                $providerKey = (string) array_key_first($this->gateways->options());
+            }
+            $gateway = $this->gateways->get($providerKey);
 
-        // Plein tarif du pack (aucun prorata sur les renouvellements), pour l'annee de service due.
-        $payment = $submission->payments()->create([
-            'type' => PaymentType::AnnualRenewal,
-            'amount_cents' => $submission->type->annualCents(),
-            'service_year' => $dueYear,
-            'currency' => 'EUR',
-            'provider' => $gateway->key(),
-            'status' => PaymentStatus::Pending,
-        ]);
+            // Plein tarif du pack (aucun prorata sur les renouvellements), pour l'annee de service due.
+            $payment = $submission->payments()->create([
+                'type' => PaymentType::AnnualRenewal,
+                'amount_cents' => $submission->type->annualCents(),
+                'service_year' => $dueYear,
+                'currency' => 'EUR',
+                'provider' => $gateway->key(),
+                'status' => PaymentStatus::Pending,
+            ]);
 
-        $session = $gateway->createCheckout($payment);
-        $payment->update(['provider_reference' => $session->providerReference]);
+            $session = $gateway->createCheckout($payment);
+            $payment->update(['provider_reference' => $session->providerReference]);
 
-        return $session;
+            return $session;
+        });
     }
 
     /** La session de renouvellement deja en cours pour ce dossier (reprise), ou null si aucune / non reutilisable. */
