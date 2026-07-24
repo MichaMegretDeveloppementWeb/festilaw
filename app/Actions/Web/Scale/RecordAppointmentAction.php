@@ -5,14 +5,21 @@ declare(strict_types=1);
 namespace App\Actions\Web\Scale;
 
 use App\Enums\Appointment\AppointmentStatus;
+use App\Enums\Notification\FunnelNotificationReason;
 use App\Enums\Payment\PaymentStatus;
 use App\Enums\Payment\PaymentType;
 use App\Enums\Submission\SubmissionStatus;
 use App\Exceptions\Scale\ScaleException;
+use App\Mail\FunnelNotification;
+use App\Mail\ScaleConsultationBooked;
 use App\Models\Appointment;
 use App\Models\Submission;
+use App\Services\Notification\TeamNotifier;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Throwable;
 
 /**
  * Records that a SCALE consultation has been requested (via the provided Google Calendar link)
@@ -21,6 +28,8 @@ use Illuminate\Support\Facades\DB;
  */
 final readonly class RecordAppointmentAction
 {
+    public function __construct(private TeamNotifier $teamNotifier) {}
+
     public function execute(Submission $submission, ?string $googleEventReference = null): Appointment
     {
         // Un dossier annule ne prend pas de rendez-vous (garde au bord, comme le paiement de l'audit).
@@ -45,7 +54,7 @@ final readonly class RecordAppointmentAction
         }
 
         try {
-            return DB::transaction(function () use ($submission, $googleEventReference): Appointment {
+            $appointment = DB::transaction(function () use ($submission, $googleEventReference): Appointment {
                 $appointment = $submission->appointment()->create([
                     'google_event_reference' => $googleEventReference,
                     'status' => AppointmentStatus::Requested,
@@ -62,9 +71,35 @@ final readonly class RecordAppointmentAction
             });
         } catch (UniqueConstraintViolationException $e) {
             // Course : deux clics quasi simultanes ont franchi le test ci-dessus ; la contrainte unique
-            // (submission_id) bloque le doublon. On retourne le rendez-vous cree par l'autre appel plutot
-            // que de laisser remonter une erreur alors que la reservation a bien eu lieu.
+            // (submission_id) bloque le doublon. On retourne le rendez-vous cree par l'autre appel (qui
+            // envoie deja les confirmations) plutot que de laisser remonter une erreur.
             return $submission->appointment()->first() ?? throw $e;
         }
+
+        // Nouveau rendez-vous : confirmation au client ET notification a l'equipe. Effets de bord
+        // peripheriques, hors transaction : un echec d'envoi est logue mais ne casse jamais la reservation.
+        $this->sendConfirmations($submission);
+
+        return $appointment;
+    }
+
+    /** Confirme la reservation au client et previent l'equipe Festilaw (best-effort, jamais bloquant). */
+    private function sendConfirmations(Submission $submission): void
+    {
+        if ((string) $submission->email !== '') {
+            try {
+                Mail::to($submission->email)
+                    ->locale($submission->locale ?: config('app.locale'))
+                    ->send(new ScaleConsultationBooked($submission));
+            } catch (Throwable $e) {
+                Log::error('Failed to send the SCALE booking confirmation to the client.', [
+                    'exception' => $e,
+                    'submission' => $submission->id,
+                ]);
+            }
+        }
+
+        // TeamNotifier est deja resilient (try/catch + Log en interne).
+        $this->teamNotifier->notify(new FunnelNotification($submission, FunnelNotificationReason::ConsultationBooked));
     }
 }

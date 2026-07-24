@@ -1,12 +1,15 @@
 <?php
 
 use App\Enums\Appointment\AppointmentStatus;
+use App\Enums\Notification\FunnelNotificationReason;
 use App\Enums\Payment\PaymentStatus;
 use App\Enums\Payment\PaymentType;
 use App\Enums\Submission\SubmissionStatus;
 use App\Enums\Submission\SubmissionType;
 use App\Livewire\Web\Funnel\ScaleForm;
+use App\Mail\FunnelNotification;
 use App\Mail\ScaleAuditConfirmed;
+use App\Mail\ScaleConsultationBooked;
 use App\Mail\ScaleSpaceLink;
 use App\Models\Payment;
 use App\Models\Submission;
@@ -132,18 +135,23 @@ it('confirms the audit on return, advancing the dossier to in-progress (not the 
     Mail::assertSent(ScaleAuditConfirmed::class, fn ($mail) => $mail->hasTo('bigco@example.com'));
 });
 
-it('records a consultation booking once the audit is paid, idempotently', function () {
+it('records a consultation booking once the audit is paid, idempotently, and confirms both parties', function () {
     $dossier = scaleDossier();
     Payment::factory()->succeeded()->for($dossier)->create(['type' => PaymentType::ScaleAudit, 'provider_reference' => 'cs_scale']);
 
     post(route('get-started.scale.book', ['dossier' => 'scaletok']))
         ->assertRedirect(route('get-started.scale.space', ['dossier' => 'scaletok']))
         ->assertSessionHas('scale_booked');
-    // Second clic : pas de doublon (unique par dossier).
+    // Second clic : pas de doublon (unique par dossier), et donc pas de second e-mail.
     post(route('get-started.scale.book', ['dossier' => 'scaletok']))->assertRedirect();
 
     expect($dossier->appointment()->count())->toBe(1)
         ->and($dossier->appointment->status)->toBe(AppointmentStatus::Requested);
+
+    // Confirmation au client (une seule fois malgre le double clic) + notification a l'equipe.
+    Mail::assertSent(ScaleConsultationBooked::class, 1);
+    Mail::assertSent(ScaleConsultationBooked::class, fn ($mail) => $mail->hasTo('bigco@example.com'));
+    Mail::assertSent(FunnelNotification::class, fn ($mail) => $mail->reason === FunnelNotificationReason::ConsultationBooked);
 });
 
 it('refuses to book a consultation before the audit is paid', function () {
