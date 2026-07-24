@@ -25,7 +25,7 @@
                 <p class="pricing__desc">{{ __('100+ products, with full audit.') }}</p>
                 <div class="pricing__amount">{{ __('Custom') }}</div>
                 <div class="pricing__period">{{ __('tailored quote') }}</div>
-                <a href="{{ route('contact') }}" class="btn btn--outline-dark pricing__cta">{{ __('Talk to us') }}</a>
+                <a href="{{ route('get-started.scale') }}" class="btn btn--outline-dark pricing__cta">{{ __('Choose Scale') }}</a>
             </div>
         </div>
     </div>
