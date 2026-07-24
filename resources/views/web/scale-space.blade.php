@@ -21,7 +21,7 @@
             <header class="my-project__head">
                 <span class="eyebrow">{{ __('Scale Pack') }}</span>
                 <h1 class="my-project__title">{{ __('Your') }} <span class="my-project__title-em">{{ __('expert audit') }}</span></h1>
-                <p class="my-project__intro">{{ __('Pay your audit and book your 45-minute consultation. Keep this link private · it\'s your secure access, no account needed.') }}</p>
+                <p class="my-project__intro">{{ __('Pay your audit, then book your video consultation. Keep this link private · it\'s your secure access, no account needed.') }}</p>
             </header>
 
             <div class="my-project__card">
@@ -46,6 +46,12 @@
                     <p class="my-project__note">{{ __('This project was cancelled. Get in touch if you\'d like to reopen it.') }}</p>
                     <a href="{{ route('contact') }}" class="btn btn--outline-dark btn--sm">{{ __('Contact us') }}</a>
                 @else
+                    @if (session('scale_booked'))
+                        <div class="scale-flash scale-flash--ok">
+                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            {{ __('Thanks · your booking request is recorded.') }}
+                        </div>
+                    @endif
                     @if (session('scale_error'))
                         <p class="my-project__renew-error">{{ session('scale_error') }}</p>
                     @endif
@@ -70,29 +76,59 @@
                     </ul>
 
                     @if (! $space->auditPaid)
-                        <p class="my-project__resume-text">{{ __('Pay your :price expert audit to unlock your consultation booking.', ['price' => $auditPrice]) }}</p>
-                        <form method="POST" action="{{ $space->payUrl }}">
-                            @csrf
-                            <button type="submit" class="btn btn--coral">{{ __('Pay :amount audit', ['amount' => $auditPrice]) }}</button>
-                        </form>
-                        <p class="my-project__note">{{ __('Your :price audit fee will be credited toward your final quote.', ['price' => $auditPrice]) }}</p>
-                    @elseif (! $space->booked)
-                        <p class="my-project__resume-text">{{ __('Your audit is paid. Book your 45-minute video consultation with our expert:') }}</p>
-                        <a href="{{ $space->calendarUrl }}" target="_blank" rel="noopener" class="btn btn--coral">{{ __('Open the booking calendar') }}</a>
-                        <p class="my-project__note">{{ __('Once you have picked a slot in the calendar, let us know so we can confirm it.') }}</p>
-                        <form method="POST" action="{{ $space->bookUrl }}">
-                            @csrf
-                            <button type="submit" class="btn btn--outline-dark">{{ __('I\'ve booked my consultation') }}</button>
-                        </form>
-                        <p class="my-project__note">{{ __('Your :price audit fee will be credited toward your final quote.', ['price' => $auditPrice]) }}</p>
-                    @else
-                        <dl class="my-project__meta">
-                            <div class="my-project__meta-row">
-                                <dt>{{ __('Consultation') }}</dt>
-                                <dd>{{ $space->appointmentStatusLabel }}@if ($space->scheduledAt) &middot; {{ $space->scheduledAt->isoFormat('D MMMM YYYY · HH:mm') }}@endif</dd>
+                        <div class="scale-action">
+                            <p class="scale-action__lead">{{ __('Pay your expert audit to unlock your consultation booking.') }}</p>
+                            <div class="scale-price">
+                                <span class="scale-price__value">{{ $auditPrice }}</span>
+                                <span class="scale-price__note">{{ __('one-off · credited toward your final quote') }}</span>
                             </div>
-                        </dl>
-                        <p class="my-project__note">{{ __('Thanks · your consultation request is recorded. Our team will confirm the exact slot by email. Your :price audit fee will be credited toward your final quote.', ['price' => $auditPrice]) }}</p>
+                            <form method="POST" action="{{ $space->payUrl }}">
+                                @csrf
+                                <button type="submit" class="btn btn--coral">{{ __('Pay :amount audit', ['amount' => $auditPrice]) }}</button>
+                            </form>
+                        </div>
+                    @elseif (! $space->booked)
+                        <div class="scale-action">
+                            <p class="scale-action__lead">{{ __('Your audit is paid. Two quick steps to lock in your video consultation:') }}</p>
+                            <ol class="scale-book">
+                                <li class="scale-book__step">
+                                    <span class="scale-book__num">1</span>
+                                    <div class="scale-book__body">
+                                        <p class="scale-book__title">{{ __('Pick a time that suits you') }}</p>
+                                        <p class="scale-book__hint">{{ __('Opens our booking calendar · times shown in Paris time.') }}</p>
+                                        <a href="{{ $space->calendarUrl }}" target="_blank" rel="noopener" class="btn btn--coral btn--sm" data-scale-open>
+                                            {{ __('Open the booking calendar') }}
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-left:6px"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                        </a>
+                                    </div>
+                                </li>
+                                <li class="scale-book__step scale-book__step--confirm" data-scale-confirm>
+                                    <span class="scale-book__num">2</span>
+                                    <div class="scale-book__body">
+                                        <p class="scale-book__title">{{ __('Confirm your booking') }}</p>
+                                        <p class="scale-book__hint">{{ __('Once you\'ve picked a slot, let us know so we can lock it in.') }}</p>
+                                        <form method="POST" action="{{ $space->bookUrl }}">
+                                            @csrf
+                                            <button type="submit" class="btn btn--outline-dark btn--sm">{{ __('I\'ve booked my consultation') }}</button>
+                                        </form>
+                                    </div>
+                                </li>
+                            </ol>
+                            <p class="scale-action__credit">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                {{ __('Your :price audit fee will be credited toward your final quote.', ['price' => $auditPrice]) }}
+                            </p>
+                        </div>
+                    @else
+                        <div class="scale-action">
+                            <dl class="my-project__meta">
+                                <div class="my-project__meta-row">
+                                    <dt>{{ __('Consultation') }}</dt>
+                                    <dd>{{ $space->appointmentStatusLabel }}@if ($space->scheduledAt) &middot; {{ $space->scheduledAt->isoFormat('D MMMM YYYY · HH:mm') }}@endif</dd>
+                                </div>
+                            </dl>
+                            <p class="my-project__note">{{ __('Thanks · your consultation request is recorded. Our team will confirm the exact slot by email. Your :price audit fee will be credited toward your final quote.', ['price' => $auditPrice]) }}</p>
+                        </div>
                     @endif
                 @endif
             </div>
@@ -101,3 +137,17 @@
         </div>
     </section>
 @endsection
+
+@push('scripts')
+    <script>
+        // Progressive : surligne l'etape 2 (confirmer) une fois l'agenda ouvert. Sans JS, les deux etapes
+        // restent visibles et pleinement fonctionnelles.
+        (function () {
+            var open = document.querySelector('[data-scale-open]');
+            var confirm = document.querySelector('[data-scale-confirm]');
+            if (open && confirm) {
+                open.addEventListener('click', function () { confirm.classList.add('is-ready'); });
+            }
+        })();
+    </script>
+@endpush

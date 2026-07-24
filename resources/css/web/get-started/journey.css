@@ -167,6 +167,55 @@
 .my-project__support { text-align: center; margin-top: 22px; color: var(--color-ink-soft); font-size: 14px; }
 .my-project__support a { color: var(--color-blue); }
 
+/* Espace SCALE : bloc d'action courant (payer l'audit / reserver), aere et hierarchise. */
+.scale-action { display: flex; flex-direction: column; align-items: flex-start; gap: 18px; }
+.scale-action__lead { margin: 0; font-size: 15px; line-height: 1.55; color: var(--color-ink); }
+.scale-action .btn { align-self: flex-start; }
+
+/* Prix de l'audit (rappel visuel avant paiement). */
+.scale-price { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.scale-price__value { font-family: var(--font-display); font-size: 40px; line-height: 1; color: var(--color-coral); }
+.scale-price__note { font-size: 13px; color: var(--color-ink-soft); }
+
+/* Reservation en deux etapes explicites (1 · choisir un creneau, 2 · confirmer). */
+.scale-book { list-style: none; margin: 0; padding: 0; width: 100%; display: flex; flex-direction: column; gap: 14px; }
+.scale-book__step {
+    display: flex; gap: 14px; padding: 16px 18px;
+    border-radius: var(--radius); border: 1px solid var(--color-line); background: var(--color-cream);
+    transition: opacity 0.2s ease, border-color 0.2s ease;
+}
+/* L'etape 2 s'allume une fois l'agenda ouvert (progressif) ; sans JS elle reste pleinement utilisable. */
+.scale-book__step--confirm { opacity: 0.6; }
+.scale-book__step--confirm.is-ready { opacity: 1; border-color: color-mix(in srgb, var(--color-coral) 35%, var(--color-line)); }
+.scale-book__num {
+    flex: none; width: 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: #fff; background: var(--color-blue);
+}
+.scale-book__step--confirm .scale-book__num { background: var(--color-ink-soft); }
+.scale-book__step--confirm.is-ready .scale-book__num { background: var(--color-coral); }
+.scale-book__body { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 0; }
+.scale-book__title { margin: 0; font-size: 15px; font-weight: 600; color: var(--color-ink); }
+.scale-book__hint { margin: 0 0 4px; font-size: 13px; line-height: 1.5; color: var(--color-ink-soft); }
+.scale-book__body .btn { display: inline-flex; align-items: center; }
+
+/* Rappel du credit 75 € : une seule fois, en note discrete. */
+.scale-action__credit {
+    display: flex; align-items: center; gap: 9px; width: 100%;
+    margin: 2px 0 0; padding: 11px 13px; border-radius: var(--radius-sm);
+    font-size: 13px; line-height: 1.45; color: var(--color-ink-soft);
+    background: color-mix(in srgb, var(--color-blue) 6%, var(--color-cream));
+}
+.scale-action__credit svg { flex: none; color: var(--color-blue); }
+
+/* Bandeau de succes apres "J'ai reserve". */
+.scale-flash {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+    padding: 12px 14px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600;
+}
+.scale-flash--ok { color: #1a7a4c; background: color-mix(in srgb, #1f9a63 12%, var(--color-cream)); border: 1px solid color-mix(in srgb, #1f9a63 28%, transparent); }
+.scale-flash--ok svg { flex: none; color: #1f9a63; }
+
 /* Liste de fichiers a telecharger (mon projet). */
 .dossier__files { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .dossier__file { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--radius-sm); border: 1px solid var(--color-line); background: var(--color-cream); }
