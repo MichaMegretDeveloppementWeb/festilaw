@@ -198,6 +198,13 @@
 .scale-book__title { margin: 0; font-size: 15px; font-weight: 600; color: var(--color-ink); }
 .scale-book__hint { margin: 0 0 4px; font-size: 13px; line-height: 1.5; color: var(--color-ink-soft); }
 .scale-book__body .btn { display: inline-flex; align-items: center; }
+/* Etape 2 verrouillee tant que l'agenda n'a pas ete ouvert (JS). */
+.scale-book__body .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.scale-book__locked { display: none; margin: 8px 0 0; font-size: 12px; color: var(--color-ink-soft); }
+.scale-book__locked.is-shown { display: block; }
+/* Filet de securite (etat reserve) : rouvrir l'agenda si le creneau n'a pas ete pris. */
+.scale-book__reopen { margin: 12px 0 0; font-size: 13px; color: var(--color-ink-soft); }
+.scale-book__reopen a { color: var(--color-blue); }
 
 /* Rappel du credit 75 € : une seule fois, en note discrete. */
 .scale-action__credit {

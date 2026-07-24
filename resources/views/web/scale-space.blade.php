@@ -109,8 +109,9 @@
                                         <p class="scale-book__hint">{{ __('Once you\'ve picked a slot, let us know so we can lock it in.') }}</p>
                                         <form method="POST" action="{{ $space->bookUrl }}">
                                             @csrf
-                                            <button type="submit" class="btn btn--outline-dark btn--sm">{{ __('I\'ve booked my consultation') }}</button>
+                                            <button type="submit" class="btn btn--outline-dark btn--sm" data-scale-confirm-btn>{{ __('I\'ve booked my consultation') }}</button>
                                         </form>
+                                        <p class="scale-book__locked" data-scale-locked>{{ __('Open the calendar in step 1 first.') }}</p>
                                     </div>
                                 </li>
                             </ol>
@@ -128,6 +129,7 @@
                                 </div>
                             </dl>
                             <p class="my-project__note">{{ __('Thanks · your consultation request is recorded. Our team will confirm the exact slot by email. Your :price audit fee will be credited toward your final quote.', ['price' => $auditPrice]) }}</p>
+                            <p class="scale-book__reopen">{{ __('Haven\'t picked a slot yet?') }} <a href="{{ $space->calendarUrl }}" target="_blank" rel="noopener">{{ __('Open the booking calendar') }}</a></p>
                         </div>
                     @endif
                 @endif
@@ -144,10 +146,19 @@
         // restent visibles et pleinement fonctionnelles.
         (function () {
             var open = document.querySelector('[data-scale-open]');
-            var confirm = document.querySelector('[data-scale-confirm]');
-            if (open && confirm) {
-                open.addEventListener('click', function () { confirm.classList.add('is-ready'); });
-            }
+            var step = document.querySelector('[data-scale-confirm]');
+            var btn = document.querySelector('[data-scale-confirm-btn]');
+            var locked = document.querySelector('[data-scale-locked]');
+            if (!open || !step || !btn) { return; }
+            // Sans JS, le bouton reste actif (repli). Avec JS, il est verrouille tant que l'agenda n'a pas
+            // ete ouvert : on evite un "J'ai reserve" clique par erreur avant meme d'avoir vu l'agenda.
+            btn.disabled = true;
+            if (locked) { locked.classList.add('is-shown'); }
+            open.addEventListener('click', function () {
+                step.classList.add('is-ready');
+                btn.disabled = false;
+                if (locked) { locked.classList.remove('is-shown'); }
+            });
         })();
     </script>
 @endpush
