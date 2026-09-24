@@ -100,11 +100,15 @@ it('serves a valid XML sitemap of the indexable pages', function () {
         ->assertDontSee('/get-started', false);
 });
 
-it('serves robots.txt referencing the sitemap', function () {
-    get('/robots.txt')
-        ->assertOk()
-        ->assertSee('Sitemap:', false)
-        ->assertSee('sitemap.xml', false);
+it('ships a static robots.txt that allows every crawler and references the sitemap', function () {
+    $robots = file_get_contents(public_path('robots.txt'));
+
+    expect($robots)
+        ->toContain("User-agent: *\nAllow: /")
+        ->toContain("User-agent: Claude-User\nAllow: /")
+        ->toContain("User-agent: ClaudeBot\nAllow: /")
+        ->toContain('Sitemap: https://festilaw.com/sitemap.xml')
+        ->not->toContain('Disallow');
 });
 
 it('references the favicons and the OG share image in the head', function () {

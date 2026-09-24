@@ -40,13 +40,10 @@ use Illuminate\Support\Facades\Route;
 /*
  | Fichiers SEO. Le site a un SEUL jeu d'URLs (langue canonique : anglais). La traduction FR/ES est
  | purement visuelle (locale en session, cf. SetLocale), sans prefixe d'URL ni hreflang.
+ | robots.txt est un fichier statique (public/robots.txt) servi directement par le serveur web,
+ | sans PHP ni session : sa reponse ne peut pas varier selon le robot.
  */
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
-Route::get('/robots.txt', function () {
-    $body = "User-agent: *\nDisallow:\n\nSitemap: ".url('/sitemap.xml')."\n";
-
-    return response($body, 200, ['Content-Type' => 'text/plain; charset=UTF-8']);
-})->name('robots');
 
 // Persistance (anonyme) d'une reponse au quiz d'eligibilite, appelee en fin de quiz. Sous /api/* pour
 // que les erreurs de validation sortent en JSON (cf. shouldRenderJsonWhen dans bootstrap/app.php).
