@@ -18,12 +18,15 @@ interface SignatureGatewayInterface
     /** Identifier of the active provider (e.g. 'signwell'). */
     public function key(): string;
 
-    /** Start a signing session for the given contract and return where the signer must go. */
+    /**
+     * Start a signing session for the given contract. The returned URL is the provider's EMBEDDED signing
+     * experience, displayed on our own page (the signer never leaves the site).
+     */
     public function createSigningSession(Contract $contract): SigningSessionData;
 
     /**
-     * The signing URL of the session already in flight for this contract, if one exists and is still
-     * signable (so a resume reuses it instead of creating a duplicate document). Null if none / not
+     * The embedded signing URL of the session already in flight for this contract, if one exists and is
+     * still signable (so a resume reuses it instead of creating a duplicate document). Null if none / not
      * reusable, in which case the caller starts a fresh session.
      */
     public function currentSigningUrl(Contract $contract): ?string;

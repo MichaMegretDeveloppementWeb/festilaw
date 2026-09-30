@@ -231,3 +231,8 @@
 .dossier__file-sub { font-weight: 400; color: var(--color-ink-soft); }
 .dossier__download { flex: none; font-size: 13.5px; font-weight: 600; color: var(--color-blue); text-decoration: none; }
 .dossier__download:hover { text-decoration: underline; }
+
+/* Signature integree SignWell : sa fenetre plein ecran (position fixe, sans z-index) doit passer au-dessus
+   de l'en-tete collant du site (z-index 50, 80 avec le menu mobile), sinon la barre d'actions SignWell
+   (demarrer / terminer la signature) est masquee sous l'en-tete. */
+#SignWell-Modal-Embedded { z-index: 1000; }

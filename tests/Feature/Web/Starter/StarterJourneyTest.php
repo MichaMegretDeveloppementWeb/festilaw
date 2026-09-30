@@ -53,11 +53,11 @@ function openStarterDossier(): Submission
 }
 
 /** Binds a stub signature provider that reports the given completion state (like SignWell would). */
-function bindSignatureGateway(bool $signed): void
+function bindSignatureGateway(bool $signed, bool $declined = false): void
 {
-    app()->bind(SignatureGatewayInterface::class, fn () => new class($signed) implements SignatureGatewayInterface
+    app()->bind(SignatureGatewayInterface::class, fn () => new class($signed, $declined) implements SignatureGatewayInterface
     {
-        public function __construct(private bool $signed) {}
+        public function __construct(private bool $signed, private bool $declined) {}
 
         public function key(): string
         {
@@ -76,7 +76,11 @@ function bindSignatureGateway(bool $signed): void
 
         public function checkStatus(Contract $contract): SignatureWebhookData
         {
-            return new SignatureWebhookData('ref-1', $this->signed ? SignatureEventOutcome::Signed : SignatureEventOutcome::Unresolved);
+            return new SignatureWebhookData('ref-1', match (true) {
+                $this->signed => SignatureEventOutcome::Signed,
+                $this->declined => SignatureEventOutcome::Declined,
+                default => SignatureEventOutcome::Unresolved,
+            });
         }
 
         public function parseWebhook(Request $request): SignatureWebhookData
@@ -108,17 +112,19 @@ it('walks the STARTER journey end-to-end through the UI', function () {
         ->assertSeeLivewire(StarterJourney::class)
         ->assertSee('Sign your Responsible Person mandate');
 
-    // Clicking "sign" captures the mandate details, starts the signing session and redirects out.
+    // Clicking "sign" captures the mandate details, starts the signing session and opens the embedded
+    // signing window on the page (no redirect out).
     Livewire::test(StarterJourney::class, ['submission' => $submission])
         ->set('incorporationPlace', 'Toronto, Canada')
         ->set('foundingYear', '2015')
         ->set('activity', 'handmade ceramics')
         ->call('sign')
-        ->assertRedirect('https://example.com/sign');
+        ->assertNoRedirect()
+        ->assertDispatched('open-signing', url: 'https://example.com/sign');
 
-    // On return, the provider reports the signature complete -> awaiting documents.
+    // The embedded window reports completion; the provider confirms the signature -> awaiting documents.
     Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
-        ->call('confirmSignature')
+        ->call('signingCompleted')
         ->assertHasNoErrors();
     expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingDocuments);
 
@@ -208,10 +214,105 @@ it('reuses the in-flight signing session on resume instead of creating a second 
 
     Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
         ->call('sign')
-        ->assertRedirect('https://example.com/sign');
+        ->assertDispatched('open-signing', url: 'https://example.com/sign');
 
     // The reference was not overwritten: no second session/document was created.
     expect($submission->fresh()->contract->signature_provider_reference)->toBe('existing_ref');
+});
+
+it('confirms the signature as soon as the embedded signing window reports it completed', function () {
+    bindSignatureGateway(signed: true);
+    $submission = openStarterDossier();
+    $submission->contract->update(['signature_provider' => 'stub', 'signature_provider_reference' => 'ref-1']);
+
+    Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
+        ->call('signingCompleted')
+        ->assertHasNoErrors()
+        ->assertSet('confirmingSignature', false)
+        ->assertSee('Mandate signed')
+        ->assertSee('Upload your documents');
+
+    expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingDocuments)
+        ->and($submission->fresh()->contract->signature_status)->toBe(SignatureStatus::Signed);
+});
+
+it('keeps finalising while the provider has not caught up, then confirms on a later poll', function () {
+    // L'iframe signale "completed" avant que l'API du prestataire ait bascule le statut.
+    bindSignatureGateway(signed: false);
+    $submission = openStarterDossier();
+    $submission->contract->update(['signature_provider' => 'stub', 'signature_provider_reference' => 'ref-1']);
+
+    $journey = Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
+        ->call('signingCompleted')
+        ->assertHasNoErrors()
+        ->assertSet('confirmingSignature', true)
+        ->assertSee('Finalising your signature')
+        ->assertDontSee('I have signed · check now');
+
+    expect($submission->fresh()->status)->toBe(SubmissionStatus::InProgress);
+
+    // Le prestataire rattrape son retard : le poll suivant confirme et le parcours avance seul.
+    bindSignatureGateway(signed: true);
+    $journey->call('pollSignature')
+        ->assertSet('confirmingSignature', false)
+        ->assertSee('Upload your documents');
+
+    expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingDocuments);
+});
+
+it('bounds the finalising loop and falls back to the manual check', function () {
+    bindSignatureGateway(signed: false);
+    $submission = openStarterDossier();
+    $submission->contract->update(['signature_provider' => 'stub', 'signature_provider_reference' => 'ref-1']);
+
+    $journey = Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
+        ->call('signingCompleted');
+
+    for ($i = 0; $i < 20; $i++) {
+        $journey->call('pollSignature');
+    }
+
+    $journey->assertSet('signatureChecks', 15)
+        ->assertSee('taking a little longer')
+        ->assertSee('I have signed · check now')
+        ->assertSee('Sign the mandate');
+
+    expect($submission->fresh()->status)->toBe(SubmissionStatus::InProgress);
+});
+
+it('records a signature declined in the embedded window from the provider status', function () {
+    bindSignatureGateway(signed: false, declined: true);
+    $submission = openStarterDossier();
+    $submission->contract->update(['signature_provider' => 'stub', 'signature_provider_reference' => 'ref-1']);
+
+    Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
+        ->call('signingDeclined')
+        ->assertHasNoErrors()
+        ->assertSee('The previous signature was declined');
+
+    expect($submission->fresh()->contract->signature_status)->toBe(SignatureStatus::Declined)
+        ->and($submission->fresh()->status)->toBe(SubmissionStatus::InProgress);
+});
+
+it('ignores a declined event the provider does not confirm', function () {
+    bindSignatureGateway(signed: false);
+    $submission = openStarterDossier();
+    $submission->contract->update(['signature_provider' => 'stub', 'signature_provider_reference' => 'ref-1']);
+
+    Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
+        ->call('signingDeclined')
+        ->assertHasNoErrors();
+
+    expect($submission->fresh()->contract->signature_status)->toBe(SignatureStatus::Pending);
+});
+
+it('explains what to do when the signing window cannot open', function () {
+    $submission = openStarterDossier();
+
+    Livewire::test(StarterJourney::class, ['submission' => $submission])
+        ->call('signingUnavailable')
+        ->assertHasErrors('journey')
+        ->assertSee('The signing window could not open');
 });
 
 it('requires the mandate details before starting the signature', function () {
@@ -236,7 +337,7 @@ it('saves the mandate details to the contract before signing', function () {
         ->set('activity', 'the design and sale of ceramics')
         ->call('sign')
         ->assertHasNoErrors()
-        ->assertRedirect('https://example.com/sign');
+        ->assertDispatched('open-signing', url: 'https://example.com/sign');
 
     expect($submission->fresh()->contract->filled_fields)->toMatchArray([
         'incorporation_place' => 'Toronto, Canada',

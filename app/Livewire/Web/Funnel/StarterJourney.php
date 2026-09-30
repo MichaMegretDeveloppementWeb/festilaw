@@ -6,6 +6,7 @@ namespace App\Livewire\Web\Funnel;
 
 use App\Actions\Web\Payment\CheckPaymentStatusAction;
 use App\Actions\Web\Payment\MarkPaymentSucceededAction;
+use App\Actions\Web\Starter\MarkContractDeclinedAction;
 use App\Actions\Web\Starter\MarkContractSignedAction;
 use App\Actions\Web\Starter\ReplaceStarterDocumentAction;
 use App\Actions\Web\Starter\StartContractSigningAction;
@@ -13,6 +14,7 @@ use App\Actions\Web\Starter\StartStarterPaymentAction;
 use App\Actions\Web\Starter\SubmitStarterDocumentsAction;
 use App\Actions\Web\SyncDossierLocaleAction;
 use App\Contracts\Signature\SignatureGatewayInterface;
+use App\Enums\Contract\SignatureEventOutcome;
 use App\Enums\Contract\SignatureStatus;
 use App\Enums\Document\DocumentType;
 use App\Enums\Payment\PaymentStatus;
@@ -32,8 +34,9 @@ use Throwable;
 
 /**
  * Multi-step STARTER dossier, driven by the submission status (source of truth): sign the mandate,
- * drop the required documents, pay. Signing (SignWell) and payment (Stripe) redirect out to the
- * provider and come back to this same screen. Documents are staged in the component (drag & drop)
+ * drop the required documents, pay. Signing happens in SignWell's embedded iframe on this very page
+ * (its "completed" event triggers the server-side confirmation); payment (Stripe) redirects out to the
+ * provider and comes back to this same screen. Documents are staged in the component (drag & drop)
  * and only persisted when the visitor confirms with a single action; the step is always recomputed
  * from the database.
  */
@@ -44,6 +47,9 @@ class StarterJourney extends Component
 
     /** Bounds the "confirming payment" auto-refresh loop (~2 min at 5s before the email fallback). */
     private const MAX_PAYMENT_POLLS = 24;
+
+    /** Bounds the "finalising your signature" loop after the iframe's completed event (~30s at 2s). */
+    private const MAX_SIGNATURE_POLLS = 15;
 
     public Submission $submission;
 
@@ -66,6 +72,12 @@ class StarterJourney extends Component
 
     /** How many payment-status polls have run on this dossier (drives + bounds the confirming loop). */
     public int $paymentChecks = 0;
+
+    /** The signer finished in the iframe: we are waiting for the provider to report the signature. */
+    public bool $confirmingSignature = false;
+
+    /** How many signature-status polls have run since the iframe's completed event (bounds the loop). */
+    public int $signatureChecks = 0;
 
     /** Client details printed on the mandate, captured on the sign step and stored in the contract's filled_fields. */
     public string $incorporationPlace = '';
@@ -198,17 +210,23 @@ class StarterJourney extends Component
         return true;
     }
 
-    public function sign(StartContractSigningAction $startContractSigning, SignatureGatewayInterface $signatureGateway): mixed
+    /**
+     * Opens the signing window on this page (SignWell iframe): reuses the session in flight, otherwise
+     * freezes the mandate details and starts a new one. The browser opens the iframe on `open-signing`.
+     */
+    public function sign(StartContractSigningAction $startContractSigning, SignatureGatewayInterface $signatureGateway): void
     {
         if ($this->step() !== 'sign') {
-            return null;
+            return;
         }
 
         // Reprise : reutiliser la session de signature deja en cours plutot que d'en creer une 2e
-        // (evite un document en double chez le prestataire et un 2e email au signataire).
+        // (evite un document en double chez le prestataire, facture hors mode test).
         $existingUrl = $this->existingSigningUrl($signatureGateway);
         if ($existingUrl !== null) {
-            return $this->redirect($existingUrl);
+            $this->openSigning($existingUrl);
+
+            return;
         }
 
         // Nouvelle session : on fige d'abord les informations imprimees sur le mandat (le PDF est
@@ -222,14 +240,90 @@ class StarterJourney extends Component
             Log::error($e->getMessage(), ['exception' => $e]);
             $this->addError('journey', __($e->getUserMessage()));
 
-            return null;
+            return;
         } catch (Throwable $e) {
             $this->reportUnexpectedError($e, 'journey', 'STARTER contract signing');
 
-            return null;
+            return;
         }
 
-        return $this->redirect($session->signingUrl);
+        $this->openSigning($session->signingUrl);
+    }
+
+    /** Asks the browser to open the embedded signing window (cf. the component script). */
+    private function openSigning(string $signingUrl): void
+    {
+        $this->confirmingSignature = false;
+        $this->signatureChecks = 0;
+        $this->dispatch('open-signing', url: $signingUrl);
+    }
+
+    /**
+     * The iframe reported the document signed: confirm it server-side right away. The provider's API can
+     * lag a few seconds behind the iframe, so if it is not signed yet the view keeps polling
+     * (pollSignature, bounded) before falling back to the manual "check now" button.
+     */
+    public function signingCompleted(SignatureGatewayInterface $signatureGateway, MarkContractSignedAction $markContractSigned): void
+    {
+        if ($this->step() !== 'sign') {
+            return;
+        }
+
+        $this->confirmingSignature = true;
+        $this->signatureChecks = 0;
+        $this->pollSignature($signatureGateway, $markContractSigned);
+    }
+
+    /** One bounded confirmation attempt of the "finalising your signature" loop. */
+    public function pollSignature(SignatureGatewayInterface $signatureGateway, MarkContractSignedAction $markContractSigned): void
+    {
+        if (! $this->confirmingSignature || $this->signatureChecks >= self::MAX_SIGNATURE_POLLS) {
+            return;
+        }
+
+        $this->signatureChecks++;
+
+        try {
+            if ($this->tryConfirmSignature($signatureGateway, $markContractSigned)) {
+                $this->confirmingSignature = false;
+            }
+        } catch (Throwable $e) {
+            // Best effort : le bouton manuel, le webhook et la reconciliation restent les filets.
+            Log::error('STARTER signature poll failed.', ['exception' => $e]);
+        }
+    }
+
+    /**
+     * The signer declined in the iframe: record it from the provider's own status (never trust the
+     * browser alone), so the step shows the "declined" banner and a fresh signature can be started.
+     */
+    public function signingDeclined(SignatureGatewayInterface $signatureGateway, MarkContractDeclinedAction $markContractDeclined): void
+    {
+        $this->confirmingSignature = false;
+
+        if ($this->step() !== 'sign') {
+            return;
+        }
+
+        $contract = $this->submission->contract;
+        if ($contract === null || (string) ($contract->signature_provider_reference ?? '') === '') {
+            return;
+        }
+
+        try {
+            if ($signatureGateway->checkStatus($contract)->outcome === SignatureEventOutcome::Declined) {
+                $markContractDeclined->execute($contract);
+                $this->submission->refresh();
+            }
+        } catch (Throwable $e) {
+            Log::error('STARTER signature decline check failed.', ['exception' => $e]);
+        }
+    }
+
+    /** The SignWell script could not load (content blocker, network): tell the signer what to do. */
+    public function signingUnavailable(): void
+    {
+        $this->addError('journey', __('The signing window could not open. Please allow content from SignWell on this page (content blockers can prevent it) and try again.'));
     }
 
     /** The in-flight signing URL to reuse on resume, or null to start a fresh session. */
@@ -685,6 +779,7 @@ class StarterJourney extends Component
             'mandateUrl' => route('get-started.starter.mandate', ['dossier' => $token]),
             'contractDeclined' => $this->submission->contract?->signature_status === SignatureStatus::Declined,
             'signatureStarted' => (string) ($this->submission->contract?->signature_provider_reference ?? '') !== '',
+            'signatureTimedOut' => $this->signatureChecks >= self::MAX_SIGNATURE_POLLS,
             'paymentStarted' => $this->pendingPayment() !== null,
             'failedPayment' => $this->latestFailedPayment(),
             'paymentTimedOut' => $this->paymentChecks >= self::MAX_PAYMENT_POLLS,

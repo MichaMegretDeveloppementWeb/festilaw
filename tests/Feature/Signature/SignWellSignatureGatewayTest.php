@@ -35,12 +35,12 @@ function signwellWebhookRequest(string $type, int $time, string $documentId, str
     return Request::create('/webhooks/signature', 'POST', [], [], [], ['CONTENT_TYPE' => 'application/json'], $body);
 }
 
-it('creates a document from the generated PDF and returns the hosted signing url', function () {
+it('creates an embedded document from the generated PDF and returns the embedded signing url', function () {
     Http::fake([
         '*/api/v1/documents' => Http::response([
             'id' => 'DOC1',
-            'status' => 'Sent',
-            'recipients' => [['id' => '1', 'signing_url' => 'https://www.signwell.com/sign/abc']],
+            'status' => 'Created',
+            'recipients' => [['id' => '1', 'signing_url' => null, 'embedded_signing_url' => 'https://www.signwell.com/docs/abc/sign/']],
         ]),
     ]);
 
@@ -58,16 +58,36 @@ it('creates a document from the generated PDF and returns the hosted signing url
 
     expect($session)->toBeInstanceOf(SigningSessionData::class)
         ->and($session->providerReference)->toBe('DOC1')
-        ->and($session->signingUrl)->toBe('https://www.signwell.com/sign/abc');
+        ->and($session->signingUrl)->toBe('https://www.signwell.com/docs/abc/sign/');
 
+    // Signature integree (iframe sur notre page) : plus aucune redirection confiee au prestataire.
     Http::assertSent(function ($req) {
         return str_ends_with($req->url(), '/api/v1/documents')
             && $req->method() === 'POST'
             && $req->hasHeader('X-Api-Key', 'testkey')
             && $req['test_mode'] === true
+            && $req['embedded_signing'] === true
+            && $req['embedded_signing_notifications'] === true
+            && ! isset($req['redirect_url'])
+            && ! isset($req['decline_redirect_url'])
             && $req['recipients'][0]['email'] === 'jane@example.com';
     });
 });
+
+it('throws a typed exception when SignWell returns no embedded signing url', function () {
+    Http::fake([
+        '*/api/v1/documents' => Http::response([
+            'id' => 'DOC1',
+            'status' => 'Created',
+            'recipients' => [['id' => '1', 'signing_url' => 'https://www.signwell.com/sign/abc']],
+        ]),
+    ]);
+
+    $submission = Submission::factory()->starter()->create(['locale' => 'en']);
+    $contract = Contract::factory()->for($submission)->create();
+
+    app(SignatureGatewayInterface::class)->createSigningSession($contract->fresh());
+})->throws(SignatureException::class);
 
 it('detects a completed signature via checkStatus (without downloading anything)', function () {
     Http::fake([
@@ -118,12 +138,12 @@ it('reports a signature still pending as unresolved', function () {
         ->toBe(SignatureEventOutcome::Unresolved);
 });
 
-it('returns the in-flight signing url for a document still pending (resume reuse)', function () {
+it('returns the in-flight embedded signing url for a document still pending (resume reuse)', function () {
     Http::fake([
         '*/api/v1/documents/*' => Http::response([
             'id' => 'DOC1',
-            'status' => 'Sent',
-            'recipients' => [['id' => '1', 'signing_url' => 'https://www.signwell.com/sign/abc']],
+            'status' => 'Created',
+            'recipients' => [['id' => '1', 'signing_url' => null, 'embedded_signing_url' => 'https://www.signwell.com/docs/abc/sign/']],
         ]),
     ]);
 
@@ -131,7 +151,22 @@ it('returns the in-flight signing url for a document still pending (resume reuse
     $contract = Contract::factory()->for($submission)->create(['signature_provider_reference' => 'DOC1']);
 
     expect(app(SignatureGatewayInterface::class)->currentSigningUrl($contract))
-        ->toBe('https://www.signwell.com/sign/abc');
+        ->toBe('https://www.signwell.com/docs/abc/sign/');
+});
+
+it('returns null from currentSigningUrl for a legacy non-embedded document (a new embedded session replaces it)', function () {
+    Http::fake([
+        '*/api/v1/documents/*' => Http::response([
+            'id' => 'DOC1',
+            'status' => 'Sent',
+            'recipients' => [['id' => '1', 'signing_url' => 'https://www.signwell.com/sign/abc', 'embedded_signing_url' => null]],
+        ]),
+    ]);
+
+    $submission = Submission::factory()->starter()->create();
+    $contract = Contract::factory()->for($submission)->create(['signature_provider_reference' => 'DOC1']);
+
+    expect(app(SignatureGatewayInterface::class)->currentSigningUrl($contract))->toBeNull();
 });
 
 it('returns null from currentSigningUrl when the document is already completed', function () {

@@ -25,11 +25,12 @@ use Throwable;
  * Real SignWell adapter. Pay-per-use, no subscription: the first 25 documents/month are free and
  * test_mode documents are free and send no email · ideal to validate the integration before going
  * live. Per signing: renders the contract PDF (whose signing line carries invisible SignWell text tags),
- * creates a document with a single recipient, and returns the hosted signing URL to redirect the signer
- * to. The signature/date fields land on the contract line via the text tags (no appended page). Completion
- * is confirmed either by polling (checkStatus, on the signer's return · no webhook needed) or by the
- * HMAC-verified webhook (parseWebhook). The signed PDF (with its audit trail) is stored on the
- * private disk. Every technical error becomes a typed SignatureException; upstream stays
+ * creates an EMBEDDED document with a single recipient, and returns the embedded signing URL that the
+ * journey opens in SignWell's iframe on our own page (the signer never leaves the site, so no redirect
+ * after signing is needed). The signature/date fields land on the contract line via the text tags (no
+ * appended page). Completion is confirmed by polling (checkStatus, triggered by the iframe's completed
+ * event) or by the HMAC-verified webhook (parseWebhook). The signed PDF (with its audit trail) is stored
+ * on the private disk. Every technical error becomes a typed SignatureException; upstream stays
  * provider-agnostic.
  */
 final class SignWellSignatureGateway implements SignatureGatewayInterface
@@ -57,11 +58,6 @@ final class SignWellSignatureGateway implements SignatureGatewayInterface
         $submission = $contract->submission;
         $pdf = $this->pdfGenerator->generate($submission);
 
-        $returnUrl = route('get-started.starter.journey', [
-            'dossier' => $submission->resume_token,
-            'signature_return' => 1,
-        ]);
-
         $payload = [
             'test_mode' => $this->isTesting(),
             'name' => 'GPSR mandate - '.($submission->company_name ?: $this->signerName($contract)),
@@ -69,19 +65,21 @@ final class SignWellSignatureGateway implements SignatureGatewayInterface
                 'name' => 'mandate.pdf',
                 'file_base64' => base64_encode($pdf),
             ]],
-            // Non-embedded signing: SignWell emails the hosted signing link itself and returns it as
-            // signing_url (which we redirect to). send_email is only accepted in embedded mode.
             'recipients' => [[
                 'id' => self::RECIPIENT_ID,
                 'name' => $this->signerName($contract),
                 'email' => (string) $submission->email,
             ]],
+            // Signature integree : SignWell renvoie une embedded_signing_url que le parcours ouvre dans
+            // l'iframe SignWell sur notre page. Plus de redirection apres signature (option reservee au
+            // plan Business SignWell) : c'est l'evenement "completed" de l'iframe qui fait avancer le
+            // parcours. Le proprietaire du compte (Festilaw) garde l'e-mail "document completed".
+            'embedded_signing' => true,
+            'embedded_signing_notifications' => true,
             // Champs de signature/date poses par des text tags invisibles sur la ligne de signature du
             // contrat (cf. ContractPdfGenerator), plutot qu'une page de signature ajoutee a la fin.
             'text_tags' => true,
             'with_signature_page' => false,
-            'redirect_url' => $returnUrl,
-            'decline_redirect_url' => $returnUrl,
             'draft' => false,
             'reminders' => false,
             // Langue de la page de signature ET des emails envoyes par SignWell, selon le signataire.
@@ -107,7 +105,7 @@ final class SignWellSignatureGateway implements SignatureGatewayInterface
         }
 
         $documentId = (string) Arr::get($document, 'id', '');
-        $signingUrl = (string) Arr::get($document, 'recipients.0.signing_url', '');
+        $signingUrl = (string) Arr::get($document, 'recipients.0.embedded_signing_url', '');
         if ($documentId === '' || $signingUrl === '') {
             throw SignatureException::apiRequestFailed('create document');
         }
@@ -139,7 +137,9 @@ final class SignWellSignatureGateway implements SignatureGatewayInterface
             return null;
         }
 
-        $url = (string) Arr::get($document, 'recipients.0.signing_url', '');
+        // Seule l'URL integree est reutilisable dans l'iframe. Un document cree avant le passage a la
+        // signature integree n'en a pas : on renvoie null et une nouvelle session integree le remplace.
+        $url = (string) Arr::get($document, 'recipients.0.embedded_signing_url', '');
 
         return $url !== '' ? $url : null;
     }

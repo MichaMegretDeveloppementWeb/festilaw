@@ -100,7 +100,7 @@
     @elseif ($step === 'sign')
         <div class="journey-panel">
             <h2 class="journey-panel__title">{{ __('Sign your Responsible Person mandate') }}</h2>
-            <p class="journey-panel__text">{{ __('This mandate authorises Festilaw to act as your official GPSR Responsible Person in the EU. You\'ll be taken to our secure signing partner and brought right back here.') }}</p>
+            <p class="journey-panel__text">{{ __('This mandate authorises Festilaw to act as your official GPSR Responsible Person in the EU. You\'ll sign it securely with our signing partner, in a window right on this page.') }}</p>
             @if ($contractDeclined)
                 <p class="journey-note journey-note--warn">{{ __('The previous signature was declined. You can restart it below.') }}</p>
             @endif
@@ -132,16 +132,28 @@
                 </div>
             @endunless
 
-            <button type="button" class="btn btn--coral" wire:click="sign" wire:loading.attr="disabled" wire:target="sign">
-                <span wire:loading.remove wire:target="sign">{{ __('Sign the mandate') }}</span>
-                <span wire:loading wire:target="sign">{{ __('Redirecting') }}&hellip;</span>
-            </button>
+            @php $finalising = $confirmingSignature && ! $signatureTimedOut; @endphp
+            @if ($finalising)
+                {{-- L'iframe a signale la signature : on attend que le prestataire la confirme (boucle bornee). --}}
+                <div class="journey-processing" wire:poll.2s="pollSignature">
+                    <span class="journey-processing__spinner" aria-hidden="true"></span>
+                    <p class="journey-panel__text">{{ __('Finalising your signature · this page updates on its own in a few seconds.') }}</p>
+                </div>
+            @else
+                @if ($confirmingSignature)
+                    <p class="journey-note">{{ __('Your signature is taking a little longer to be confirmed. Check again below in a moment.') }}</p>
+                @endif
+                <button type="button" class="btn btn--coral" wire:click="sign" wire:loading.attr="disabled" wire:target="sign">
+                    <span wire:loading.remove wire:target="sign">{{ __('Sign the mandate') }}</span>
+                    <span wire:loading wire:target="sign">{{ __('Opening') }}&hellip;</span>
+                </button>
+            @endif
 
-            {{-- Retour OU reprise avec une signature en cours : on verifie le statut en silence (sans webhook). --}}
+            {{-- Reprise avec une signature en cours : on verifie le statut en silence (sans webhook). --}}
             @if ($autoConfirm)
                 <div wire:init="autoConfirmSignature"></div>
             @endif
-            @if ($signatureStarted)
+            @if ($signatureStarted && ! $finalising)
                 <button type="button" class="btn btn--outline-dark btn--sm" wire:click="confirmSignature" wire:loading.attr="disabled" wire:target="confirmSignature">
                     <span wire:loading.remove wire:target="confirmSignature">{{ __('I have signed · check now') }}</span>
                     <span wire:loading wire:target="confirmSignature">{{ __('Checking') }}&hellip;</span>
@@ -283,3 +295,57 @@
         </div>
     @endif
 </div>
+
+@script
+<script>
+    // Signature integree : l'iframe SignWell s'ouvre en modal sur cette page, le signataire ne quitte
+    // jamais le site. Le script SignWell est charge a la demande, une seule fois. Aucune redirection :
+    // l'evenement "completed" declenche la confirmation cote serveur (le statut reste verifie chez le
+    // prestataire, jamais sur la seule foi du navigateur).
+    let signWellScript = null;
+
+    const loadSignWell = () => signWellScript ??= new Promise((resolve, reject) => {
+        if (window.SignWellEmbed) {
+            resolve();
+
+            return;
+        }
+
+        const script = document.createElement('script');
+        script.src = 'https://static.signwell.com/assets/embedded.js';
+        script.async = true;
+        script.onload = () => resolve();
+        script.onerror = () => {
+            signWellScript = null;
+            reject(new Error('SignWell embed script failed to load'));
+        };
+        document.head.appendChild(script);
+    });
+
+    $wire.$on('open-signing', async (event) => {
+        const url = event?.url ?? event?.detail?.url;
+        if (!url) {
+            return;
+        }
+
+        try {
+            await loadSignWell();
+        } catch (error) {
+            $wire.signingUnavailable();
+
+            return;
+        }
+
+        new window.SignWellEmbed({
+            url,
+            allowRedirect: false,
+            events: {
+                completed: () => $wire.signingCompleted(),
+                declined: () => $wire.signingDeclined(),
+                closed: () => $wire.autoConfirmSignature(),
+                error: () => $wire.signingUnavailable(),
+            },
+        }).open();
+    });
+</script>
+@endscript

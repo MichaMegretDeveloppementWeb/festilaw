@@ -29,9 +29,10 @@ final readonly class MarkContractSignedAction
             return $contract;
         }
 
-        // Le PDF signe existe deja chez le prestataire : on le recupere avant la bascule. Un echec de
-        // telechargement est peripherique (la signature a bien eu lieu) : on trace sans bloquer la
-        // confirmation, et la reconciliation rattrape le fichier manquant (backfillSignedDocument).
+        // On tente de recuperer le PDF signe avant la bascule. Avec la signature integree, la confirmation
+        // arrive des la fin de la signature, souvent avant que SignWell ait genere le PDF final (404 pendant
+        // quelques dizaines de secondes) : l'echec est donc attendu et peripherique (la signature a bien eu
+        // lieu). On trace sans bloquer, et la reconciliation rattrape le fichier (backfillSignedDocument).
         $signedFilePath = $this->fetchSignedDocument($contract);
 
         DB::transaction(function () use ($contract, $signedFilePath, $providerReference): void {
@@ -84,7 +85,7 @@ final readonly class MarkContractSignedAction
         try {
             return $this->signatureGateway->downloadSignedDocument($contract);
         } catch (Throwable $e) {
-            Log::channel('signature')->error('Failed to download the signed document.', [
+            Log::channel('signature')->warning('Signed document not downloaded yet (the provider may still be generating it); the reconciliation will backfill it.', [
                 'exception' => $e,
                 'contract' => $contract->getKey(),
             ]);
