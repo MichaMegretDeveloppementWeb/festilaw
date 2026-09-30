@@ -33,11 +33,11 @@
             <div class="site-footer__col">
                 <div class="site-footer__heading">{{ __('Language') }}</div>
                 <x-layout.web.lang-switch class="lang-switch--footer" />
-                <p class="site-footer__note">{{ __('EU Consumer Law Ready, trained under the European Commission programme.') }}</p>
+                <p class="site-footer__note">{{ __('Consumer Law Ready certified · EU-funded training programme') }}</p>
             </div>
         </div>
         <div class="site-footer__copy">
-            <span>&copy; {{ date('Y') }} Festilaw. {{ __('All rights reserved.') }}</span>
+            <span>&copy; {{ date('Y') }} Festilaw B.V. &middot; {{ __('Registered office: Nijmegen, the Netherlands') }} &middot; KvK 77058720 &middot; {{ __('VAT :number', ['number' => 'NL860886761B01']) }}</span>
             <a href="{{ route('admin.login') }}" class="site-footer__admin" aria-label="Administration">&middot;</a>
         </div>
     </div>

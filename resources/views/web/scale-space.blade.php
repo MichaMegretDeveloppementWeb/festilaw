@@ -58,7 +58,7 @@
 
                     <ul class="project-steps">
                         <li @class(['project-step', 'is-done' => $space->auditPaid])>
-                            <span class="project-step__mark">
+                            <span class="project-step__mark" aria-hidden="true">
                                 @if ($space->auditPaid)
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                                 @endif
@@ -66,7 +66,7 @@
                             <span class="project-step__label">{{ __('Audit paid') }}@if ($space->auditPaid && $space->paidAt) <span class="project-step__amount">({{ $auditPrice }} &middot; {{ $space->paidAt->isoFormat('D MMMM YYYY') }})</span>@endif</span>
                         </li>
                         <li @class(['project-step', 'is-done' => $space->booked])>
-                            <span class="project-step__mark">
+                            <span class="project-step__mark" aria-hidden="true">
                                 @if ($space->booked)
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                                 @endif

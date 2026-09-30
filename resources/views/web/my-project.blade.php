@@ -48,7 +48,7 @@
                 @else
                     <ul class="project-steps">
                         <li @class(['project-step', 'is-done' => $project->signed])>
-                            <span class="project-step__mark">
+                            <span class="project-step__mark" aria-hidden="true">
                                 @if ($project->signed)
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                                 @endif
@@ -56,7 +56,7 @@
                             <span class="project-step__label">{{ __('Mandate signed') }}</span>
                         </li>
                         <li @class(['project-step', 'is-done' => $project->documentsDone])>
-                            <span class="project-step__mark">
+                            <span class="project-step__mark" aria-hidden="true">
                                 @if ($project->documentsDone)
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                                 @endif
@@ -64,7 +64,7 @@
                             <span class="project-step__label">{{ __('Documents uploaded') }}</span>
                         </li>
                         <li @class(['project-step', 'is-done' => $project->paid])>
-                            <span class="project-step__mark">
+                            <span class="project-step__mark" aria-hidden="true">
                                 @if ($project->paid)
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                                 @endif

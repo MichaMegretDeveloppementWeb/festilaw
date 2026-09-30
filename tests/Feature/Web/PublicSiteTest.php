@@ -119,3 +119,30 @@ it('references the favicons and the OG share image in the head', function () {
         ->assertSee('rel="manifest"', false)
         ->assertSee('og-default.png', false);
 });
+
+it('shows the company legal line and the certification in the footer and the trust block, without the placeholder testimonial', function () {
+    get(route('home'))
+        ->assertOk()
+        // Ligne legale du footer (texte fourni par Festilaw le 29/09/2026).
+        ->assertSee('Festilaw B.V.', false)
+        ->assertSee('Registered office: Nijmegen, the Netherlands', false)
+        ->assertSee('KvK 77058720', false)
+        ->assertSee('VAT NL860886761B01', false)
+        // Mention de certification corrigee (footer + bloc confiance), l'ancienne formulation a disparu.
+        ->assertSee('Consumer Law Ready certified', false)
+        ->assertDontSee('trained under the European Commission programme', false)
+        // Le temoignage fictif de maquette est retire ; le bandeau des places de marche reste.
+        ->assertDontSee('Maya Thornton', false)
+        ->assertDontSee('Wildthread', false)
+        ->assertSee('Trusted by sellers on', false);
+});
+
+it('translates the footer legal line', function () {
+    get(route('locale.switch', ['locale' => 'fr']))->assertRedirect();
+
+    get(route('home'))
+        ->assertOk()
+        ->assertSee('Siège social : Nijmegen, Pays-Bas', false)
+        ->assertSee('TVA NL860886761B01', false)
+        ->assertSee('Certification Consumer Law Ready', false);
+});
