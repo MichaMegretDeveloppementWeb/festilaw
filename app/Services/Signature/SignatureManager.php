@@ -24,6 +24,7 @@ final class SignatureManager extends Manager
         return new SignWellSignatureGateway(
             (array) $this->config->get('signature.drivers.signwell', []),
             $this->container->make(ContractPdfGenerator::class),
+            $this->container->make(SignWellWebhookRegistry::class),
         );
     }
 }

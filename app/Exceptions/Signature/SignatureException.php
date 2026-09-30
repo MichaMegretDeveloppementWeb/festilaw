@@ -28,6 +28,14 @@ final class SignatureException extends BaseAppException
         );
     }
 
+    public static function webhookNotRegistered(): self
+    {
+        return new self(
+            technicalMessage: 'Signature webhook rejected: no SignWell webhook id is registered (run php artisan festilaw:signwell-webhook).',
+            userMessage: self::USER_MESSAGE,
+        );
+    }
+
     public static function webhookSignatureInvalid(): self
     {
         return new self(

@@ -30,8 +30,13 @@ Schedule::command('festilaw:reconcile-payments')->everyFiveMinutes()->withoutOve
 
 /*
  | Reconciliation des signatures : meme filet, cote signature. Re-interroge le prestataire pour les
- | contrats en attente > 15 min, enregistre signe/refuse/expire, et rattrape le PDF signe manquant
- | (backfill). Toutes les 5 min : le mandat manquant est recupere en <= 5 min (ou instantanement via le
- | bouton du back-office). Idempotent.
+ | contrats en attente > 15 min et enregistre signe/refuse/expire. Toutes les 5 min. Idempotent.
  */
 Schedule::command('festilaw:reconcile-signatures')->everyFiveMinutes()->withoutOverlapping();
+
+/*
+ | PDF du mandat signe : avec la signature integree, le navigateur confirme la signature avant que le
+ | prestataire ait genere le PDF final. Le webhook le recupere quand il arrive ; a defaut, ce rattrapage
+ | le telecharge dans la minute (requete legere : contrats signes sans fichier). Idempotent.
+ */
+Schedule::command('festilaw:backfill-signed-pdfs')->everyMinute()->withoutOverlapping();

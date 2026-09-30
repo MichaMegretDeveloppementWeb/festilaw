@@ -267,6 +267,13 @@ Certaines choses tournent **toutes seules, tous les jours** :
 
 - **Rappels de renouvellement** (email au client + récap à l'admin, à 07:00).
 - **Purge RGPD** des dossiers abandonnés et jamais payés (à 03:00).
+- **Réconciliation** des paiements et des signatures (toutes les 5 min) et récupération
+  du **mandat signé** encore manquant (chaque minute).
+
+**Webhook SignWell** : SignWell signe chaque événement avec l'identifiant de son webhook.
+`deploy.sh` lance `php artisan festilaw:signwell-webhook`, qui retrouve (ou crée) le
+webhook `https://<domaine>/webhooks/signature` et mémorise son identifiant : rien à
+copier à la main. À relancer si le webhook est supprimé dans l'interface SignWell.
 
 Pour que ça fonctionne, l'hébergeur doit exécuter **une seule ligne de cron**, qui
 « réveille » le planificateur Laravel chaque minute (c'est Laravel qui décide

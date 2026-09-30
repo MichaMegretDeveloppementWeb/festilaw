@@ -9,6 +9,7 @@ use App\Mail\ScaleAuditConfirmed;
 use App\Mail\StarterPaymentConfirmed;
 use App\Models\Contract;
 use App\Models\Submission;
+use App\Repositories\SettingRepository;
 use App\Services\Payment\PaymentGatewayRegistry;
 use App\Services\Payment\StripePaymentGateway;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -30,6 +31,8 @@ beforeEach(function () {
     app()->forgetInstance(PaymentGatewayRegistry::class);
     app()->forgetInstance(StripePaymentGateway::class);
     app()->forgetInstance(SignatureGatewayInterface::class);
+    // SignWell signe ses webhooks avec l'id du webhook : celui memorise par festilaw:signwell-webhook.
+    app(SettingRepository::class)->put('signwell.webhook_ids', json_encode(['hook_test_1']));
     Mail::fake();
 });
 
@@ -46,11 +49,11 @@ function postStripeWebhook(array $payload): TestResponse
     ], $body);
 }
 
-/** POSTs a SignWell-signed signature webhook (HMAC over "{type}@{time}"), reporting the given status. */
-function postSignwellWebhook(string $type, string $documentId, string $status): TestResponse
+/** POSTs a SignWell-signed signature webhook (HMAC over "{type}@{time}" keyed by the webhook id). */
+function postSignwellWebhook(string $type, string $documentId, string $status, string $webhookId = 'hook_test_1'): TestResponse
 {
     $time = 1689332249;
-    $hash = hash_hmac('sha256', "{$type}@{$time}", 'testkey');
+    $hash = hash_hmac('sha256', "{$type}@{$time}", $webhookId);
 
     return postJson('/webhooks/signature', [
         'event' => ['type' => $type, 'time' => $time, 'hash' => $hash],
@@ -313,7 +316,7 @@ it('marks a contract signed from a valid SignWell webhook', function () {
     ]);
 
     $time = 1689332249;
-    $hash = hash_hmac('sha256', "document_completed@{$time}", 'testkey');
+    $hash = hash_hmac('sha256', "document_completed@{$time}", 'hook_test_1');
 
     postJson('/webhooks/signature', [
         'event' => ['type' => 'document_completed', 'time' => $time, 'hash' => $hash],
@@ -326,6 +329,7 @@ it('marks a contract signed from a valid SignWell webhook', function () {
 });
 
 it('rejects a SignWell webhook with an invalid signature and leaves the contract untouched', function () {
+    Http::fake(['*/api/v1/hooks' => Http::response([['id' => 'hook_test_1', 'callback_url' => route('webhooks.signature')]])]);
     config()->set('signature.default', 'signwell');
     config()->set('signature.drivers.signwell', [
         'api_key' => 'testkey',
@@ -380,4 +384,78 @@ it('returns 400 when the payment webhook cannot be verified', function () {
 
     postJson('/webhooks/payment/stripe', ['provider_reference' => 'x'])
         ->assertStatus(400);
+});
+
+/** A SignWell contract, already confirmed as signed by the browser, whose signed PDF is still missing. */
+function signwellContractSignedWithoutPdf(): Contract
+{
+    return Contract::factory()->for(Submission::factory()->starter()->create(['status' => SubmissionStatus::AwaitingPayment]))->create([
+        'signature_status' => SignatureStatus::Signed,
+        'signature_provider' => 'signwell',
+        'signature_provider_reference' => 'DOC_PDF',
+        'signed_file_path' => null,
+        'signed_at' => now(),
+    ]);
+}
+
+it('rejects a SignWell webhook signed with the API key (SignWell keys the hash with the webhook id)', function () {
+    Http::fake(['*/api/v1/hooks' => Http::response([['id' => 'hook_test_1', 'callback_url' => route('webhooks.signature')]])]);
+    $contract = signwellContractSignedWithoutPdf();
+    $contract->update(['signature_status' => SignatureStatus::Pending, 'signed_at' => null]);
+
+    // Ancien calcul (cle API) : c'est lui qui faisait rejeter tous les webhooks en production.
+    postSignwellWebhook('document_completed', 'DOC_PDF', 'Completed', webhookId: 'testkey')->assertStatus(400);
+
+    expect($contract->fresh()->signature_status)->toBe(SignatureStatus::Pending);
+});
+
+it('re-reads the registered webhook ids once when none is known, then accepts the event', function () {
+    Storage::fake('local');
+    app(SettingRepository::class)->put('signwell.webhook_ids', json_encode([]));
+    Http::fake([
+        '*/api/v1/hooks' => Http::response([
+            ['id' => 'hook_other', 'callback_url' => 'https://another-site.example/webhooks/signature'],
+            ['id' => 'hook_from_ui', 'callback_url' => route('webhooks.signature')],
+        ]),
+        '*/api/v1/documents/*/completed_pdf*' => Http::response('SIGNED-PDF', 200),
+    ]);
+    signwellContractSignedWithoutPdf();
+
+    postSignwellWebhook('document_completed', 'DOC_PDF', 'Completed', webhookId: 'hook_from_ui')->assertNoContent();
+
+    // L'id du webhook de notre URL est memorise (pas celui d'un autre site).
+    expect(json_decode(app(SettingRepository::class)->get('signwell.webhook_ids'), true))->toBe(['hook_from_ui']);
+
+    // Un webhook invalide ensuite ne relit pas la liste avant le delai (pas de martelage de l'API).
+    postSignwellWebhook('document_completed', 'DOC_PDF', 'Completed', webhookId: 'forged')->assertStatus(400);
+    Http::assertSentCount(2); // 1 lecture de la liste + 1 telechargement du PDF
+});
+
+it('refuses every webhook while no SignWell webhook is registered for the site', function () {
+    app(SettingRepository::class)->put('signwell.webhook_ids', json_encode([]));
+    Http::fake(['*/api/v1/hooks' => Http::response([])]);
+
+    postSignwellWebhook('document_completed', 'DOC_PDF', 'Completed', webhookId: 'anything')->assertStatus(400);
+});
+
+it('fetches the signed PDF on a completed webhook even when the browser already confirmed the signature', function () {
+    Storage::fake('local');
+    Http::fake(['*/api/v1/documents/*/completed_pdf*' => Http::response('SIGNED-PDF', 200)]);
+    $contract = signwellContractSignedWithoutPdf();
+
+    postSignwellWebhook('document_completed', 'DOC_PDF', 'Completed')->assertNoContent();
+
+    expect($contract->fresh()->signed_file_path)->toBe('contracts/DOC_PDF.pdf')
+        ->and($contract->fresh()->submission->status)->toBe(SubmissionStatus::AwaitingPayment); // statut inchange
+    Storage::disk('local')->assertExists('contracts/DOC_PDF.pdf');
+});
+
+it('acknowledges the webhook when the signed PDF is not generated yet (the minute backfill catches it)', function () {
+    Http::fake(['*/api/v1/documents/*/completed_pdf*' => Http::response('', 404)]);
+    $contract = signwellContractSignedWithoutPdf();
+
+    postSignwellWebhook('document_completed', 'DOC_PDF', 'Completed')->assertNoContent();
+
+    expect($contract->fresh()->signed_file_path)->toBeNull()
+        ->and($contract->fresh()->signature_status)->toBe(SignatureStatus::Signed);
 });

@@ -6,6 +6,7 @@ use App\Enums\Contract\SignatureEventOutcome;
 use App\Exceptions\Signature\SignatureException;
 use App\Models\Contract;
 use App\Models\Submission;
+use App\Repositories\SettingRepository;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -21,12 +22,14 @@ beforeEach(function () {
         'api_base_url' => 'https://www.signwell.com/api/v1',
         'test_mode' => true,
     ]);
+    // SignWell signe ses webhooks avec l'id du webhook (memorise par festilaw:signwell-webhook).
+    app(SettingRepository::class)->put('signwell.webhook_ids', json_encode(['hook_test_1']));
 });
 
-/** Builds a SignWell webhook Request with a valid (or overridden) HMAC hash in the body. */
-function signwellWebhookRequest(string $type, int $time, string $documentId, string $status, string $apiKey = 'testkey', ?string $hashOverride = null): Request
+/** Builds a SignWell webhook Request with a valid (or overridden) HMAC hash, keyed by the webhook id. */
+function signwellWebhookRequest(string $type, int $time, string $documentId, string $status, string $webhookId = 'hook_test_1', ?string $hashOverride = null): Request
 {
-    $hash = $hashOverride ?? hash_hmac('sha256', "{$type}@{$time}", $apiKey);
+    $hash = $hashOverride ?? hash_hmac('sha256', "{$type}@{$time}", $webhookId);
     $body = json_encode([
         'event' => ['type' => $type, 'time' => $time, 'hash' => $hash],
         'data' => ['object' => ['id' => $documentId, 'status' => $status]],
@@ -204,6 +207,7 @@ it('maps an expired document to the expired outcome', function () {
 });
 
 it('rejects a webhook whose HMAC hash does not match', function () {
+    Http::fake(['*/api/v1/hooks' => Http::response([['id' => 'hook_test_1', 'callback_url' => route('webhooks.signature')]])]);
     $request = signwellWebhookRequest('document_completed', 1689332249, 'DOC1', 'Completed', hashOverride: 'not-a-valid-hash');
 
     expect(fn () => app(SignatureGatewayInterface::class)->parseWebhook($request))

@@ -44,6 +44,7 @@ final class SignWellSignatureGateway implements SignatureGatewayInterface
     public function __construct(
         private readonly array $config,
         private readonly ContractPdfGenerator $pdfGenerator,
+        private readonly SignWellWebhookRegistry $webhooks,
     ) {}
 
     public function key(): string
@@ -239,8 +240,10 @@ final class SignWellSignatureGateway implements SignatureGatewayInterface
     }
 
     /**
-     * SignWell signs each webhook with HMAC-SHA256 over the string "{event_type}@{event_time}" using
-     * the API key as the secret (cf. developers.signwell.com · Event Hash Verification).
+     * SignWell signs each webhook with HMAC-SHA256 over the string "{event_type}@{event_time}", keyed by
+     * the WEBHOOK ID (not the API key). The ids are those of our registered webhook(s), stored by
+     * `festilaw:signwell-webhook`; on a mismatch they are re-read once (throttled) in case the webhook was
+     * recreated in the SignWell interface.
      */
     private function verifyWebhookSignature(Request $request): void
     {
@@ -248,11 +251,35 @@ final class SignWellSignatureGateway implements SignatureGatewayInterface
         $time = (string) $request->input('event.time', '');
         $received = (string) $request->input('event.hash', '');
 
-        $expected = hash_hmac('sha256', "{$type}@{$time}", (string) $this->config['api_key']);
-
-        if ($received === '' || ! hash_equals($expected, $received)) {
-            throw SignatureException::webhookSignatureInvalid();
+        $known = $this->webhooks->knownIds();
+        if ($this->signedByOneOf($known, "{$type}@{$time}", $received)) {
+            return;
         }
+
+        $refreshed = $this->webhooks->refreshKnownIds(route('webhooks.signature'));
+        if ($refreshed !== $known && $this->signedByOneOf($refreshed, "{$type}@{$time}", $received)) {
+            return;
+        }
+
+        throw $refreshed === []
+            ? SignatureException::webhookNotRegistered()
+            : SignatureException::webhookSignatureInvalid();
+    }
+
+    /** @param  list<string>  $webhookIds */
+    private function signedByOneOf(array $webhookIds, string $message, string $received): bool
+    {
+        if ($received === '') {
+            return false;
+        }
+
+        foreach ($webhookIds as $webhookId) {
+            if (hash_equals(hash_hmac('sha256', $message, $webhookId), $received)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function api(): PendingRequest

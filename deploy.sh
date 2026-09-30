@@ -139,6 +139,11 @@ echo "→ Optimisation des caches..."
 "$PHP_BIN" artisan view:cache
 "$PHP_BIN" artisan event:cache
 
+# 9b. Webhook SignWell : retrouve (ou cree) le webhook du site et memorise son id, cle de verification
+# des evenements SignWell. Non bloquant : si SignWell ne repond pas, le deploiement continue.
+echo "→ Synchronisation du webhook SignWell..."
+"$PHP_BIN" artisan festilaw:signwell-webhook || echo "⚠ Webhook SignWell non synchronisé : relancer 'php artisan festilaw:signwell-webhook' (voir storage/logs/signature-*.log)."
+
 # 10. Permissions
 echo "→ Correction des permissions..."
 chmod -R 755 storage bootstrap/cache

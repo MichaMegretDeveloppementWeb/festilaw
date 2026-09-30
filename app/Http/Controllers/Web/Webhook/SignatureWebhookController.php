@@ -21,6 +21,10 @@ use Throwable;
  * Receives the signature provider webhook (SignWell...), verifies + parses it via the active gateway,
  * and records the outcome synchronously (signed / declined / expired). Idempotent (the Actions are),
  * no worker/cron.
+ *
+ * On a "signed" event the signed PDF is fetched too, even when the contract was already confirmed by the
+ * browser (embedded signing confirms first, before the provider has generated the final PDF). If the PDF
+ * is still not ready, festilaw:backfill-signed-pdfs catches it within a minute.
  */
 final class SignatureWebhookController extends Controller
 {
@@ -44,9 +48,18 @@ final class SignatureWebhookController extends Controller
                 ->where('signature_provider_reference', $event->providerReference)
                 ->first();
 
+            Log::channel('signature')->info('Signature webhook received', [
+                'type' => (string) $request->input('event.type', ''),
+                'document' => $event->providerReference,
+                'outcome' => $event->outcome->name,
+                'contract' => $contract?->id,
+            ]);
+
             if ($contract !== null) {
                 match ($event->outcome) {
-                    SignatureEventOutcome::Signed => $markContractSigned->execute($contract, $event->providerReference),
+                    SignatureEventOutcome::Signed => $markContractSigned->backfillSignedDocument(
+                        $markContractSigned->execute($contract, $event->providerReference),
+                    ),
                     SignatureEventOutcome::Declined => $markContractDeclined->execute($contract),
                     SignatureEventOutcome::Expired => $markContractExpired->execute($contract),
                     SignatureEventOutcome::Unresolved => null,

@@ -20,7 +20,8 @@ use Throwable;
  * Filet ultime des signatures : re-interroge le prestataire (source de verite serveur) pour chaque
  * contrat reste "en attente" au-dela d'un delai, et enregistre le resultat reel (signe / refuse /
  * expire). Rattrape les cas ou le retour navigateur ET le webhook ont ete loupes. Idempotent : ne
- * touche que les contrats en attente, via les actions dediees (transitions dirigees).
+ * touche que les contrats en attente, via les actions dediees (transitions dirigees). Le PDF signe
+ * manquant est rattrape a part, chaque minute (festilaw:backfill-signed-pdfs).
  *
  * Planifiee frequemment (routes/console.php). Options :
  *  --minutes=N  age minimal (defaut 15) d'un contrat en attente avant de le reprendre
@@ -78,51 +79,9 @@ final class ReconcileSignatures extends Command
                 }
             });
 
-        $repaired = $this->backfillMissingSignedPdfs($dry);
-
-        $this->info('Contrats verifies : '.$checked.' · signes : '.$signed.' · ranges (refuse/expire) : '.$settled.' · PDF rattrapes : '.$repaired.($dry ? ' [DRY-RUN]' : ''));
+        $this->info('Contrats verifies : '.$checked.' · signes : '.$signed.' · ranges (refuse/expire) : '.$settled.($dry ? ' [DRY-RUN]' : ''));
 
         return self::SUCCESS;
-    }
-
-    /**
-     * Rattrapage : un contrat SIGNE dont le PDF n'a pas pu etre telecharge a la confirmation (echec
-     * transitoire) reste "signe" mais sans fichier local, et n'est plus re-tente par les transitions
-     * (Signed n'est plus confirmable). On re-telecharge ici le fichier manquant, sans toucher au statut.
-     */
-    private function backfillMissingSignedPdfs(bool $dry): int
-    {
-        $repaired = 0;
-
-        Contract::query()
-            ->where('signature_status', SignatureStatus::Signed)
-            ->whereNull('signed_file_path')
-            ->whereNotNull('signature_provider_reference')
-            ->where('signature_provider', $this->gateway->key())
-            ->chunkById(100, function (Collection $contracts) use ($dry, &$repaired): void {
-                foreach ($contracts as $contract) {
-                    if ($dry) {
-                        $repaired++;
-
-                        continue;
-                    }
-
-                    try {
-                        $contract = $this->markContractSigned->backfillSignedDocument($contract);
-                    } catch (Throwable $e) {
-                        Log::channel('signature')->warning('Reconcile: signed PDF backfill failed.', ['exception' => $e, 'contract' => $contract->id]);
-
-                        continue;
-                    }
-
-                    if ($contract->signed_file_path !== null) {
-                        $repaired++;
-                        Log::channel('signature')->notice('Signature.pdf_backfilled', ['contract' => $contract->id]);
-                    }
-                }
-            });
-
-        return $repaired;
     }
 
     private function confirmSigned(Contract $contract, string $providerReference, bool $dry, int &$signed): void
