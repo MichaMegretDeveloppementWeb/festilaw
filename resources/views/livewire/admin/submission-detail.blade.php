@@ -274,6 +274,10 @@
                     <div class="px-5 py-4">
                         @if ($scaleAuditPaid)
                             <x-ui.badge color="emerald" ring>{{ __('Audit 75 € payé · à déduire du devis final') }}</x-ui.badge>
+                        @elseif ($submission->appointment)
+                            {{-- La consultation se reserve avant le paiement : un creneau peut etre pris sans audit regle. --}}
+                            <x-ui.badge color="amber" ring>{{ __('Réservé · audit non payé') }}</x-ui.badge>
+                            <p class="mt-2 text-[12px] text-secondary">{{ __('Le client a réservé un créneau mais n\'a pas encore réglé l\'audit. S\'il ne le règle pas, annulez le créneau dans Google Agenda.') }}</p>
                         @else
                             <x-ui.badge color="gray" ring>{{ __('Audit non payé') }}</x-ui.badge>
                         @endif

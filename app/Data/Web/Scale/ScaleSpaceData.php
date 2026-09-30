@@ -23,6 +23,7 @@ final readonly class ScaleSpaceData
         public ?string $appointmentStatusLabel,
         public ?CarbonInterface $scheduledAt,
         public string $calendarUrl,
+        public ?string $calendarEmbedUrl,
         public string $payUrl,
         public string $bookUrl,
     ) {}

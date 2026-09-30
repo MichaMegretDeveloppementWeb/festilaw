@@ -11,6 +11,7 @@ use App\Mail\FunnelNotification;
 use App\Mail\ScaleAuditConfirmed;
 use App\Mail\ScaleConsultationBooked;
 use App\Mail\ScaleSpaceLink;
+use App\Models\Appointment;
 use App\Models\Payment;
 use App\Models\Submission;
 use App\Services\Payment\PaymentGatewayRegistry;
@@ -24,11 +25,19 @@ use Livewire\Livewire;
 use function Pest\Laravel\get;
 use function Pest\Laravel\post;
 
+/*
+ | Parcours SCALE : la consultation se reserve d'abord (page de reservation Google integree a l'espace
+ | Scale), puis le paiement de l'audit (75 EUR) vient la confirmer.
+ */
+
 uses(RefreshDatabase::class);
+
+const SCALE_TEST_CALENDAR = 'https://calendar.google.com/calendar/appointments/schedules/TestSchedule123';
 
 beforeEach(function () {
     config()->set('payment.enabled', ['stripe']);
     config()->set('payment.drivers.stripe', ['secret_key' => 'sk_test_x', 'webhook_secret' => 'whsec_x']);
+    config()->set('festilaw.scale.calendar_url', SCALE_TEST_CALENDAR);
     app()->forgetInstance(PaymentGatewayRegistry::class);
     app()->forgetInstance(StripePaymentGateway::class);
     Mail::fake();
@@ -52,6 +61,16 @@ function scaleDossier(string $token = 'scaletok'): Submission
     ]);
 }
 
+/** A SCALE dossier whose consultation is already booked (the step before paying the audit). */
+function bookedScaleDossier(string $token = 'scaletok'): Submission
+{
+    $dossier = scaleDossier($token);
+    Appointment::factory()->for($dossier)->create();
+    $dossier->update(['status' => SubmissionStatus::InProgress]);
+
+    return $dossier->fresh();
+}
+
 it('opens a SCALE dossier with a magic link, emails it and lands the visitor in the space', function () {
     Livewire::test(ScaleForm::class)
         ->set('company_name', 'Bigco')
@@ -70,23 +89,94 @@ it('opens a SCALE dossier with a magic link, emails it and lands the visitor in 
     Mail::assertSent(ScaleSpaceLink::class, fn ($mail) => $mail->hasTo('bigco@example.com'));
 });
 
-it('shows the pay step (pay form) on the Scale space when the audit is unpaid', function () {
+it('opens the Scale space on the booking step, with the Google booking page embedded', function () {
     scaleDossier();
 
     get(route('get-started.scale.space', ['dossier' => 'scaletok']))
         ->assertOk()
-        ->assertSee(route('get-started.scale.pay', ['dossier' => 'scaletok'])); // l'action du formulaire de paiement
+        ->assertSee('Consultation to book')
+        ->assertSee('<iframe class="scale-calendar__frame" src="'.SCALE_TEST_CALENDAR.'?gv=true"', false)
+        ->assertSee('referrerpolicy="no-referrer"', false)
+        ->assertSee('href="'.SCALE_TEST_CALENDAR.'" target="_blank"', false)                // repli : nouvel onglet
+        ->assertSee(route('get-started.scale.book', ['dossier' => 'scaletok']))              // "J'ai reserve"
+        ->assertDontSee(route('get-started.scale.pay', ['dossier' => 'scaletok']));          // pas de paiement avant
 });
 
+it('falls back to opening the calendar in a new tab when the configured URL cannot be embedded', function (string $calendarUrl) {
+    config()->set('festilaw.scale.calendar_url', $calendarUrl);
+    scaleDossier();
+
+    get(route('get-started.scale.space', ['dossier' => 'scaletok']))
+        ->assertOk()
+        ->assertDontSee('scale-calendar__frame', false)
+        ->assertSee('Open the booking calendar')
+        ->assertSee('href="'.$calendarUrl.'" target="_blank"', false);
+})->with([
+    'short link' => 'https://calendar.app.google/w8ZejYQLkZfgAo3F7',
+    'placeholder' => 'https://calendar.google.com/',
+    'other site' => 'https://example.com/calendar/appointments/schedules/abc',
+]);
+
 it('404s the Scale space for a non-Scale dossier', function () {
-    $starter = Submission::factory()->starter()->create(['resume_token' => 'startertok', 'resume_expires_at' => now()->addDays(30)]);
+    Submission::factory()->starter()->create(['resume_token' => 'startertok', 'resume_expires_at' => now()->addDays(30)]);
 
     get(route('get-started.scale.space', ['dossier' => 'startertok']))->assertNotFound();
 });
 
-it('starts the audit checkout with an idempotency key and Scale return URLs', function () {
+it('records a consultation booking before the audit is paid, idempotently, and points to the payment', function () {
+    $dossier = scaleDossier();
+
+    post(route('get-started.scale.book', ['dossier' => 'scaletok']))
+        ->assertRedirect(route('get-started.scale.space', ['dossier' => 'scaletok']))
+        ->assertSessionHas('scale_booked');
+    // Second clic : pas de doublon (unique par dossier), et donc pas de second e-mail.
+    post(route('get-started.scale.book', ['dossier' => 'scaletok']))->assertRedirect();
+
+    expect($dossier->appointment()->count())->toBe(1)
+        ->and($dossier->appointment->status)->toBe(AppointmentStatus::Requested)
+        ->and($dossier->fresh()->status)->toBe(SubmissionStatus::InProgress);
+
+    // Confirmation au client (une seule fois malgre le double clic), qui l'envoie payer + notification equipe.
+    Mail::assertSent(ScaleConsultationBooked::class, 1);
+    Mail::assertSent(ScaleConsultationBooked::class, fn (ScaleConsultationBooked $mail) => $mail->hasTo('bigco@example.com')
+        && ! $mail->auditPaid
+        && str_contains($mail->render(), 'One last step to confirm it'));
+    Mail::assertSent(FunnelNotification::class, fn ($mail) => $mail->reason === FunnelNotificationReason::ConsultationBooked);
+
+    // L'espace passe a l'etape paiement.
+    get(route('get-started.scale.space', ['dossier' => 'scaletok']))
+        ->assertOk()
+        ->assertSee('Audit to pay')
+        ->assertSee('Consultation requested')   // statut client traduit, pas le libelle du back-office
+        ->assertDontSee('Demandé')
+        ->assertSee('Pay your expert audit to confirm it')
+        ->assertSee(route('get-started.scale.pay', ['dossier' => 'scaletok']))
+        ->assertDontSee('scale-calendar__frame', false);
+});
+
+it('shows the "last step: pay" banner right after booking', function () {
+    bookedScaleDossier();
+
+    $this->withSession(['scale_booked' => true])
+        ->get(route('get-started.scale.space', ['dossier' => 'scaletok']))
+        ->assertSee('Last step: pay your audit to confirm it.');
+});
+
+it('refuses to pay the audit before the consultation is booked', function () {
     fakeStripeCreate();
     scaleDossier();
+
+    post(route('get-started.scale.pay', ['dossier' => 'scaletok']))
+        ->assertRedirect(route('get-started.scale.space', ['dossier' => 'scaletok']))
+        ->assertSessionHas('scale_error', 'Please book your consultation before paying the audit fee.');
+
+    expect(Payment::where('type', PaymentType::ScaleAudit)->count())->toBe(0);
+    Http::assertNothingSent();
+});
+
+it('starts the audit checkout with an idempotency key and Scale return URLs', function () {
+    fakeStripeCreate();
+    bookedScaleDossier();
 
     post(route('get-started.scale.pay', ['dossier' => 'scaletok']))
         ->assertRedirect('https://checkout.stripe.test/cs_scale');
@@ -110,7 +200,7 @@ it('reuses the pending audit checkout instead of creating a second one (anti dou
         '*/v1/checkout/sessions/*' => Http::response(['id' => 'cs_scale', 'status' => 'open', 'url' => 'https://checkout.stripe.test/cs_scale']),
         '*/v1/checkout/sessions' => Http::response(['id' => 'cs_scale', 'url' => 'https://checkout.stripe.test/cs_scale']),
     ]);
-    scaleDossier();
+    bookedScaleDossier();
 
     post(route('get-started.scale.pay', ['dossier' => 'scaletok']))->assertRedirect();
     post(route('get-started.scale.pay', ['dossier' => 'scaletok']))->assertRedirect();
@@ -118,8 +208,8 @@ it('reuses the pending audit checkout instead of creating a second one (anti dou
     expect(Payment::where('type', PaymentType::ScaleAudit)->count())->toBe(1);
 });
 
-it('confirms the audit on return, advancing the dossier to in-progress (not the subscription "paid")', function () {
-    $dossier = scaleDossier();
+it('confirms the audit on return, confirming the booked consultation (not the subscription "paid")', function () {
+    $dossier = bookedScaleDossier();
     $dossier->payments()->create([
         'type' => PaymentType::ScaleAudit,
         'amount_cents' => 7500,
@@ -131,59 +221,52 @@ it('confirms the audit on return, advancing the dossier to in-progress (not the 
     // Le provider dit "paye" au retour.
     Http::fake(['*/v1/checkout/sessions/*' => Http::response(['id' => 'cs_scale', 'status' => 'complete', 'payment_status' => 'paid'])]);
 
-    get(route('get-started.scale.space', ['dossier' => 'scaletok', 'audit_return' => 1]))->assertOk();
+    get(route('get-started.scale.space', ['dossier' => 'scaletok', 'audit_return' => 1]))
+        ->assertOk()
+        ->assertSee('Consultation requested')
+        ->assertSee('Our team will confirm the exact slot by email');
 
     $dossier->refresh();
     expect($dossier->payments()->where('type', PaymentType::ScaleAudit)->sole()->status)->toBe(PaymentStatus::Succeeded)
         ->and($dossier->status)->toBe(SubmissionStatus::InProgress) // l'audit n'est pas un abonnement
         ->and($dossier->isActive())->toBeFalse();                   // pas de couverture RP ouverte
 
-    Mail::assertSent(ScaleAuditConfirmed::class, fn ($mail) => $mail->hasTo('bigco@example.com'));
+    Mail::assertSent(ScaleAuditConfirmed::class, fn (ScaleAuditConfirmed $mail) => $mail->hasTo('bigco@example.com')
+        && $mail->booked
+        && str_contains($mail->render(), 'and so is your consultation'));
 });
 
-it('records a consultation booking once the audit is paid, idempotently, and confirms both parties', function () {
+it('invites a dossier paid before booking (former order) to book, without asking to pay again', function () {
     $dossier = scaleDossier();
     Payment::factory()->succeeded()->for($dossier)->create(['type' => PaymentType::ScaleAudit, 'provider_reference' => 'cs_scale']);
 
-    post(route('get-started.scale.book', ['dossier' => 'scaletok']))
-        ->assertRedirect(route('get-started.scale.space', ['dossier' => 'scaletok']))
-        ->assertSessionHas('scale_booked');
-    // Second clic : pas de doublon (unique par dossier), et donc pas de second e-mail.
-    post(route('get-started.scale.book', ['dossier' => 'scaletok']))->assertRedirect();
+    get(route('get-started.scale.space', ['dossier' => 'scaletok']))
+        ->assertOk()
+        ->assertSee('Your audit is paid. Two quick steps to lock in your video consultation:')
+        ->assertSee('scale-calendar__frame', false)
+        ->assertDontSee(route('get-started.scale.pay', ['dossier' => 'scaletok']));
 
-    expect($dossier->appointment()->count())->toBe(1)
-        ->and($dossier->appointment->status)->toBe(AppointmentStatus::Requested);
+    post(route('get-started.scale.book', ['dossier' => 'scaletok']))->assertSessionHas('scale_booked');
 
-    // Confirmation au client (une seule fois malgre le double clic) + notification a l'equipe.
-    Mail::assertSent(ScaleConsultationBooked::class, 1);
-    Mail::assertSent(ScaleConsultationBooked::class, fn ($mail) => $mail->hasTo('bigco@example.com'));
-    Mail::assertSent(FunnelNotification::class, fn ($mail) => $mail->reason === FunnelNotificationReason::ConsultationBooked);
-});
-
-it('refuses to book a consultation before the audit is paid', function () {
-    scaleDossier();
-
-    post(route('get-started.scale.book', ['dossier' => 'scaletok']))
-        ->assertRedirect(route('get-started.scale.space', ['dossier' => 'scaletok']))
-        ->assertSessionHas('scale_error');
-
-    expect(Submission::where('resume_token', 'scaletok')->sole()->appointment()->count())->toBe(0);
+    // Audit deja paye : l'e-mail de reservation ne demande pas de payer.
+    Mail::assertSent(ScaleConsultationBooked::class, fn (ScaleConsultationBooked $mail) => $mail->auditPaid
+        && ! str_contains($mail->render(), 'One last step to confirm it'));
 });
 
 it('refuses to start a second audit payment once the audit is paid', function () {
-    $dossier = scaleDossier();
+    $dossier = bookedScaleDossier();
     Payment::factory()->succeeded()->for($dossier)->create(['type' => PaymentType::ScaleAudit, 'provider_reference' => 'cs_scale']);
 
     post(route('get-started.scale.pay', ['dossier' => 'scaletok']))
         ->assertRedirect(route('get-started.scale.space', ['dossier' => 'scaletok']))
-        ->assertSessionHas('scale_error');
+        ->assertSessionHas('scale_error', 'Your audit is already paid.');
 
     expect(Payment::where('type', PaymentType::ScaleAudit)->count())->toBe(1);
 });
 
 it('refuses to pay the audit on a cancelled Scale dossier', function () {
     fakeStripeCreate();
-    $dossier = scaleDossier();
+    $dossier = bookedScaleDossier();
     $dossier->update(['status' => SubmissionStatus::Cancelled]);
 
     post(route('get-started.scale.pay', ['dossier' => 'scaletok']))
@@ -193,9 +276,8 @@ it('refuses to pay the audit on a cancelled Scale dossier', function () {
     expect(Payment::where('type', PaymentType::ScaleAudit)->count())->toBe(0);
 });
 
-it('refuses to book on a cancelled Scale dossier even when the audit was paid', function () {
+it('refuses to book on a cancelled Scale dossier', function () {
     $dossier = scaleDossier();
-    Payment::factory()->succeeded()->for($dossier)->create(['type' => PaymentType::ScaleAudit, 'provider_reference' => 'cs_scale']);
     $dossier->update(['status' => SubmissionStatus::Cancelled]);
 
     post(route('get-started.scale.book', ['dossier' => 'scaletok']))
@@ -225,7 +307,9 @@ it('renders the cancelled state on the Scale space (no pay or book form)', funct
     get(route('get-started.scale.space', ['dossier' => 'scaletok']))
         ->assertOk()
         ->assertSee('cancelled')
-        ->assertDontSee(route('get-started.scale.pay', ['dossier' => 'scaletok']));
+        ->assertDontSee(route('get-started.scale.pay', ['dossier' => 'scaletok']))
+        ->assertDontSee(route('get-started.scale.book', ['dossier' => 'scaletok']))
+        ->assertDontSee('scale-calendar__frame', false);
 });
 
 it('404s an expired Scale space link (capability binding)', function () {

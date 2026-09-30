@@ -12,14 +12,15 @@ use Illuminate\Queue\SerializesModels;
 
 /**
  * Sent to the buyer once their SCALE audit payment (75 EUR) is confirmed. Also the safety net for slow
- * async payment methods: even if the buyer left the page, they learn the audit is paid and are invited to
- * book their consultation. Dispatched resiliently from MarkPaymentSucceededAction.
+ * async payment methods: even if the buyer left the page, they learn the audit is paid. The consultation
+ * is normally already booked (booking comes first): the payment confirms it. A dossier paid before
+ * booking (former order) is invited to book instead. Dispatched resiliently from MarkPaymentSucceededAction.
  */
 final class ScaleAuditConfirmed extends Mailable
 {
     use SerializesModels;
 
-    public function __construct(public Submission $submission) {}
+    public function __construct(public Submission $submission, public bool $booked = true) {}
 
     public function envelope(): Envelope
     {

@@ -16,9 +16,10 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Starts the SCALE audit payment (75 EUR, deducted from the final contract). Paying the audit unlocks the
- * consultation booking; confirmation arrives via the payment webhook (and the poll-on-return). Guards
- * against paying twice (audit already paid) and reuses an in-flight checkout (anti double-debit).
+ * Starts the SCALE audit payment (75 EUR, deducted from the final contract). The consultation is booked
+ * FIRST; paying the audit then confirms it. Confirmation arrives via the payment webhook (and the
+ * poll-on-return). Guards against paying before booking or paying twice (audit already paid), and reuses
+ * an in-flight checkout (anti double-debit).
  */
 final readonly class StartScaleAuditPaymentAction
 {
@@ -32,13 +33,19 @@ final readonly class StartScaleAuditPaymentAction
             throw ScaleException::dossierCancelled($submission->id);
         }
 
-        // Audit deja regle : rien a repayer (le dossier passe alors a la reservation).
+        // Audit deja regle : rien a repayer.
         if ($submission->payments()
             ->where('type', PaymentType::ScaleAudit)
             ->where('status', PaymentStatus::Succeeded)
             ->exists()
         ) {
             throw ScaleException::auditAlreadyPaid($submission->id);
+        }
+
+        // La consultation se reserve d'abord : le paiement de l'audit vient la confirmer (garde au bord,
+        // le POST reste atteignable avec un token valide meme si l'UI masque le bouton).
+        if ($submission->appointment()->doesntExist()) {
+            throw ScaleException::consultationNotBooked($submission->id);
         }
 
         // Verrou anti double-debit : serialise deux paiements concurrents (double clic / deux onglets) pour

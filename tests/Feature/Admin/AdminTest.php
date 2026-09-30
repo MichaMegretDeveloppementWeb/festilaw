@@ -431,6 +431,27 @@ it('shows the Scale audit deduction badge once the 75 EUR audit is paid', functi
         ->assertSee('à déduire du devis');
 });
 
+it('flags a Scale consultation booked but whose audit is not paid yet', function () {
+    $submission = Submission::factory()->scale()->create();
+    $submission->appointment()->create(['status' => AppointmentStatus::Requested]);
+
+    actingAs(User::factory()->create());
+
+    // La consultation se reserve avant le paiement : Festilaw doit voir le creneau pris sans audit regle.
+    Livewire::test(SubmissionDetail::class, ['submission' => $submission])
+        ->assertSee('Réservé · audit non payé')
+        ->assertSee('annulez le créneau dans Google Agenda');
+
+    $submission->payments()->create([
+        'type' => PaymentType::ScaleAudit, 'amount_cents' => 7500, 'currency' => 'EUR',
+        'provider' => 'stripe', 'provider_reference' => 'cs_scale', 'status' => PaymentStatus::Succeeded, 'paid_at' => now(),
+    ]);
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $submission->fresh()])
+        ->assertDontSee('Réservé · audit non payé')
+        ->assertSee('à déduire du devis');
+});
+
 it('lets an admin record the confirmed Scale consultation slot and advance its status', function () {
     $submission = Submission::factory()->scale()->create();
     $submission->payments()->create([

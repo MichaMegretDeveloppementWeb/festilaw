@@ -184,26 +184,38 @@
 .scale-book__step {
     display: flex; gap: 14px; padding: 16px 18px;
     border-radius: var(--radius); border: 1px solid var(--color-line); background: var(--color-cream);
-    transition: opacity 0.2s ease, border-color 0.2s ease;
 }
-/* L'etape 2 s'allume une fois l'agenda ouvert (progressif) ; sans JS elle reste pleinement utilisable. */
-.scale-book__step--confirm { opacity: 0.6; }
-.scale-book__step--confirm.is-ready { opacity: 1; border-color: color-mix(in srgb, var(--color-coral) 35%, var(--color-line)); }
 .scale-book__num {
     flex: none; width: 26px; height: 26px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     font-size: 14px; font-weight: 700; color: #fff; background: var(--color-blue);
 }
-.scale-book__step--confirm .scale-book__num { background: var(--color-ink-soft); }
-.scale-book__step--confirm.is-ready .scale-book__num { background: var(--color-coral); }
-.scale-book__body { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 0; }
+.scale-book__body { flex: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 0; }
 .scale-book__title { margin: 0; font-size: 15px; font-weight: 600; color: var(--color-ink); }
 .scale-book__hint { margin: 0 0 4px; font-size: 13px; line-height: 1.5; color: var(--color-ink-soft); }
 .scale-book__body .btn { display: inline-flex; align-items: center; }
-/* Etape 2 verrouillee tant que l'agenda n'a pas ete ouvert (JS). */
-.scale-book__body .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.scale-book__locked { display: none; margin: 8px 0 0; font-size: 12px; color: var(--color-ink-soft); }
-.scale-book__locked.is-shown { display: block; }
+
+/* Agenda Google integre (etape de reservation) : la carte s'elargit pour lui laisser la place, et
+   l'agenda passe sous le titre de l'etape, sur toute sa largeur. */
+.my-project__inner--wide { max-width: 880px; }
+.scale-book__step--calendar { flex-wrap: wrap; }
+.scale-calendar {
+    flex: 1 1 100%; min-width: 0; overflow: hidden;
+    border-radius: var(--radius-sm); border: 1px solid var(--color-line); background: #fff;
+}
+.scale-calendar__frame { display: block; width: 100%; height: 680px; border: 0; }
+.scale-calendar__fallback { flex: 1 1 100%; margin: 0; font-size: 13px; color: var(--color-ink-soft); }
+.scale-calendar__fallback a { color: var(--color-blue); }
+/* Sur mobile, l'agenda de Google a besoin d'environ 320 px de large : la carte gagne sur les marges de la
+   page et l'agenda deborde sur celles de l'etape. Google y empile le mois puis les horaires : plus haut,
+   pour limiter le defilement interne. */
+@media (max-width: 620px) {
+    .my-project__inner--wide { margin: 0 -12px; }
+    .my-project__inner--wide .my-project__card { padding: 20px 12px; }
+    .scale-book__step--calendar { padding: 14px 10px 12px; }
+    .scale-calendar { flex-basis: calc(100% + 20px); margin: 4px -10px 0; border-radius: 0; border-left: 0; border-right: 0; }
+    .scale-calendar__frame { height: 1000px; }
+}
 /* Filet de securite (etat reserve) : rouvrir l'agenda si le creneau n'a pas ete pris. */
 .scale-book__reopen { margin: 12px 0 0; font-size: 13px; color: var(--color-ink-soft); }
 .scale-book__reopen a { color: var(--color-blue); }

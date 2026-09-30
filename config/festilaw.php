@@ -72,11 +72,14 @@ return [
     ],
 
     /*
-     | Parcours SCALE : paiement de l'audit (deduit du contrat final) + agenda de reservation.
+     | Parcours SCALE : reservation de la consultation (page de reservation Google, integree a l'espace
+     | Scale) puis paiement de l'audit (deduit du contrat final). calendar_url = URL LONGUE de la page
+     | (https://calendar.google.com/calendar/appointments/schedules/<ID>) : seule celle-ci s'integre en
+     | iframe ; le lien court calendar.app.google ne s'ouvre que dans un nouvel onglet.
      */
     'scale' => [
         'audit_amount_cents' => (int) env('FESTILAW_SCALE_AUDIT_CENTS', 7500),
-        'calendar_url' => env('FESTILAW_SCALE_CALENDAR_URL', 'https://calendar.app.google/w8ZejYQLkZfgAo3F7'),
+        'calendar_url' => env('FESTILAW_SCALE_CALENDAR_URL', 'https://calendar.google.com/calendar/appointments/schedules/AcZssZ1WmGHBiY53WN8q2_e-D_7wwcfbnDIPVWczmXSDs0kSyK_xNpUMClzHbv7Lp24JvjmE-_LsAFGz'),
         // Duree de validite du lien magique de l'espace Scale (jours).
         'resume_ttl_days' => (int) env('FESTILAW_SCALE_RESUME_TTL_DAYS', 30),
     ],

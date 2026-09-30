@@ -119,7 +119,8 @@ final readonly class MarkPaymentSucceededAction
 
         $mailable = match (true) {
             $payment->type->isSubscription() => new StarterPaymentConfirmed($submission),
-            $payment->type === PaymentType::ScaleAudit => new ScaleAuditConfirmed($submission),
+            // Audit SCALE : la consultation est normalement deja reservee (elle precede le paiement).
+            $payment->type === PaymentType::ScaleAudit => new ScaleAuditConfirmed($submission, $submission->appointment()->exists()),
             default => null,
         };
 

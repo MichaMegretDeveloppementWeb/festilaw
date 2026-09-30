@@ -22,9 +22,10 @@ use Illuminate\Support\Facades\Mail;
 use Throwable;
 
 /**
- * Records that a SCALE consultation has been requested (via the provided Google Calendar link)
- * and advances the submission to "in progress". Guards that the audit is paid first. The exact slot may
- * be filled in later by Festilaw from the back-office (no calendar webhook in scope).
+ * Records that a SCALE consultation has been requested (via the Google booking page embedded in the Scale
+ * space) and advances the submission to "in progress". Booking comes FIRST: the 75 EUR audit is paid
+ * afterwards to confirm the consultation. The exact slot may be filled in later by Festilaw from the
+ * back-office (no calendar webhook in scope).
  */
 final readonly class RecordAppointmentAction
 {
@@ -35,15 +36,6 @@ final readonly class RecordAppointmentAction
         // Un dossier annule ne prend pas de rendez-vous (garde au bord, comme le paiement de l'audit).
         if ($submission->status === SubmissionStatus::Cancelled) {
             throw ScaleException::dossierCancelled($submission->id);
-        }
-
-        // Reserver n'a de sens qu'une fois l'audit paye (garde metier au bord).
-        if ($submission->payments()
-            ->where('type', PaymentType::ScaleAudit)
-            ->where('status', PaymentStatus::Succeeded)
-            ->doesntExist()
-        ) {
-            throw ScaleException::auditNotPaid($submission->id);
         }
 
         // Idempotent : un dossier n'a qu'un rendez-vous (unique submission_id, cf. chantier #4). Un second
@@ -83,14 +75,22 @@ final readonly class RecordAppointmentAction
         return $appointment;
     }
 
-    /** Confirme la reservation au client et previent l'equipe Festilaw (best-effort, jamais bloquant). */
+    /**
+     * Confirme la reservation au client (avec l'etape suivante : payer l'audit, sauf s'il l'est deja) et
+     * previent l'equipe Festilaw (best-effort, jamais bloquant).
+     */
     private function sendConfirmations(Submission $submission): void
     {
         if ((string) $submission->email !== '') {
+            $auditPaid = $submission->payments()
+                ->where('type', PaymentType::ScaleAudit)
+                ->where('status', PaymentStatus::Succeeded)
+                ->exists();
+
             try {
                 Mail::to($submission->email)
                     ->locale($submission->locale ?: config('app.locale'))
-                    ->send(new ScaleConsultationBooked($submission));
+                    ->send(new ScaleConsultationBooked($submission, $auditPaid));
             } catch (Throwable $e) {
                 Log::error('Failed to send the SCALE booking confirmation to the client.', [
                     'exception' => $e,
