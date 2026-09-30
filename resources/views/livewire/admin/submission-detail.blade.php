@@ -19,6 +19,22 @@
             </div>
             <x-admin.dossier-state-badge :state="$dossierState" />
         </div>
+
+        {{-- Changement de pack avant paiement : l'ancien dossier (annule) et son remplacant se pointent l'un l'autre. --}}
+        @if ($submission->replacedBy)
+            <x-ui.alert type="warning" class="mb-6">
+                {{ __('Remplacé par') }}
+                <a href="{{ route('admin.submissions.show', ['submission' => $submission->replacedBy->id]) }}" class="font-semibold underline">{{ $submission->replacedBy->reference }}</a>
+                · {{ __('changement de pack vers :pack le :date par le client.', ['pack' => $submission->replacedBy->type->label(), 'date' => $submission->replacedBy->created_at->format('d/m/Y à H:i')]) }}
+            </x-ui.alert>
+        @endif
+        @if ($submission->replaces)
+            <x-ui.alert type="info" class="mb-6">
+                {{ __('Remplace') }}
+                <a href="{{ route('admin.submissions.show', ['submission' => $submission->replaces->id]) }}" class="font-semibold underline">{{ $submission->replaces->reference }}</a>
+                · {{ __(':pack, changé par le client avant paiement (informations et pièces reprises).', ['pack' => $submission->replaces->type->label()]) }}
+            </x-ui.alert>
+        @endif
     @endif
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">

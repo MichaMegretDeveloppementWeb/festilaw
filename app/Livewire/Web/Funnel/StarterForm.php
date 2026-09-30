@@ -47,6 +47,13 @@ class StarterForm extends Component
     /** True when that existing dossier is an already-active (paid) subscription. */
     public bool $resentActive = false;
 
+    /**
+     * Pack of that existing dossier (its type value). Named on the "Check your inbox" screen: this form
+     * never changes the pack of an existing dossier, the switch is made from the dossier itself.
+     */
+    #[Locked]
+    public string $resentType = '';
+
     public function mount(string $type = 'starter'): void
     {
         $this->type = in_array($type, ['starter', 'pro'], true) ? $type : 'starter';
@@ -123,6 +130,7 @@ class StarterForm extends Component
         if (! $outcome->isNew) {
             $this->resent = true;
             $this->resentActive = $outcome->isActive;
+            $this->resentType = $outcome->submission->type->value;
 
             return;
         }
@@ -135,8 +143,12 @@ class StarterForm extends Component
 
     public function render()
     {
+        $resentPack = SubmissionType::tryFrom($this->resentType);
+
         return view('livewire.web.funnel.starter-form', [
             'packLabel' => $this->packType()->label(),
+            'resentPackLabel' => $resentPack?->label(),
+            'resentOtherPack' => $resentPack !== null && $resentPack !== $this->packType(),
         ]);
     }
 }

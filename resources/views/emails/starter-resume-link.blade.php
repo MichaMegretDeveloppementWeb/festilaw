@@ -18,6 +18,8 @@
 
         <x-mail.button :url="$resumeUrl">{{ __('Continue my application') }}</x-mail.button>
 
+        <x-mail.text>{{ __('Want a different plan? You can switch between the Creator Pack and the Pro Pack from your file, before paying.') }}</x-mail.text>
+
         <x-mail.text :muted="true" size="13.5px">{!! __('Keep this link private: anyone who has it can access your file. Your reference is :reference, and the link stays valid for :days days.', ['reference' => '<strong style="color:#0B1E45;">'.e($submission->reference).'</strong>', 'days' => $ttlDays]) !!}</x-mail.text>
     @endif
 

@@ -14,6 +14,23 @@
 .journey-flash__icon { flex: none; color: var(--color-coral); }
 .journey-error { margin-bottom: 4px; }
 
+/* Changement de pack avant paiement : lien discret, puis encart de confirmation. */
+.journey-switch-link { margin: 0; font-size: 13.5px; color: var(--color-ink-soft); }
+.journey-switch-link button {
+    padding: 0; border: 0; background: none; cursor: pointer;
+    font: inherit; font-weight: 600; color: var(--color-blue); text-decoration: underline;
+}
+.journey-switch {
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 16px 18px; border-radius: var(--radius-sm);
+    font-size: 14px; line-height: 1.5; color: var(--color-ink);
+    background: color-mix(in srgb, var(--color-blue) 6%, var(--color-cream));
+    border: 1px solid color-mix(in srgb, var(--color-blue) 20%, transparent);
+}
+.journey-switch p { margin: 0; }
+.journey-switch__title { font-weight: 700; color: var(--color-blue); }
+.journey-switch__actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+
 /* Indicateur d'etapes. */
 .journey-progress { display: flex; align-items: center; gap: 8px; list-style: none; padding: 0; margin: 0; }
 .journey-progress__step { display: flex; align-items: center; gap: 9px; flex: 1; color: var(--color-ink-soft); }

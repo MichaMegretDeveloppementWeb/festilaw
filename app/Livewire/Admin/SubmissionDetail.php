@@ -72,6 +72,7 @@ class SubmissionDetail extends Component
     {
         $this->submission = $submission->load([
             'contract', 'uploadedDocuments', 'payments', 'appointment', 'quizResult', 'notes.author',
+            'replacedBy', 'replaces',
         ]);
         $this->newStatus = $this->submission->status->value;
         $this->rpAddress = (string) $this->submission->eu_rp_address;

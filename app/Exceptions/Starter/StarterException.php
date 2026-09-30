@@ -66,6 +66,14 @@ final class StarterException extends BaseAppException
         );
     }
 
+    public static function packChangeNotAllowed(int $submissionId, string $reason): self
+    {
+        return new self(
+            technicalMessage: "STARTER submission [{$submissionId}] cannot change pack: {$reason}.",
+            userMessage: 'Your plan can no longer be changed from here (a payment has been made or is in progress). Please contact us.',
+        );
+    }
+
     /** @param  list<string>  $missingTypes */
     public static function documentsMissing(int $submissionId, array $missingTypes): self
     {

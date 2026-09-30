@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
@@ -43,6 +44,7 @@ class Submission extends Model
         'resume_expires_at',
         'meta',
         'eu_rp_address',
+        'replaced_by_id',
     ];
 
     protected function casts(): array
@@ -181,6 +183,18 @@ class Submission extends Model
     public function appointment(): HasOne
     {
         return $this->hasOne(Appointment::class);
+    }
+
+    /** Dossier ouvert a la place de celui-ci lors d'un changement de pack avant paiement. */
+    public function replacedBy(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'replaced_by_id');
+    }
+
+    /** Dossier que celui-ci remplace (changement de pack avant paiement), s'il y en a un. */
+    public function replaces(): HasOne
+    {
+        return $this->hasOne(self::class, 'replaced_by_id');
     }
 
     /** Notes internes de l'equipe (back-office), les plus recentes d'abord. */

@@ -18,6 +18,8 @@ use Illuminate\Support\Collection;
  * SubmissionObserver). Un dossier SCALE abandonne = demande d'audit soumise (statut Nouveau) jamais reglee.
  * Les dossiers ayant paye quoi que ce soit (abonnement OU audit) sont TOUJOURS conserves (relation client
  * + obligations comptables) · double garde : statut hors [Paye, Termine, Annule] ET aucun paiement reussi.
+ * Seule exception pour « Annule » : le dossier annule parce que remplace par un changement de pack avant
+ * paiement (replaced_by_id), purge au meme delai apres l'expiration de son lien.
  *
  * Planifiee quotidiennement (routes/console.php). Suppression modele par modele pour declencher
  * l'observer qui efface les fichiers du disque.
@@ -42,12 +44,19 @@ final class PurgeAbandonedDossiers extends Command
 
         Submission::query()
             ->whereIn('type', $purgeableTypes)
-            ->whereIn('status', [
-                SubmissionStatus::New,               // SCALE abandonne : audit jamais paye
-                SubmissionStatus::InProgress,
-                SubmissionStatus::AwaitingDocuments,
-                SubmissionStatus::AwaitingPayment,
-            ])
+            ->where(function (Builder $query): void {
+                $query->whereIn('status', [
+                    SubmissionStatus::New,               // SCALE abandonne : audit jamais paye
+                    SubmissionStatus::InProgress,
+                    SubmissionStatus::AwaitingDocuments,
+                    SubmissionStatus::AwaitingPayment,
+                ])
+                    // Dossier annule parce que remplace (changement de pack avant paiement) : il ne fait que
+                    // dupliquer l'identite du nouveau dossier, qui a repris ses pieces.
+                    ->orWhere(fn (Builder $replaced): Builder => $replaced
+                        ->where('status', SubmissionStatus::Cancelled)
+                        ->whereNotNull('replaced_by_id'));
+            })
             ->whereNotNull('resume_expires_at')
             ->where('resume_expires_at', '<', $cutoff)
             // Garde absolue : jamais un dossier ayant paye (abonnement ou audit), quel que soit son statut.

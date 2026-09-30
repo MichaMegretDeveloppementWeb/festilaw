@@ -11,6 +11,7 @@ enum FunnelNotificationReason: string
     case ScaleAuditRequest = 'scale_audit_request';
     case PaymentReceived = 'payment_received';
     case ConsultationBooked = 'consultation_booked';
+    case PackChanged = 'pack_changed';
 
     public function subject(): string
     {
@@ -20,6 +21,7 @@ enum FunnelNotificationReason: string
             self::ScaleAuditRequest => __('New Scale Pack audit request'),
             self::PaymentReceived => __('Payment received'),
             self::ConsultationBooked => __('New Scale consultation booked'),
+            self::PackChanged => __('Pack changed by the client'),
         };
     }
 }

@@ -431,6 +431,25 @@ it('shows the Scale audit deduction badge once the 75 EUR audit is paid', functi
         ->assertSee('à déduire du devis');
 });
 
+it('links a dossier replaced by a pack change and its replacement', function () {
+    $old = Submission::factory()->starter()->create(['status' => SubmissionStatus::Cancelled]);
+    $new = Submission::factory()->pro()->create();
+    $old->update(['replaced_by_id' => $new->id]);
+
+    actingAs(User::factory()->create());
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $old->fresh()])
+        ->assertSee('Remplacé par')
+        ->assertSee($new->reference)
+        ->assertSee(route('admin.submissions.show', ['submission' => $new->id]), false)
+        ->assertSee('changement de pack vers Pro Pack');
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $new->fresh()])
+        ->assertSee('Remplace')
+        ->assertSee($old->reference)
+        ->assertSee(route('admin.submissions.show', ['submission' => $old->id]), false);
+});
+
 it('flags a Scale consultation booked but whose audit is not paid yet', function () {
     $submission = Submission::factory()->scale()->create();
     $submission->appointment()->create(['status' => AppointmentStatus::Requested]);

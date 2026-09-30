@@ -6,6 +6,7 @@ namespace App\Livewire\Web\Funnel;
 
 use App\Actions\Web\Payment\CheckPaymentStatusAction;
 use App\Actions\Web\Payment\MarkPaymentSucceededAction;
+use App\Actions\Web\Starter\ChangeStarterPackAction;
 use App\Actions\Web\Starter\MarkContractDeclinedAction;
 use App\Actions\Web\Starter\MarkContractSignedAction;
 use App\Actions\Web\Starter\ReplaceStarterDocumentAction;
@@ -20,6 +21,7 @@ use App\Enums\Contract\SignatureStatus;
 use App\Enums\Document\DocumentType;
 use App\Enums\Payment\PaymentStatus;
 use App\Enums\Submission\SubmissionStatus;
+use App\Enums\Submission\SubmissionType;
 use App\Exceptions\BaseAppException;
 use App\Livewire\Concerns\HandlesUnexpectedErrors;
 use App\Models\Payment;
@@ -84,6 +86,9 @@ class StarterJourney extends Component
 
     /** How many signature-status polls have run since the iframe's completed event (bounds the loop). */
     public int $signatureChecks = 0;
+
+    /** The visitor asked to switch to the other pack: the confirmation panel is shown. */
+    public bool $confirmingPackChange = false;
 
     /** Client details printed on the mandate, captured on the sign step and stored in the contract's filled_fields. */
     public string $incorporationPlace = '';
@@ -528,6 +533,53 @@ class StarterJourney extends Component
     }
 
     /**
+     * Switches the dossier to the other pack (Creator <-> Pro) before any payment: the dossier is replaced
+     * by a new one at that pack (details and documents carried over, mandate to sign again) and the
+     * visitor is taken straight into it. Its link was their access; the new one is also emailed.
+     */
+    public function changePack(ChangeStarterPackAction $changePack): mixed
+    {
+        if (! $this->canChangePack()) {
+            return null;
+        }
+
+        try {
+            $replacement = $changePack->execute($this->submission, $this->otherPack());
+        } catch (BaseAppException $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            $this->confirmingPackChange = false;
+            $this->addError('journey', __($e->getUserMessage()));
+
+            return null;
+        } catch (Throwable $e) {
+            $this->reportUnexpectedError($e, 'journey', 'STARTER pack change');
+
+            return null;
+        }
+
+        session()->flash('starter_status', 'pack_changed');
+
+        return $this->redirectRoute('get-started.starter.journey', ['dossier' => $replacement->resume_token]);
+    }
+
+    /** The other online pack, the one the visitor can switch to. */
+    private function otherPack(): SubmissionType
+    {
+        return $this->submission->type === SubmissionType::Pro ? SubmissionType::Starter : SubmissionType::Pro;
+    }
+
+    /**
+     * The pack can still be changed: a step before payment, no checkout in flight, no signature being
+     * finalised. The Action re-checks everything (payments included) under the checkout lock.
+     */
+    private function canChangePack(): bool
+    {
+        return in_array($this->step(), self::STEPS, true)
+            && ! $this->confirmingSignature
+            && $this->pendingPayment() === null;
+    }
+
+    /**
      * "Verifier aupres du prestataire" sur un paiement echoue : re-interroge la source de verite avant de
      * re-payer. Si le prestataire dit "paye", la fausse-echec est corrigee et le dossier active (evite un
      * double-debit). Sinon, message clair : le client peut relancer (nouveau paiement, prorata recalcule).
@@ -817,6 +869,10 @@ class StarterJourney extends Component
             'annualCents' => $annualCents,
             'serviceYear' => (int) $reference->year,
             'packLabel' => $this->submission->type->label(),
+            'canChangePack' => $this->canChangePack(),
+            'otherPackLabel' => $this->otherPack()->label(),
+            'otherPackAnnualCents' => $this->otherPack()->annualCents(),
+            'contractSigned' => $this->submission->contract?->signature_status === SignatureStatus::Signed,
             'myProjectUrl' => route('my-project', ['dossier' => $this->submission->resume_token]),
         ]);
     }

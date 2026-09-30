@@ -7,8 +7,11 @@
             <h3 class="funnel-success__title">{{ __('Check your inbox') }}</h3>
             @if ($resentActive)
                 <p class="funnel-success__text">{!! __('You already have an active subscription. We\'ve emailed your secure link to :email to view your file and download your documents.', ['email' => '<strong>'.e($email).'</strong>']) !!}</p>
+            @elseif ($resentOtherPack)
+                {{-- Le formulaire ne change jamais le pack d'un dossier existant : le changement se fait depuis le dossier. --}}
+                <p class="funnel-success__text">{!! __('You already have a :current application in progress. We\'ve just emailed your secure link to :email. To switch to the :requested, open your file from that link and change your plan there, before paying.', ['current' => e(__($resentPackLabel)), 'requested' => e(__($packLabel)), 'email' => '<strong>'.e($email).'</strong>']) !!}</p>
             @else
-                <p class="funnel-success__text">{!! __('You already have an application in progress. We\'ve just emailed your secure link to :email so you can pick up right where you left off.', ['email' => '<strong>'.e($email).'</strong>']) !!}</p>
+                <p class="funnel-success__text">{!! __('You already have a :pack application in progress. We\'ve just emailed your secure link to :email so you can pick up right where you left off.', ['pack' => e(__($resentPackLabel ?? $packLabel)), 'email' => '<strong>'.e($email).'</strong>']) !!}</p>
             @endif
             <a href="{{ route('home') }}" class="btn btn--outline-dark btn--sm">{{ __('Back to home') }}</a>
         </div>

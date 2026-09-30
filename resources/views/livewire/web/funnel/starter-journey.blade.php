@@ -5,6 +5,7 @@
                 ? __('Documents saved. Last step: payment.')
                 : __('Documents saved. Next: sign your mandate.'),
             'signed' => __('Mandate signed. Last step: payment.'),
+            'pack_changed' => __('You\'ve switched to the :pack. Your details and documents have been carried over.', ['pack' => __($packLabel)]),
             'paid' => __('Payment received. Your file is complete.'),
             'document_replaced' => __('Document replaced.'),
             default => null,
@@ -18,6 +19,34 @@
     @endif
 
     @error('journey') <div class="funnel-form__error journey-error">{{ $message }}</div> @enderror
+
+    {{-- Changement de pack avant paiement : le dossier est remplace par un nouveau au pack choisi (infos et
+         documents repris, mandat a re-signer). Masque des qu'un paiement est lance. --}}
+    @if ($canChangePack)
+        @php
+            $otherPack = __($otherPackLabel);
+            $otherPrice = '€'.number_format($otherPackAnnualCents / 100, $otherPackAnnualCents % 100 === 0 ? 0 : 2);
+        @endphp
+        @if ($confirmingPackChange)
+            <div class="journey-switch">
+                <p class="journey-switch__title">{{ __('Switch to the :pack?', ['pack' => $otherPack]) }}</p>
+                <p>{{ __('The :pack is :price/year. Your details and documents are carried over to a new file for this plan.', ['pack' => $otherPack, 'price' => $otherPrice]) }}</p>
+                @if ($contractSigned)
+                    <p>{{ __('You\'ve already signed your mandate for the :current: you\'ll sign a new one for the :pack.', ['current' => __($packLabel), 'pack' => $otherPack]) }}</p>
+                @endif
+                <p>{{ __('Your current link will stop working: we\'ll email you the new one.') }}</p>
+                <div class="journey-switch__actions">
+                    <button type="button" class="btn btn--coral btn--sm" wire:click="changePack" wire:loading.attr="disabled" wire:target="changePack">
+                        <span wire:loading.remove wire:target="changePack">{{ __('Switch to the :pack', ['pack' => $otherPack]) }}</span>
+                        <span wire:loading wire:target="changePack">{{ __('Switching') }}&hellip;</span>
+                    </button>
+                    <button type="button" class="btn btn--outline-dark btn--sm" wire:click="$set('confirmingPackChange', false)">{{ __('Keep the :pack', ['pack' => __($packLabel)]) }}</button>
+                </div>
+            </div>
+        @else
+            <p class="journey-switch-link">{{ __('Not the right plan?') }} <button type="button" wire:click="$set('confirmingPackChange', true)">{{ __('Switch to the :pack', ['pack' => $otherPack]) }}</button></p>
+        @endif
+    @endif
 
     @unless (in_array($currentStep, ['done', 'cancelled'], true))
         @php
