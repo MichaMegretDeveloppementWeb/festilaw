@@ -75,6 +75,43 @@ it('only reports on a dry run: nothing created, nothing stored', function () {
     Http::assertNotSent(fn (ClientRequest $request): bool => $request->method() === 'POST');
 });
 
+it('recreates the webhook: the new one first, then only the old ones of the site are deleted', function () {
+    Http::fake([
+        'https://www.signwell.com/api/v1/hooks' => Http::sequence()
+            ->push([
+                ['id' => 'aaaa1111-silenced-hook', 'callback_url' => 'https://festilaw.com/webhooks/signature'],
+                ['id' => 'bbbb2222-another-site', 'callback_url' => 'https://another-site.example/webhooks/signature'],
+            ])
+            ->push(['id' => 'dddd4444-fresh-hook', 'callback_url' => 'https://festilaw.com/webhooks/signature'], 201),
+        'https://www.signwell.com/api/v1/hooks/*' => Http::response(null, 204),
+    ]);
+
+    $this->artisan('festilaw:signwell-webhook', ['--recreate' => true])
+        ->expectsOutputToContain('Webhook SignWell recree')
+        ->doesntExpectOutputToContain('dddd4444-fresh-hook')
+        ->assertOk();
+
+    expect(storedWebhookIds())->toBe(['dddd4444-fresh-hook']);
+
+    $methods = collect(Http::recorded())->map(fn (array $pair): string => $pair[0]->method().' '.parse_url($pair[0]->url(), PHP_URL_PATH))->all();
+    expect($methods)->toBe([
+        'GET /api/v1/hooks',
+        'POST /api/v1/hooks',                                  // le neuf d'abord...
+        'DELETE /api/v1/hooks/aaaa1111-silenced-hook',         // ...puis l'ancien du site, et lui seul
+    ]);
+});
+
+it('only reports what a recreate would do on a dry run', function () {
+    Http::fake(['*/api/v1/hooks' => Http::response([['id' => 'aaaa1111-silenced-hook', 'callback_url' => 'https://festilaw.com/webhooks/signature']])]);
+
+    $this->artisan('festilaw:signwell-webhook', ['--recreate' => true, '--dry' => true])
+        ->expectsOutputToContain('DRY-RUN')
+        ->assertOk();
+
+    expect(storedWebhookIds())->toBeNull();
+    Http::assertSentCount(1); // la seule lecture de la liste
+});
+
 it('never registers a local development URL on a SignWell account', function (string $root) {
     URL::forceRootUrl($root);
     URL::forceScheme((string) parse_url($root, PHP_URL_SCHEME));

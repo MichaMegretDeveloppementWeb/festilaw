@@ -17,10 +17,17 @@ use Throwable;
  * Lancee par deploy.sh a chaque deploiement (non bloquante). Refuse une URL non publique (festilaw.test,
  * localhost, http) : jamais de webhook local enregistre sur un compte SignWell. Option --dry : affiche
  * ce qui existe sans rien creer ni ecrire.
+ *
+ * Option --recreate (a lancer a la main, une fois) : remplace le(s) webhook(s) du site par un neuf, quand
+ * SignWell a cesse de l'appeler (desactive apres des refus en serie, etat que son API n'expose pas). Le
+ * neuf est cree d'abord, les anciens de la meme URL supprimes ensuite ; les webhooks d'autres URL ne sont
+ * jamais touches.
  */
 final class SyncSignWellWebhook extends Command
 {
-    protected $signature = 'festilaw:signwell-webhook {--dry : Simulation, sans creation ni ecriture}';
+    protected $signature = 'festilaw:signwell-webhook
+        {--dry : Simulation, sans creation, suppression ni ecriture}
+        {--recreate : Remplace le(s) webhook(s) du site par un neuf (SignWell a cesse de l\'appeler)}';
 
     protected $description = 'Retrouve ou cree le webhook SignWell du site et memorise son id (cle de verification).';
 
@@ -40,9 +47,10 @@ final class SyncSignWellWebhook extends Command
         }
 
         $dry = (bool) $this->option('dry');
+        $recreate = (bool) $this->option('recreate');
 
         try {
-            $result = $registry->sync($callbackUrl, $dry);
+            $result = $recreate ? $registry->recreate($callbackUrl, $dry) : $registry->sync($callbackUrl, $dry);
         } catch (Throwable $e) {
             $this->error('Synchronisation du webhook SignWell impossible : '.$e->getMessage());
 
@@ -50,6 +58,15 @@ final class SyncSignWellWebhook extends Command
         }
 
         $ids = implode(', ', array_map($this->mask(...), $result->ids));
+        $deleted = implode(', ', array_map($this->mask(...), $result->deleted));
+
+        if ($recreate) {
+            $this->info($dry
+                ? 'Recreation : '.($deleted !== '' ? "supprimerait {$deleted} et " : '')."creerait un webhook neuf pour {$callbackUrl}. [DRY-RUN]"
+                : "Webhook SignWell recree pour {$callbackUrl} (id {$ids})".($deleted !== '' ? ", ancien(s) supprime(s) : {$deleted}." : '.'));
+
+            return self::SUCCESS;
+        }
 
         $this->info(match (true) {
             $result->created => "Webhook SignWell cree pour {$callbackUrl} (id {$ids}).",
