@@ -22,6 +22,7 @@ use Throwable;
  * sync() (deploy command) finds the webhooks registered for our URL, creates one only if there is none,
  * and stores their ids. It never deletes anything (the webhook created in the SignWell interface is kept).
  * recreate() (explicit, run by hand) replaces them by a fresh webhook when the provider stopped calling.
+ * SignWell allows a single webhook per callback URL.
  * refreshKnownIds() re-reads the list without creating anything, at most once per REFRESH_COOLDOWN
  * seconds: self-healing if the webhook is recreated in the SignWell interface.
  */
@@ -71,8 +72,10 @@ final readonly class SignWellWebhookRegistry
     /**
      * Replaces the webhook(s) calling $callbackUrl by a fresh one: a webhook the provider stopped calling
      * (e.g. disabled after repeated rejections) is not reported as such by its API, recreating it is the
-     * way to restart deliveries. The new webhook is created FIRST, the old ones for the same URL deleted
-     * after (never left without a webhook); webhooks of other URLs are untouched. Dry run: reports only.
+     * way to restart deliveries. SignWell refuses two webhooks on the same URL ("callback_url has already
+     * been taken"), so the old ones are deleted FIRST, then the new one is created; if that creation fails,
+     * a plain sync (every deploy) recreates the missing webhook. Webhooks of other URLs are untouched.
+     * Dry run: reports only.
      */
     public function recreate(string $callbackUrl, bool $dry = false): WebhookSyncData
     {
@@ -82,9 +85,6 @@ final readonly class SignWellWebhookRegistry
             return new WebhookSyncData($callbackUrl, [], false, $old);
         }
 
-        $new = $this->create($callbackUrl);
-        $this->store([$new]);
-
         foreach ($old as $id) {
             try {
                 $this->api()->delete("/hooks/{$id}")->throw();
@@ -92,6 +92,9 @@ final readonly class SignWellWebhookRegistry
                 throw SignatureException::apiRequestFailed('delete webhook', $e);
             }
         }
+
+        $new = $this->create($callbackUrl);
+        $this->store([$new]);
 
         return new WebhookSyncData($callbackUrl, [$new], true, $old);
     }

@@ -6,6 +6,7 @@ namespace App\Console\Commands;
 
 use App\Services\Signature\SignWellWebhookRegistry;
 use Illuminate\Console\Command;
+use Illuminate\Http\Client\RequestException;
 use Throwable;
 
 /**
@@ -19,9 +20,10 @@ use Throwable;
  * ce qui existe sans rien creer ni ecrire.
  *
  * Option --recreate (a lancer a la main, une fois) : remplace le(s) webhook(s) du site par un neuf, quand
- * SignWell a cesse de l'appeler (desactive apres des refus en serie, etat que son API n'expose pas). Le
- * neuf est cree d'abord, les anciens de la meme URL supprimes ensuite ; les webhooks d'autres URL ne sont
- * jamais touches.
+ * SignWell a cesse de l'appeler (desactive apres des refus en serie, etat que son API n'expose pas).
+ * SignWell n'accepte qu'un webhook par URL : l'ancien est supprime d'abord, puis le neuf cree ; si la
+ * creation echoue, relancer la commande sans option le recree. Les webhooks d'autres URL ne sont jamais
+ * touches.
  */
 final class SyncSignWellWebhook extends Command
 {
@@ -52,7 +54,10 @@ final class SyncSignWellWebhook extends Command
         try {
             $result = $recreate ? $registry->recreate($callbackUrl, $dry) : $registry->sync($callbackUrl, $dry);
         } catch (Throwable $e) {
-            $this->error('Synchronisation du webhook SignWell impossible : '.$e->getMessage());
+            $this->error('Synchronisation du webhook SignWell impossible : '.$e->getMessage().$this->providerAnswer($e));
+            if ($recreate) {
+                $this->warn('Si l\'ancien webhook a deja ete supprime, relancer sans option recree le webhook manquant : php artisan festilaw:signwell-webhook');
+            }
 
             return self::FAILURE;
         }
@@ -75,6 +80,17 @@ final class SyncSignWellWebhook extends Command
         });
 
         return self::SUCCESS;
+    }
+
+    /** La reponse de SignWell (code + message) quand l'appel a ete refuse : sans elle, on devine. */
+    private function providerAnswer(Throwable $e): string
+    {
+        $previous = $e->getPrevious();
+        if (! $previous instanceof RequestException) {
+            return '';
+        }
+
+        return ' (SignWell HTTP '.$previous->response->status().' : '.mb_substr(trim($previous->response->body()), 0, 300).')';
     }
 
     /** https, et pas un domaine de developpement local. */

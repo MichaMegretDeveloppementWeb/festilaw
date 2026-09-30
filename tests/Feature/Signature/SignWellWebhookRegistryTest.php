@@ -75,7 +75,7 @@ it('only reports on a dry run: nothing created, nothing stored', function () {
     Http::assertNotSent(fn (ClientRequest $request): bool => $request->method() === 'POST');
 });
 
-it('recreates the webhook: the new one first, then only the old ones of the site are deleted', function () {
+it('recreates the webhook: the old one of the site deleted first (one webhook per URL), then a new one', function () {
     Http::fake([
         'https://www.signwell.com/api/v1/hooks' => Http::sequence()
             ->push([
@@ -96,9 +96,23 @@ it('recreates the webhook: the new one first, then only the old ones of the site
     $methods = collect(Http::recorded())->map(fn (array $pair): string => $pair[0]->method().' '.parse_url($pair[0]->url(), PHP_URL_PATH))->all();
     expect($methods)->toBe([
         'GET /api/v1/hooks',
-        'POST /api/v1/hooks',                                  // le neuf d'abord...
-        'DELETE /api/v1/hooks/aaaa1111-silenced-hook',         // ...puis l'ancien du site, et lui seul
+        'DELETE /api/v1/hooks/aaaa1111-silenced-hook',         // l'ancien du site, et lui seul, d'abord...
+        'POST /api/v1/hooks',                                  // ...puis le neuf (SignWell : un webhook par URL)
     ]);
+});
+
+it('shows the SignWell answer when a call is refused, and how to recover after a recreate', function () {
+    Http::fake([
+        'https://www.signwell.com/api/v1/hooks' => Http::sequence()
+            ->push([['id' => 'aaaa1111-silenced-hook', 'callback_url' => 'https://festilaw.com/webhooks/signature']])
+            ->push(['errors' => ['callback_url' => ['has already been taken']]], 422),
+        'https://www.signwell.com/api/v1/hooks/*' => Http::response(null, 204),
+    ]);
+
+    $this->artisan('festilaw:signwell-webhook', ['--recreate' => true])
+        ->expectsOutputToContain('SignWell HTTP 422 : {"errors":{"callback_url":["has already been taken"]}}')
+        ->expectsOutputToContain('relancer sans option')
+        ->assertFailed();
 });
 
 it('only reports what a recreate would do on a dry run', function () {
