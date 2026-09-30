@@ -52,6 +52,29 @@ function openStarterDossier(): Submission
     ])->submission;
 }
 
+/** Stores the pack's required documents on the dossier (documents come first in the journey). */
+function storeRequiredDocuments(Submission $submission): Submission
+{
+    foreach ($submission->type->requiredDocuments() as $type) {
+        $submission->uploadedDocuments()->create([
+            'type' => $type,
+            'file_path' => "starter-documents/{$submission->reference}/{$type->value}.pdf",
+            'original_filename' => "{$type->value}.pdf",
+            'mime_type' => 'application/pdf',
+            'size_bytes' => 1000,
+            'uploaded_at' => now(),
+        ]);
+    }
+
+    return $submission->fresh();
+}
+
+/** A fresh dossier whose documents are uploaded: the journey is at the signature step. */
+function dossierReadyToSign(): Submission
+{
+    return storeRequiredDocuments(openStarterDossier());
+}
+
 /** Binds a stub signature provider that reports the given completion state (like SignWell would). */
 function bindSignatureGateway(bool $signed, bool $declined = false): void
 {
@@ -95,9 +118,9 @@ function bindSignatureGateway(bool $signed, bool $declined = false): void
     });
 }
 
-it('walks the STARTER journey end-to-end through the UI', function () {
+it('walks the journey end-to-end through the UI: documents, then signature, then payment', function () {
     Storage::fake('local');
-    bindSignatureGateway(signed: true); // le prestataire de signature confirmera au retour
+    bindSignatureGateway(signed: true); // le prestataire de signature confirmera a la fin de la signature
     Http::fake([
         '*/v1/checkout/sessions/*' => Http::response(['id' => 'cs_1', 'status' => 'complete', 'payment_status' => 'paid', 'url' => 'https://checkout.stripe.test/cs_1']),
         '*/v1/checkout/sessions' => Http::response(['id' => 'cs_1', 'url' => 'https://checkout.stripe.test/cs_1']),
@@ -106,15 +129,33 @@ it('walks the STARTER journey end-to-end through the UI', function () {
     $submission = openStarterDossier();
     $token = $submission->resume_token;
 
-    // Step 1 - the journey page renders at the sign step.
+    // Step 1 - the journey page opens on the documents.
     get(route('get-started.starter.journey', ['dossier' => $token]))
         ->assertOk()
         ->assertSeeLivewire(StarterJourney::class)
+        ->assertSee('Upload your documents')
+        ->assertSee('Continue to signature');
+
+    // Drop both required documents and submit in one go; the dossier then waits for the signature.
+    Livewire::test(StarterJourney::class, ['submission' => $submission])
+        ->set('documents.turnover_proof', UploadedFile::fake()->create('turnover.pdf', 120, 'application/pdf'))
+        ->set('documents.technical_documentation', UploadedFile::fake()->create('tech.pdf', 120, 'application/pdf'))
+        ->call('submitDocuments')
+        ->assertHasNoErrors()
+        ->assertSee('Documents saved. Next: sign your mandate.')
         ->assertSee('Sign your Responsible Person mandate');
 
-    // Clicking "sign" captures the mandate details, starts the signing session and opens the embedded
-    // signing window on the page (no redirect out).
-    Livewire::test(StarterJourney::class, ['submission' => $submission])
+    $submission->refresh();
+    expect($submission->status)->toBe(SubmissionStatus::InProgress)
+        ->and($submission->uploadedDocuments)->toHaveCount(2);
+
+    foreach ($submission->uploadedDocuments as $document) {
+        Storage::disk('local')->assertExists($document->file_path);
+    }
+
+    // Step 2 - clicking "sign" captures the mandate details, starts the signing session and opens the
+    // embedded signing window on the page (no redirect out).
+    Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
         ->set('incorporationPlace', 'Toronto, Canada')
         ->set('foundingYear', '2015')
         ->set('activity', 'handmade ceramics')
@@ -122,26 +163,13 @@ it('walks the STARTER journey end-to-end through the UI', function () {
         ->assertNoRedirect()
         ->assertDispatched('open-signing', url: 'https://example.com/sign');
 
-    // The embedded window reports completion; the provider confirms the signature -> awaiting documents.
+    // The embedded window reports completion; the provider confirms the signature -> awaiting payment.
     Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
         ->call('signingCompleted')
-        ->assertHasNoErrors();
-    expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingDocuments);
-
-    // Step 2 - drop both required documents and submit in one go; the dossier then becomes awaiting payment.
-    Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
-        ->set('documents.turnover_proof', UploadedFile::fake()->create('turnover.pdf', 120, 'application/pdf'))
-        ->set('documents.technical_documentation', UploadedFile::fake()->create('tech.pdf', 120, 'application/pdf'))
-        ->call('submitDocuments')
-        ->assertHasNoErrors();
-
-    $submission->refresh();
-    expect($submission->status)->toBe(SubmissionStatus::AwaitingPayment)
-        ->and($submission->uploadedDocuments)->toHaveCount(2);
-
-    foreach ($submission->uploadedDocuments as $document) {
-        Storage::disk('local')->assertExists($document->file_path);
-    }
+        ->assertHasNoErrors()
+        ->assertSee('Mandate signed. Last step: payment.')
+        ->assertSee('Pay & activate');
+    expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingPayment);
 
     // Step 3 - pay: creates a pending payment and redirects out to the Stripe checkout.
     Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
@@ -157,23 +185,104 @@ it('walks the STARTER journey end-to-end through the UI', function () {
 
     get(route('my-project', ['dossier' => $token]))
         ->assertOk()
-        ->assertSee('Your documents');
+        ->assertSee('Your documents')
+        ->assertSeeInOrder(['Documents uploaded', 'Mandate signed', 'Payment']);
+});
+
+it('opens a new dossier on the documents and never starts a signature before them', function () {
+    bindSignatureGateway(signed: false);
+    $submission = openStarterDossier();
+
+    Livewire::test(StarterJourney::class, ['submission' => $submission])
+        ->assertSee('Upload your documents')
+        ->assertDontSee('Sign the mandate')
+        ->set('incorporationPlace', 'Toronto, Canada')
+        ->set('foundingYear', '2015')
+        ->set('activity', 'handmade ceramics')
+        ->call('sign')
+        ->assertNotDispatched('open-signing');
+
+    expect($submission->fresh()->contract->signature_provider_reference)->toBeNull();
+});
+
+it('takes a dossier signed in the former order to its documents, then straight to payment', function () {
+    Storage::fake('local');
+    $submission = openStarterDossier();
+    $submission->update(['status' => SubmissionStatus::AwaitingDocuments]);
+    $submission->contract->update(['signature_status' => SignatureStatus::Signed, 'signed_at' => now()]);
+
+    $journey = Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
+        ->assertSee('Upload your documents')
+        ->assertSee('Continue to payment')
+        ->call('goToStep', 'sign')->assertSet('viewStep', 'sign')   // la signature, deja faite, se revoit
+        ->call('goToStep', 'documents')->assertSet('viewStep', null);
+
+    $journey->set('documents.turnover_proof', UploadedFile::fake()->create('turnover.pdf', 120, 'application/pdf'))
+        ->set('documents.technical_documentation', UploadedFile::fake()->create('tech.pdf', 120, 'application/pdf'))
+        ->call('submitDocuments')
+        ->assertHasNoErrors()
+        ->assertSee('Documents saved. Last step: payment.')
+        ->assertSee('Pay & activate');
+
+    expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingPayment)
+        ->and($submission->fresh()->contract->signature_status)->toBe(SignatureStatus::Signed);
+});
+
+it('checks silently a signature opened before the documents (former order) once they are uploaded', function () {
+    Storage::fake('local');
+    bindSignatureGateway(signed: false);
+    $submission = openStarterDossier();
+    $submission->contract->update(['signature_provider' => 'stub', 'signature_provider_reference' => 'ref-1']);
+
+    Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
+        ->assertSet('autoConfirm', false) // etape pieces : pas de verification de signature
+        ->set('documents.turnover_proof', UploadedFile::fake()->create('turnover.pdf', 120, 'application/pdf'))
+        ->set('documents.technical_documentation', UploadedFile::fake()->create('tech.pdf', 120, 'application/pdf'))
+        ->call('submitDocuments')
+        ->assertHasNoErrors()
+        ->assertSet('autoConfirm', true);
+});
+
+it('asks each pack for its own required documents', function () {
+    Storage::fake('local');
+    config()->set('festilaw.pro.required_documents', ['technical_documentation']);
+
+    $pro = app(CreateStarterSubmissionAction::class)->execute([
+        'company_name' => 'Northwind Toys',
+        'first_name' => 'Ada',
+        'email' => 'ada@example.com',
+    ], SubmissionType::Pro)->submission;
+
+    Livewire::test(StarterJourney::class, ['submission' => $pro])
+        ->assertSee('Technical documentation')
+        ->assertDontSee('Proof of turnover')
+        ->set('documents.technical_documentation', UploadedFile::fake()->create('tech.pdf', 120, 'application/pdf'))
+        ->call('submitDocuments')
+        ->assertHasNoErrors()
+        ->assertSee('Sign your Responsible Person mandate');
+
+    expect($pro->fresh()->uploadedDocuments)->toHaveCount(1);
+
+    // Le Creator garde sa propre liste (deux pieces).
+    Livewire::test(StarterJourney::class, ['submission' => openStarterDossier()])
+        ->assertSee('Technical documentation')
+        ->assertSee('Proof of turnover');
 });
 
 it('confirms the signature on the signer return and shows the success banner', function () {
     // The provider answers "signed", exactly like SignWell once the signer completed on its hosted page.
     bindSignatureGateway(signed: true);
 
-    $submission = openStarterDossier();
+    $submission = dossierReadyToSign();
     $submission->contract->update(['signature_provider' => 'stub', 'signature_provider_reference' => 'ref-1']);
 
     Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
         ->call('confirmSignature')
         ->assertHasNoErrors()
-        ->assertSee('Mandate signed')
-        ->assertSee('Upload your documents');
+        ->assertSee('Mandate signed. Last step: payment.')
+        ->assertSee('Pay & activate');
 
-    expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingDocuments)
+    expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingPayment)
         ->and($submission->fresh()->contract->signature_status)->toBe(SignatureStatus::Signed);
 });
 
@@ -181,7 +290,7 @@ it('tells the signer to retry when the signature is not recorded yet on return',
     // The provider still reports "pending" (e.g. the signer returned a hair too early).
     bindSignatureGateway(signed: false);
 
-    $submission = openStarterDossier();
+    $submission = dossierReadyToSign();
     $submission->contract->update(['signature_provider' => 'stub', 'signature_provider_reference' => 'ref-1']);
 
     Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
@@ -195,21 +304,21 @@ it('auto-confirms on resume a signature already completed at the provider (brows
     // Silent self-heal: the provider has the signature but our DB never learned it (no webhook).
     bindSignatureGateway(signed: true);
 
-    $submission = openStarterDossier();
+    $submission = dossierReadyToSign();
     $submission->contract->update(['signature_provider' => 'stub', 'signature_provider_reference' => 'ref-1']);
 
     Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
         ->call('autoConfirmSignature')
         ->assertHasNoErrors()
-        ->assertSee('Upload your documents');
+        ->assertSee('Pay & activate');
 
-    expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingDocuments);
+    expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingPayment);
 });
 
 it('reuses the in-flight signing session on resume instead of creating a second one', function () {
     // Une session existe deja (provider_reference pose), le contrat n'est pas encore signe.
     bindSignatureGateway(signed: false);
-    $submission = openStarterDossier();
+    $submission = dossierReadyToSign();
     $submission->contract->update(['signature_provider' => 'stub', 'signature_provider_reference' => 'existing_ref']);
 
     Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
@@ -222,24 +331,24 @@ it('reuses the in-flight signing session on resume instead of creating a second 
 
 it('confirms the signature as soon as the embedded signing window reports it completed', function () {
     bindSignatureGateway(signed: true);
-    $submission = openStarterDossier();
+    $submission = dossierReadyToSign();
     $submission->contract->update(['signature_provider' => 'stub', 'signature_provider_reference' => 'ref-1']);
 
     Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
         ->call('signingCompleted')
         ->assertHasNoErrors()
         ->assertSet('confirmingSignature', false)
-        ->assertSee('Mandate signed')
-        ->assertSee('Upload your documents');
+        ->assertSee('Mandate signed. Last step: payment.')
+        ->assertSee('Pay & activate');
 
-    expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingDocuments)
+    expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingPayment)
         ->and($submission->fresh()->contract->signature_status)->toBe(SignatureStatus::Signed);
 });
 
 it('keeps finalising while the provider has not caught up, then confirms on a later poll', function () {
     // L'iframe signale "completed" avant que l'API du prestataire ait bascule le statut.
     bindSignatureGateway(signed: false);
-    $submission = openStarterDossier();
+    $submission = dossierReadyToSign();
     $submission->contract->update(['signature_provider' => 'stub', 'signature_provider_reference' => 'ref-1']);
 
     $journey = Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
@@ -255,14 +364,14 @@ it('keeps finalising while the provider has not caught up, then confirms on a la
     bindSignatureGateway(signed: true);
     $journey->call('pollSignature')
         ->assertSet('confirmingSignature', false)
-        ->assertSee('Upload your documents');
+        ->assertSee('Pay & activate');
 
-    expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingDocuments);
+    expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingPayment);
 });
 
 it('bounds the finalising loop and falls back to the manual check', function () {
     bindSignatureGateway(signed: false);
-    $submission = openStarterDossier();
+    $submission = dossierReadyToSign();
     $submission->contract->update(['signature_provider' => 'stub', 'signature_provider_reference' => 'ref-1']);
 
     $journey = Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
@@ -282,7 +391,7 @@ it('bounds the finalising loop and falls back to the manual check', function () 
 
 it('records a signature declined in the embedded window from the provider status', function () {
     bindSignatureGateway(signed: false, declined: true);
-    $submission = openStarterDossier();
+    $submission = dossierReadyToSign();
     $submission->contract->update(['signature_provider' => 'stub', 'signature_provider_reference' => 'ref-1']);
 
     Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
@@ -296,7 +405,7 @@ it('records a signature declined in the embedded window from the provider status
 
 it('ignores a declined event the provider does not confirm', function () {
     bindSignatureGateway(signed: false);
-    $submission = openStarterDossier();
+    $submission = dossierReadyToSign();
     $submission->contract->update(['signature_provider' => 'stub', 'signature_provider_reference' => 'ref-1']);
 
     Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
@@ -316,7 +425,7 @@ it('explains what to do when the signing window cannot open', function () {
 });
 
 it('requires the mandate details before starting the signature', function () {
-    $submission = openStarterDossier();
+    $submission = dossierReadyToSign();
 
     Livewire::test(StarterJourney::class, ['submission' => $submission])
         ->call('sign')
@@ -327,7 +436,7 @@ it('requires the mandate details before starting the signature', function () {
 });
 
 it('saves the mandate details to the contract before signing', function () {
-    $submission = openStarterDossier();
+    $submission = dossierReadyToSign();
 
     bindSignatureGateway(signed: false);
 
@@ -347,7 +456,7 @@ it('saves the mandate details to the contract before signing', function () {
 });
 
 it('rejects a founding year that is not four digits', function () {
-    $submission = openStarterDossier();
+    $submission = dossierReadyToSign();
 
     Livewire::test(StarterJourney::class, ['submission' => $submission])
         ->set('incorporationPlace', 'Toronto, Canada')
@@ -372,7 +481,7 @@ it('pre-fills the mandate fields from what was already saved (resume)', function
 });
 
 it('shows the first year prorated to the signature date on the payment step', function () {
-    $submission = openStarterDossier();
+    $submission = dossierReadyToSign();
     $submission->update(['status' => SubmissionStatus::AwaitingPayment]);
     $submission->contract->update(['signature_status' => SignatureStatus::Signed, 'signed_at' => Carbon::create(2026, 7, 15)]);
 
@@ -411,7 +520,7 @@ it('charges the first year prorated from the signature date', function () {
 /** A dossier at the payment step with a pending Stripe checkout in flight. */
 function dossierAwaitingStripePayment(): Submission
 {
-    $submission = openStarterDossier();
+    $submission = dossierReadyToSign();
     $submission->update(['status' => SubmissionStatus::AwaitingPayment]);
     $submission->contract->update(['signature_status' => SignatureStatus::Signed]);
     $submission->payments()->create([
@@ -519,8 +628,6 @@ it('reuses the in-flight checkout at the action level too (anti double-debit bac
 it('rejects an oversized document on submit', function () {
     Storage::fake('local');
     $submission = openStarterDossier();
-    $submission->update(['status' => SubmissionStatus::AwaitingDocuments]);
-    $submission->contract->update(['signature_status' => SignatureStatus::Signed]);
 
     // Les deux documents sont deposes (presence OK) mais l'un depasse notre regle max:10240 (10 MB).
     Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
@@ -535,8 +642,6 @@ it('rejects an oversized document on submit', function () {
 it('shows an error when a required document is missing on submit', function () {
     Storage::fake('local');
     $submission = openStarterDossier();
-    $submission->update(['status' => SubmissionStatus::AwaitingDocuments]);
-    $submission->contract->update(['signature_status' => SignatureStatus::Signed]);
 
     // Un seul des deux documents requis : l'erreur s'affiche SOUS le document manquant, pas en global.
     Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
@@ -545,7 +650,7 @@ it('shows an error when a required document is missing on submit', function () {
         ->assertHasErrors('documents.technical_documentation')
         ->assertHasNoErrors('documents.turnover_proof');
 
-    expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingDocuments)
+    expect($submission->fresh()->status)->toBe(SubmissionStatus::InProgress)
         ->and($submission->fresh()->uploadedDocuments)->toHaveCount(0);
 });
 
@@ -569,7 +674,7 @@ it('returns 404 when the token belongs to a non-STARTER submission', function ()
 });
 
 it('shows a graceful error and does not crash when the signature provider fails', function () {
-    $submission = openStarterDossier();
+    $submission = dossierReadyToSign();
 
     app()->bind(SignatureGatewayInterface::class, fn () => new class implements SignatureGatewayInterface
     {
@@ -631,20 +736,27 @@ it('builds a journey URL from the submission model using the resume token as rou
 it('reviews a completed step read-only and returns, and locks forward navigation', function () {
     $submission = Submission::factory()->starter()->create(['status' => SubmissionStatus::AwaitingPayment]);
     Contract::factory()->for($submission)->signed()->create();
+    $submission = storeRequiredDocuments($submission);
 
     Livewire::test(StarterJourney::class, ['submission' => $submission])
         ->assertSet('viewStep', null)
-        ->call('goToStep', 'sign')->assertSet('viewStep', 'sign')            // revoir une etape terminee
-        ->call('goToStep', 'documents')->assertSet('viewStep', 'documents')
+        ->call('goToStep', 'documents')->assertSet('viewStep', 'documents')  // revoir une etape terminee
+        ->call('goToStep', 'sign')->assertSet('viewStep', 'sign')
         ->call('goToStep', 'payment')->assertSet('viewStep', null)           // retour a l'etape en cours
         ->call('goToStep', 'nope')->assertSet('viewStep', null);             // cible invalide -> ignoree
 });
 
 it('locks review navigation to a not-yet-reached step', function () {
-    $submission = Submission::factory()->starter()->create(['status' => SubmissionStatus::InProgress]); // etape signature
+    $submission = Submission::factory()->starter()->create(['status' => SubmissionStatus::InProgress]); // etape pieces
 
     Livewire::test(StarterJourney::class, ['submission' => $submission])
-        ->call('goToStep', 'payment')->assertSet('viewStep', null);         // etape future -> ignoree
+        ->call('goToStep', 'sign')->assertSet('viewStep', null)             // etape future -> ignoree
+        ->call('goToStep', 'payment')->assertSet('viewStep', null);
+
+    // A l'etape signature, les pieces se revoient mais le paiement reste verrouille.
+    Livewire::test(StarterJourney::class, ['submission' => dossierReadyToSign()])
+        ->call('goToStep', 'payment')->assertSet('viewStep', null)
+        ->call('goToStep', 'documents')->assertSet('viewStep', 'documents');
 });
 
 it('adopts the last display language used as the dossier locale on each journey load', function () {
@@ -667,7 +779,7 @@ it('ignores an unsupported display locale for the dossier language', function ()
     expect($submission->fresh()->locale)->toBe('en'); // inchange
 });
 
-/** A dossier at the payment step (documents done, signed) with the given documents already stored. */
+/** A signed dossier with its technical documentation stored (each test adds its proof of turnover). */
 function dossierReviewingDocuments(): Submission
 {
     $submission = openStarterDossier();
@@ -683,6 +795,10 @@ function dossierReviewingDocuments(): Submission
 
 it('shows download links (and a replace control) when reviewing completed steps', function () {
     $submission = dossierReviewingDocuments();
+    $submission->uploadedDocuments()->create([
+        'type' => 'turnover_proof', 'file_path' => "starter-documents/{$submission->reference}/turnover.pdf",
+        'original_filename' => 'turnover.pdf', 'mime_type' => 'application/pdf', 'size_bytes' => 5, 'uploaded_at' => now(),
+    ]);
 
     Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
         ->call('goToStep', 'documents')->assertSet('viewStep', 'documents')  // revue documents

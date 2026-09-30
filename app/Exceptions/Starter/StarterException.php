@@ -13,7 +13,7 @@ final class StarterException extends BaseAppException
     {
         return new self(
             technicalMessage: "STARTER submission [{$submissionId}] cannot proceed to payment: dossier is incomplete.",
-            userMessage: 'Please sign your contract and upload all required documents before paying.',
+            userMessage: 'Please upload all required documents and sign your mandate before paying.',
         );
     }
 

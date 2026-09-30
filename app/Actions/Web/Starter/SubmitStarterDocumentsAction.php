@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Actions\Web\Starter;
 
 use App\Enums\Document\DocumentType;
-use App\Enums\Submission\SubmissionStatus;
 use App\Exceptions\Starter\StarterException;
 use App\Models\Submission;
+use App\Services\Web\Starter\StarterDossierResolver;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -15,19 +15,22 @@ use Illuminate\Support\Str;
 use Throwable;
 
 /**
- * Stores ALL required STARTER documents at once (single "continue" action), then advances the
- * submission to "awaiting payment". Atomic: files are stored first (I/O), then the rows + status
+ * Stores ALL the pack's required documents at once (single "continue" action), then moves the
+ * submission on: to the signature (first step of the journey), or straight to payment for a dossier
+ * already signed in the former order. Atomic: files are stored first (I/O), then the rows + status
  * are written in a transaction. Any failure (storage or DB) removes the freshly-stored files so no
  * orphan is left. Every I/O error is converted to a typed StarterException.
  */
 final readonly class SubmitStarterDocumentsAction
 {
+    public function __construct(private StarterDossierResolver $resolver) {}
+
     /** @param  array<string, UploadedFile>  $files  keyed by DocumentType value */
     public function execute(Submission $submission, array $files): void
     {
         $requiredValues = array_map(
-            static fn (string $value): string => DocumentType::from($value)->value,
-            (array) config('festilaw.starter.required_documents', []),
+            static fn (DocumentType $type): string => $type->value,
+            $submission->type->requiredDocuments(),
         );
 
         $missing = array_values(array_diff($requiredValues, array_keys(array_filter($files))));
@@ -65,7 +68,10 @@ final readonly class SubmitStarterDocumentsAction
                     ]);
                 }
 
-                $submission->update(['status' => SubmissionStatus::AwaitingPayment]);
+                // Statut deduit des faits (pieces desormais completes) : en attente de signature, ou de
+                // paiement si le mandat etait deja signe.
+                $submission->load(['contract', 'uploadedDocuments']);
+                $submission->update(['status' => $this->resolver->workflowStatus($submission)]);
             });
         } catch (Throwable $e) {
             $this->deleteStored($stored);

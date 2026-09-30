@@ -18,7 +18,7 @@
                 <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
             <h3 class="funnel-success__title">{{ __('Your file is open.') }}</h3>
-            <p class="funnel-success__text">{{ __('We\'ve received your details and will be in touch to guide you through the next steps: signing your mandate, uploading your documents and paying securely.') }}</p>
+            <p class="funnel-success__text">{{ __('We\'ve received your details and will be in touch to guide you through the next steps: uploading your documents, signing your mandate and paying securely.') }}</p>
             <a href="{{ route('home') }}" class="btn btn--outline-dark btn--sm">{{ __('Back to home') }}</a>
         </div>
     @else

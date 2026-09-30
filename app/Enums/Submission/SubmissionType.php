@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Enums\Submission;
 
+use App\Enums\Document\DocumentType;
 use App\Services\Billing\PackPricingService;
 
 enum SubmissionType: string
@@ -24,10 +25,35 @@ enum SubmissionType: string
         };
     }
 
-    /** Packs a cotisation annuelle empruntant le meme parcours en ligne self-service (signer -> payer). */
+    /** Packs a cotisation annuelle empruntant le meme parcours en ligne self-service (pieces -> signer -> payer). */
     public function hasOnlineJourney(): bool
     {
         return in_array($this, [self::Starter, self::Pro], true);
+    }
+
+    /**
+     * Pieces obligatoires du parcours en ligne, propres a chaque pack (config festilaw.{starter,pro}),
+     * source unique pour le depot, la completude du dossier et le blocage du paiement. Vide pour les
+     * types sans parcours en ligne.
+     *
+     * @return list<DocumentType>
+     */
+    public function requiredDocuments(): array
+    {
+        $configKey = match ($this) {
+            self::Starter => 'starter',
+            self::Pro => 'pro',
+            default => null,
+        };
+
+        if ($configKey === null) {
+            return [];
+        }
+
+        return array_values(array_map(
+            static fn (string $value): DocumentType => DocumentType::from($value),
+            (array) config("festilaw.{$configKey}.required_documents", []),
+        ));
     }
 
     /** Cotisation annuelle du pack, en centimes. Seuls Creator et Pro en ont une. */

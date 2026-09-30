@@ -28,7 +28,8 @@ return [
 
     /*
      | Parcours STARTER (Creator Pack). Montant en centimes ; liste des pieces obligatoires
-     | pour qu'un dossier soit "complet" (a confirmer avec la cliente, QO-5/D1).
+     | pour qu'un dossier soit "complet" (valeurs de App\Enums\Document\DocumentType, lues via
+     | SubmissionType::requiredDocuments()).
      */
     'starter' => [
         'amount_cents' => (int) env('FESTILAW_STARTER_AMOUNT_CENTS', 33300),
@@ -41,11 +42,13 @@ return [
     ],
 
     /*
-     | Parcours PRO : meme parcours en ligne self-service que Creator (cf. StarterJourney), seul le
-     | tarif annuel (contrat Pack Pro) change.
+     | Parcours PRO : meme parcours en ligne self-service que Creator (cf. StarterJourney). Changent :
+     | le tarif annuel (contrat Pack Pro) et la liste des pieces obligatoires (meme liste que Creator
+     | en attendant l'arbitrage de Festilaw).
      */
     'pro' => [
         'amount_cents' => (int) env('FESTILAW_PRO_AMOUNT_CENTS', 120000),
+        'required_documents' => ['turnover_proof', 'technical_documentation'],
     ],
 
     /*

@@ -6,6 +6,7 @@ use App\Enums\Contract\SignatureStatus;
 use App\Enums\Submission\SubmissionStatus;
 use App\Models\Contract;
 use App\Models\Submission;
+use App\Models\UploadedDocument;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -60,4 +61,30 @@ it('never re-downloads the signed PDF on a replayed webhook (already signed)', f
 
     // Le pre-check (etat non-confirmable) coupe avant tout appel : aucun re-telechargement.
     Http::assertNotSent(fn ($req) => str_contains($req->url(), 'completed_pdf'));
+});
+
+it('moves a dossier whose documents are already uploaded straight to payment (documents come first)', function () {
+    Http::fake(['*/api/v1/documents/*/completed_pdf*' => Http::response('SIGNED-PDF-BYTES', 200)]);
+
+    $contract = signwellContract(SignatureStatus::Pending);
+    foreach (['turnover_proof', 'technical_documentation'] as $type) {
+        UploadedDocument::factory()->for($contract->submission)->create(['type' => $type]);
+    }
+
+    app(MarkContractSignedAction::class)->execute($contract, 'DOC1');
+
+    expect($contract->submission->fresh()->status)->toBe(SubmissionStatus::AwaitingPayment);
+});
+
+it('never brings a cancelled dossier back into the journey on a late signature', function () {
+    Http::fake(['*/api/v1/documents/*/completed_pdf*' => Http::response('SIGNED-PDF-BYTES', 200)]);
+
+    $contract = signwellContract(SignatureStatus::Pending);
+    $contract->submission->update(['status' => SubmissionStatus::Cancelled]);
+
+    app(MarkContractSignedAction::class)->execute($contract, 'DOC1');
+
+    // La signature est bien enregistree, mais le dossier reste annule.
+    expect($contract->fresh()->signature_status)->toBe(SignatureStatus::Signed)
+        ->and($contract->submission->fresh()->status)->toBe(SubmissionStatus::Cancelled);
 });

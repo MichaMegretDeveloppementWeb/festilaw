@@ -9,7 +9,7 @@
         ['name' => __('Pricing'), 'url' => route('pricing')],
     ];
     $faqItems = [
-        ['q' => __('How does Festilaw work?'), 'a' => __('You choose the plan that fits your size, complete a short form, sign your mandate online, upload the required documents, and pay securely. We then provide your official EU Responsible Person address and your signed mandate, typically within 24 hours.')],
+        ['q' => __('How does Festilaw work?'), 'a' => __('You choose the plan that fits your size, complete a short form, upload the required documents, sign your mandate online, and pay securely. We then provide your official EU Responsible Person address and your signed mandate, typically within 24 hours.')],
         ['q' => __('How fast do I get my mandate?'), 'a' => __('Our promise is a mandate and EU Responsible Person address within 24 hours of your file being complete.')],
         ['q' => __('How much does it cost? Are there hidden per-SKU fees?'), 'a' => __('Our pricing is public and flat, with no hidden per-SKU fees: Creator Pack at :creator EUR per year (up to 9 products), Pro Pack at :pro EUR per year (10 to 100 products), and Scale Pack on request (100+ products).', ['creator' => number_format($creatorAnnualCents / 100), 'pro' => number_format($proAnnualCents / 100)])],
         ['q' => __('What do you need from me?'), 'a' => __('For the Creator plan: your company details, proof that you meet the plan\'s eligibility, and your product technical documentation or test reports.')],

@@ -24,7 +24,7 @@
                 <header class="funnel__head">
                     <span class="eyebrow">{{ __($packLabel) }}</span>
                     <h1 class="funnel__title">{!! __('Your :file', ['file' => '<span class="funnel__title-em">'.e(__('compliance file')).'</span>']) !!}</h1>
-                    <p class="funnel__intro">{{ __('Three steps to your EU Responsible Person: sign your mandate, upload your documents, and pay securely.') }}</p>
+                    <p class="funnel__intro">{{ __('Three steps to your EU Responsible Person: upload your documents, sign your mandate, and pay securely.') }}</p>
                 </header>
 
                 <div class="funnel__body">

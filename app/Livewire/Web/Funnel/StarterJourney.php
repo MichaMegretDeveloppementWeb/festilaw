@@ -14,6 +14,7 @@ use App\Actions\Web\Starter\StartStarterPaymentAction;
 use App\Actions\Web\Starter\SubmitStarterDocumentsAction;
 use App\Actions\Web\SyncDossierLocaleAction;
 use App\Contracts\Signature\SignatureGatewayInterface;
+use App\Data\Web\Starter\DossierStatusData;
 use App\Enums\Contract\SignatureEventOutcome;
 use App\Enums\Contract\SignatureStatus;
 use App\Enums\Document\DocumentType;
@@ -25,6 +26,7 @@ use App\Models\Payment;
 use App\Models\Submission;
 use App\Services\Billing\AnnualFeeProrator;
 use App\Services\Payment\PaymentGatewayRegistry;
+use App\Services\Web\Starter\StarterDossierResolver;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Livewire\Component;
@@ -33,17 +35,21 @@ use Livewire\WithFileUploads;
 use Throwable;
 
 /**
- * Multi-step STARTER dossier, driven by the submission status (source of truth): sign the mandate,
- * drop the required documents, pay. Signing happens in SignWell's embedded iframe on this very page
- * (its "completed" event triggers the server-side confirmation); payment (Stripe) redirects out to the
- * provider and comes back to this same screen. Documents are staged in the component (drag & drop)
- * and only persisted when the visitor confirms with a single action; the step is always recomputed
- * from the database.
+ * Multi-step STARTER / PRO dossier: drop the pack's required documents, sign the mandate, pay. The step
+ * is DERIVED from the facts (documents complete? mandate signed?) by StarterDossierResolver, never from
+ * the stored status, so a dossier started in the former order (signed first) resumes on the documents,
+ * then payment. Signing happens in SignWell's embedded iframe on this very page (its "completed" event
+ * triggers the server-side confirmation); payment (Stripe) redirects out to the provider and comes back
+ * to this same screen. Documents are staged in the component (drag & drop) and only persisted when the
+ * visitor confirms with a single action; the step is always recomputed from the database.
  */
 class StarterJourney extends Component
 {
     use HandlesUnexpectedErrors;
     use WithFileUploads;
+
+    /** The journey's steps, in order (progress bar + review navigation). */
+    private const STEPS = ['documents', 'sign', 'payment'];
 
     /** Bounds the "confirming payment" auto-refresh loop (~2 min at 5s before the email fallback). */
     private const MAX_PAYMENT_POLLS = 24;
@@ -438,6 +444,11 @@ class StarterJourney extends Component
 
         $this->reset('documents');
         $this->submission->refresh();
+        session()->now('starter_status', 'documents_saved');
+
+        // Dossier dont la signature avait ete ouverte avant ses pieces (ancien ordre) : on verifie en
+        // silence si elle a deja abouti chez le prestataire.
+        $this->autoConfirm = $this->signatureInFlight();
     }
 
     /** Discards a staged replacement file before it is confirmed. */
@@ -634,65 +645,79 @@ class StarterJourney extends Component
     }
 
     /**
-     * The single source of truth for what the user sees, derived from the submission status.
+     * The single source of truth for what the user sees: the next step derived from the facts
+     * (documents -> signature -> payment); the stored status only decides "done" and "cancelled".
      */
     private function step(): string
     {
         return match ($this->submission->status) {
-            SubmissionStatus::InProgress => 'sign',
-            SubmissionStatus::AwaitingDocuments => 'documents',
-            SubmissionStatus::AwaitingPayment => 'payment',
             // "Termine" seulement si le dossier est REELLEMENT actif : un dossier paye puis rembourse
             // (statut stocke encore Paid, mais isActive() faux) doit revenir a l'etape paiement, sinon
             // "mon projet" (derive de isActive) et le parcours se contredisent -> boucle de redirection.
             SubmissionStatus::Paid, SubmissionStatus::Completed => $this->submission->isActive() ? 'done' : 'payment',
             SubmissionStatus::Cancelled => 'cancelled',
-            default => 'sign',
+            default => $this->dossierStatus()->nextStep,
         };
+    }
+
+    /** Where the dossier stands (documents, signature), from its freshly loaded relations. */
+    private function dossierStatus(): DossierStatusData
+    {
+        $this->submission->loadMissing(['contract', 'uploadedDocuments']);
+
+        return app(StarterDossierResolver::class)->resolve($this->submission);
+    }
+
+    /**
+     * Steps already done, from the facts (not from their position): a dossier signed in the former order
+     * shows its signature as done while it still uploads its documents.
+     *
+     * @return list<string>
+     */
+    private function completedSteps(): array
+    {
+        $status = $this->dossierStatus();
+
+        return array_values(array_filter([
+            $status->missingDocuments === [] ? 'documents' : null,
+            $status->contractSigned ? 'sign' : null,
+        ]));
     }
 
     /**
      * The step actually shown. Normally the live step; but if the visitor clicked a COMPLETED step in the
-     * progress bar, we show it read-only (review) instead. Never a future step. The action guards keep
-     * using step() (the live step), so reviewing a past step can never trigger an out-of-order action.
+     * progress bar, we show it read-only (review) instead. Never a step not done yet. The action guards
+     * keep using step() (the live step), so reviewing a past step can never trigger an out-of-order action.
      */
     private function displayStep(): string
     {
-        $order = ['sign', 'documents', 'payment'];
         $current = $this->step();
 
-        if ($this->viewStep === null) {
+        if ($this->viewStep === null || $this->viewStep === $current) {
             return $current;
         }
 
-        $currentIndex = array_search($current, $order, true);
-        $viewIndex = array_search($this->viewStep, $order, true);
-
-        return ($viewIndex !== false && $currentIndex !== false && $viewIndex <= $currentIndex) ? $this->viewStep : $current;
+        return in_array($this->viewStep, $this->completedSteps(), true) ? $this->viewStep : $current;
     }
 
-    /** Review a completed (or current) step via the progress bar. Forward jumps are locked. */
+    /** Review a completed (or current) step via the progress bar. Steps not done yet are locked. */
     public function goToStep(string $target): void
     {
-        $order = ['sign', 'documents', 'payment'];
-        $currentIndex = array_search($this->step(), $order, true);
-        $targetIndex = array_search($target, $order, true);
+        if ($target === $this->step()) {
+            $this->viewStep = null; // revenir a l'etape en cours = quitter le mode revue
 
-        if ($targetIndex === false || $currentIndex === false || $targetIndex > $currentIndex) {
-            return; // etape future / invalide : verrouillee
+            return;
         }
 
-        // Revenir a l'etape en cours = quitter le mode revue.
-        $this->viewStep = $targetIndex === $currentIndex ? null : $target;
+        if (in_array($target, self::STEPS, true) && in_array($target, $this->completedSteps(), true)) {
+            $this->viewStep = $target;
+        }
     }
 
     /** @return list<DocumentType> */
     private function requiredDocumentTypes(): array
     {
-        return array_map(
-            static fn (string $value): DocumentType => DocumentType::from($value),
-            (array) config('festilaw.starter.required_documents', []),
-        );
+        return $this->submission->type->requiredDocuments();
     }
 
     /**
@@ -765,6 +790,8 @@ class StarterJourney extends Component
         return view('livewire.web.funnel.starter-journey', [
             'step' => $displayStep,
             'currentStep' => $currentStep,
+            'steps' => self::STEPS,
+            'completedSteps' => $this->completedSteps(),
             'reviewing' => $displayStep !== $currentStep,
             // Revue documents : nom + telechargement + remplacement (on a pu se tromper de fichier).
             'reviewDocuments' => $this->submission->uploadedDocuments->map(fn ($d): array => [

@@ -26,7 +26,7 @@ use Throwable;
 /**
  * The client's "my project" space · the hub for a self-service dossier (Creator or Pro) at ANY stage,
  * reached by its magic link ({dossier} binding, capability URL). It shows where the project stands
- * (signed, documents, paid), lets the visitor resume the funnel at the right step if unfinished, and
+ * (documents, signed, paid), lets the visitor resume the funnel at the right step if unfinished, and
  * once active exposes the plan, next renewal (with a pay-renewal call to action when due) and document
  * downloads. Separate from the funnel itself (no sales aside).
  */

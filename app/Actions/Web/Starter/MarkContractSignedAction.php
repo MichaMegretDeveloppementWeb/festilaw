@@ -8,6 +8,7 @@ use App\Contracts\Signature\SignatureGatewayInterface;
 use App\Enums\Contract\SignatureStatus;
 use App\Enums\Submission\SubmissionStatus;
 use App\Models\Contract;
+use App\Services\Web\Starter\StarterDossierResolver;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -16,11 +17,23 @@ use Throwable;
  * Records a completed signature (called by the signature webhook, the return poll, or reconciliation).
  * Idempotent AND concurrency-safe: only the first delivery transitions the state (confirmable → Signed),
  * and the signed PDF is downloaded ONCE · never on a replay (a contract that is no longer Pending returns
- * immediately, before any download). Advances the submission to "awaiting documents".
+ * immediately, before any download). Moves the submission on to payment (documents come first in the
+ * journey), or to "awaiting documents" for a dossier signed before uploading them (former order).
  */
 final readonly class MarkContractSignedAction
 {
-    public function __construct(private SignatureGatewayInterface $signatureGateway) {}
+    /** Stored statuses of a dossier still before payment: the only ones a signature may move on. */
+    private const PRE_PAYMENT_STATUSES = [
+        SubmissionStatus::New,
+        SubmissionStatus::InProgress,
+        SubmissionStatus::AwaitingDocuments,
+        SubmissionStatus::AwaitingPayment,
+    ];
+
+    public function __construct(
+        private SignatureGatewayInterface $signatureGateway,
+        private StarterDossierResolver $resolver,
+    ) {}
 
     public function execute(Contract $contract, ?string $providerReference = null): Contract
     {
@@ -50,7 +63,12 @@ final readonly class MarkContractSignedAction
                 return;
             }
 
-            $contract->submission()->update(['status' => SubmissionStatus::AwaitingDocuments]);
+            // Statut deduit des faits (contrat desormais signe). Jamais sur un dossier annule, paye ou
+            // termine : un webhook tardif ne doit pas le faire revenir dans le parcours.
+            $submission = $contract->submission()->with(['contract', 'uploadedDocuments'])->first();
+            if ($submission !== null && in_array($submission->status, self::PRE_PAYMENT_STATUSES, true)) {
+                $submission->update(['status' => $this->resolver->workflowStatus($submission)]);
+            }
         });
 
         return $contract->refresh();

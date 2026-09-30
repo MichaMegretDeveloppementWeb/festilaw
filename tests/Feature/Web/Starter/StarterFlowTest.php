@@ -9,6 +9,7 @@ use App\Actions\Web\Starter\SubmitStarterDocumentsAction;
 use App\Contracts\Signature\SignatureGatewayInterface;
 use App\Data\Payment\CheckoutSessionData;
 use App\Data\Signature\SigningSessionData;
+use App\Enums\Document\DocumentType;
 use App\Enums\Payment\PaymentStatus;
 use App\Enums\Payment\PaymentType;
 use App\Enums\Submission\SubmissionStatus;
@@ -17,6 +18,7 @@ use App\Exceptions\Starter\StarterException;
 use App\Mail\FunnelNotification;
 use App\Models\Contract;
 use App\Models\Submission;
+use App\Models\UploadedDocument;
 use App\Services\Billing\AnnualFeeProrator;
 use App\Services\Payment\PaymentGatewayRegistry;
 use App\Services\Payment\StripePaymentGateway;
@@ -71,24 +73,19 @@ it('walks the STARTER happy path end-to-end', function () {
     expect(fn () => app(StartStarterPaymentAction::class)->execute($submission->fresh(), 'stripe'))
         ->toThrow(StarterException::class);
 
-    // 3. Sign the contract then confirm via the webhook action.
-    $session = app(StartContractSigningAction::class)->execute($submission->fresh());
-    expect($session)->toBeInstanceOf(SigningSessionData::class);
+    // 3. Documents come first: no signing session is started (nor billed) while one is missing.
+    expect(fn () => app(StartContractSigningAction::class)->execute($submission->fresh()))
+        ->toThrow(StarterException::class);
+    expect($submission->fresh()->contract->signature_provider_reference)->toBeNull();
 
-    app(MarkContractSignedAction::class)->execute(
-        $submission->contract->fresh(),
-        'sig_ref_123',
-    );
-    expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingDocuments);
-
-    // 4. Submit the required documents in one go -> dossier complete -> awaiting payment.
+    // 4. Submit the required documents in one go -> still to be signed (in progress).
     Storage::fake('local');
     app(SubmitStarterDocumentsAction::class)->execute($submission->fresh(), [
         // createWithContent (pas create) : contenu reel, donc taille lue > 0 sur le fichier stocke.
         'turnover_proof' => UploadedFile::fake()->createWithContent('turnover.pdf', str_repeat('PDF-CONTENT ', 200)),
         'technical_documentation' => UploadedFile::fake()->createWithContent('tech.pdf', str_repeat('PDF-CONTENT ', 200)),
     ]);
-    expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingPayment);
+    expect($submission->fresh()->status)->toBe(SubmissionStatus::InProgress);
 
     // Les fichiers sont bien stockes sur le disque prive, avec leurs metadonnees.
     $stored = $submission->fresh()->uploadedDocuments;
@@ -98,7 +95,17 @@ it('walks the STARTER happy path end-to-end', function () {
         expect($document->size_bytes)->toBeGreaterThan(0);
     }
 
-    // 5. Start the payment (Stripe) -> pending payment + checkout session.
+    // 5. Sign the contract then confirm via the webhook action -> dossier complete -> awaiting payment.
+    $session = app(StartContractSigningAction::class)->execute($submission->fresh());
+    expect($session)->toBeInstanceOf(SigningSessionData::class);
+
+    app(MarkContractSignedAction::class)->execute(
+        $submission->contract->fresh(),
+        'sig_ref_123',
+    );
+    expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingPayment);
+
+    // 6. Start the payment (Stripe) -> pending payment + checkout session.
     $checkout = app(StartStarterPaymentAction::class)->execute($submission->fresh(), 'stripe');
     expect($checkout)->toBeInstanceOf(CheckoutSessionData::class);
 
@@ -111,7 +118,7 @@ it('walks the STARTER happy path end-to-end', function () {
         ->and($payment->amount_cents)->toBe($expectedCents)
         ->and($payment->provider)->toBe('stripe');
 
-    // 6. Payment webhook confirms -> paid.
+    // 7. Payment webhook confirms -> paid.
     app(MarkPaymentSucceededAction::class)->execute($payment->fresh(), 'pay_ref_456');
     expect($submission->fresh()->status)->toBe(SubmissionStatus::Paid)
         ->and($payment->fresh()->status)->toBe(PaymentStatus::Succeeded);
@@ -166,5 +173,45 @@ it('reports missing documents through the resolver', function () {
 
     expect($status->contractSigned)->toBeTrue()
         ->and($status->isComplete)->toBeFalse()
-        ->and($status->missingDocuments)->toHaveCount(2);
+        ->and($status->missingDocuments)->toHaveCount(2)
+        ->and($status->nextStep)->toBe('documents'); // signe dans l'ancien ordre : les pieces d'abord
+});
+
+it('derives the next step and the stored status from the facts, in the documents -> signature -> payment order', function (bool $withDocuments, bool $signed, string $nextStep, SubmissionStatus $workflowStatus) {
+    $submission = Submission::factory()->starter()->create();
+    $signed
+        ? Contract::factory()->for($submission)->signed()->create()
+        : Contract::factory()->for($submission)->create();
+    if ($withDocuments) {
+        foreach (['turnover_proof', 'technical_documentation'] as $type) {
+            UploadedDocument::factory()->for($submission)->create(['type' => $type]);
+        }
+    }
+    $submission->load(['contract', 'uploadedDocuments']);
+
+    $resolver = app(StarterDossierResolver::class);
+
+    expect($resolver->resolve($submission)->nextStep)->toBe($nextStep)
+        ->and($resolver->workflowStatus($submission))->toBe($workflowStatus);
+})->with([
+    'nothing done yet' => [false, false, 'documents', SubmissionStatus::InProgress],
+    'documents uploaded' => [true, false, 'sign', SubmissionStatus::InProgress],
+    'signed first (former order)' => [false, true, 'documents', SubmissionStatus::AwaitingDocuments],
+    'complete' => [true, true, 'payment', SubmissionStatus::AwaitingPayment],
+]);
+
+it('reads the required documents per pack', function () {
+    config()->set('festilaw.pro.required_documents', ['technical_documentation']);
+
+    expect(SubmissionType::Starter->requiredDocuments())->toBe([DocumentType::TurnoverProof, DocumentType::TechnicalDocumentation])
+        ->and(SubmissionType::Pro->requiredDocuments())->toBe([DocumentType::TechnicalDocumentation])
+        ->and(SubmissionType::Scale->requiredDocuments())->toBe([]);
+
+    // Un dossier Pro avec la seule piece exigee pour son pack est complet cote pieces.
+    $pro = Submission::factory()->pro()->create();
+    Contract::factory()->for($pro)->signed()->create();
+    UploadedDocument::factory()->for($pro)->create(['type' => 'technical_documentation']);
+    $pro->load(['contract', 'uploadedDocuments']);
+
+    expect(app(StarterDossierResolver::class)->resolve($pro)->isComplete)->toBeTrue();
 });

@@ -14,7 +14,7 @@
                 <header class="funnel__head">
                     <span class="eyebrow">{{ __('Pro Pack') }}</span>
                     <h1 class="funnel__title">{!! __('Open your :file', ['file' => '<span class="funnel__title-em">'.e(__('compliance file')).'</span>']) !!}</h1>
-                    <p class="funnel__intro">{{ __('A few details to get started. Next, you\'ll sign your mandate, upload your documents, and pay securely. It takes about two minutes.') }}</p>
+                    <p class="funnel__intro">{{ __('A few details to get started. Next, you\'ll upload your documents, sign your mandate, and pay securely. It takes about two minutes.') }}</p>
                 </header>
 
                 <div class="funnel__body">

@@ -127,7 +127,7 @@ class StarterForm extends Component
             return;
         }
 
-        // Nouveau dossier : on enchaine directement sur le parcours (signer -> televerser -> payer).
+        // Nouveau dossier : on enchaine directement sur le parcours (televerser -> signer -> payer).
         $this->redirectRoute('get-started.starter.journey', [
             'dossier' => $outcome->submission->resume_token,
         ], navigate: true);

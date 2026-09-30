@@ -1,11 +1,19 @@
 <div class="journey">
     @php
-        $flash = session('starter_status');
+        $flashMessage = match (session('starter_status')) {
+            'documents_saved' => $currentStep === 'payment'
+                ? __('Documents saved. Last step: payment.')
+                : __('Documents saved. Next: sign your mandate.'),
+            'signed' => __('Mandate signed. Last step: payment.'),
+            'paid' => __('Payment received. Your file is complete.'),
+            'document_replaced' => __('Document replaced.'),
+            default => null,
+        };
     @endphp
-    @if (in_array($flash, ['signed', 'paid', 'document_replaced'], true))
+    @if ($flashMessage)
         <div class="journey-flash">
             <svg class="journey-flash__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            <span>{{ $flash === 'signed' ? __('Mandate signed. Next: upload your documents.') : ($flash === 'paid' ? __('Payment received. Your file is complete.') : __('Document replaced.')) }}</span>
+            <span>{{ $flashMessage }}</span>
         </div>
     @endif
 
@@ -13,24 +21,27 @@
 
     @unless (in_array($currentStep, ['done', 'cancelled'], true))
         @php
-            $labels = ['sign' => __('Read & Sign'), 'documents' => __('Documents'), 'payment' => __('Payment')];
-            $order = array_keys($labels);
-            $currentIndex = array_search($currentStep, $order, true);
-            $displayIndex = array_search($step, $order, true);
+            $labels = ['documents' => __('Documents'), 'sign' => __('Read & Sign'), 'payment' => __('Payment')];
         @endphp
+        {{-- Etapes dans l'ordre du parcours ; "faite" d'apres les faits (pieces completes, mandat signe),
+             pas d'apres sa position : on peut revoir toute etape faite, jamais une etape a venir. --}}
         <ol class="journey-progress">
-            @foreach ($labels as $key => $label)
-                @php $navigable = $currentIndex !== false && $loop->index <= $currentIndex; @endphp
+            @foreach ($steps as $key)
+                @php
+                    $isCurrent = $key === $currentStep;
+                    $isDone = ! $isCurrent && in_array($key, $completedSteps, true);
+                    $navigable = $isCurrent || $isDone;
+                @endphp
                 <li wire:key="progress-{{ $key }}" @class([
                         'journey-progress__step',
-                        'is-done' => $currentIndex !== false && $loop->index < $currentIndex,
-                        'is-current' => $loop->index === $currentIndex,
+                        'is-done' => $isDone,
+                        'is-current' => $isCurrent,
                         'is-navigable' => $navigable,
-                        'is-viewing' => $reviewing && $loop->index === $displayIndex,
+                        'is-viewing' => $reviewing && $key === $step,
                     ])
                     @if ($navigable) wire:click="goToStep('{{ $key }}')" role="button" tabindex="0" @endif>
                     <span class="journey-progress__num">{{ $loop->iteration }}</span>
-                    <span class="journey-progress__label">{{ $label }}</span>
+                    <span class="journey-progress__label">{{ $labels[$key] }}</span>
                 </li>
             @endforeach
         </ol>
@@ -211,7 +222,8 @@
             @error('documents_submit') <div class="funnel-form__error journey-error">{{ $message }}</div> @enderror
 
             <button type="button" class="btn btn--coral" wire:click="submitDocuments" wire:loading.attr="disabled" wire:target="submitDocuments">
-                <span wire:loading.remove wire:target="submitDocuments">{{ __('Continue to payment') }}</span>
+                {{-- Un dossier deja signe (ancien ordre) passe directement au paiement. --}}
+                <span wire:loading.remove wire:target="submitDocuments">{{ in_array('sign', $completedSteps, true) ? __('Continue to payment') : __('Continue to signature') }}</span>
                 <span wire:loading wire:target="submitDocuments">{{ __('Saving') }}&hellip;</span>
             </button>
         </div>

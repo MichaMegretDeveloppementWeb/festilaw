@@ -7,8 +7,10 @@ namespace App\Actions\Web\Starter;
 use App\Contracts\Signature\SignatureGatewayInterface;
 use App\Data\Signature\SigningSessionData;
 use App\Enums\Contract\SignatureStatus;
+use App\Enums\Document\DocumentType;
 use App\Exceptions\Starter\StarterException;
 use App\Models\Submission;
+use App\Services\Web\Starter\StarterDossierResolver;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -18,14 +20,29 @@ use Illuminate\Support\Facades\Cache;
  * Anti-double-document: an atomic cache lock serialises two concurrent starts (a double-click), so a
  * race can never create two documents at the provider. Inside the lock we re-check for an in-flight,
  * still-signable session and reuse it; a restart after a decline/expiry resets the contract to Pending.
+ *
+ * The journey runs documents -> signature -> payment: no signing session is started (and billed by the
+ * provider) while a required document is missing.
  */
 final readonly class StartContractSigningAction
 {
-    public function __construct(private SignatureGatewayInterface $signatureGateway) {}
+    public function __construct(
+        private SignatureGatewayInterface $signatureGateway,
+        private StarterDossierResolver $resolver,
+    ) {}
 
     public function execute(Submission $submission): SigningSessionData
     {
         $contract = $submission->contract ?? throw StarterException::contractMissing($submission->id);
+
+        $submission->load('uploadedDocuments');
+        $missing = $this->resolver->resolve($submission)->missingDocuments;
+        if ($missing !== []) {
+            throw StarterException::documentsMissing(
+                $submission->id,
+                array_map(static fn (DocumentType $type): string => $type->value, $missing),
+            );
+        }
 
         // Le verrou (table cache_locks) ne tient JAMAIS de transaction DB pendant l'appel HTTP au
         // prestataire : il serialise seulement les demarrages concurrents. 15s de bail, 10s d'attente.
