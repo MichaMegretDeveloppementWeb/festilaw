@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Enums\Submission\SubmissionType;
+use App\Exceptions\Web\DossierLinkInvalidException;
 use App\Models\Submission;
 use App\Services\Billing\AnnualFeeProrator;
 use App\Services\Billing\PackPricingService;
@@ -35,9 +36,12 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Lien de reprise du parcours STARTER : {dossier} = resume_token, resolu vers la Submission
-        // si le lien est encore valide (scope resumable).
+        // si le lien est encore valide (scope resumable). Sinon (lien remplace par un plus recent, expire
+        // ou inconnu) : page "lien expire" qui propose d'en recevoir un nouveau, plutot qu'une 404 brute.
         Route::bind('dossier', static function (string $value): Submission {
-            return Submission::resumable()->where('resume_token', $value)->firstOrFail();
+            return Submission::resumable()->where('resume_token', $value)->firstOr(
+                static fn () => throw new DossierLinkInvalidException,
+            );
         });
 
         // Prix effectifs des packs (editables au back-office) exposes aux pages publiques qui les

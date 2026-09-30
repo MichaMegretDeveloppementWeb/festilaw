@@ -9,6 +9,7 @@ use App\Http\Controllers\Web\About\AboutController;
 use App\Http\Controllers\Web\Contact\ContactController;
 use App\Http\Controllers\Web\ExcludedProducts\ExcludedProductsController;
 use App\Http\Controllers\Web\Funnel\GetStartedController;
+use App\Http\Controllers\Web\Funnel\PaymentReturnController;
 use App\Http\Controllers\Web\Funnel\ProController;
 use App\Http\Controllers\Web\Funnel\ScaleAuditPaymentController;
 use App\Http\Controllers\Web\Funnel\ScaleBookingController;
@@ -86,6 +87,12 @@ Route::prefix('get-started')->name('get-started.')->group(function () {
     Route::get('/', GetStartedController::class)->name('index');
     Route::get('/pro', ProController::class)->name('pro');
     Route::get('/scale', ScaleController::class)->name('scale');
+
+    // Retour du prestataire de paiement (URL signee, independante du token du dossier qui peut avoir
+    // change entre-temps) : redirige vers la page du dossier avec son token actuel.
+    Route::get('/payment/{payment:id}/return', PaymentReturnController::class)
+        ->middleware('signed:relative')
+        ->name('payment.return');
 
     // Espace SCALE (magic link, porte par le token) : payer l'audit 75 EUR puis reserver la visio.
     Route::get('/scale/{dossier}', ScaleSpaceController::class)->name('scale.space');

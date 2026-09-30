@@ -14,6 +14,7 @@ use App\Mail\ScaleSpaceLink;
 use App\Models\Payment;
 use App\Models\Submission;
 use App\Services\Payment\PaymentGatewayRegistry;
+use App\Services\Payment\PaymentReturnService;
 use App\Services\Payment\StripePaymentGateway;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -94,10 +95,14 @@ it('starts the audit checkout with an idempotency key and Scale return URLs', fu
     expect($audit->amount_cents)->toBe(7500)
         ->and($audit->status)->toBe(PaymentStatus::Pending);
 
+    // Retour signe (cle : le paiement), qui redirige ensuite vers l'espace Scale avec le token courant.
     Http::assertSent(fn ($req) => str_ends_with($req->url(), '/v1/checkout/sessions')
         && $req->hasHeader('Idempotency-Key')
-        && str_contains(urldecode($req->body()), 'get-started/scale/scaletok')
-        && str_contains(urldecode($req->body()), 'audit_return'));
+        && str_contains(urldecode($req->body()), 'get-started/payment/'.$audit->id.'/return')
+        && str_contains(urldecode($req->body()), 'signature='));
+
+    get(app(PaymentReturnService::class)->returnUrls($audit)[0])
+        ->assertRedirect(route('get-started.scale.space', ['dossier' => 'scaletok', 'audit_return' => 1]));
 });
 
 it('reuses the pending audit checkout instead of creating a second one (anti double-debit)', function () {

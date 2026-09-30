@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Contracts\Payment\PaymentGatewayInterface;
 use App\Services\Payment\PaymentGatewayRegistry;
+use App\Services\Payment\PaymentReturnService;
 use App\Services\Payment\StripePaymentGateway;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
@@ -14,10 +15,13 @@ final class PaymentServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Stripe needs its config injected.
+        // Stripe needs its config injected, plus the signed return-URL builder (token-independent returns).
         $this->app->singleton(
             StripePaymentGateway::class,
-            fn (): StripePaymentGateway => new StripePaymentGateway((array) config('payment.drivers.stripe', [])),
+            fn (Application $app): StripePaymentGateway => new StripePaymentGateway(
+                (array) config('payment.drivers.stripe', []),
+                $app->make(PaymentReturnService::class),
+            ),
         );
 
         // All known providers are tagged; the Registry keeps only the ones enabled by config.

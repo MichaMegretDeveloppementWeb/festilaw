@@ -8,7 +8,6 @@ use App\Contracts\Payment\PaymentGatewayInterface;
 use App\Data\Payment\CheckoutSessionData;
 use App\Data\Payment\PaymentWebhookData;
 use App\Enums\Payment\PaymentEventOutcome;
-use App\Enums\Payment\PaymentType;
 use App\Exceptions\Payment\PaymentException;
 use App\Models\Payment;
 use Illuminate\Http\Client\PendingRequest;
@@ -30,7 +29,10 @@ final class StripePaymentGateway implements PaymentGatewayInterface
     private const WEBHOOK_TOLERANCE = 300;
 
     /** @param  array<string, mixed>  $config */
-    public function __construct(private readonly array $config) {}
+    public function __construct(
+        private readonly array $config,
+        private readonly PaymentReturnService $returns,
+    ) {}
 
     public function key(): string
     {
@@ -47,7 +49,8 @@ final class StripePaymentGateway implements PaymentGatewayInterface
         $this->assertConfigured('secret_key');
 
         $submission = $payment->submission;
-        [$successUrl, $cancelUrl] = $this->returnUrls($payment);
+        // URLs de retour signees, independantes du token du dossier (qui peut changer pendant le paiement).
+        [$successUrl, $cancelUrl] = $this->returns->returnUrls($payment);
 
         try {
             // Idempotency-Key stable par ligne Payment : si Stripe cree la session mais que la reponse se
@@ -90,36 +93,6 @@ final class StripePaymentGateway implements PaymentGatewayInterface
         }
 
         return new CheckoutSessionData(providerReference: $id, redirectUrl: $url);
-    }
-
-    /**
-     * URLs de retour [succes, annulation] selon le type de paiement. Un renouvellement part de l'espace
-     * dossier (page "mon projet") et doit y revenir pour etre confirme (le dossier est deja "paye", la
-     * journey rebondirait sans rien confirmer) ; l'annee 1 revient sur la journey qui poll la confirmation.
-     *
-     * @return array{0: string, 1: string}
-     */
-    private function returnUrls(Payment $payment): array
-    {
-        $token = $payment->submission?->resume_token;
-
-        if ($payment->type === PaymentType::AnnualRenewal) {
-            $base = route('my-project', ['dossier' => $token]);
-
-            return [$base.'?renewal_return=1', $base.'?renewal_cancelled=1'];
-        }
-
-        // Audit SCALE : retour vers l'espace Scale (paiement puis reservation), porte par le token du
-        // dossier Scale. Sans cette branche, l'audit retombait sur la journey STARTER (P0-01).
-        if ($payment->type === PaymentType::ScaleAudit) {
-            $base = route('get-started.scale.space', ['dossier' => $token]);
-
-            return [$base.'?audit_return=1', $base.'?audit_cancelled=1'];
-        }
-
-        $base = route('get-started.starter.journey', ['dossier' => $token]);
-
-        return [$base.'?payment_return=1', $base.'?payment_cancelled=1'];
     }
 
     /** Libelle de la ligne sur la page Stripe : pack + annee de service (ex. "Festilaw Pro Pack 2026"). */

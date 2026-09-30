@@ -82,7 +82,7 @@ it('sends a stable Idempotency-Key on the checkout POST (a retry cannot create a
         && $req->hasHeader('Idempotency-Key', 'checkout-'.$payment->id));
 });
 
-it('builds Scale-specific return URLs for a ScaleAudit checkout (no more broken STARTER return · P0-01)', function () {
+it('hands Stripe signed return URLs keyed by the payment, never the dossier token (which may rotate meanwhile)', function () {
     Http::fake(['*/v1/checkout/sessions' => Http::response(['id' => 'cs_scale', 'url' => 'https://checkout.stripe.com/x'])]);
 
     $submission = Submission::factory()->scale()->create(['resume_token' => 'scaletok', 'resume_expires_at' => now()->addDays(30)]);
@@ -96,9 +96,16 @@ it('builds Scale-specific return URLs for a ScaleAudit checkout (no more broken 
 
     app(StripePaymentGateway::class)->createCheckout($payment);
 
-    Http::assertSent(fn ($req) => str_contains(urldecode($req->body()), 'get-started/scale/scaletok')
-        && str_contains(urldecode($req->body()), 'audit_return')
-        && str_contains(urldecode($req->body()), 'audit_cancelled'));
+    Http::assertSent(function ($req) use ($payment) {
+        $body = urldecode($req->body());
+
+        return str_contains($body, 'success_url=')
+            && str_contains($body, 'get-started/payment/'.$payment->id.'/return?expires=')
+            && str_contains($body, 'status=success')
+            && str_contains($body, 'status=cancelled')
+            && str_contains($body, 'signature=')
+            && ! str_contains($body, 'scaletok');
+    });
 });
 
 it('confirms a paid checkout session via polling', function () {

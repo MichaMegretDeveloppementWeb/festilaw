@@ -7,6 +7,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -33,6 +34,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Sur chaque requete web (apres StartSession) : SetLocale applique la locale de session
         // (y compris /livewire/update).
         $middleware->web(append: [SetLocale::class]);
+        // ... et AVANT la resolution des liaisons de route : une page rendue des la liaison (ex. lien de
+        // dossier expire, cf. DossierLinkInvalidException) doit deja etre dans la langue du visiteur.
+        $middleware->prependToPriorityList(before: SubstituteBindings::class, prepend: SetLocale::class);
 
         // Les webhooks providers (Stripe/SignWell) sont des POST externes : hors CSRF.
         $middleware->validateCsrfTokens(except: ['webhooks/*']);
