@@ -7,6 +7,7 @@ use App\Enums\Payment\PaymentType;
 use App\Exceptions\Payment\PaymentException;
 use App\Models\Payment;
 use App\Models\Submission;
+use App\Services\Payment\PaymentGatewayRegistry;
 use App\Services\Payment\StripePaymentGateway;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
@@ -20,6 +21,10 @@ beforeEach(function () {
         'secret_key' => 'sk_test_x',
         'webhook_secret' => 'whsec_x',
     ]);
+    // La migration de la base de test (premier test du lancement) peut deja avoir construit la passerelle
+    // avec la cle du .env : on la reconstruit avec celle du test.
+    app()->forgetInstance(PaymentGatewayRegistry::class);
+    app()->forgetInstance(StripePaymentGateway::class);
 });
 
 function stripePendingPayment(): Payment
@@ -309,13 +314,16 @@ it('maps an expired checkout session to expired', function () {
 });
 
 it('maps a FULL charge.refunded event to refunded and carries our payment id from the charge metadata', function () {
+    Http::fake();
+
     $event = app(StripePaymentGateway::class)->parseWebhook(stripeWebhookRequest([
         'type' => 'charge.refunded',
-        'data' => ['object' => ['id' => 'ch_1', 'refunded' => true, 'amount' => 33300, 'amount_refunded' => 33300, 'metadata' => ['payment_id' => '77']]],
+        'data' => ['object' => ['id' => 'ch_1', 'refunded' => true, 'amount' => 33300, 'amount_refunded' => 33300, 'metadata' => ['payment_id' => '77'], 'payment_intent' => 'pi_1']],
     ]));
 
     expect($event->outcome)->toBe(PaymentEventOutcome::Refunded)
         ->and($event->clientReference)->toBe('77');
+    Http::assertNothingSent(); // la Charge porte deja notre id (metadata heritees du PaymentIntent)
 });
 
 it('does NOT deactivate on a PARTIAL charge.refunded (coverage stays, handled manually)', function () {
@@ -338,33 +346,59 @@ it('treats a fully-refunded charge as Refunded even when the refunded flag is fa
     expect($event->outcome)->toBe(PaymentEventOutcome::Refunded);
 });
 
-it('does NOT deactivate on a dispute being opened (funds only held, may be won)', function () {
-    $event = app(StripePaymentGateway::class)->parseWebhook(stripeWebhookRequest([
-        'type' => 'charge.dispute.created',
-        'data' => ['object' => ['id' => 'dp_1', 'status' => 'needs_response', 'metadata' => ['payment_id' => '77']]],
-    ]));
+/** Un litige tel que Stripe l'envoie vraiment : metadata VIDES, seulement la Charge et le PaymentIntent. */
+function stripeDisputeEvent(string $type, string $status, ?string $paymentIntent = 'pi_1'): Request
+{
+    return stripeWebhookRequest([
+        'type' => $type,
+        'data' => ['object' => ['id' => 'du_1', 'object' => 'dispute', 'status' => $status, 'metadata' => [], 'charge' => 'ch_1', 'payment_intent' => $paymentIntent]],
+    ]);
+}
+
+it('does NOT deactivate on a dispute being opened, and asks Stripe nothing (funds only held, may be won)', function () {
+    Http::fake();
+
+    $event = app(StripePaymentGateway::class)->parseWebhook(stripeDisputeEvent('charge.dispute.created', 'needs_response'));
 
     expect($event->outcome)->toBe(PaymentEventOutcome::Unresolved);
+    Http::assertNothingSent();
 });
 
-it('does NOT deactivate on a dispute won (dispute closed in the merchant favour)', function () {
-    $event = app(StripePaymentGateway::class)->parseWebhook(stripeWebhookRequest([
-        'type' => 'charge.dispute.closed',
-        'data' => ['object' => ['id' => 'dp_1', 'status' => 'won', 'metadata' => ['payment_id' => '77']]],
-    ]));
+it('does NOT deactivate on a dispute won, and asks Stripe nothing (dispute closed in the merchant favour)', function () {
+    Http::fake();
+
+    $event = app(StripePaymentGateway::class)->parseWebhook(stripeDisputeEvent('charge.dispute.closed', 'won'));
 
     expect($event->outcome)->toBe(PaymentEventOutcome::Unresolved);
+    Http::assertNothingSent();
 });
 
-it('deactivates (refunded) only when a dispute is lost, funds definitively taken back', function () {
-    $event = app(StripePaymentGateway::class)->parseWebhook(stripeWebhookRequest([
-        'type' => 'charge.dispute.closed',
-        'data' => ['object' => ['id' => 'dp_1', 'status' => 'lost', 'metadata' => ['payment_id' => '77']]],
-    ]));
+it('deactivates (refunded) when a dispute is lost, finding our payment id on its payment intent', function () {
+    Http::fake(['*/v1/payment_intents/pi_1' => Http::response(['id' => 'pi_1', 'metadata' => ['payment_id' => '77']])]);
+
+    $event = app(StripePaymentGateway::class)->parseWebhook(stripeDisputeEvent('charge.dispute.closed', 'lost'));
 
     expect($event->outcome)->toBe(PaymentEventOutcome::Refunded)
         ->and($event->clientReference)->toBe('77');
+    Http::assertSentCount(1);
+    Http::assertSent(fn ($req) => $req->method() === 'GET' && str_ends_with($req->url(), '/v1/payment_intents/pi_1')
+        && $req->hasHeader('Authorization', 'Bearer sk_test_x'));
 });
+
+it('falls back on the charge of a lost dispute that has no payment intent', function () {
+    Http::fake(['*/v1/charges/ch_1' => Http::response(['id' => 'ch_1', 'metadata' => ['payment_id' => '77']])]);
+
+    $event = app(StripePaymentGateway::class)->parseWebhook(stripeDisputeEvent('charge.dispute.closed', 'lost', paymentIntent: null));
+
+    expect($event->clientReference)->toBe('77');
+    Http::assertSent(fn ($req) => str_ends_with($req->url(), '/v1/charges/ch_1'));
+});
+
+it('raises a payment error when Stripe cannot tell which payment a lost dispute is about', function () {
+    Http::fake(['*/v1/payment_intents/*' => Http::response(['error' => ['message' => 'down']], 500)]);
+
+    app(StripePaymentGateway::class)->parseWebhook(stripeDisputeEvent('charge.dispute.closed', 'lost'));
+})->throws(PaymentException::class);
 
 it('reports an expired session as expired when polling', function () {
     Http::fake(['*/v1/checkout/sessions/*' => Http::response(['id' => 'cs_1', 'status' => 'expired', 'payment_status' => 'unpaid'])]);

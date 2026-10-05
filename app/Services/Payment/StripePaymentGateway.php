@@ -232,7 +232,7 @@ final class StripePaymentGateway implements PaymentGatewayInterface
             return new PaymentWebhookData(
                 providerReference: (string) Arr::get($object, 'id', ''),
                 outcome: $fullyRefunded ? PaymentEventOutcome::Refunded : PaymentEventOutcome::Unresolved,
-                clientReference: ((string) Arr::get($object, 'metadata.payment_id', '')) ?: null,
+                clientReference: $this->paymentIdFrom($object, lookUp: $fullyRefunded),
             );
         }
 
@@ -246,7 +246,7 @@ final class StripePaymentGateway implements PaymentGatewayInterface
             return new PaymentWebhookData(
                 providerReference: (string) Arr::get($object, 'id', ''),
                 outcome: $lost ? PaymentEventOutcome::Refunded : PaymentEventOutcome::Unresolved,
-                clientReference: ((string) Arr::get($object, 'metadata.payment_id', '')) ?: null,
+                clientReference: $this->paymentIdFrom($object, lookUp: $lost),
             );
         }
 
@@ -323,6 +323,44 @@ final class StripePaymentGateway implements PaymentGatewayInterface
         }
 
         return (array) json_decode($payload, true);
+    }
+
+    /**
+     * Notre payment id pour un remboursement ou un litige. Une Charge le porte (metadata heritees du
+     * PaymentIntent, posees au Checkout) ; un Dispute jamais (metadata vides, constate sur de vrais evenements
+     * Stripe) : on le lit alors sur son PaymentIntent, ou a defaut sur sa Charge. Appel a Stripe seulement
+     * quand l'issue modifie un paiement ($lookUp) ; s'il echoue, exception : le webhook repond 400 et Stripe
+     * renverra l'evenement.
+     *
+     * @param  array<string, mixed>  $object
+     */
+    private function paymentIdFrom(array $object, bool $lookUp): ?string
+    {
+        $paymentId = (string) Arr::get($object, 'metadata.payment_id', '');
+        if ($paymentId !== '' || ! $lookUp) {
+            return $paymentId !== '' ? $paymentId : null;
+        }
+
+        $paymentIntent = (string) Arr::get($object, 'payment_intent', '');
+        $charge = (string) Arr::get($object, 'charge', '');
+        $path = match (true) {
+            $paymentIntent !== '' => "/payment_intents/{$paymentIntent}",
+            $charge !== '' => "/charges/{$charge}",
+            default => null,
+        };
+        if ($path === null) {
+            return null;
+        }
+
+        $this->assertConfigured('secret_key');
+
+        try {
+            $paymentId = (string) $this->api()->get($path)->throw()->json('metadata.payment_id', '');
+        } catch (Throwable $e) {
+            throw PaymentException::apiRequestFailed('retrieve disputed payment', $e);
+        }
+
+        return $paymentId !== '' ? $paymentId : null;
     }
 
     private function api(): PendingRequest

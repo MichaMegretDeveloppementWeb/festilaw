@@ -240,6 +240,69 @@ it('marks a succeeded payment refunded from a Stripe charge.refunded webhook', f
     expect($payment->fresh()->status)->toBe(PaymentStatus::Refunded);
 });
 
+/** Un charge.dispute.closed perdu tel que Stripe l'envoie vraiment (metadata vides), signe. */
+function postLostStripeDispute(): TestResponse
+{
+    $payload = json_encode([
+        'type' => 'charge.dispute.closed',
+        'data' => ['object' => ['id' => 'du_1', 'object' => 'dispute', 'status' => 'lost', 'metadata' => new stdClass, 'charge' => 'ch_1', 'payment_intent' => 'pi_1']],
+    ]);
+    $time = now()->timestamp;
+    $signature = hash_hmac('sha256', "{$time}.{$payload}", 'whsec_x');
+
+    return test()->call('POST', '/webhooks/payment/stripe', [], [], [], [
+        'CONTENT_TYPE' => 'application/json',
+        'HTTP_STRIPE_SIGNATURE' => "t={$time},v1={$signature}",
+    ], $payload);
+}
+
+it('deactivates the dossier when a dispute is lost, from a dispute event as Stripe really sends it', function () {
+    config()->set('payment.enabled', ['stripe']);
+    config()->set('payment.drivers.stripe', ['secret_key' => 'sk_test_x', 'webhook_secret' => 'whsec_x']);
+
+    $submission = Submission::factory()->starter()->create(['status' => SubmissionStatus::Paid, 'resume_expires_at' => null]);
+    $payment = $submission->payments()->create([
+        'type' => PaymentType::StarterSubscription,
+        'amount_cents' => 33300,
+        'service_year' => (int) now()->year,
+        'currency' => 'EUR',
+        'provider' => 'stripe',
+        'provider_reference' => 'cs_1',
+        'status' => PaymentStatus::Succeeded,
+        'paid_at' => now(),
+    ]);
+    expect($submission->fresh()->isActive())->toBeTrue();
+
+    // Le Dispute n'a pas nos metadata : le site lit notre id sur son PaymentIntent.
+    Http::fake(['*/v1/payment_intents/pi_1' => Http::response(['id' => 'pi_1', 'metadata' => ['payment_id' => (string) $payment->id]])]);
+
+    postLostStripeDispute()->assertNoContent();
+
+    expect($payment->fresh()->status)->toBe(PaymentStatus::Refunded)
+        ->and($submission->fresh()->isActive())->toBeFalse();
+});
+
+it('answers 400 to a lost dispute Stripe cannot trace yet, so Stripe sends it again, and changes nothing', function () {
+    config()->set('payment.enabled', ['stripe']);
+    config()->set('payment.drivers.stripe', ['secret_key' => 'sk_test_x', 'webhook_secret' => 'whsec_x']);
+
+    $submission = Submission::factory()->starter()->create(['status' => SubmissionStatus::Paid]);
+    $payment = $submission->payments()->create([
+        'type' => PaymentType::StarterSubscription,
+        'amount_cents' => 33300,
+        'currency' => 'EUR',
+        'provider' => 'stripe',
+        'provider_reference' => 'cs_1',
+        'status' => PaymentStatus::Succeeded,
+        'paid_at' => now(),
+    ]);
+    Http::fake(['*/v1/payment_intents/*' => Http::response(['error' => ['message' => 'down']], 500)]);
+
+    postLostStripeDispute()->assertStatus(400);
+
+    expect($payment->fresh()->status)->toBe(PaymentStatus::Succeeded);
+});
+
 it('reconciles a Stripe webhook by our payment id when the provider reference does not match', function () {
     config()->set('payment.enabled', ['stripe']);
     config()->set('payment.drivers.stripe', ['secret_key' => 'sk_test_x', 'webhook_secret' => 'whsec_x']);
