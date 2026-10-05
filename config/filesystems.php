@@ -30,11 +30,14 @@ return [
 
     'disks' => [
 
+        // Disque prive (pieces des clients, mandats signes, contrats contresignes). throw : une ecriture ou une
+        // suppression ratee leve une exception au lieu de renvoyer false en silence (un chemin enregistre
+        // en base sans fichier, un fichier RGPD laisse en place). Les appelants la traitent ou la journalisent.
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
             'serve' => true,
-            'throw' => false,
+            'throw' => true,
             'report' => false,
         ],
 

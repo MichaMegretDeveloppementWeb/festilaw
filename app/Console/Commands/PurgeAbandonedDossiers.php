@@ -11,6 +11,8 @@ use App\Models\Submission;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * Purge RGPD (minimisation) : supprime les dossiers a lien de reprise (STARTER + PRO + SCALE) abandonnes
@@ -34,6 +36,7 @@ final class PurgeAbandonedDossiers extends Command
     {
         $cutoff = now()->subDays((int) config('festilaw.starter.abandoned_retention_days', 90));
         $deleted = 0;
+        $failed = 0;
 
         // Tout type a lien de reprise/espace client porteur de donnees personnelles : STARTER + PRO
         // (parcours en ligne) et SCALE (demande d'audit). Contact reste hors perimetre.
@@ -61,14 +64,21 @@ final class PurgeAbandonedDossiers extends Command
             ->where('resume_expires_at', '<', $cutoff)
             // Garde absolue : jamais un dossier ayant paye (abonnement ou audit), quel que soit son statut.
             ->whereDoesntHave('payments', fn (Builder $query): Builder => $query->where('status', PaymentStatus::Succeeded))
-            ->chunkById(100, function (Collection $dossiers) use (&$deleted): void {
-                $dossiers->each(function (Submission $dossier) use (&$deleted): void {
-                    $dossier->delete();
-                    $deleted++;
+            ->chunkById(100, function (Collection $dossiers) use (&$deleted, &$failed): void {
+                $dossiers->each(function (Submission $dossier) use (&$deleted, &$failed): void {
+                    // Un fichier impossible a effacer interrompt la suppression de CE dossier (rien d'efface a
+                    // moitie) : on le journalise et on continue avec les autres ; le prochain passage reessaie.
+                    try {
+                        $dossier->delete();
+                        $deleted++;
+                    } catch (Throwable $e) {
+                        $failed++;
+                        Log::error('Abandoned dossier purge failed; it will be retried.', ['submission' => $dossier->id, 'exception' => $e]);
+                    }
                 });
             });
 
-        $this->info("Purged {$deleted} abandoned dossier(s).");
+        $this->info("Purged {$deleted} abandoned dossier(s).".($failed > 0 ? " {$failed} failed (see logs)." : ''));
 
         return self::SUCCESS;
     }

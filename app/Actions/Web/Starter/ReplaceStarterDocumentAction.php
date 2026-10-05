@@ -9,6 +9,7 @@ use App\Exceptions\Starter\StarterException;
 use App\Models\Submission;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Throwable;
@@ -49,13 +50,14 @@ final readonly class ReplaceStarterDocumentAction
                     : $submission->uploadedDocuments()->create(['type' => $type, ...$attributes]);
             });
         } catch (Throwable $e) {
-            Storage::disk('local')->delete($stored['path']);
+            $this->deleteQuietly($stored['path']);
             throw $e;
         }
 
-        // Remplacement reussi : on supprime l'ancien fichier (best-effort, ne bloque jamais).
+        // Remplacement reussi : on supprime l'ancien fichier (au mieux : ne bloque jamais, mais un echec est
+        // journalise, l'ancien fichier restant une donnee personnelle a effacer).
         if ($oldPath !== '' && $oldPath !== $stored['path']) {
-            Storage::disk('local')->delete($oldPath);
+            $this->deleteQuietly($oldPath);
         }
     }
 
@@ -64,6 +66,8 @@ final readonly class ReplaceStarterDocumentAction
      */
     private function storeOnPrivateDisk(Submission $submission, DocumentType $type, UploadedFile $file): array
     {
+        $path = null;
+
         try {
             $disk = Storage::disk('local');
             $extension = $file->getClientOriginalExtension() ?: 'bin';
@@ -85,7 +89,25 @@ final readonly class ReplaceStarterDocumentAction
         } catch (StarterException $e) {
             throw $e;
         } catch (Throwable $e) {
+            // Fichier ecrit mais illisible ensuite (taille / type) : on ne le laisse pas orphelin.
+            if (is_string($path) && $path !== '') {
+                $this->deleteQuietly($path);
+            }
+
             throw StarterException::documentStorageFailed($submission->id, $type->value, $e);
+        }
+    }
+
+    /**
+     * Nettoyage au mieux d'un fichier prive : un echec ne doit jamais masquer l'erreur d'origine ni casser le
+     * parcours, mais le fichier laisse en place (donnees personnelles) est journalise pour etre retrouve.
+     */
+    private function deleteQuietly(string $path): void
+    {
+        try {
+            Storage::disk('local')->delete($path);
+        } catch (Throwable $e) {
+            Log::warning('Private file left behind: delete failed.', ['path' => $path, 'exception' => $e]);
         }
     }
 }
