@@ -12,8 +12,8 @@ use App\Models\Payment;
 use App\Models\Submission;
 
 /**
- * Derives the SCALE space view-model from a dossier: whether the consultation is booked, whether the
- * 75 EUR audit is paid (booking first, then payment), and the calendar / action URLs. Pure derivation over
+ * Derives the SCALE space view-model from a dossier: whether the 75 EUR audit is paid, the consultation
+ * booking state (payment first, then booking), and the calendar / action URLs. Pure derivation over
  * the loaded relations (no side effect) so the controller stays thin and never queries directly.
  */
 final readonly class ScaleSpaceService

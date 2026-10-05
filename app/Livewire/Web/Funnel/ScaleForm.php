@@ -50,7 +50,7 @@ class ScaleForm extends Component
 
         $this->resetContactFields();
 
-        // On enchaine directement sur l'espace SCALE (reserver puis payer l'audit) ; le token vaut acces.
+        // On enchaine directement sur l'espace SCALE (payer l'audit puis reserver) ; le token vaut acces.
         // Le lien est aussi envoye par email pour revenir plus tard.
         $this->redirectRoute('get-started.scale.space', [
             'dossier' => $submission->resume_token,

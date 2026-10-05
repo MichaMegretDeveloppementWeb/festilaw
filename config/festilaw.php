@@ -72,8 +72,8 @@ return [
     ],
 
     /*
-     | Parcours SCALE : reservation de la consultation (page de reservation Google, integree a l'espace
-     | Scale) puis paiement de l'audit (deduit du contrat final). calendar_url = URL LONGUE de la page
+     | Parcours SCALE : paiement de l'audit (deduit du contrat final) puis reservation de la consultation
+     | (page de reservation Google, integree a l'espace Scale une fois l'audit paye). calendar_url = URL LONGUE de la page
      | (https://calendar.google.com/calendar/appointments/schedules/<ID>) : seule celle-ci s'integre en
      | iframe ; le lien court calendar.app.google ne s'ouvre que dans un nouvel onglet.
      */

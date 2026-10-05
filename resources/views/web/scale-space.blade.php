@@ -15,31 +15,32 @@
 @section('content')
     @php
         $auditPrice = '€'.number_format($space->auditAmountCents / 100, $space->auditAmountCents % 100 === 0 ? 0 : 2);
-        // La consultation se reserve d'abord, le paiement de l'audit vient ensuite la confirmer.
-        $toBook = ! $space->cancelled && ! $space->booked;
+        // L'audit se paie d'abord : l'agenda de reservation n'est propose (ni meme son URL affichee) qu'une
+        // fois l'audit paye.
+        $toBook = ! $space->cancelled && $space->auditPaid && ! $space->booked;
     @endphp
     <section class="my-project">
         <div @class(['my-project__inner', 'my-project__inner--wide' => $toBook && $space->calendarEmbedUrl])>
             <header class="my-project__head">
                 <span class="eyebrow">{{ __('Scale Pack') }}</span>
                 <h1 class="my-project__title">{{ __('Your') }} <span class="my-project__title-em">{{ __('expert audit') }}</span></h1>
-                <p class="my-project__intro">{{ __('Book your video consultation, then pay your audit to confirm it. Keep this link private · it\'s your secure access, no account needed.') }}</p>
+                <p class="my-project__intro">{{ __('Pay your audit, then book your video consultation right here. Keep this link private · it\'s your secure access, no account needed.') }}</p>
             </header>
 
             <div class="my-project__card">
                 <div class="my-project__statusbar">
                     @php
                         $badgeLabel = $space->cancelled ? __('Cancelled')
-                            : (! $space->booked ? __('Consultation to book')
                             : (! $space->auditPaid ? __('Audit to pay')
+                            : (! $space->booked ? __('Consultation to book')
                             : __('Consultation requested')));
                     @endphp
                     <span @class([
                         'my-project__badge',
-                        'is-active' => $space->booked && $space->auditPaid,
-                        'is-warn' => $space->booked && ! $space->auditPaid,
+                        'is-active' => $space->auditPaid && $space->booked,
+                        'is-warn' => $space->auditPaid && ! $space->booked,
                         'is-cancelled' => $space->cancelled,
-                        'is-progress' => ! $space->booked && ! $space->cancelled,
+                        'is-progress' => ! $space->auditPaid && ! $space->cancelled,
                     ])>{{ $badgeLabel }}</span>
                     <span class="my-project__ref">{{ __('Ref.') }} {{ $space->reference }}</span>
                 </div>
@@ -48,10 +49,16 @@
                     <p class="my-project__note">{{ __('This project was cancelled. Get in touch if you\'d like to reopen it.') }}</p>
                     <a href="{{ route('contact') }}" class="btn btn--outline-dark btn--sm">{{ __('Contact us') }}</a>
                 @else
+                    @if ($returningFromCheckout && $toBook)
+                        <div class="scale-flash scale-flash--ok">
+                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            {{ __('Payment received · now pick your consultation slot below.') }}
+                        </div>
+                    @endif
                     @if (session('scale_booked'))
                         <div class="scale-flash scale-flash--ok">
                             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                            {{ $space->auditPaid ? __('Thanks · your booking request is recorded.') : __('Thanks · your booking request is recorded. Last step: pay your audit to confirm it.') }}
+                            {{ __('Thanks · your booking request is recorded.') }}
                         </div>
                     @endif
                     @if (session('scale_error'))
@@ -59,14 +66,6 @@
                     @endif
 
                     <ul class="project-steps">
-                        <li @class(['project-step', 'is-done' => $space->booked])>
-                            <span class="project-step__mark" aria-hidden="true">
-                                @if ($space->booked)
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                                @endif
-                            </span>
-                            <span class="project-step__label">{{ __('Consultation booked') }}</span>
-                        </li>
                         <li @class(['project-step', 'is-done' => $space->auditPaid])>
                             <span class="project-step__mark" aria-hidden="true">
                                 @if ($space->auditPaid)
@@ -75,14 +74,51 @@
                             </span>
                             <span class="project-step__label">{{ __('Audit paid') }}@if ($space->auditPaid && $space->paidAt) <span class="project-step__amount">({{ $auditPrice }} &middot; {{ $space->paidAt->isoFormat('D MMMM YYYY') }})</span>@endif</span>
                         </li>
+                        <li @class(['project-step', 'is-done' => $space->booked])>
+                            <span class="project-step__mark" aria-hidden="true">
+                                @if ($space->booked)
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                @endif
+                            </span>
+                            <span class="project-step__label">{{ __('Consultation booked') }}</span>
+                        </li>
                     </ul>
 
-                    @if (! $space->booked)
-                        {{-- 1. Reserver : agenda Google integre (ou ouvert dans un nouvel onglet si l'URL configuree ne
-                             s'integre pas), puis confirmer la reservation. Aussi pour un audit deja paye avant de
-                             reserver (ancien ordre). --}}
+                    @if (! $space->auditPaid)
+                        {{-- 1. Payer l'audit. Aucun lien vers l'agenda ici : on ne reserve qu'une fois l'audit paye. --}}
                         <div class="scale-action">
-                            <p class="scale-action__lead">{{ $space->auditPaid ? __('Your audit is paid. Two quick steps to lock in your video consultation:') : __('Two quick steps to book your video consultation:') }}</p>
+                            @if ($space->booked)
+                                {{-- Reserve avant de payer (ordre en vigueur jusqu'en octobre 2026) : le paiement confirme la consultation. --}}
+                                <dl class="my-project__meta">
+                                    <div class="my-project__meta-row">
+                                        <dt>{{ __('Status') }}</dt>
+                                        <dd>{{ $space->appointmentStatusLabel }}@if ($space->scheduledAt) &middot; {{ $space->scheduledAt->isoFormat('D MMMM YYYY · HH:mm') }}@endif</dd>
+                                    </div>
+                                </dl>
+                                <p class="scale-action__lead">{{ __('Your consultation request is recorded. Pay your expert audit to confirm it.') }}</p>
+                            @else
+                                <p class="scale-action__lead">{{ __('Pay your expert audit to unlock your consultation booking.') }}</p>
+                            @endif
+                            <div class="scale-price">
+                                <span class="scale-price__value">{{ $auditPrice }}</span>
+                                <span class="scale-price__note">{{ __('one-off · credited toward your final quote') }}</span>
+                            </div>
+                            <form method="POST" action="{{ $space->payUrl }}">
+                                @csrf
+                                <button type="submit" class="btn btn--coral">{{ __('Pay :amount audit', ['amount' => $auditPrice]) }}</button>
+                            </form>
+                            @unless ($space->booked)
+                                <p class="scale-action__credit">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                    {{ __('After payment, you\'ll come straight back here to pick your consultation slot in our calendar.') }}
+                                </p>
+                            @endunless
+                        </div>
+                    @elseif (! $space->booked)
+                        {{-- 2. Audit paye : reserver dans l'agenda Google integre (ou ouvert dans un nouvel onglet si l'URL
+                             configuree ne s'integre pas), puis confirmer la reservation. --}}
+                        <div class="scale-action">
+                            <p class="scale-action__lead">{{ __('Your audit is paid. Two quick steps to lock in your video consultation:') }}</p>
                             <ol class="scale-book">
                                 <li @class(['scale-book__step', 'scale-book__step--calendar' => $space->calendarEmbedUrl])>
                                     <span class="scale-book__num">1</span>
@@ -119,30 +155,8 @@
                             </ol>
                             <p class="scale-action__credit">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                                {{ $space->auditPaid
-                                    ? __('Your :price audit fee will be credited toward your final quote.', ['price' => $auditPrice])
-                                    : __('Next, you\'ll pay the :price audit fee to confirm your consultation. It will be credited toward your final quote.', ['price' => $auditPrice]) }}
+                                {{ __('Your :price audit fee will be credited toward your final quote.', ['price' => $auditPrice]) }}
                             </p>
-                        </div>
-                    @elseif (! $space->auditPaid)
-                        {{-- 2. Reserve, pas encore paye : le paiement de l'audit confirme la consultation. --}}
-                        <div class="scale-action">
-                            <dl class="my-project__meta">
-                                <div class="my-project__meta-row">
-                                    <dt>{{ __('Status') }}</dt>
-                                    <dd>{{ $space->appointmentStatusLabel }}@if ($space->scheduledAt) &middot; {{ $space->scheduledAt->isoFormat('D MMMM YYYY · HH:mm') }}@endif</dd>
-                                </div>
-                            </dl>
-                            <p class="scale-action__lead">{{ __('Your consultation request is recorded. Pay your expert audit to confirm it.') }}</p>
-                            <div class="scale-price">
-                                <span class="scale-price__value">{{ $auditPrice }}</span>
-                                <span class="scale-price__note">{{ __('one-off · credited toward your final quote') }}</span>
-                            </div>
-                            <form method="POST" action="{{ $space->payUrl }}">
-                                @csrf
-                                <button type="submit" class="btn btn--coral">{{ __('Pay :amount audit', ['amount' => $auditPrice]) }}</button>
-                            </form>
-                            <p class="scale-book__reopen">{{ __('Haven\'t picked a slot yet?') }} <a href="{{ $space->calendarUrl }}" target="_blank" rel="noopener">{{ __('Open the booking calendar') }}</a></p>
                         </div>
                     @else
                         <div class="scale-action">

@@ -82,6 +82,29 @@ it('sends a stable Idempotency-Key on the checkout POST (a retry cannot create a
         && $req->hasHeader('Idempotency-Key', 'checkout-'.$payment->id));
 });
 
+it('notes under the Stripe pay button that the Scale consultation is booked right after paying, and only for the audit', function () {
+    Http::fake(['*/v1/checkout/sessions' => Http::response(['id' => 'cs_test_1', 'url' => 'https://checkout.stripe.com/x'])]);
+
+    $subscription = stripePendingPayment();
+    $audit = Submission::factory()->scale()->create()->payments()->create([
+        'type' => PaymentType::ScaleAudit,
+        'amount_cents' => 7500,
+        'currency' => 'EUR',
+        'provider' => 'stripe',
+        'status' => PaymentStatus::Pending,
+    ]);
+
+    app()->setLocale('fr');
+    app(StripePaymentGateway::class)->createCheckout($audit);
+    app(StripePaymentGateway::class)->createCheckout($subscription);
+
+    // Le mot suit la langue du visiteur.
+    Http::assertSent(fn ($req) => $req->hasHeader('Idempotency-Key', 'checkout-'.$audit->id)
+        && str_contains(urldecode($req->body()), 'custom_text[submit][message]=Après le paiement, vous revenez sur votre espace Scale pour réserver votre consultation.'));
+    Http::assertSent(fn ($req) => $req->hasHeader('Idempotency-Key', 'checkout-'.$subscription->id)
+        && ! str_contains(urldecode($req->body()), 'custom_text'));
+});
+
 it('hands Stripe signed return URLs keyed by the payment, never the dossier token (which may rotate meanwhile)', function () {
     Http::fake(['*/v1/checkout/sessions' => Http::response(['id' => 'cs_scale', 'url' => 'https://checkout.stripe.com/x'])]);
 

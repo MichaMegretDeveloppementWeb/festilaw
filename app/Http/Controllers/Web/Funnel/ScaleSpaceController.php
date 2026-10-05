@@ -14,10 +14,10 @@ use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
- * The client's SCALE space (magic link, capability URL). The hub for a SCALE dossier: book the
- * consultation (embedded Google booking page), then pay the 75 EUR audit to confirm it. Reached by its
- * {dossier} token binding. On return from the checkout it confirms the audit server-side (the signed
- * webhook stays the source of truth in production).
+ * The client's SCALE space (magic link, capability URL). The hub for a SCALE dossier: pay the 75 EUR
+ * audit, then book the consultation (embedded Google booking page). Reached by its {dossier} token
+ * binding. On return from the checkout it confirms the audit server-side (the signed webhook stays the
+ * source of truth in production) and tells the view, so it can point to the booking calendar.
  */
 final class ScaleSpaceController extends Controller
 {
@@ -36,10 +36,14 @@ final class ScaleSpaceController extends Controller
 
         // Retour du checkout : on confirme la synchrone (le webhook reste le filet cote serveur en prod ;
         // en local il ne peut pas joindre le site).
-        if ($request->boolean('audit_return')) {
+        $returningFromCheckout = $request->boolean('audit_return');
+        if ($returningFromCheckout) {
             $this->confirmAudit->execute($dossier);
         }
 
-        return view('web.scale-space', ['space' => $this->space->spaceFor($dossier)]);
+        return view('web.scale-space', [
+            'space' => $this->space->spaceFor($dossier),
+            'returningFromCheckout' => $returningFromCheckout,
+        ]);
     }
 }

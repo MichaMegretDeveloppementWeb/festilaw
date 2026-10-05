@@ -14,7 +14,7 @@
                 <header class="funnel__head">
                     <span class="eyebrow">{{ __('Scale Pack') }}</span>
                     <h1 class="funnel__title">{!! __('Start with a :audit', ['audit' => '<span class="funnel__title-em">'.e(__('compliance audit')).'</span>']) !!}</h1>
-                    <p class="funnel__intro">{{ __('For 100+ products. Request your audit, book a consultation with our experts, then pay the €75 fee, deducted from your final contract.') }}</p>
+                    <p class="funnel__intro">{{ __('For 100+ products. Request your audit, then pay the €75 fee, deducted from your final contract, and book a consultation with our experts.') }}</p>
                 </header>
 
                 <div class="funnel__body">

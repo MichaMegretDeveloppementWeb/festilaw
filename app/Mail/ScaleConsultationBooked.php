@@ -11,17 +11,16 @@ use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * Sent to the client once they confirm their SCALE consultation booking ("I've booked"). Complements
- * Google's own calendar invitation with an application-side confirmation. Booking comes first: while the
- * 75 EUR audit is unpaid, the email points to that last step (paying confirms the consultation); once paid
- * (former order), it reminds them Festilaw will confirm the exact slot. Dispatched resiliently from
- * RecordAppointmentAction (only on a new booking).
+ * Sent to the client once they confirm their SCALE consultation booking ("I've booked"), which only
+ * happens after the 75 EUR audit is paid. Complements Google's own calendar invitation with an
+ * application-side confirmation, and reminds them Festilaw will confirm the exact slot. Dispatched
+ * resiliently from RecordAppointmentAction (only on a new booking).
  */
 final class ScaleConsultationBooked extends Mailable
 {
     use SerializesModels;
 
-    public function __construct(public Submission $submission, public bool $auditPaid = false) {}
+    public function __construct(public Submission $submission) {}
 
     public function envelope(): Envelope
     {

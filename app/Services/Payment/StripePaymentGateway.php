@@ -8,6 +8,7 @@ use App\Contracts\Payment\PaymentGatewayInterface;
 use App\Data\Payment\CheckoutSessionData;
 use App\Data\Payment\PaymentWebhookData;
 use App\Enums\Payment\PaymentEventOutcome;
+use App\Enums\Payment\PaymentType;
 use App\Exceptions\Payment\PaymentException;
 use App\Models\Payment;
 use Illuminate\Http\Client\PendingRequest;
@@ -81,6 +82,7 @@ final class StripePaymentGateway implements PaymentGatewayInterface
                         'payment_id' => (string) $payment->id,
                     ],
                 ],
+                ...$this->submitNote($payment),
             ])->throw()->json();
         } catch (Throwable $e) {
             throw PaymentException::apiRequestFailed('create checkout session', $e);
@@ -93,6 +95,21 @@ final class StripePaymentGateway implements PaymentGatewayInterface
         }
 
         return new CheckoutSessionData(providerReference: $id, redirectUrl: $url);
+    }
+
+    /**
+     * Mot affiche sous le bouton de paiement Stripe. Audit SCALE seulement : la consultation se reserve juste
+     * apres le paiement, dans l'espace Scale (demande de Festilaw du 04/10/2026). Rien pour les abonnements.
+     *
+     * @return array{custom_text?: array{submit: array{message: string}}}
+     */
+    private function submitNote(Payment $payment): array
+    {
+        if ($payment->type !== PaymentType::ScaleAudit) {
+            return [];
+        }
+
+        return ['custom_text' => ['submit' => ['message' => __('After payment, you\'ll return to your Scale space to book your consultation.')]]];
     }
 
     /** Libelle de la ligne sur la page Stripe : pack + annee de service (ex. "Festilaw Pro Pack 2026"). */

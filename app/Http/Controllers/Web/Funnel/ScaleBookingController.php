@@ -16,8 +16,8 @@ use Throwable;
 /**
  * Records the SCALE consultation booking (POST) once the client has picked a slot in the Google booking
  * page embedded in their Scale space. There is no calendar webhook (out of scope): this marks the
- * appointment as requested and Festilaw fills the exact slot from the back-office. Booking comes first;
- * the audit is paid afterwards to confirm the consultation.
+ * appointment as requested and Festilaw fills the exact slot from the back-office. Guards (in the Action)
+ * that the audit is paid first.
  */
 final class ScaleBookingController extends Controller
 {

@@ -18,7 +18,7 @@ use Throwable;
 
 /**
  * SCALE parcours: opens the file, then hands the visitor a capability link to their "Scale space" where
- * they book the consultation, then pay the audit fee. The resume_token is the space's access key (magic
+ * they pay the audit fee, then book the consultation. The resume_token is the space's access key (magic
  * link), emailed so they can return on any device without an account. Notifies the team of the request.
  *
  * @phpstan-type ScaleData array{company_name: string, email: string, first_name: string, last_name: string, website_url?: string|null, phone?: string|null, eu_sales_countries?: array<int, string>|null, product_types?: string|null}

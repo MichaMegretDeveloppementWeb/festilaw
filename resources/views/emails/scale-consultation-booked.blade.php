@@ -3,16 +3,9 @@
 
     <x-mail.text>{{ __('Hello') }}{{ $submission->first_name ? ' '.$submission->first_name : '' }},</x-mail.text>
 
-    @if ($auditPaid)
-        <x-mail.text>{{ __('Thanks · we\'ve recorded your consultation booking. Our team will confirm the exact slot by email, and you\'ll also receive a Google Calendar invitation with the video link.') }}</x-mail.text>
+    <x-mail.text>{{ __('Thanks · we\'ve recorded your consultation booking. Our team will confirm the exact slot by email, and you\'ll also receive a Google Calendar invitation with the video link.') }}</x-mail.text>
 
-        <x-mail.button :url="$spaceUrl">{{ __('View my Scale space') }}</x-mail.button>
-    @else
-        {{-- La reservation precede le paiement : le paiement de l'audit vient confirmer la consultation. --}}
-        <x-mail.text>{{ __('Thanks · we\'ve recorded your consultation booking. One last step to confirm it: pay the €75 audit fee from your Scale space. Our team will then confirm the exact slot by email.') }}</x-mail.text>
-
-        <x-mail.button :url="$spaceUrl">{{ __('Pay my audit') }}</x-mail.button>
-    @endif
+    <x-mail.button :url="$spaceUrl">{{ __('View my Scale space') }}</x-mail.button>
 
     <x-mail.text>{{ __('Your €75 audit fee will be credited toward your final quote.') }}</x-mail.text>
 

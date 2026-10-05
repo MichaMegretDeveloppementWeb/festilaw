@@ -17,8 +17,8 @@ use Throwable;
 
 /**
  * Starts the SCALE audit payment (75 EUR) from the client's Scale space (POST). Kicks off the checkout and
- * redirects to the provider. On a business error (consultation not booked yet, already paid, provider down)
- * the visitor is sent back to the space with a friendly message. Mirrors StarterRenewalController.
+ * redirects to the provider. On a business error (already paid, provider down) the visitor is sent back to
+ * the space with a friendly message. Mirrors StarterRenewalController.
  */
 final class ScaleAuditPaymentController extends Controller
 {
