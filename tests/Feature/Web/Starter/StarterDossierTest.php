@@ -76,7 +76,8 @@ it('shows the Pro pack label and annual price on an active Pro dossier', functio
         ->assertSee('Active')
         ->assertSee('Pro Pack')
         ->assertSee('€1,200') // tarif annuel plein du pack Pro
-        ->assertDontSee('Creator Pack');
+        ->assertSee('Pro Pack &middot; €1,200 / year', false)
+        ->assertDontSee('Creator Pack &middot;', false); // le Creator n'apparait que dans l'offre de retour (SC12)
 });
 
 it('sends a paid dossier from the journey to its my-project space', function () {

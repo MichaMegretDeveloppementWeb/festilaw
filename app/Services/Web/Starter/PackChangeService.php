@@ -25,9 +25,16 @@ use Carbon\CarbonInterface;
  *
  * Montee Creator -> Pro : le client seul, s'il est a jour (aucun renouvellement du). Il signe un mandat Pro,
  * puis paie l'ecart de tarif au prorata des mois restants de l'annee (mois en cours compris, comme l'annee 1).
+ *
+ * Retour Pro -> Creator : une demande (justificatif de CA recent + attestation d'eligibilite) que Festilaw
+ * valide ; effet au prochain renouvellement (l'annee qui suit la derniere annee payee), ou des la validation
+ * si ce renouvellement est deja du. Le mandat Creator se signe alors depuis l'espace, avant de renouveler.
  */
 final readonly class PackChangeService
 {
+    /** Une demande refusee reste affichee au client pendant ce delai (jours). */
+    private const REJECTION_NOTICE_DAYS = 30;
+
     public function __construct(
         private AnnualFeeProrator $prorator,
         private RenewalService $renewals,
@@ -58,32 +65,63 @@ final readonly class PackChangeService
     public function canStartUpgrade(Submission $submission): bool
     {
         return $submission->type === SubmissionType::Starter
-            && $submission->status !== SubmissionStatus::Cancelled
-            && $submission->isActive()
+            && $this->isActiveClient($submission)
             && $this->renewals->dueYear($submission) === null
             && $this->inProgress($submission) === null;
     }
 
-    /** Le mandat que le client doit signer depuis son espace (celui de la montee en cours), s'il y en a un. */
+    /** Le client Pro peut-il demander le Creator : client Pro actif, sans changement en cours. */
+    public function canRequestDowngrade(Submission $submission): bool
+    {
+        return $submission->type === SubmissionType::Pro
+            && $this->isActiveClient($submission)
+            && $this->inProgress($submission) === null;
+    }
+
+    /** Annee a partir de laquelle un retour au Creator s'applique : celle qui suit la derniere annee payee. */
+    public function downgradeEffectiveYear(Submission $submission): int
+    {
+        return ($this->renewals->paidThroughYear($submission) ?? (int) now()->year) + 1;
+    }
+
+    /**
+     * Le mandat que le client doit signer depuis son espace : celui de la montee en cours, ou le mandat en
+     * vigueur pas encore signe d'un client actif (nouveau pack applique au renouvellement).
+     */
     public function signableContract(Submission $submission): ?Contract
     {
-        $contract = $this->openUpgrade($submission)?->contract;
+        $upgradeContract = $this->openUpgrade($submission)?->contract;
+        if ($upgradeContract !== null) {
+            return $upgradeContract->signature_status !== SignatureStatus::Signed ? $upgradeContract : null;
+        }
 
-        return $contract !== null && $contract->signature_status !== SignatureStatus::Signed ? $contract : null;
+        $current = $submission->contract()->first();
+
+        return $current !== null && $current->signature_status !== SignatureStatus::Signed && $this->isActiveClient($submission)
+            ? $current
+            : null;
     }
 
     public function panel(Submission $submission): PackChangePanelData
     {
         $other = $submission->type === SubmissionType::Pro ? SubmissionType::Starter : SubmissionType::Pro;
         $upgrade = $this->openUpgrade($submission);
+        $change = $upgrade ?? $this->inProgress($submission);
+        $signable = $this->signableContract($submission);
 
         $mode = match (true) {
             $upgrade !== null => $this->upgradeStep($upgrade),
+            $signable !== null => PackChangePanelData::MANDATE_SIGN,
+            $change?->status === PackChangeStatus::Requested => PackChangePanelData::DOWNGRADE_REQUESTED,
+            $change?->status === PackChangeStatus::Approved => PackChangePanelData::DOWNGRADE_APPROVED,
             $this->canStartUpgrade($submission) => PackChangePanelData::UPGRADE_OFFER,
+            $this->canRequestDowngrade($submission) => $this->recentlyRejected($submission)
+                ? PackChangePanelData::DOWNGRADE_REJECTED
+                : PackChangePanelData::DOWNGRADE_OFFER,
             default => PackChangePanelData::NONE,
         };
 
-        $contract = $upgrade?->contract;
+        $contract = $upgrade?->contract ?? $signable;
 
         return new PackChangePanelData(
             mode: $mode,
@@ -94,7 +132,22 @@ final readonly class PackChangeService
             year: (int) now()->year,
             signatureStarted: (string) ($contract?->signature_provider_reference ?? '') !== '',
             signatureDeclined: $contract?->signature_status === SignatureStatus::Declined,
+            effectiveYear: $change?->effective_year ?? ($mode === PackChangePanelData::DOWNGRADE_OFFER ? $this->downgradeEffectiveYear($submission) : null),
         );
+    }
+
+    private function isActiveClient(Submission $submission): bool
+    {
+        return $submission->status !== SubmissionStatus::Cancelled && $submission->isActive();
+    }
+
+    private function recentlyRejected(Submission $submission): bool
+    {
+        $latest = $submission->packChanges()->first();
+
+        return $latest !== null
+            && $latest->status === PackChangeStatus::Rejected
+            && $latest->decided_at?->gt(now()->subDays(self::REJECTION_NOTICE_DAYS));
     }
 
     private function upgradeStep(PackChange $upgrade): string

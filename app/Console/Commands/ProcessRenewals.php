@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Actions\Web\Starter\ApplyPackDowngradeAction;
 use App\Enums\Billing\RenewalStatus;
+use App\Enums\Submission\PackChangeStatus;
 use App\Enums\Submission\SubmissionType;
 use App\Mail\AdminRenewalDigest;
 use App\Mail\RenewalReminder;
+use App\Models\PackChange;
 use App\Models\Submission;
 use App\Services\Billing\RenewalService;
 use App\Services\Notification\TeamNotifier;
@@ -22,7 +25,9 @@ use Throwable;
  * Traite les renouvellements annuels (renouvellement manuel, cf. contrat) : rappel au client quand son
  * annee de service est due, recap groupe a Festilaw des dossiers a renouveler, puis alerte groupee des
  * retards une fois la fenetre de grace depassee. Un client n'est rappele qu'une fois par an et chaque
- * digest admin n'est envoye qu'une fois par an (anti-doublon via meta du dossier).
+ * digest admin n'est envoye qu'une fois par an (anti-doublon via meta du dossier). Applique d'abord les
+ * retours au Creator valides par Festilaw dont l'annee d'effet est arrivee (SC12), pour que le rappel et le
+ * bouton de renouvellement annoncent deja le tarif Creator.
  *
  * Planifiee quotidiennement (routes/console.php). Options :
  *  --now=AAAA-MM-JJ  simule la date (pour tester "on est en janvier")
@@ -37,6 +42,7 @@ final class ProcessRenewals extends Command
     public function __construct(
         private readonly RenewalService $renewals,
         private readonly TeamNotifier $teamNotifier,
+        private readonly ApplyPackDowngradeAction $applyPackDowngrade,
     ) {
         parent::__construct();
     }
@@ -48,6 +54,8 @@ final class ProcessRenewals extends Command
         $dry = (bool) $this->option('dry');
 
         $this->info("Renouvellements au {$now->toDateString()} (annee {$year})".($dry ? ' [DRY-RUN]' : ''));
+
+        $this->applyDueDowngrades($year, $dry);
 
         /** @var list<array{company:string,pack:string,year:int,email:string,url:string}> $dueRows */
         $dueRows = [];
@@ -115,6 +123,36 @@ final class ProcessRenewals extends Command
         $this->info('Rappels client : '.$clientReminders.' · admin a renouveler : '.count($dueRows).' · admin en retard : '.count($overdueRows));
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Retours au Creator valides dont l'annee d'effet est arrivee (SC12) : le dossier passe au Creator, avec
+     * un nouveau mandat Creator a signer depuis l'espace avant de renouveler.
+     */
+    private function applyDueDowngrades(int $year, bool $dry): void
+    {
+        $due = PackChange::query()
+            ->where('status', PackChangeStatus::Approved)
+            ->where('effective_year', '<=', $year)
+            ->get();
+
+        foreach ($due as $downgrade) {
+            if ($dry) {
+                $this->line("  [DRY] Retour au Creator a appliquer : dossier {$downgrade->submission_id}");
+
+                continue;
+            }
+
+            try {
+                $this->applyPackDowngrade->execute($downgrade);
+            } catch (Throwable $e) {
+                Log::error('Failed to apply an approved switch back to Creator.', ['exception' => $e, 'pack_change' => $downgrade->id]);
+            }
+        }
+
+        if ($due->isNotEmpty()) {
+            $this->info(($dry ? '[DRY-RUN] ' : '')."Retours au Creator appliques : {$due->count()}.");
+        }
     }
 
     private function resolveNow(): CarbonImmutable

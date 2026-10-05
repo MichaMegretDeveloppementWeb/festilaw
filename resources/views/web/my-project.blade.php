@@ -106,7 +106,8 @@
                             <p class="my-project__renew-error">{{ session('renewal_error') }}</p>
                         @endif
 
-                        @if ($project->renewalDue)
+                        {{-- Nouveau pack au renouvellement (retour au Creator, SC12) : son mandat se signe d'abord (panneau ci-dessous). --}}
+                        @if ($project->renewalDue && $project->signed)
                             <div @class(['my-project__renew', 'is-overdue' => $project->renewalOverdue])>
                                 <p class="my-project__renew-text">
                                     @if ($project->renewalOverdue)

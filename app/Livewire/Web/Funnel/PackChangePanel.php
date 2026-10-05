@@ -7,10 +7,13 @@ namespace App\Livewire\Web\Funnel;
 use App\Actions\Web\Starter\CancelPackUpgradeAction;
 use App\Actions\Web\Starter\MarkContractDeclinedAction;
 use App\Actions\Web\Starter\MarkContractSignedAction;
+use App\Actions\Web\Starter\RequestPackDowngradeAction;
 use App\Actions\Web\Starter\StartContractSigningAction;
 use App\Actions\Web\Starter\StartPackUpgradeAction;
 use App\Actions\Web\Starter\StartPackUpgradePaymentAction;
+use App\Actions\Web\Starter\WithdrawPackDowngradeAction;
 use App\Contracts\Signature\SignatureGatewayInterface;
+use App\Enums\Contract\ContractRole;
 use App\Enums\Contract\SignatureEventOutcome;
 use App\Exceptions\BaseAppException;
 use App\Livewire\Concerns\HandlesUnexpectedErrors;
@@ -22,17 +25,22 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Livewire\WithFileUploads;
 use Throwable;
 
 /**
  * Panneau "changer de pack" de l'espace client d'un dossier paye (SC12, page "my project"). Montee vers le
  * Pro : le client l'ouvre, signe son mandat Pro dans une fenetre sur la page (meme mecanique SignWell que le
  * parcours), puis paie la difference au prorata ; la montee s'applique a la confirmation du paiement. Il peut
- * y renoncer tant qu'il n'a pas paye. Toute la logique est dans PackChangeService et les Actions.
+ * y renoncer tant qu'il n'a pas paye. Retour au Creator : le client Pro le demande (justificatif de CA recent +
+ * attestation d'eligibilite), Festilaw valide, et au renouvellement le client signe ici son mandat Creator
+ * avant de renouveler. Toute la logique est dans PackChangeService et les Actions.
  */
 final class PackChangePanel extends Component
 {
     use HandlesUnexpectedErrors;
+    use WithFileUploads;
 
     /** Tentatives bornees de confirmation de la signature apres l'evenement "completed" de l'iframe. */
     private const MAX_SIGNATURE_POLLS = 15;
@@ -50,6 +58,15 @@ final class PackChangePanel extends Component
 
     /** Une signature est deja en cours au chargement : verification silencieuse (wire:init). */
     public bool $autoConfirm = false;
+
+    /** Le formulaire de demande de retour au Creator est ouvert. */
+    public bool $requestingDowngrade = false;
+
+    /** Justificatif de chiffre d'affaires recent joint a la demande de retour au Creator. */
+    public ?TemporaryUploadedFile $turnoverProof = null;
+
+    /** Attestation d'eligibilite au Creator (CA < 35 000 EUR, 9 produits maximum). */
+    public bool $eligibilityConfirmed = false;
 
     public function mount(Submission $submission, PackChangeService $packChanges): void
     {
@@ -93,7 +110,42 @@ final class PackChangePanel extends Component
         session()->now('pack_status', 'upgrade_cancelled');
     }
 
-    /** Ouvre la signature du mandat Pro sur la page : reprend la session en cours, sinon en cree une. */
+    /** Demande de retour au Creator (effet au prochain renouvellement, apres validation de Festilaw). */
+    public function requestDowngrade(RequestPackDowngradeAction $requestDowngrade): void
+    {
+        $this->validate([
+            'turnoverProof' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'],
+            'eligibilityConfirmed' => ['accepted'],
+        ], [
+            'turnoverProof.required' => __('Please add a recent proof of turnover.'),
+            'turnoverProof.mimes' => __('Accepted formats: PDF, JPG, PNG or WEBP.'),
+            'turnoverProof.max' => __('This file is too large (10 MB maximum).'),
+            'eligibilityConfirmed.accepted' => __('Please confirm that your business meets the Creator Pack conditions.'),
+        ]);
+
+        try {
+            $requestDowngrade->execute($this->submission, $this->turnoverProof);
+        } catch (BaseAppException $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            $this->addError('pack', __($e->getUserMessage()));
+
+            return;
+        } catch (Throwable $e) {
+            $this->reportUnexpectedError($e, 'pack', 'pack downgrade request');
+
+            return;
+        }
+
+        $this->reset('requestingDowngrade', 'turnoverProof', 'eligibilityConfirmed');
+    }
+
+    public function withdrawDowngrade(WithdrawPackDowngradeAction $withdrawDowngrade): void
+    {
+        $withdrawDowngrade->execute($this->submission);
+        session()->now('pack_status', 'downgrade_withdrawn');
+    }
+
+    /** Ouvre la signature du mandat (Pro d'une montee, ou celui du nouveau pack au renouvellement) sur la page. */
     public function sign(PackChangeService $packChanges, StartContractSigningAction $startSigning, SignatureGatewayInterface $signatureGateway): void
     {
         $contract = $packChanges->signableContract($this->submission);
@@ -237,7 +289,15 @@ final class PackChangePanel extends Component
         }
 
         $markSigned->execute($contract, $event->providerReference);
-        session()->now('pack_status', 'signed');
+
+        // Mandat d'une montee : l'etape suivante (payer) s'affiche ici. Mandat en vigueur (nouveau pack au
+        // renouvellement) : on recharge la page pour que le bouton de renouvellement apparaisse.
+        if ($contract->role === ContractRole::Pending) {
+            session()->now('pack_status', 'signed');
+        } else {
+            session()->flash('pack_status', 'mandate_signed');
+            $this->redirectRoute('my-project', ['dossier' => $this->submission->resume_token]);
+        }
 
         return true;
     }

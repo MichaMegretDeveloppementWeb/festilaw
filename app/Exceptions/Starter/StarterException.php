@@ -82,6 +82,14 @@ final class StarterException extends BaseAppException
         );
     }
 
+    public static function packDowngradeUnavailable(int $submissionId, string $reason): self
+    {
+        return new self(
+            technicalMessage: "STARTER submission [{$submissionId}] cannot request the Creator pack: {$reason}.",
+            userMessage: 'Switching to the Creator Pack cannot be requested for your file right now. Please contact us.',
+        );
+    }
+
     public static function packUpgradeNotSigned(int $submissionId): self
     {
         return new self(

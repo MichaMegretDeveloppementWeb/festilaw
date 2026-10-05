@@ -30,6 +30,12 @@
                 · {{ __('changement de pack vers :pack le :date par le client.', ['pack' => $submission->replacedBy->type->label(), 'date' => $submission->replacedBy->created_at->format('d/m/Y à H:i')]) }}
             </x-ui.alert>
         @endif
+        @if ($submission->packChanges->contains('status', \App\Enums\Submission\PackChangeStatus::Requested))
+            {{-- Retour au Creator demande par le client (SC12) : Festilaw a le dernier mot. --}}
+            <x-ui.alert type="warning" class="mb-6">
+                {{ __('Demande de passage au Creator à valider : vérifiez le justificatif de chiffre d\'affaires (Pièces) et l\'attestation du client (moins de 35 000 € de CA, 9 produits maximum), puis validez ou refusez dans la carte « Changement de pack ».') }}
+            </x-ui.alert>
+        @endif
         @if ($submission->replaces)
             <x-ui.alert type="info" class="mb-6">
                 {{ __('Remplace') }}
@@ -431,6 +437,23 @@
                                         · {{ __('appliqué le') }} {{ $change->applied_at->format('d/m/Y') }}
                                     @endif
                                 </p>
+                                @if (! $change->isUpgrade() && $change->eligibility_confirmed_at)
+                                    <p class="mt-1 text-[12px] text-muted">{{ __('Éligibilité attestée le') }} {{ $change->eligibility_confirmed_at->format('d/m/Y') }}@if ($change->effective_year) · {{ __('effet au 1er janvier :year', ['year' => $change->effective_year]) }}@endif</p>
+                                @endif
+                                @if ($change->note)
+                                    <p class="mt-1 text-[12px] text-secondary">{{ __('Message au client :') }} {{ $change->note }}</p>
+                                @endif
+                                @if (! $change->isUpgrade() && $change->status === \App\Enums\Submission\PackChangeStatus::Requested)
+                                    <div class="mt-3 space-y-2.5">
+                                        <x-ui.textarea wire:model="packDowngradeNote" rows="2" placeholder="{{ __('Message au client en cas de refus (facultatif)') }}" />
+                                        <div class="flex gap-2">
+                                            <x-ui.button size="compact" class="flex-1 justify-center" wire:click="approvePackDowngrade({{ $change->id }})" :loading="true" target="approvePackDowngrade"
+                                                wire:confirm="{{ __('Valider le passage au Creator au 1er janvier ? Le client sera prévenu par e-mail.') }}">{{ __('Valider') }}</x-ui.button>
+                                            <x-ui.button variant="danger" size="compact" class="flex-1 justify-center" wire:click="rejectPackDowngrade({{ $change->id }})" :loading="true" target="rejectPackDowngrade"
+                                                wire:confirm="{{ __('Refuser le passage au Creator ? Le client sera prévenu par e-mail, avec votre message s\'il y en a un.') }}">{{ __('Refuser') }}</x-ui.button>
+                                        </div>
+                                    </div>
+                                @endif
                                 @if ($revertible)
                                     <x-ui.button variant="danger" size="compact" class="mt-2.5 w-full justify-center"
                                         wire:click="revertPackUpgrade({{ $change->id }})" :loading="true" target="revertPackUpgrade"

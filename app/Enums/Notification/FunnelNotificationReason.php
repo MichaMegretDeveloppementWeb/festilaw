@@ -15,6 +15,7 @@ enum FunnelNotificationReason: string
     // Changement de pack apres paiement (SC12).
     case PackUpgradeStarted = 'pack_upgrade_started';
     case PackUpgraded = 'pack_upgraded';
+    case PackDowngradeRequested = 'pack_downgrade_requested';
 
     public function subject(): string
     {
@@ -27,6 +28,7 @@ enum FunnelNotificationReason: string
             self::PackChanged => __('Pack changed by the client'),
             self::PackUpgradeStarted => __('Switch to the Pro Pack started by the client'),
             self::PackUpgraded => __('Client switched to the Pro Pack (paid)'),
+            self::PackDowngradeRequested => __('Switch back to the Creator Pack to review'),
         };
     }
 }

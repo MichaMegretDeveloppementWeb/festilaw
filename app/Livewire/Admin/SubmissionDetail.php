@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Livewire\Admin;
 
 use App\Actions\Admin\AddSubmissionNoteAction;
+use App\Actions\Admin\ApprovePackDowngradeAction;
 use App\Actions\Admin\ChangeSubmissionStatusAction;
 use App\Actions\Admin\IssueResponsiblePersonAction;
+use App\Actions\Admin\RejectPackDowngradeAction;
 use App\Actions\Admin\RevertPackUpgradeAction;
 use App\Actions\Admin\SendAdminMessageAction;
 use App\Actions\Admin\UpdateAppointmentAction;
@@ -23,11 +25,13 @@ use App\Enums\Submission\SubmissionStatus;
 use App\Enums\Submission\SubmissionType;
 use App\Exceptions\BaseAppException;
 use App\Livewire\Concerns\HandlesAdminErrors;
+use App\Models\PackChange;
 use App\Models\Payment;
 use App\Models\Submission;
 use App\Services\Billing\RenewalService;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
+use Closure;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -69,6 +73,9 @@ class SubmissionDetail extends Component
 
     /** Statut du rendez-vous SCALE (Demande / Programme / Termine / Annule). */
     public string $apptStatus = '';
+
+    /** Message facultatif au client en cas de refus d'un retour au Creator (SC12). */
+    public string $packDowngradeNote = '';
 
     public function mount(Submission $submission): void
     {
@@ -193,10 +200,6 @@ class SubmissionDetail extends Component
     }
 
     /**
-     * Re-interroge le prestataire (Stripe...) pour un paiement du dossier, a la demande du support. Si le
-     * prestataire dit "paye", une fausse-echec est corrigee et le dossier reactive (source de verite).
-     */
-    /**
      * Le "dernier mot" de Festilaw sur un passage au Pro (SC12) : rembourse la difference et ramene le dossier
      * au Creator. Rien n'est modifie si le remboursement echoue chez le prestataire.
      */
@@ -226,6 +229,50 @@ class SubmissionDetail extends Component
         $this->toast(__('Passage au Pro annulé et remboursé : le dossier est revenu au Creator.'));
     }
 
+    /** Festilaw valide le retour au Creator demande par le client (effet au prochain renouvellement, SC12). */
+    public function approvePackDowngrade(int $packChangeId, ApprovePackDowngradeAction $approve): void
+    {
+        $this->decidePackDowngrade($packChangeId, fn (PackChange $change) => $approve->execute($change, auth()->id()), __('Passage au Creator validé : le client est prévenu par e-mail.'));
+    }
+
+    /** Festilaw refuse le retour au Creator demande par le client, avec un message facultatif (SC12). */
+    public function rejectPackDowngrade(int $packChangeId, RejectPackDowngradeAction $reject): void
+    {
+        $this->validate(['packDowngradeNote' => ['nullable', 'string', 'max:2000']], ['packDowngradeNote.max' => __('Le message ne peut pas dépasser 2000 caractères.')]);
+
+        $this->decidePackDowngrade($packChangeId, fn (PackChange $change) => $reject->execute($change, auth()->id(), $this->packDowngradeNote), __('Passage au Creator refusé : le client est prévenu par e-mail.'));
+    }
+
+    private function decidePackDowngrade(int $packChangeId, Closure $decide, string $success): void
+    {
+        $change = $this->submission->packChanges->firstWhere('id', $packChangeId);
+        if ($change === null) {
+            $this->toast(__('Changement de pack introuvable.'), 'error');
+
+            return;
+        }
+
+        try {
+            $decide($change);
+        } catch (BaseAppException $e) {
+            $this->toast(__($e->getUserMessage()), 'error');
+
+            return;
+        } catch (Throwable $e) {
+            $this->reportAdminError($e, 'Admin pack downgrade decision');
+
+            return;
+        }
+
+        $this->packDowngradeNote = '';
+        $this->submission->refresh()->load(['contract', 'contracts', 'payments', 'packChanges.contract', 'packChanges.payment']);
+        $this->toast($success);
+    }
+
+    /**
+     * Re-interroge le prestataire (Stripe...) pour un paiement du dossier, a la demande du support. Si le
+     * prestataire dit "paye", une fausse-echec est corrigee et le dossier reactive (source de verite).
+     */
     public function recheckPayment(int $paymentId, CheckPaymentStatusAction $checkPaymentStatus): void
     {
         $payment = $this->submission->payments()->whereKey($paymentId)->first();

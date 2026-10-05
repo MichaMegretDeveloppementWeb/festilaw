@@ -25,6 +25,21 @@ final readonly class PackChangePanelData
     /** Montee en cours : paiement en cours de confirmation par le prestataire. */
     public const UPGRADE_PROCESSING = 'upgrade_processing';
 
+    /** Pro (paye) : peut demander le Creator a partir du prochain renouvellement. */
+    public const DOWNGRADE_OFFER = 'downgrade_offer';
+
+    /** Retour au Creator demande, en attente de Festilaw. */
+    public const DOWNGRADE_REQUESTED = 'downgrade_requested';
+
+    /** Retour au Creator valide : effet au prochain renouvellement (effectiveYear). */
+    public const DOWNGRADE_APPROVED = 'downgrade_approved';
+
+    /** Derniere demande de retour au Creator refusee (le client peut en refaire une). */
+    public const DOWNGRADE_REJECTED = 'downgrade_rejected';
+
+    /** Le mandat en vigueur (nouveau pack au renouvellement) est a signer avant de renouveler. */
+    public const MANDATE_SIGN = 'mandate_sign';
+
     public function __construct(
         public string $mode,
         public string $currentPackLabel,
@@ -34,5 +49,6 @@ final readonly class PackChangePanelData
         public int $year,
         public bool $signatureStarted = false,
         public bool $signatureDeclined = false,
+        public ?int $effectiveYear = null,
     ) {}
 }

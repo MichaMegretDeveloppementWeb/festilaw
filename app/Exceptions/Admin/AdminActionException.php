@@ -45,6 +45,14 @@ final class AdminActionException extends BaseAppException
         );
     }
 
+    public static function packDowngradeNotPending(int $packChangeId): self
+    {
+        return new self(
+            technicalMessage: "Pack change [{$packChangeId}] is not a pending switch back to Creator.",
+            userMessage: 'Cette demande de passage au Creator n\'est plus en attente (déjà traitée ou retirée par le client).',
+        );
+    }
+
     public static function packUpgradeRefundFailed(int $packChangeId, ?Throwable $previous = null): self
     {
         return new self(

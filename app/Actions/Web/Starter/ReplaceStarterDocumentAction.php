@@ -18,28 +18,35 @@ use Throwable;
  * completed step). Stores the new file first (I/O, out of the transaction), swaps the row inside a
  * transaction, then removes the old file. On any failure the freshly-stored file is deleted so no orphan
  * is left. Never touches the dossier status : it is a pure correction, the parcours stays where it is.
+ *
+ * With $createIfMissing, a document of that type not uploaded yet is added instead (e.g. the recent proof of
+ * turnover of a Pro client asking to switch back to Creator, SC12).
  */
 final readonly class ReplaceStarterDocumentAction
 {
-    public function execute(Submission $submission, DocumentType $type, UploadedFile $file): void
+    public function execute(Submission $submission, DocumentType $type, UploadedFile $file, bool $createIfMissing = false): void
     {
         $existing = $submission->uploadedDocuments()->where('type', $type)->first();
-        if ($existing === null) {
+        if ($existing === null && ! $createIfMissing) {
             throw StarterException::documentNotFound($submission->id, $type->value);
         }
 
-        $oldPath = (string) $existing->file_path;
+        $oldPath = (string) ($existing?->file_path ?? '');
         $stored = $this->storeOnPrivateDisk($submission, $type, $file);
 
         try {
-            DB::transaction(function () use ($existing, $stored, $file): void {
-                $existing->update([
+            DB::transaction(function () use ($submission, $type, $existing, $stored, $file): void {
+                $attributes = [
                     'file_path' => $stored['path'],
                     'original_filename' => $file->getClientOriginalName(),
                     'mime_type' => $stored['mime'],
                     'size_bytes' => $stored['size'],
                     'uploaded_at' => now(),
-                ]);
+                ];
+
+                $existing !== null
+                    ? $existing->update($attributes)
+                    : $submission->uploadedDocuments()->create(['type' => $type, ...$attributes]);
             });
         } catch (Throwable $e) {
             Storage::disk('local')->delete($stored['path']);
