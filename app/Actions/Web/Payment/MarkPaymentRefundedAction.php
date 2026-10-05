@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Actions\Web\Payment;
 
+use App\Actions\Web\Starter\ReverseAppliedPackUpgradeAction;
 use App\Enums\Payment\PaymentStatus;
+use App\Enums\Payment\PaymentType;
+use App\Models\PackChange;
 use App\Models\Payment;
 use Illuminate\Support\Facades\Log;
 
@@ -14,9 +17,14 @@ use Illuminate\Support\Facades\Log;
  * dossier's active state is *derived* from its non-refunded succeeded subscription payments, so writing
  * Refunded here is what deactivates it · no separate submission write. Logged at warning level because a
  * refund/chargeback is exceptional and support-relevant.
+ *
+ * A refunded pack upgrade payment (SC12) also takes the dossier back to the Creator pack: a refund made
+ * in the Stripe dashboard has the same effect as the back-office button.
  */
 final readonly class MarkPaymentRefundedAction
 {
+    public function __construct(private ReverseAppliedPackUpgradeAction $reverseAppliedPackUpgrade) {}
+
     public function execute(Payment $payment): Payment
     {
         $affected = Payment::query()
@@ -31,10 +39,25 @@ final readonly class MarkPaymentRefundedAction
                 'provider' => $payment->provider,
             ]);
 
+            $this->reversePackUpgrade($payment);
             $this->invalidateDeadDossierLink($payment);
         }
 
         return $payment->refresh();
+    }
+
+    /** Sans effet si la montee est deja defaite (bouton du back-office, qui passe avant ce remboursement). */
+    private function reversePackUpgrade(Payment $payment): void
+    {
+        if ($payment->type !== PaymentType::PackUpgrade) {
+            return;
+        }
+
+        $upgrade = PackChange::query()->where('payment_id', $payment->getKey())->first();
+
+        if ($upgrade !== null) {
+            $this->reverseAppliedPackUpgrade->execute($upgrade);
+        }
     }
 
     /**

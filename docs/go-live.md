@@ -181,11 +181,18 @@ les moyens de paiement qui se règlent en différé. **En prod, on le veut.**
    https://festilaw.com/webhooks/payment/stripe
    ```
 
-3. **Événements à écouter** (sélectionner exactement ces trois) :
+3. **Événements à écouter** (sélectionner exactement ces six) :
 
    - `checkout.session.completed`
    - `checkout.session.async_payment_succeeded`
    - `checkout.session.async_payment_failed`
+   - `checkout.session.expired`
+   - `charge.refunded` (un remboursement fait dans Stripe désactive le dossier, ou le ramène au Creator pour un passage au Pro)
+   - `charge.dispute.closed` (un litige perdu compte comme un remboursement)
+
+   À chaque déploiement, `deploy.sh` lance `php artisan festilaw:stripe-webhook`, qui
+   ajoute à cet endpoint les événements qui lui manqueraient (sans en retirer, sans
+   changer son secret). Elle ne crée pas l'endpoint : cette étape reste manuelle.
 
 4. Valider, puis **révéler le « Signing secret »** de ce webhook : il commence par
    **`whsec_`**. C'est ce qui permet au site de **vérifier que la notification vient
@@ -424,7 +431,7 @@ Actions manuelles (hors `.env`) :
 - [ ] Domaine `festilaw.com` pointe sur l'hébergement + **SSL/HTTPS actif**
 - [ ] Racine web du domaine = dossier `public/` du projet
 - [ ] Compte Stripe activé (société + IBAN)
-- [ ] Webhook Stripe créé (`https://festilaw.com/webhooks/payment/stripe`, 3 événements) → `whsec_`
+- [ ] Webhook Stripe créé (`https://festilaw.com/webhooks/payment/stripe`, 6 événements) → `whsec_`
 - [ ] Webhook SignWell confirmé (`https://festilaw.com/webhooks/signature`)
 - [ ] Cron `schedule:run` activé chez l'hébergeur
 - [ ] Sauvegarde de la base avant migration

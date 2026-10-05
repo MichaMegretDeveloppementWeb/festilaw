@@ -140,6 +140,22 @@ function upgradeAwaitingPayment(Submission $dossier): Payment
     return $payment;
 }
 
+/** Le webhook charge.refunded d'un remboursement integral fait dans le tableau de bord Stripe. */
+function refundUpgradeFromStripe(Payment $payment): void
+{
+    $payload = json_encode([
+        'type' => 'charge.refunded',
+        'data' => ['object' => ['id' => 'ch_up', 'refunded' => true, 'amount' => 21675, 'amount_refunded' => 21675, 'metadata' => ['payment_id' => (string) $payment->id]]],
+    ]);
+    $time = now()->timestamp;
+    $signature = hash_hmac('sha256', "{$time}.{$payload}", 'whsec_x');
+
+    test()->call('POST', '/webhooks/payment/stripe', [], [], [], [
+        'CONTENT_TYPE' => 'application/json',
+        'HTTP_STRIPE_SIGNATURE' => "t={$time},v1={$signature}",
+    ], $payload)->assertNoContent();
+}
+
 it('quotes the price gap over the remaining months of the year (October: 3/12)', function () {
     expect(app(PackChangeService::class)->upgradeQuoteCents())->toBe(21675); // (120000 - 33300) x 3/12
 });
@@ -314,6 +330,69 @@ it('lets Festilaw cancel a paid switch from the back-office: refund, then back t
         ->and($payment->fresh()->status)->toBe(PaymentStatus::Refunded)
         ->and($dossier->isActive())->toBeTrue();
     Http::assertSent(fn ($req) => str_ends_with($req->url(), '/v1/refunds') && $req->hasHeader('Idempotency-Key', 'refund-'.$payment->id));
+});
+
+it('takes the dossier back to Creator when the switch is refunded in the Stripe dashboard', function () {
+    $dossier = activeCreator();
+    $creatorMandate = $dossier->contract;
+    $payment = upgradeAwaitingPayment($dossier);
+    app(MarkPaymentSucceededAction::class)->execute($payment, 'cs_up');
+
+    refundUpgradeFromStripe($payment);
+    refundUpgradeFromStripe($payment); // webhook rejoue : rien de plus
+
+    $dossier->refresh();
+    $upgrade = PackChange::sole();
+    expect($dossier->type)->toBe(SubmissionType::Starter)
+        ->and($dossier->contract->id)->toBe($creatorMandate->id)
+        ->and($dossier->contracts()->where('role', ContractRole::Current)->count())->toBe(1)
+        ->and($upgrade->status)->toBe(PackChangeStatus::Reverted)
+        ->and($upgrade->decided_by)->toBeNull()
+        ->and($upgrade->contract->fresh()->role)->toBe(ContractRole::Superseded)
+        ->and($payment->fresh()->status)->toBe(PaymentStatus::Refunded)
+        ->and($dossier->isActive())->toBeTrue(); // l'abonnement Creator, lui, reste paye
+});
+
+it('does nothing more when the refund webhook follows the back-office cancellation', function () {
+    Http::fake([
+        '*/v1/checkout/sessions/*' => Http::response(['id' => 'cs_up', 'payment_intent' => 'pi_up']),
+        '*/v1/refunds' => Http::response(['id' => 're_up', 'status' => 'succeeded']),
+    ]);
+    $dossier = activeCreator();
+    $creatorMandate = $dossier->contract;
+    $payment = upgradeAwaitingPayment($dossier);
+    app(MarkPaymentSucceededAction::class)->execute($payment, 'cs_up');
+    actingAs($admin = User::factory()->create());
+    Livewire::test(SubmissionDetail::class, ['submission' => $dossier->fresh()])->call('revertPackUpgrade', PackChange::sole()->id);
+    auth()->logout();
+
+    refundUpgradeFromStripe($payment);
+
+    expect(PackChange::sole()->status)->toBe(PackChangeStatus::Reverted)
+        ->and(PackChange::sole()->decided_by)->toBe($admin->id)
+        ->and($dossier->fresh()->contract->id)->toBe($creatorMandate->id)
+        ->and($dossier->fresh()->type)->toBe(SubmissionType::Starter);
+});
+
+it('leaves the mandates alone when a switch is refunded after the file went back to Creator', function () {
+    $dossier = activeCreator();
+    $payment = upgradeAwaitingPayment($dossier);
+    app(MarkPaymentSucceededAction::class)->execute($payment, 'cs_up');
+    // Retour au Creator applique depuis (renouvellement) : nouveau mandat Creator en vigueur.
+    $dossier->contracts()->reorder()->where('role', ContractRole::Current)->update(['role' => ContractRole::Superseded, 'superseded_at' => now()]);
+    $newCreatorMandate = $dossier->contracts()->create([
+        'pack' => SubmissionType::Starter,
+        'role' => ContractRole::Current,
+        'signature_status' => SignatureStatus::Pending,
+        'filled_fields' => [],
+    ]);
+    $dossier->refresh()->update(['type' => SubmissionType::Starter]);
+
+    refundUpgradeFromStripe($payment);
+
+    expect(PackChange::sole()->status)->toBe(PackChangeStatus::Reverted)
+        ->and($dossier->fresh()->contract->id)->toBe($newCreatorMandate->id)
+        ->and($dossier->contracts()->where('role', ContractRole::Current)->count())->toBe(1);
 });
 
 it('changes nothing when the refund fails at Stripe', function () {

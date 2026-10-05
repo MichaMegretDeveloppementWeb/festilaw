@@ -144,6 +144,11 @@ echo "→ Optimisation des caches..."
 echo "→ Synchronisation du webhook SignWell..."
 "$PHP_BIN" artisan festilaw:signwell-webhook || echo "⚠ Webhook SignWell non synchronisé : relancer 'php artisan festilaw:signwell-webhook' (voir storage/logs/signature-*.log)."
 
+# 9c. Webhook Stripe : ajoute a l'endpoint existant les evenements traites par le site (remboursements,
+# litiges perdus, sessions expirees). Ne cree rien, ne change pas son secret. Non bloquant.
+echo "→ Synchronisation des événements du webhook Stripe..."
+"$PHP_BIN" artisan festilaw:stripe-webhook || echo "⚠ Webhook Stripe non synchronisé : relancer 'php artisan festilaw:stripe-webhook' (voir docs/go-live.md, étape 2.3)."
+
 # 10. Permissions
 echo "→ Correction des permissions..."
 chmod -R 755 storage bootstrap/cache
