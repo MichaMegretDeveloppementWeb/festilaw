@@ -8,6 +8,7 @@ use App\Enums\Contract\ContractRole;
 use App\Enums\Submission\PackChangeStatus;
 use App\Enums\Submission\SubmissionType;
 use App\Models\PackChange;
+use App\Models\Submission;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -15,7 +16,8 @@ use Illuminate\Support\Facades\Log;
  * Defait un passage au Pro dont la difference est remboursee (SC12), que le remboursement vienne du bouton du
  * back-office (RevertPackUpgradeAction) ou du tableau de bord Stripe (webhook charge.refunded, via
  * MarkPaymentRefundedAction) : le dossier redevient Creator, son dernier mandat Creator signe reprend effet
- * et le mandat Pro est conserve (remplace). La montee passe en "annulee et remboursee".
+ * et le mandat Pro est conserve (remplace). La montee passe en "annulee et remboursee", et une demande de
+ * retour au Creator encore en cours devient "sans objet".
  *
  * Une seule fois par montee (sans effet si elle n'est plus "effectuee"). Si le dossier n'est deja plus en Pro
  * (retour au Creator applique depuis), seul le statut de la montee change : les mandats restent tels quels.
@@ -55,6 +57,8 @@ final readonly class ReverseAppliedPackUpgradeAction
                 'decided_at' => now(),
             ]);
 
+            $this->voidPendingDowngrades($submission, $adminId);
+
             return true;
         });
 
@@ -68,5 +72,31 @@ final readonly class ReverseAppliedPackUpgradeAction
         }
 
         return $reversed;
+    }
+
+    /**
+     * Une demande de retour au Creator encore en cours (demandee ou validee) n'a plus d'objet : le dossier y est
+     * deja revenu. Sans cela, l'espace l'afficherait toujours, le passage au Pro resterait bloque et le
+     * renouvellement creerait un nouveau mandat Creator a signer.
+     */
+    private function voidPendingDowngrades(Submission $submission, ?int $adminId): void
+    {
+        $pending = $submission->packChanges()
+            ->where('to_pack', SubmissionType::Starter)
+            ->whereIn('status', [PackChangeStatus::Requested, PackChangeStatus::Approved])
+            ->get();
+
+        foreach ($pending as $downgrade) {
+            $downgrade->update([
+                'status' => PackChangeStatus::Voided,
+                'decided_by' => $adminId,
+                'decided_at' => now(),
+            ]);
+
+            Log::channel('payments')->notice('pack_downgrade.voided', [
+                'pack_change' => $downgrade->id,
+                'submission' => $submission->id,
+            ]);
+        }
     }
 }

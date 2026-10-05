@@ -31,6 +31,18 @@ final readonly class ApplyPackDowngradeAction
             }
 
             $submission = $downgrade->submission;
+
+            // Deja revenu au Creator (passage au Pro annule et rembourse) : pas de nouveau mandat a signer.
+            if ($submission->type !== SubmissionType::Pro) {
+                $downgrade->update(['status' => PackChangeStatus::Voided, 'decided_at' => now()]);
+                Log::channel('payments')->notice('pack_downgrade.voided', [
+                    'pack_change' => $downgrade->id,
+                    'submission' => $submission->id,
+                ]);
+
+                return false;
+            }
+
             $previous = $submission->contract;
 
             $submission->contracts()->reorder()

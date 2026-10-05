@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Actions\Web\Payment\MarkPaymentSucceededAction;
+use App\Actions\Web\Starter\ApplyPackDowngradeAction;
 use App\Contracts\Signature\SignatureGatewayInterface;
 use App\Data\Signature\SignatureWebhookData;
 use App\Data\Signature\SigningSessionData;
@@ -154,6 +155,22 @@ function refundUpgradeFromStripe(Payment $payment): void
         'CONTENT_TYPE' => 'application/json',
         'HTTP_STRIPE_SIGNATURE' => "t={$time},v1={$signature}",
     ], $payload)->assertNoContent();
+}
+
+/** Un passage au Pro paye, puis une demande de retour au Creator (en attente de Festilaw). */
+function pendingDowngradeAfterUpgrade(Submission $dossier): Payment
+{
+    $payment = upgradeAwaitingPayment($dossier);
+    app(MarkPaymentSucceededAction::class)->execute($payment, 'cs_up');
+    $dossier->packChanges()->create([
+        'from_pack' => SubmissionType::Pro,
+        'to_pack' => SubmissionType::Starter,
+        'status' => PackChangeStatus::Requested,
+        'effective_year' => 2027,
+        'eligibility_confirmed_at' => now(),
+    ]);
+
+    return $payment;
 }
 
 it('quotes the price gap over the remaining months of the year (October: 3/12)', function () {
@@ -393,6 +410,77 @@ it('leaves the mandates alone when a switch is refunded after the file went back
     expect(PackChange::sole()->status)->toBe(PackChangeStatus::Reverted)
         ->and($dossier->fresh()->contract->id)->toBe($newCreatorMandate->id)
         ->and($dossier->contracts()->where('role', ContractRole::Current)->count())->toBe(1);
+});
+
+it('voids a pending request to go back to Creator when the switch to Pro is refunded in Stripe', function () {
+    $dossier = activeCreator();
+    $payment = pendingDowngradeAfterUpgrade($dossier);
+    get(route('my-project', ['dossier' => 'creatortok']))->assertSee('Your request to switch to the Creator Pack is with Festilaw');
+
+    refundUpgradeFromStripe($payment);
+
+    $downgrade = PackChange::where('to_pack', SubmissionType::Starter)->sole();
+    expect($dossier->fresh()->type)->toBe(SubmissionType::Starter)
+        ->and($downgrade->status)->toBe(PackChangeStatus::Voided)
+        ->and($downgrade->decided_by)->toBeNull();
+
+    // Le client est deja Creator : plus de demande affichee, le passage au Pro est de nouveau possible.
+    get(route('my-project', ['dossier' => 'creatortok']))
+        ->assertSee('More than 9 products?')
+        ->assertDontSee('is with Festilaw');
+
+    actingAs(User::factory()->create());
+    Livewire::test(SubmissionDetail::class, ['submission' => $dossier->fresh()])
+        ->assertDontSee('Demande de passage au Creator à valider')
+        ->assertSee('Sans objet (passage au Pro annulé)');
+});
+
+it('voids an approved request when Festilaw cancels the switch to Pro, then renews at the Creator price with no new mandate', function () {
+    Http::fake([
+        '*/v1/checkout/sessions/*' => Http::response(['id' => 'cs_up', 'payment_intent' => 'pi_up']),
+        '*/v1/refunds' => Http::response(['id' => 're_up', 'status' => 'succeeded']),
+    ]);
+    $dossier = activeCreator();
+    $creatorMandate = $dossier->contract;
+    pendingDowngradeAfterUpgrade($dossier);
+    $downgrade = PackChange::where('to_pack', SubmissionType::Starter)->sole();
+    $downgrade->update(['status' => PackChangeStatus::Approved, 'decided_at' => now()]);
+
+    actingAs($admin = User::factory()->create());
+    Livewire::test(SubmissionDetail::class, ['submission' => $dossier->fresh()])
+        ->call('revertPackUpgrade', PackChange::where('to_pack', SubmissionType::Pro)->sole()->id)
+        ->assertDispatched('admin-toast', type: 'success');
+    auth()->logout();
+
+    expect($downgrade->fresh()->status)->toBe(PackChangeStatus::Voided)
+        ->and($downgrade->fresh()->decided_by)->toBe($admin->id);
+
+    $contractsBefore = $dossier->contracts()->count();
+    $this->travelTo(now()->setDate(2027, 1, 2)->setTime(7, 0));
+    $this->artisan('festilaw:process-renewals')->assertOk();
+
+    $dossier->refresh();
+    expect($dossier->type)->toBe(SubmissionType::Starter)
+        ->and($dossier->contracts()->count())->toBe($contractsBefore)
+        ->and($dossier->contract->id)->toBe($creatorMandate->id);
+    get(route('my-project', ['dossier' => 'creatortok']))
+        ->assertSee('Pay €333 to renew')
+        ->assertDontSee('Sign your Creator Pack mandate');
+});
+
+it('does not apply a switch back to Creator on a file that is already Creator', function () {
+    $dossier = activeCreator();
+    $downgrade = $dossier->packChanges()->create([
+        'from_pack' => SubmissionType::Pro,
+        'to_pack' => SubmissionType::Starter,
+        'status' => PackChangeStatus::Approved,
+        'effective_year' => 2026,
+    ]);
+    $contractsBefore = $dossier->contracts()->count();
+
+    expect(app(ApplyPackDowngradeAction::class)->execute($downgrade))->toBeFalse()
+        ->and($downgrade->fresh()->status)->toBe(PackChangeStatus::Voided)
+        ->and($dossier->contracts()->count())->toBe($contractsBefore);
 });
 
 it('changes nothing when the refund fails at Stripe', function () {

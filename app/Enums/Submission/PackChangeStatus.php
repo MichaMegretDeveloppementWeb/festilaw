@@ -11,7 +11,8 @@ namespace App\Enums\Submission;
  * Cancelled (abandonnee par le client avant paiement) ; Reverted (annulee et remboursee par Festilaw).
  *
  * Retour Pro -> Creator (valide par Festilaw) : Requested -> Approved (effet au renouvellement) -> Applied ;
- * Rejected (refusee par Festilaw) ; Withdrawn (retiree par le client).
+ * Rejected (refusee par Festilaw) ; Withdrawn (retiree par le client) ; Voided (sans objet : le passage au Pro
+ * qui l'avait precedee a ete annule et rembourse, le dossier est deja revenu au Creator).
  */
 enum PackChangeStatus: string
 {
@@ -24,6 +25,7 @@ enum PackChangeStatus: string
     case Rejected = 'rejected';
     case Withdrawn = 'withdrawn';
     case Applied = 'applied';
+    case Voided = 'voided';
 
     /** Libelle back-office (francophone). */
     public function label(): string
@@ -38,6 +40,7 @@ enum PackChangeStatus: string
             self::Rejected => __('Refusé'),
             self::Withdrawn => __('Retiré par le client'),
             self::Applied => __('Appliqué'),
+            self::Voided => __('Sans objet (passage au Pro annulé)'),
         };
     }
 
