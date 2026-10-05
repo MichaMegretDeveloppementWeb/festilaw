@@ -13,36 +13,93 @@ use Barryvdh\DomPDF\Facade\Pdf;
  * General Terms annex), in the dossier's language (en/fr/es). The pack (Creator/Pro) drives the title
  * and the annual fee; the client-specific fields come from the contract's filled_fields and are
  * emphasised so they stand out. Invisible SignWell text tags on the signing line let the signature and
- * date fields land directly on the contract page.
+ * date fields land directly on the contract page. Also renders blank specimens (bracketed placeholders)
+ * that Festilaw can keep or share.
  */
 final readonly class ContractPdfGenerator
 {
     private const SUPPORTED_LOCALES = ['en', 'fr', 'es'];
 
+    /** Placeholders of a blank specimen, per language, in place of the client's details. */
+    private const SPECIMEN_PLACEHOLDERS = [
+        'en' => ['reference' => 'SPECIMEN', 'company' => '[Client company name]', 'place' => '[city, country]', 'year' => '[year]', 'activity' => '[activity]', 'signer' => '[Signatory name]'],
+        'fr' => ['reference' => 'MODÈLE', 'company' => '[Nom de la société cliente]', 'place' => '[ville, pays]', 'year' => '[année]', 'activity' => '[activité]', 'signer' => '[Nom du signataire]'],
+        'es' => ['reference' => 'MODELO', 'company' => '[Nombre de la empresa cliente]', 'place' => '[ciudad, país]', 'year' => '[año]', 'activity' => '[actividad]', 'signer' => '[Nombre del firmante]'],
+    ];
+
     /** @return string  Raw PDF bytes. */
     public function generate(Submission $submission): string
     {
-        $isPro = $submission->type === SubmissionType::Pro;
-        $locale = in_array($submission->locale, self::SUPPORTED_LOCALES, true) ? $submission->locale : 'en';
-
-        $feeEuros = intdiv($submission->type->annualCents(), 100);
+        $locale = $this->supportedLocale($submission->locale);
 
         /** @var array<string, mixed> $fields */
         $fields = $submission->contract?->filled_fields ?? [];
 
-        return Pdf::loadView("contracts.{$locale}.agreement", [
-            'logo' => $this->logoDataUri(),
-            'pack' => $isPro ? 'Pro' : 'Creator',
-            'fee' => $feeEuros,
-            'feeWords' => $this->spellFee($feeEuros, $locale),
-            'date' => now()->locale($locale)->isoFormat('LL'),
+        return $this->render($locale, $this->commonData($submission->type, $locale) + [
             'reference' => (string) $submission->reference,
             'company' => $this->emphasise($submission->company_name ?: '-'),
             'place' => $this->emphasise((string) ($fields['incorporation_place'] ?? '-')),
             'year' => $this->emphasise((string) ($fields['founding_year'] ?? '-')),
             'activity' => $this->emphasise((string) ($fields['activity'] ?? '-')),
             'signer' => $this->signerName($submission),
-        ])->output();
+        ]);
+    }
+
+    /** @return string  Raw PDF bytes of a blank agreement (specimen) for the pack, in the given language. */
+    public function specimen(SubmissionType $type, string $locale): string
+    {
+        $locale = $this->supportedLocale($locale);
+
+        return $this->render($locale, $this->specimenData($type, $locale));
+    }
+
+    /**
+     * View data of a blank agreement: bracketed placeholders instead of the client's details.
+     *
+     * @return array<string, mixed>
+     */
+    public function specimenData(SubmissionType $type, string $locale): array
+    {
+        $locale = $this->supportedLocale($locale);
+        $placeholders = self::SPECIMEN_PLACEHOLDERS[$locale];
+
+        return $this->commonData($type, $locale) + [
+            'reference' => $placeholders['reference'],
+            'company' => $this->emphasise($placeholders['company']),
+            'place' => $this->emphasise($placeholders['place']),
+            'year' => $this->emphasise($placeholders['year']),
+            'activity' => $this->emphasise($placeholders['activity']),
+            'signer' => $placeholders['signer'],
+        ];
+    }
+
+    /**
+     * What every agreement carries whoever the client: logo, pack, annual fee (figures and words), date.
+     *
+     * @return array{logo: string, pack: string, fee: int, feeWords: string, date: string}
+     */
+    private function commonData(SubmissionType $type, string $locale): array
+    {
+        $feeEuros = intdiv($type->annualCents(), 100);
+
+        return [
+            'logo' => $this->logoDataUri(),
+            'pack' => $type === SubmissionType::Pro ? 'Pro' : 'Creator',
+            'fee' => $feeEuros,
+            'feeWords' => $this->spellFee($feeEuros, $locale),
+            'date' => now()->locale($locale)->isoFormat('LL'),
+        ];
+    }
+
+    /** @param  array<string, mixed>  $data */
+    private function render(string $locale, array $data): string
+    {
+        return Pdf::loadView("contracts.{$locale}.agreement", $data)->output();
+    }
+
+    private function supportedLocale(?string $locale): string
+    {
+        return in_array($locale, self::SUPPORTED_LOCALES, true) ? $locale : 'en';
     }
 
     /** Bold + italic HTML so a client-provided value stands out in the contract body. */

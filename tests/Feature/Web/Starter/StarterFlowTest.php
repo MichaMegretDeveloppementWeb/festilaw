@@ -201,8 +201,7 @@ it('derives the next step and the stored status from the facts, in the documents
 ]);
 
 it('reads the required documents per pack', function () {
-    config()->set('festilaw.pro.required_documents', ['technical_documentation']);
-
+    // Valeurs livrees par config/festilaw.php : Pro = documentation technique seule (Festilaw, 04/10/2026).
     expect(SubmissionType::Starter->requiredDocuments())->toBe([DocumentType::TurnoverProof, DocumentType::TechnicalDocumentation])
         ->and(SubmissionType::Pro->requiredDocuments())->toBe([DocumentType::TechnicalDocumentation])
         ->and(SubmissionType::Scale->requiredDocuments())->toBe([]);

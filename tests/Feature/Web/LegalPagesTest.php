@@ -36,6 +36,39 @@ it('serves the translated legal pages with the English-prevails notice and a lin
     'es terms' => ['es', 'terms', 'Ley aplicable', 'prevalece la versión en inglés'],
 ]);
 
+it('describes in the privacy policy how the site really works (reformulations validated on 04/10/2026)', function (string $locale, array $present, array $absent) {
+    get(route('locale.switch', ['locale' => $locale]))->assertRedirect();
+
+    $response = get(route('privacy-policy'))->assertOk();
+
+    // Destinataires : Stripe, Google (reservation des consultations) et Resend, transfere comme SignWell.
+    foreach (['Stripe Payments Europe, Limited', 'Google Ireland Limited', 'Plus Five Five, Inc.', ...$present] as $needle) {
+        $response->assertSee($needle, false);
+    }
+    foreach ($absent as $needle) {
+        $response->assertDontSee($needle, false);
+    }
+})->with([
+    'en' => ['en', [
+        'website or shop URL',
+        'secure personal link sent by email, without an account or password',
+        'and our email service provider, Resend, are established in the United States',
+        'Last updated: 5 October 2026',
+    ], ['login credentials', 'company name, position', 'password-protected', 'log in to the client area', 'Client area accounts']],
+    'fr' => ['fr', [
+        'adresse de votre site ou de votre boutique',
+        'sans compte ni mot de passe',
+        'et notre prestataire d\'envoi d\'e-mails, Resend, sont établis aux États-Unis',
+        'Dernière mise à jour : 5 octobre 2026',
+    ], ['identifiants de connexion', 'nom de société et fonction', 'protégé par mot de passe', 'Comptes de l\'espace client']],
+    'es' => ['es', [
+        'la dirección de su sitio web o tienda',
+        'sin cuenta ni contraseña',
+        'y nuestro proveedor de servicios de correo electrónico, Resend, están establecidos en Estados Unidos',
+        'Última actualización: 5 de octubre de 2026',
+    ], ['credenciales de acceso', 'nombre de la empresa, cargo', 'protegido mediante contraseña', 'Cuentas del área de cliente']],
+]);
+
 it('links the footer to the real legal pages with no dead anchors', function () {
     get(route('home'))
         ->assertSee(route('legal-notice'), false)

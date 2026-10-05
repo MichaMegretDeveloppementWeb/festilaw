@@ -75,3 +75,39 @@ it('injects the pack, fee and emphasised client fields, includes the annex, and 
         ->toContain('{{signature:1:y}}')
         ->toContain('{{date:1:y}}');
 });
+
+it('submits any dispute to the Rechtbank Gelderland in every language (Festilaw, 04/10/2026)', function (string $locale, string $clause) {
+    $html = view("contracts.{$locale}.general-terms", ['fee' => 333])->render();
+
+    expect($html)->toContain($clause)
+        ->not->toContain('Brabant')
+        ->not->toContain('Hertogenbosch');
+})->with([
+    'en' => ['en', 'Any dispute shall be submitted to the exclusive jurisdiction of the Rechtbank Gelderland.'],
+    'fr' => ['fr', 'Tout litige sera soumis à la compétence exclusive de la Rechtbank Gelderland.'], // formule de Festilaw
+    'es' => ['es', 'Todo litigio se someterá a la competencia exclusiva del Rechtbank Gelderland.'],
+]);
+
+it('renders a blank specimen of each pack in each language', function (SubmissionType $type, string $locale) {
+    expect(app(ContractPdfGenerator::class)->specimen($type, $locale))->toStartWith('%PDF');
+})->with([SubmissionType::Starter, SubmissionType::Pro])->with(['en', 'fr', 'es']);
+
+it('fills a specimen with bracketed placeholders instead of client details', function () {
+    $generator = app(ContractPdfGenerator::class);
+
+    $french = view('contracts.fr.agreement', $generator->specimenData(SubmissionType::Pro, 'fr'))->render();
+    expect($french)
+        ->toContain('MODÈLE')
+        ->toContain('<strong><em>[Nom de la société cliente]</em></strong>')
+        ->toContain('<strong><em>[ville, pays]</em></strong>')
+        ->toContain('[Nom du signataire]')
+        ->toContain('mille deux cents euros')
+        ->toContain('Rechtbank Gelderland');
+
+    $english = view('contracts.en.agreement', $generator->specimenData(SubmissionType::Starter, 'en'))->render();
+    expect($english)
+        ->toContain('SPECIMEN')
+        ->toContain('<strong><em>[Client company name]</em></strong>')
+        ->toContain('Pack Creator')
+        ->toContain('three hundred and thirty-three euros');
+});

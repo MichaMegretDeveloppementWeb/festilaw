@@ -43,12 +43,12 @@ return [
 
     /*
      | Parcours PRO : meme parcours en ligne self-service que Creator (cf. StarterJourney). Changent :
-     | le tarif annuel (contrat Pack Pro) et la liste des pieces obligatoires (meme liste que Creator
-     | en attendant l'arbitrage de Festilaw).
+     | le tarif annuel (contrat Pack Pro) et la liste des pieces obligatoires : la documentation
+     | technique seule, le justificatif de CA ne prouvant que l'eligibilite Creator (Festilaw, 04/10/2026).
      */
     'pro' => [
         'amount_cents' => (int) env('FESTILAW_PRO_AMOUNT_CENTS', 120000),
-        'required_documents' => ['turnover_proof', 'technical_documentation'],
+        'required_documents' => ['technical_documentation'],
     ],
 
     /*
