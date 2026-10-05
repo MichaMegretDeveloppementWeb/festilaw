@@ -24,15 +24,14 @@ final class SubmissionObserver
             }
         }
 
-        $signedPath = $submission->contract?->signed_file_path;
-        if ($signedPath !== null && $signedPath !== '') {
-            $disk->delete($signedPath);
-        }
-
-        // Le mandat contresigne par Festilaw (Q3) est un fichier prive de plus : a effacer aussi (RGPD).
-        $countersignedPath = $submission->contract?->countersigned_file_path;
-        if ($countersignedPath !== null && $countersignedPath !== '') {
-            $disk->delete($countersignedPath);
+        // Tous les mandats du dossier (en vigueur, en attente, remplaces par un changement de pack) : le mandat
+        // signe et, s'il existe, celui contresigne par Festilaw (Q3), fichiers prives a effacer aussi (RGPD).
+        foreach ($submission->contracts as $contract) {
+            foreach ([$contract->signed_file_path, $contract->countersigned_file_path] as $path) {
+                if ($path !== null && $path !== '') {
+                    $disk->delete($path);
+                }
+            }
         }
     }
 }

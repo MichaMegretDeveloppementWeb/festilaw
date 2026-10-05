@@ -57,7 +57,8 @@ final class SignWellSignatureGateway implements SignatureGatewayInterface
         $this->assertConfigured(['api_key']);
 
         $submission = $contract->submission;
-        $pdf = $this->pdfGenerator->generate($submission);
+        // Le PDF de CE mandat (son pack) : celui d'un changement de pack peut differer du pack du dossier.
+        $pdf = $this->pdfGenerator->generate($submission, $contract);
 
         $payload = [
             'test_mode' => $this->isTesting(),

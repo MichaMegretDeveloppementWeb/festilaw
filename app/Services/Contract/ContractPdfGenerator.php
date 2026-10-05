@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Contract;
 
 use App\Enums\Submission\SubmissionType;
+use App\Models\Contract;
 use App\Models\Submission;
 use Barryvdh\DomPDF\Facade\Pdf;
 
@@ -27,22 +28,40 @@ final readonly class ContractPdfGenerator
         'es' => ['reference' => 'MODELO', 'company' => '[Nombre de la empresa cliente]', 'place' => '[ciudad, país]', 'year' => '[año]', 'activity' => '[actividad]', 'signer' => '[Nombre del firmante]'],
     ];
 
-    /** @return string  Raw PDF bytes. */
-    public function generate(Submission $submission): string
+    /**
+     * The mandate PDF of the dossier: its current mandate by default, or the given one (e.g. the Pro mandate
+     * of a pack upgrade, signed while the dossier is still Creator). The pack is the mandate's own.
+     *
+     * @return string Raw PDF bytes.
+     */
+    public function generate(Submission $submission, ?Contract $contract = null): string
+    {
+        return $this->render($this->supportedLocale($submission->locale), $this->agreementData($submission, $contract));
+    }
+
+    /**
+     * View data of the dossier's mandate (its current one by default, or the given one): the mandate's pack
+     * and fee, and the client's details.
+     *
+     * @return array<string, mixed>
+     */
+    public function agreementData(Submission $submission, ?Contract $contract = null): array
     {
         $locale = $this->supportedLocale($submission->locale);
+        $contract ??= $submission->contract;
+        $pack = $contract?->pack ?? $submission->type;
 
         /** @var array<string, mixed> $fields */
-        $fields = $submission->contract?->filled_fields ?? [];
+        $fields = $contract?->filled_fields ?? [];
 
-        return $this->render($locale, $this->commonData($submission->type, $locale) + [
+        return $this->commonData($pack, $locale) + [
             'reference' => (string) $submission->reference,
             'company' => $this->emphasise($submission->company_name ?: '-'),
             'place' => $this->emphasise((string) ($fields['incorporation_place'] ?? '-')),
             'year' => $this->emphasise((string) ($fields['founding_year'] ?? '-')),
             'activity' => $this->emphasise((string) ($fields['activity'] ?? '-')),
             'signer' => $this->signerName($submission),
-        ]);
+        ];
     }
 
     /** @return string  Raw PDF bytes of a blank agreement (specimen) for the pack, in the given language. */

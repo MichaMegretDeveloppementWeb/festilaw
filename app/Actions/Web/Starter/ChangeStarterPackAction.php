@@ -108,6 +108,7 @@ final readonly class ChangeStarterPackAction
         // Nouveau mandat a signer pour le nouveau pack, pre-rempli des infos deja saisies. Le mandat
         // eventuellement signe pour l'ancien pack reste sur l'ancien dossier (trace).
         $replacement->contract()->create([
+            'pack' => $replacement->type,
             'signature_status' => SignatureStatus::Pending,
             'filled_fields' => $current->contract?->filled_fields ?? [],
         ]);

@@ -40,4 +40,10 @@ interface PaymentGatewayInterface
 
     /** Verify + parse an incoming provider webhook. Throws on an invalid/untrusted payload. */
     public function parseWebhook(Request $request): PaymentWebhookData;
+
+    /**
+     * Fully refund a succeeded payment at the provider (e.g. Festilaw cancelling a pack upgrade). Idempotent
+     * per payment; throws a PaymentException when the provider refuses or cannot be reached.
+     */
+    public function refund(Payment $payment): void;
 }

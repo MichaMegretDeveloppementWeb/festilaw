@@ -130,11 +130,15 @@ final class StarterProjectController extends Controller
         }
     }
 
-    /** Last successful payment on the dossier (most recent by pay date), or null if none. */
+    /**
+     * Last successful SUBSCRIPTION payment (year 1 or renewal, most recent by pay date), or null if none. A pack
+     * upgrade payment (difference, SC12) is not the annual fee the "Payment" step reports.
+     */
     private function lastSuccessfulPayment(Submission $dossier): ?Payment
     {
         return $dossier->payments
             ->where('status', PaymentStatus::Succeeded)
+            ->filter(fn (Payment $payment): bool => $payment->type->isSubscription())
             ->sortByDesc('paid_at')
             ->first();
     }

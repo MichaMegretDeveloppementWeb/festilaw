@@ -44,6 +44,7 @@ final class PaymentReturnService
 
         [$route, $flag] = match ($payment->type) {
             PaymentType::AnnualRenewal => ['my-project', $cancelled ? 'renewal_cancelled' : 'renewal_return'],
+            PaymentType::PackUpgrade => ['my-project', $cancelled ? 'upgrade_cancelled' : 'upgrade_return'],
             PaymentType::ScaleAudit => ['get-started.scale.space', $cancelled ? 'audit_cancelled' : 'audit_return'],
             PaymentType::StarterSubscription => ['get-started.starter.journey', $cancelled ? 'payment_cancelled' : 'payment_return'],
         };

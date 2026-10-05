@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminContractMandateDownloadController;
 use App\Http\Controllers\Admin\AdminCountersignedDownloadController;
 use App\Http\Controllers\Admin\AdminDocumentDownloadController;
 use App\Http\Controllers\Admin\AdminMandateDownloadController;
@@ -138,6 +139,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
             ->name('submissions.document')
             ->withoutScopedBindings();
         Route::get('/submissions/{submission:id}/mandate', AdminMandateDownloadController::class)->name('submissions.mandate');
+        // Un mandat precis du dossier (mandats remplaces par un changement de pack apres paiement, SC12).
+        Route::get('/submissions/{submission:id}/contracts/{contract:id}/mandate', AdminContractMandateDownloadController::class)
+            ->name('submissions.contract-mandate');
         Route::get('/submissions/{submission:id}/countersigned', AdminCountersignedDownloadController::class)->name('submissions.countersigned');
     });
 });

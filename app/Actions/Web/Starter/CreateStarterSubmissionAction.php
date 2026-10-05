@@ -75,6 +75,7 @@ final readonly class CreateStarterSubmissionAction
             ]);
 
             $submission->contract()->create([
+                'pack' => $submission->type,
                 'signature_status' => SignatureStatus::Pending,
                 'filled_fields' => $data['contract_fields'] ?? [],
             ]);

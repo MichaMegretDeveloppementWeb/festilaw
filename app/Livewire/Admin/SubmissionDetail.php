@@ -72,8 +72,8 @@ class SubmissionDetail extends Component
     public function mount(Submission $submission): void
     {
         $this->submission = $submission->load([
-            'contract', 'uploadedDocuments', 'payments', 'appointment', 'quizResult', 'notes.author',
-            'replacedBy', 'replaces',
+            'contract', 'contracts', 'uploadedDocuments', 'payments', 'appointment', 'quizResult', 'notes.author',
+            'replacedBy', 'replaces', 'packChanges.contract', 'packChanges.payment',
         ]);
         $this->newStatus = $this->submission->status->value;
         $this->rpAddress = (string) $this->submission->eu_rp_address;
@@ -320,7 +320,8 @@ class SubmissionDetail extends Component
         );
 
         try {
-            $path = $this->countersigned->storeAs('contracts/countersigned', $this->submission->id.'.pdf', 'local');
+            // Un fichier par mandat : apres un changement de pack, le contresigne du mandat precedent est conserve.
+            $path = $this->countersigned->storeAs('contracts/countersigned', 'contract-'.$this->submission->contract->id.'.pdf', 'local');
             $upload->execute($this->submission, $path, $this->notifyClientOnCountersign);
         } catch (Throwable $e) {
             $this->reportAdminError($e, 'Admin upload countersigned contract');

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\Contract\ContractRole;
 use App\Enums\Payment\PaymentStatus;
 use App\Enums\Payment\PaymentType;
 use App\Enums\Submission\SubmissionStatus;
@@ -162,9 +163,25 @@ class Submission extends Model
         return $this->hasOne(QuizResult::class);
     }
 
+    /**
+     * Le mandat EN VIGUEUR du dossier (un seul, tenu par le code). Un changement de pack apres paiement (SC12)
+     * ajoute un mandat en attente puis remplace celui-ci ; l'historique complet est dans contracts().
+     */
     public function contract(): HasOne
     {
-        return $this->hasOne(Contract::class);
+        return $this->hasOne(Contract::class)->where('role', ContractRole::Current->value);
+    }
+
+    /** Tous les mandats du dossier (en vigueur, en attente, remplaces), du plus ancien au plus recent. */
+    public function contracts(): HasMany
+    {
+        return $this->hasMany(Contract::class)->orderBy('id');
+    }
+
+    /** Changements de pack apres paiement (SC12), les plus recents d'abord. */
+    public function packChanges(): HasMany
+    {
+        return $this->hasMany(PackChange::class)->latest('id');
     }
 
     public function uploadedDocuments(): HasMany

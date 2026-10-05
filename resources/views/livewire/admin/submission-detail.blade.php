@@ -98,6 +98,10 @@
                     <div class="px-5 py-2">
                         <dl class="divide-y divide-subtle text-[13px]">
                             <div class="flex items-center justify-between gap-4 py-2.5">
+                                <dt class="text-muted">{{ __('Pack du mandat') }}</dt>
+                                <dd class="font-medium text-primary">{{ $submission->contract->packType()->label() }}</dd>
+                            </div>
+                            <div class="flex items-center justify-between gap-4 py-2.5">
                                 <dt class="text-muted">{{ __('Statut de signature') }}</dt>
                                 <dd class="font-medium text-primary">{{ $submission->contract->signature_status->label() }}</dd>
                             </div>
@@ -181,6 +185,22 @@
                                 </x-ui.button>
                             </form>
                         </div>
+
+                        {{-- Mandats remplaces par un changement de pack apres paiement (SC12) : conserves comme trace. --}}
+                        @php
+                            $previousMandates = $submission->contracts->where('role', \App\Enums\Contract\ContractRole::Superseded)->whereNotNull('signed_file_path');
+                        @endphp
+                        @if ($previousMandates->isNotEmpty())
+                            <div class="mt-4 border-t border-subtle pt-4 pb-2">
+                                <p class="text-[11px] font-semibold uppercase tracking-wide text-muted">{{ __('Mandats précédents') }}</p>
+                                @foreach ($previousMandates as $previous)
+                                    <x-admin.document-item class="mt-2"
+                                        :title="__('Mandat :pack', ['pack' => $previous->packType()->label()])"
+                                        :subtitle="__('Signé le').' '.$previous->signed_at?->format('d/m/Y').($previous->superseded_at ? ' · '.__('remplacé le').' '.$previous->superseded_at->format('d/m/Y') : '')"
+                                        :download-url="route('admin.submissions.contract-mandate', ['submission' => $submission->id, 'contract' => $previous->id])" />
+                                @endforeach
+                            </div>
+                        @endif
                     </div>
                 </section>
             @endif

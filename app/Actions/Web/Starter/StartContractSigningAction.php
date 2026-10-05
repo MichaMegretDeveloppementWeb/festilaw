@@ -9,6 +9,7 @@ use App\Data\Signature\SigningSessionData;
 use App\Enums\Contract\SignatureStatus;
 use App\Enums\Document\DocumentType;
 use App\Exceptions\Starter\StarterException;
+use App\Models\Contract;
 use App\Models\Submission;
 use App\Services\Web\Starter\StarterDossierResolver;
 use Illuminate\Support\Facades\Cache;
@@ -23,6 +24,9 @@ use Illuminate\Support\Facades\Cache;
  *
  * The journey runs documents -> signature -> payment: no signing session is started (and billed by the
  * provider) while a required document is missing.
+ *
+ * Signs the dossier's current mandate by default, or the given one: the pending mandate of a pack change
+ * after payment (SC12).
  */
 final readonly class StartContractSigningAction
 {
@@ -31,9 +35,9 @@ final readonly class StartContractSigningAction
         private StarterDossierResolver $resolver,
     ) {}
 
-    public function execute(Submission $submission): SigningSessionData
+    public function execute(Submission $submission, ?Contract $contract = null): SigningSessionData
     {
-        $contract = $submission->contract ?? throw StarterException::contractMissing($submission->id);
+        $contract ??= $submission->contract ?? throw StarterException::contractMissing($submission->id);
 
         $submission->load('uploadedDocuments');
         $missing = $this->resolver->resolve($submission)->missingDocuments;

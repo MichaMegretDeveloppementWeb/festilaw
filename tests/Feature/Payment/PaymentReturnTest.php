@@ -43,6 +43,7 @@ it('brings the buyer back to the right dossier page with the current token, even
     'year 1' => ['starter', PaymentType::StarterSubscription, 'get-started.starter.journey', 'payment_return', 'payment_cancelled'],
     'renewal' => ['starter', PaymentType::AnnualRenewal, 'my-project', 'renewal_return', 'renewal_cancelled'],
     'scale audit' => ['scale', PaymentType::ScaleAudit, 'get-started.scale.space', 'audit_return', 'audit_cancelled'],
+    'pack upgrade' => ['starter', PaymentType::PackUpgrade, 'my-project', 'upgrade_return', 'upgrade_cancelled'],
 ]);
 
 it('refuses a return URL without a signature', function () {

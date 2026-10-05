@@ -109,7 +109,10 @@ final readonly class StartRenewalPaymentAction
             ->latest('id')
             ->first();
 
-        if ($payment === null || ! $this->gateways->has((string) $payment->provider)) {
+        // Une session ouverte a un autre tarif (pack change entre-temps, SC12) n'est pas reprise.
+        if ($payment === null
+            || $payment->amount_cents !== $submission->type->annualCents()
+            || ! $this->gateways->has((string) $payment->provider)) {
             return null;
         }
 

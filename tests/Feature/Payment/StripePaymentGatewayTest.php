@@ -105,6 +105,42 @@ it('notes under the Stripe pay button that the Scale consultation is booked righ
         && ! str_contains(urldecode($req->body()), 'custom_text'));
 });
 
+it('names a pack upgrade line as an upgrade to the Pro Pack (the dossier is still Creator)', function () {
+    Http::fake(['*/v1/checkout/sessions' => Http::response(['id' => 'cs_up', 'url' => 'https://checkout.stripe.com/x'])]);
+    $upgrade = stripePendingPayment();
+    $upgrade->update(['type' => PaymentType::PackUpgrade, 'amount_cents' => 21675, 'service_year' => 2026]);
+
+    app(StripePaymentGateway::class)->createCheckout($upgrade->fresh());
+
+    Http::assertSent(fn ($req) => str_contains(urldecode($req->body()), 'Festilaw Pro Pack upgrade 2026'));
+});
+
+it('fully refunds a payment through its checkout session, idempotently', function () {
+    Http::fake([
+        '*/v1/checkout/sessions/*' => Http::response(['id' => 'cs_paid', 'payment_intent' => 'pi_123']),
+        '*/v1/refunds' => Http::response(['id' => 're_1', 'status' => 'succeeded']),
+    ]);
+    $payment = stripePendingPayment();
+    $payment->update(['provider_reference' => 'cs_paid', 'status' => PaymentStatus::Succeeded]);
+
+    app(StripePaymentGateway::class)->refund($payment->fresh());
+
+    Http::assertSent(fn ($req) => str_ends_with($req->url(), '/v1/refunds')
+        && $req->hasHeader('Idempotency-Key', 'refund-'.$payment->id)
+        && str_contains($req->body(), 'payment_intent=pi_123'));
+});
+
+it('reports a refused refund as a payment error', function () {
+    Http::fake([
+        '*/v1/checkout/sessions/*' => Http::response(['id' => 'cs_paid', 'payment_intent' => 'pi_123']),
+        '*/v1/refunds' => Http::response(['error' => ['message' => 'charge_already_refunded']], 400),
+    ]);
+    $payment = stripePendingPayment();
+    $payment->update(['provider_reference' => 'cs_paid', 'status' => PaymentStatus::Succeeded]);
+
+    app(StripePaymentGateway::class)->refund($payment->fresh());
+})->throws(PaymentException::class);
+
 it('hands Stripe signed return URLs keyed by the payment, never the dossier token (which may rotate meanwhile)', function () {
     Http::fake(['*/v1/checkout/sessions' => Http::response(['id' => 'cs_scale', 'url' => 'https://checkout.stripe.com/x'])]);
 

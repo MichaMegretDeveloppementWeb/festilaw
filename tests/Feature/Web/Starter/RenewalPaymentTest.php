@@ -71,6 +71,23 @@ it('reuses the pending renewal checkout instead of creating a duplicate (anti do
     expect(Payment::where('type', PaymentType::AnnualRenewal)->count())->toBe(1);
 });
 
+it('does not reuse a pending renewal checkout opened at another price (pack changed meanwhile)', function () {
+    $dossier = renewableDossier(now()->year - 1);
+    $dossier->payments()->create([
+        'type' => PaymentType::AnnualRenewal,
+        'amount_cents' => 120000, // ouvert quand le dossier etait encore Pro
+        'service_year' => now()->year,
+        'currency' => 'EUR',
+        'provider' => 'stripe',
+        'provider_reference' => 'cs_old_price',
+        'status' => PaymentStatus::Pending,
+    ]);
+
+    post(route('get-started.starter.renew', ['dossier' => 'renewme']))->assertRedirect();
+
+    expect($dossier->payments()->where('type', PaymentType::AnnualRenewal)->latest('id')->first()->amount_cents)->toBe(33300);
+});
+
 it('refuses a second renewal while one is awaiting async confirmation (anti double-debit)', function () {
     $dossier = renewableDossier(now()->year - 1);
     // Un renouvellement asynchrone (Klarna/Bancontact) engage cote prestataire, en attente de reglement.

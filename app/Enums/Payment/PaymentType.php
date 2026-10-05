@@ -9,6 +9,9 @@ enum PaymentType: string
     case StarterSubscription = 'starter_subscription';
     case AnnualRenewal = 'annual_renewal';
     case ScaleAudit = 'scale_audit';
+    // Passage du Creator au Pro apres paiement (SC12) : la difference au prorata des mois restants. Ce n'est
+    // pas un abonnement (il ne rend pas un dossier actif et ne couvre pas d'annee de service).
+    case PackUpgrade = 'pack_upgrade';
 
     /** Libelle lisible (back-office francophone). */
     public function label(): string
@@ -17,6 +20,7 @@ enum PaymentType: string
             self::StarterSubscription => __('Abonnement (année 1)'),
             self::AnnualRenewal => __('Renouvellement annuel'),
             self::ScaleAudit => __('Audit Scale'),
+            self::PackUpgrade => __('Passage au Pro'),
         };
     }
 

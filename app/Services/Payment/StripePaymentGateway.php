@@ -9,12 +9,14 @@ use App\Data\Payment\CheckoutSessionData;
 use App\Data\Payment\PaymentWebhookData;
 use App\Enums\Payment\PaymentEventOutcome;
 use App\Enums\Payment\PaymentType;
+use App\Enums\Submission\SubmissionType;
 use App\Exceptions\Payment\PaymentException;
 use App\Models\Payment;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
+use RuntimeException;
 use Throwable;
 
 /**
@@ -112,13 +114,52 @@ final class StripePaymentGateway implements PaymentGatewayInterface
         return ['custom_text' => ['submit' => ['message' => __('After payment, you\'ll return to your Scale space to book your consultation.')]]];
     }
 
-    /** Libelle de la ligne sur la page Stripe : pack + annee de service (ex. "Festilaw Pro Pack 2026"). */
+    /**
+     * Libelle de la ligne sur la page Stripe : pack + annee de service (ex. "Festilaw Pro Pack 2026"), ou le
+     * passage au Pro (ex. "Festilaw Pro Pack upgrade 2026") : le dossier est encore Creator a ce moment-la.
+     */
     private function lineItemName(Payment $payment): string
     {
-        $pack = $payment->submission?->type->label() ?? 'Festilaw';
         $year = $payment->service_year;
 
+        if ($payment->type === PaymentType::PackUpgrade) {
+            return 'Festilaw '.SubmissionType::Pro->label().' upgrade'.($year ? ' '.$year : '');
+        }
+
+        $pack = $payment->submission?->type->label() ?? 'Festilaw';
+
         return 'Festilaw '.$pack.($year ? ' '.$year : '');
+    }
+
+    /**
+     * Rembourse integralement le paiement (annulation d'un passage au Pro par Festilaw, SC12) : retrouve le
+     * PaymentIntent de la session Checkout puis cree le remboursement. Idempotency-Key stable par paiement :
+     * un nouvel essai ne rembourse jamais deux fois. Le webhook charge.refunded confirmera ensuite.
+     */
+    public function refund(Payment $payment): void
+    {
+        $this->assertConfigured('secret_key');
+
+        $sessionId = (string) ($payment->provider_reference ?? '');
+
+        try {
+            if ($sessionId === '') {
+                throw new RuntimeException('No checkout session to refund.');
+            }
+
+            $session = $this->api()->get("/checkout/sessions/{$sessionId}")->throw()->json();
+            $paymentIntent = (string) Arr::get($session, 'payment_intent', '');
+            if ($paymentIntent === '') {
+                throw new RuntimeException('The checkout session has no payment intent.');
+            }
+
+            $this->api()->withHeaders(['Idempotency-Key' => 'refund-'.$payment->id])->asForm()->post('/refunds', [
+                'payment_intent' => $paymentIntent,
+                'metadata' => ['payment_id' => (string) $payment->id],
+            ])->throw();
+        } catch (Throwable $e) {
+            throw PaymentException::apiRequestFailed('refund payment', $e);
+        }
     }
 
     public function currentCheckoutUrl(Payment $payment): ?string

@@ -49,7 +49,8 @@ it('lets an admin upload the counter-signed contract and notify the client', fun
         ->call('uploadCountersigned')
         ->assertHasNoErrors();
 
-    $path = 'contracts/countersigned/'.$dossier->id.'.pdf';
+    // Un fichier par mandat (SC12) : le contresigne d'un mandat precedent n'est jamais ecrase.
+    $path = 'contracts/countersigned/contract-'.$dossier->contract->id.'.pdf';
     Storage::disk('local')->assertExists($path);
 
     expect($dossier->contract->fresh()->countersigned_file_path)->toBe($path)
@@ -98,7 +99,7 @@ it('refuses a counter-signed upload when the client has not signed the mandate y
         ->assertHasErrors('countersigned');
 
     // Rien n'a ete stocke ni notifie.
-    Storage::disk('local')->assertMissing('contracts/countersigned/'.$dossier->id.'.pdf');
+    Storage::disk('local')->assertMissing('contracts/countersigned/contract-'.$dossier->contract->id.'.pdf');
     expect($dossier->contract->fresh()->countersigned_file_path)->toBeNull();
     Mail::assertNothingSent();
 });
