@@ -120,6 +120,11 @@ echo "→ Assets trouvés (commit $(git rev-parse --short HEAD))."
 echo "→ Exécution des migrations..."
 "$PHP_BIN" artisan migrate --force
 
+# 6b. Battement des taches automatiques : un premier passage note maintenant. Si le cron ne tourne pas
+# (jamais configure, arrete), le back-office et l'alerte e-mail le signalent 15 minutes plus tard.
+echo "→ Battement des tâches automatiques..."
+"$PHP_BIN" artisan festilaw:scheduler-heartbeat || echo "⚠ Battement non enregistré (non bloquant)."
+
 # 7. Lien symbolique storage
 echo "→ Vérification du lien storage..."
 "$PHP_BIN" artisan storage:link 2>/dev/null || true

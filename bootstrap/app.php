@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AlertOnStalledScheduler;
 use App\Http\Middleware\EnsureProductionIsConfigured;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetLocale;
@@ -26,6 +27,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // Fail-closed : une PROD mal configuree (faux prestataires, mail simule, debug...) refuse de
         // servir plutot que d'encaisser en simulation. Global (prepend) : couvre aussi le webhook fake.
         $middleware->prepend(EnsureProductionIsConfigured::class);
+
+        // Taches automatiques a l'arret (cron) : toute visite en prod verifie, apres la reponse, que le cron
+        // tourne encore et previent le prestataire technique sinon. Global : les 404 et webhooks comptent.
+        $middleware->append(AlertOnStalledScheduler::class);
 
         // En-tetes de securite sur TOUTES les reponses, y compris les erreurs (un 404 "route inconnue"
         // est leve avant le groupe web) : SecurityHeaders est donc global, pas dans le groupe web.

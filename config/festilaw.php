@@ -27,6 +27,20 @@ return [
     'notification_email' => env('FESTILAW_NOTIFICATION_EMAIL') ?: 'team@festilaw.com',
 
     /*
+     | Alertes techniques (taches automatiques a l'arret) : adresse du prestataire technique. A defaut,
+     | l'adresse de notification ci-dessus.
+     */
+    'tech_alert_email' => env('FESTILAW_TECH_ALERT_EMAIL'),
+
+    /*
+     | Taches automatiques (cron unique `schedule:run` chaque minute) : au-dela de stale_after_minutes sans
+     | battement, elles sont a l'arret (bandeau du back-office + alerte e-mail, SchedulerHealthService).
+     */
+    'scheduler' => [
+        'stale_after_minutes' => (int) env('FESTILAW_SCHEDULER_STALE_MINUTES', 15),
+    ],
+
+    /*
      | Parcours STARTER (Creator Pack). Montant en centimes ; liste des pieces obligatoires
      | pour qu'un dossier soit "complet" (valeurs de App\Enums\Document\DocumentType, lues via
      | SubmissionType::requiredDocuments()).

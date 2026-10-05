@@ -9,6 +9,7 @@ use App\Exceptions\Web\DossierLinkInvalidException;
 use App\Models\Submission;
 use App\Services\Billing\AnnualFeeProrator;
 use App\Services\Billing\PackPricingService;
+use App\Services\System\SchedulerHealthService;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -58,6 +59,24 @@ class AppServiceProvider extends ServiceProvider
             $view->with([
                 'creatorAnnualCents' => $pricing->annualCents(SubmissionType::Starter),
                 'proAnnualCents' => $pricing->annualCents(SubmissionType::Pro),
+            ]);
+        });
+
+        // Back-office : etat des taches automatiques (cron), en prod seulement (pas de cron en local).
+        // Bandeau si elles sont a l'arret, ligne discrete "dernier passage" dans la barre laterale.
+        View::composer('layouts.admin', static function ($view): void {
+            if (! app()->isProduction()) {
+                $view->with('schedulerStatus', null);
+
+                return;
+            }
+
+            $health = app(SchedulerHealthService::class);
+            $lastRunAt = $health->lastRunAt();
+            $view->with('schedulerStatus', [
+                'lastRunAt' => $lastRunAt,
+                'minutesAgo' => $lastRunAt === null ? null : max(0, (int) floor($lastRunAt->diffInMinutes(now()))),
+                'stalled' => $health->isStalled(),
             ]);
         });
     }

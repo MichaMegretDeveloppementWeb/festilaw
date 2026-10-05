@@ -156,6 +156,23 @@
                     <x-ui.icon name="arrow-top-right-on-square" class="h-[18px] w-[18px] shrink-0" />
                     <span class="admin-navlabel">{{ __('Voir le site public') }}</span>
                 </a>
+                @if ($schedulerStatus)
+                    <div class="admin-navlabel flex items-center gap-1.5 px-3 py-1 text-[11px] text-muted" title="{{ $schedulerStatus['lastRunAt'] ? __('Dernier passage : :date (UTC)', ['date' => $schedulerStatus['lastRunAt']->format('d/m/Y H:i')]) : '' }}">
+                        <span @class([
+                            'h-2 w-2 shrink-0 rounded-full',
+                            'bg-red-500' => $schedulerStatus['stalled'],
+                            'bg-emerald-500' => ! $schedulerStatus['stalled'] && $schedulerStatus['lastRunAt'],
+                            'bg-gray-300' => ! $schedulerStatus['lastRunAt'],
+                        ])></span>
+                        @if ($schedulerStatus['stalled'])
+                            {{ __('Tâches automatiques à l\'arrêt') }}
+                        @elseif ($schedulerStatus['lastRunAt'])
+                            {{ __('Tâches automatiques · il y a :minutes min', ['minutes' => $schedulerStatus['minutesAgo']]) }}
+                        @else
+                            {{ __('Tâches automatiques · aucun passage') }}
+                        @endif
+                    </div>
+                @endif
                 <div class="admin-navlabel px-3 py-1.5 text-[12px] text-muted" title="{{ auth()->user()->email }}">{{ auth()->user()->email }}</div>
                 <form method="POST" action="{{ route('admin.logout') }}">
                     @csrf
@@ -169,6 +186,11 @@
 
         <div class="admin-content">
             <main class="mx-auto max-w-[90em] px-4 py-6 sm:px-6 sm:py-8">
+                @if ($schedulerStatus['stalled'] ?? false)
+                    <x-ui.alert type="error" class="mb-6" :title="__('Les tâches automatiques ne tournent plus depuis le :date (UTC)', ['date' => $schedulerStatus['lastRunAt']->format('d/m/Y à H:i')])">
+                        {{ __('Rappels de renouvellement, vérification des paiements et des signatures, récupération des mandats signés et purges RGPD ne s\'exécutent plus. À vérifier côté hébergement (tâche cron).') }}
+                    </x-ui.alert>
+                @endif
                 {{ $slot ?? '' }}
                 @yield('content')
             </main>

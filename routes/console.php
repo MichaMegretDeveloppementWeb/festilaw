@@ -46,3 +46,9 @@ Schedule::command('festilaw:reconcile-signatures')->everyFiveMinutes()->withoutO
  | le telecharge dans la minute (requete legere : contrats signes sans fichier). Idempotent.
  */
 Schedule::command('festilaw:backfill-signed-pdfs')->everyMinute()->withoutOverlapping();
+
+/*
+ | Battement : note chaque passage du cron. S'il s'arrete, le back-office l'affiche et le prestataire
+ | technique est prevenu par e-mail (SchedulerHealthService, AlertOnStalledScheduler).
+ */
+Schedule::command('festilaw:scheduler-heartbeat')->everyMinute();

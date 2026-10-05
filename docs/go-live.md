@@ -296,6 +296,14 @@ ensuite quoi lancer et quand) :
 > étape à ne pas oublier — elle se règle dans le panneau « Cron Jobs » de
 > l'hébergeur.
 
+**Surveillance du cron.** Chaque minute, le cron note son passage
+(`festilaw:scheduler-heartbeat`, aussi lancée par `deploy.sh`). En bas de la barre
+latérale du back-office, « Tâches automatiques · il y a N min » doit rester sous
+2 minutes. Après 15 minutes sans passage, un bandeau rouge s'affiche dans le
+back-office et un e-mail part à `FESTILAW_TECH_ALERT_EMAIL` (à défaut, à l'adresse
+de notification), au plus toutes les 6 heures. Mettre dans le `.env` de prod
+l'adresse du prestataire technique, puis `php artisan config:cache`.
+
 **Pour tester les renouvellements sans attendre janvier**, il existe une commande
 qui simule la date :
 
@@ -433,7 +441,8 @@ Actions manuelles (hors `.env`) :
 - [ ] Compte Stripe activé (société + IBAN)
 - [ ] Webhook Stripe créé (`https://festilaw.com/webhooks/payment/stripe`, 6 événements) → `whsec_`
 - [ ] Webhook SignWell confirmé (`https://festilaw.com/webhooks/signature`)
-- [ ] Cron `schedule:run` activé chez l'hébergeur
+- [ ] Cron `schedule:run` activé chez l'hébergeur (back-office : « Tâches automatiques · il y a 1 min »)
+- [ ] `FESTILAW_TECH_ALERT_EMAIL` renseignée (alerte si le cron s'arrête)
 - [ ] Sauvegarde de la base avant migration
 - [ ] Déploiement : `composer install --no-dev`, `key:generate` (1re fois), `npm run build`, `migrate --force`, caches
 - [ ] Droits d'écriture OK sur `storage/` et `bootstrap/cache/`
