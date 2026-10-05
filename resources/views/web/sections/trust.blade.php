@@ -21,7 +21,7 @@
         </div>
 
         <div class="trust__trusted">
-            <span class="trust__trusted-label">{{ __('Trusted by sellers on') }}</span>
+            <span class="trust__trusted-label">{{ __('Built for sellers on') }}</span>
             <div class="trust__trusted-grid">
                 <span>Etsy</span><span>Amazon</span><span>Shopify</span><span>eBay</span>
             </div>

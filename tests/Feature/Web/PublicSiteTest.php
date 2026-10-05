@@ -131,10 +131,12 @@ it('shows the company legal line and the certification in the footer and the tru
         // Mention de certification corrigee (footer + bloc confiance), l'ancienne formulation a disparu.
         ->assertSee('Consumer Law Ready certified', false)
         ->assertDontSee('trained under the European Commission programme', false)
-        // Le temoignage fictif de maquette est retire ; le bandeau des places de marche reste.
+        // Le temoignage fictif de maquette est retire ; le bandeau des places de marche reste, sans pretendre
+        // y avoir deja des clients (Festilaw n'en a pas encore sur ces plateformes, 05/10/2026).
         ->assertDontSee('Maya Thornton', false)
         ->assertDontSee('Wildthread', false)
-        ->assertSee('Trusted by sellers on', false);
+        ->assertSee('Built for sellers on', false)
+        ->assertDontSee('Trusted by sellers on', false);
 });
 
 it('translates the footer legal line', function () {

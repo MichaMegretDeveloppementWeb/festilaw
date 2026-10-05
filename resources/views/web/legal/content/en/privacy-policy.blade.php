@@ -1,6 +1,6 @@
 {{-- Privacy Policy (EN, version de reference) · texte fourni par Festilaw le 29/09/2026. Corrections : liens
      cliquables, listes (destinataires, durees de conservation) ; reformulations validees par Festilaw le 04/10/2026
-     (espace client sans compte, Stripe et Google destinataires, Resend et transferts, champs du formulaire de contact). --}}
+     (espace client sans compte, Stripe et Google destinataires, transferts vers les Etats-Unis, champs du formulaire de contact). --}}
 <p class="legal__updated">Last updated: 5 October 2026</p>
 
 <h2>1. Data controller</h2>
@@ -30,7 +30,7 @@
 <p>Our service providers act as processors, on our instructions and under a contract compliant with Article 28 GDPR. We do not sell or rent your data.</p>
 
 <h2>4. Transfers outside the European Union</h2>
-<p>Our electronic signature provider, SignWell, and our email service provider, Resend, are established in the United States. Transfers of personal data to these providers are carried out on the basis of the Standard Contractual Clauses adopted by the European Commission (Article 46(2)(c) GDPR). You may obtain a copy of these safeguards by writing to <a href="mailto:team@festilaw.com">team@festilaw.com</a>.</p>
+<p>Our electronic signature provider, SignWell, and our email service provider, Resend, are established in the United States; our payment service provider, Stripe, and Google, for booking consultations, may transfer personal data to their parent companies in the United States (Stripe, Inc. and Google LLC). These transfers are carried out on the basis of the Standard Contractual Clauses adopted by the European Commission (Article 46(2)(c) GDPR). You may obtain a copy of these safeguards by writing to <a href="mailto:team@festilaw.com">team@festilaw.com</a>.</p>
 <p>In addition, as our clients are established outside the European Union, our exchanges with them may involve the communication of personal data to the country in which they are established. Such transfers take place either to a country covered by an adequacy decision of the European Commission, or because they are necessary for the performance of the contract concluded with the client (Article 49(1)(b) GDPR).</p>
 
 <h2>5. Retention periods</h2>

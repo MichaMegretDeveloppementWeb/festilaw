@@ -41,8 +41,9 @@ it('describes in the privacy policy how the site really works (reformulations va
 
     $response = get(route('privacy-policy'))->assertOk();
 
-    // Destinataires : Stripe, Google (reservation des consultations) et Resend, transfere comme SignWell.
-    foreach (['Stripe Payments Europe, Limited', 'Google Ireland Limited', 'Plus Five Five, Inc.', ...$present] as $needle) {
+    // Destinataires : Stripe, Google (reservation des consultations) et Resend ; transferts vers les Etats-Unis
+    // (SignWell, Resend, maisons meres de Stripe et Google) sur la base des clauses contractuelles types.
+    foreach (['Stripe Payments Europe, Limited', 'Google Ireland Limited', 'Plus Five Five, Inc.', 'Stripe, Inc.', 'Google LLC', ...$present] as $needle) {
         $response->assertSee($needle, false);
     }
     foreach ($absent as $needle) {
