@@ -16,6 +16,12 @@ Artisan::command('inspire', function () {
 Schedule::command('festilaw:purge-abandoned-dossiers')->dailyAt('03:00')->withoutOverlapping();
 
 /*
+ | Politique de confidentialite : acces ferme des dossiers annules (rattrapage / filet) et suppression des
+ | demandes de contact sans echange depuis 12 mois. Idempotent.
+ */
+Schedule::command('festilaw:apply-privacy-retention')->dailyAt('03:15')->withoutOverlapping();
+
+/*
  | Renouvellements annuels : rappels client + digests admin (a renouveler / en retard). Idempotent sur
  | l'annee (anti-doublon via meta du dossier), donc sans risque a passer tous les jours.
  */

@@ -26,6 +26,7 @@ use App\Models\Payment;
 use App\Models\Submission;
 use App\Services\Billing\RenewalService;
 use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -132,7 +133,8 @@ class SubmissionDetail extends Component
         }
 
         $this->noteBody = '';
-        $this->submission->load('notes.author');
+        // refresh : la note a mis a jour le dossier (date du dernier echange d'une demande de contact).
+        $this->submission->refresh()->load('notes.author');
         $this->toast(__('Note ajoutée.'));
     }
 
@@ -168,8 +170,11 @@ class SubmissionDetail extends Component
 
     public function resendLink(SendStarterResumeLinkAction $sendLink): void
     {
-        // Ouvert a tous les parcours self-service (Creator ET Pro), pas au seul Starter.
-        if (! $this->submission->type->hasOnlineJourney() || (string) $this->submission->resume_token === '') {
+        // Ouvert a tous les parcours self-service (Creator ET Pro), pas au seul Starter. Jamais pour un dossier
+        // annule : son acces client est ferme (fin de la relation).
+        if (! $this->submission->type->hasOnlineJourney()
+            || (string) $this->submission->resume_token === ''
+            || $this->submission->status === SubmissionStatus::Cancelled) {
             return;
         }
 
@@ -223,6 +228,15 @@ class SubmissionDetail extends Component
         } else {
             $this->toast(__(':provider ne confirme pas ce paiement comme payé (aucune correction).', ['provider' => $provider]), 'error');
         }
+    }
+
+    /**
+     * Date a laquelle une demande de contact sera supprimee si aucun echange n'a lieu d'ici la (dernier
+     * echange = updated_at, tenu a jour par les notes et les e-mails envoyes d'ici), cf. ApplyPrivacyRetention.
+     */
+    private function contactDeletionDate(): CarbonInterface
+    {
+        return $this->submission->updated_at->copy()->addMonths((int) config('festilaw.contact.retention_months', 12));
     }
 
     /** Dossier deja actif (souscription payee, non remboursee) : le lien mene a l'espace projet, pas a une reprise. */
@@ -441,6 +455,8 @@ class SubmissionDetail extends Component
             'statuses' => $this->assignableStatuses(),
             'isOnlineJourney' => $this->submission->type->hasOnlineJourney(),
             'isContact' => $isContact,
+            'contactDeletionDate' => $isContact ? $this->contactDeletionDate() : null,
+            'isCancelled' => $this->submission->status === SubmissionStatus::Cancelled,
             'isPaid' => $this->isPaid(),
             'renewal' => $renewal,
             'isScale' => $this->submission->type === SubmissionType::Scale,

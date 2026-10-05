@@ -10,6 +10,8 @@
             <x-ui.badge color="amber" dot>{{ __('Prise de contact') }}</x-ui.badge>
             <h1 class="mt-2 text-2xl font-semibold tracking-tight text-primary">{{ $submission->first_name ?: __('Contact sans nom') }}</h1>
             <p class="mt-1 text-[13px] text-secondary">{{ __('Reçue le') }} {{ $submission->created_at->format('d/m/Y à H:i') }} · {{ __('via le formulaire de contact') }} · {{ __('Réf.') }} {{ $submission->reference }}</p>
+            {{-- Politique de confidentialite : suppression 12 mois apres le dernier echange (ApplyPrivacyRetention). --}}
+            <p class="mt-1 text-[12px] text-muted">{{ __('Suppression automatique le :date, sans nouvel échange d\'ici là. Une note ou un e-mail envoyé d\'ici repousse ce délai ; les réponses envoyées depuis votre boîte mail ne comptent pas.', ['date' => $contactDeletionDate->format('d/m/Y')]) }}</p>
         </div>
     @else
         <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
@@ -385,11 +387,15 @@
                         <x-ui.icon name="envelope" class="h-4 w-4" />
                         {{ $isContact ? __('Répondre par email') : __('Envoyer un email') }}
                     </x-ui.button>
-                    @if ($isOnlineJourney && $submission->resume_token)
+                    @if ($isOnlineJourney && $submission->resume_token && ! $isCancelled)
                         <x-ui.button variant="secondary" wire:click="resendLink" :loading="true" target="resendLink" class="w-full justify-center">
                             <x-ui.icon name="arrow-path" class="h-4 w-4" />
                             {{ $isPaid ? __('Renvoyer le lien du dossier') : __('Renvoyer le lien de reprise') }}
                         </x-ui.button>
+                    @endif
+                    @if ($isCancelled && $submission->resume_token)
+                        {{-- Fin de la relation : le lien magique du client est ferme (ChangeSubmissionStatusAction). --}}
+                        <p class="text-[12px] text-muted">{{ __('Accès client fermé (dossier annulé). Rouvrir le dossier rétablit le lien.') }}</p>
                     @endif
                 </div>
             </section>

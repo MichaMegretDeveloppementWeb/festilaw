@@ -108,6 +108,43 @@ class Submission extends Model
     }
 
     /**
+     * Ferme l'acces client : le lien magique, ceux des anciens e-mails et les telechargements menent a la
+     * page "ce lien n'est plus valide". Fin de la relation (dossier annule), cf. politique de confidentialite.
+     */
+    public function closeAccess(): void
+    {
+        if ((string) $this->resume_token === '') {
+            return;
+        }
+
+        $this->update(['resume_expires_at' => now()]);
+    }
+
+    /**
+     * Rend le lien magique valable selon l'etat du dossier : sans expiration des qu'un paiement a abouti
+     * (comme a la confirmation du paiement), sinon pour la duree du lien de son pack. A chaque envoi du lien
+     * (l'e-mail en annonce la duree) et a la reouverture d'un dossier annule.
+     */
+    public function refreshAccess(): void
+    {
+        if ((string) $this->resume_token === '') {
+            return;
+        }
+
+        $paid = $this->payments()->where('status', PaymentStatus::Succeeded)->exists();
+
+        $this->update(['resume_expires_at' => $paid ? null : now()->addDays($this->resumeTtlDays())]);
+    }
+
+    /** Duree de validite (jours) du lien magique d'un dossier non paye, selon son pack. */
+    private function resumeTtlDays(): int
+    {
+        return (int) ($this->type === SubmissionType::Scale
+            ? config('festilaw.scale.resume_ttl_days', 30)
+            : config('festilaw.starter.resume_ttl_days', 30));
+    }
+
+    /**
      * Dossiers dont le lien de reprise (magic link) est encore valide : jamais expire,
      * ou expiration dans le futur. Filtre partage par le parcours STARTER et le back-office.
      *

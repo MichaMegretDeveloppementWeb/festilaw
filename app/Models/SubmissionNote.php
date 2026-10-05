@@ -10,7 +10,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Note interne de l'equipe sur un dossier (back-office).
+ * Note interne de l'equipe sur un dossier (back-office). Une note met a jour le dossier (updated_at) : pour
+ * une demande de contact, c'est la date du dernier echange qui fait courir le delai de suppression (RGPD).
  */
 class SubmissionNote extends Model
 {
@@ -18,6 +19,9 @@ class SubmissionNote extends Model
     use HasFactory;
 
     protected $fillable = ['submission_id', 'author_id', 'body'];
+
+    /** @var list<string> */
+    protected $touches = ['submission'];
 
     public function submission(): BelongsTo
     {

@@ -84,4 +84,13 @@ return [
         'resume_ttl_days' => (int) env('FESTILAW_SCALE_RESUME_TTL_DAYS', 30),
     ],
 
+    /*
+     | Demandes de contact (politique de confidentialite) : supprimees apres retention_months mois sans
+     | echange (reception, note interne ou e-mail envoye depuis le back-office), par la commande
+     | festilaw:apply-privacy-retention.
+     */
+    'contact' => [
+        'retention_months' => (int) env('FESTILAW_CONTACT_RETENTION_MONTHS', 12),
+    ],
+
 ];

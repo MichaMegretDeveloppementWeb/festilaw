@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Web\Starter;
 
+use App\Enums\Submission\SubmissionStatus;
 use App\Mail\StarterResumeLink;
 use App\Models\Submission;
 use Illuminate\Support\Facades\Log;
@@ -12,19 +13,23 @@ use Throwable;
 
 /**
  * Emails the visitor their STARTER resume link. Peripheral side effect: a failure is logged but never
- * breaks the flow (cf. gestion-erreurs, erreurs partielles non bloquantes).
+ * breaks the flow (cf. gestion-erreurs, erreurs partielles non bloquantes). A cancelled dossier (end of the
+ * relationship) never gets a link: its access stays closed.
  */
 final readonly class SendStarterResumeLinkAction
 {
     public function execute(Submission $submission): void
     {
-        if ((string) $submission->email === '') {
+        if ((string) $submission->email === '' || $submission->status === SubmissionStatus::Cancelled) {
             return;
         }
 
         // Rotation systematique a chaque demande de lien : le mail porte un token frais et l'eventuel
-        // lien precedent devient caduc (plus jamais de lien perime/fuite reutilisable).
+        // lien precedent devient caduc (plus jamais de lien perime/fuite reutilisable). La validite est
+        // rafraichie en meme temps : le lien envoye tient la duree annoncee dans l'e-mail (sans expiration
+        // une fois paye).
         $submission->regenerateResumeToken();
+        $submission->refreshAccess();
 
         try {
             Mail::to($submission->email)
