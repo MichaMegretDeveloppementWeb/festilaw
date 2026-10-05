@@ -24,22 +24,25 @@ use Throwable;
  * Records a successful payment (called by the Stripe webhook), whatever the parcours
  * (STARTER subscription or SCALE audit). Idempotent AND concurrency-safe: only the first of
  * two redelivered webhooks transitions the state and notifies. Advances the submission to "paid". A pack
- * upgrade payment (SC12) also applies the switch to Pro, in the same transaction.
+ * upgrade payment (SC12) also applies the switch to Pro, in the same transaction. Once confirmed, the payment
+ * is reviewed (ReviewConfirmedPaymentAction): a double payment or a charged amount that differs from the
+ * expected one alerts Festilaw, and a double payment sends the buyer no second confirmation.
  */
 final readonly class MarkPaymentSucceededAction
 {
     public function __construct(
         private TeamNotifier $teamNotifier,
         private ApplyPackUpgradeAction $applyPackUpgrade,
+        private ReviewConfirmedPaymentAction $reviewConfirmedPayment,
     ) {}
 
     /**
      * Nominal confirmation (webhook, poll-on-return, cron de reconciliation) : conservateur, ne
      * transitionne que depuis un etat confirmable (Pending/Processing).
      */
-    public function execute(Payment $payment, ?string $providerReference = null): Payment
+    public function execute(Payment $payment, ?string $providerReference = null, ?int $chargedCents = null): Payment
     {
-        return $this->confirm($payment, $providerReference, PaymentStatus::confirmable());
+        return $this->confirm($payment, $providerReference, $chargedCents, PaymentStatus::confirmable());
     }
 
     /**
@@ -47,9 +50,9 @@ final readonly class MarkPaymentSucceededAction
      * echoue) : si le provider dit "paye", on corrige une fausse-echec. Autorise donc aussi Failed/Expired
      * -> Succeeded, contrairement au chemin automatique. Jamais depuis Succeeded/Refunded (deja regles).
      */
-    public function reconcile(Payment $payment, ?string $providerReference = null): Payment
+    public function reconcile(Payment $payment, ?string $providerReference = null, ?int $chargedCents = null): Payment
     {
-        return $this->confirm($payment, $providerReference, [
+        return $this->confirm($payment, $providerReference, $chargedCents, [
             PaymentStatus::Pending,
             PaymentStatus::Processing,
             PaymentStatus::Failed,
@@ -60,7 +63,7 @@ final readonly class MarkPaymentSucceededAction
     /**
      * @param  array<int, PaymentStatus>  $fromStatuses
      */
-    private function confirm(Payment $payment, ?string $providerReference, array $fromStatuses): Payment
+    private function confirm(Payment $payment, ?string $providerReference, ?int $chargedCents, array $fromStatuses): Payment
     {
         $upgraded = false;
         $processed = DB::transaction(function () use ($payment, $providerReference, $fromStatuses, &$upgraded): bool {
@@ -111,7 +114,13 @@ final readonly class MarkPaymentSucceededAction
             // sans casser la confirmation (important pour le webhook, qui doit repondre 200).
             $reason = $upgraded ? FunnelNotificationReason::PackUpgraded : FunnelNotificationReason::PaymentReceived;
             $this->teamNotifier->notify(new FunnelNotification($payment->submission, $reason));
-            $this->emailBuyerConfirmation($payment, $upgraded);
+
+            // Garde-fou : double paiement ou montant different -> Festilaw verifie. Un client qui a paye deux
+            // fois ne recoit pas de seconde confirmation (Festilaw le contacte pour le remboursement).
+            $review = $this->reviewConfirmedPayment->execute($payment, $chargedCents);
+            if (! $review->isDuplicate()) {
+                $this->emailBuyerConfirmation($payment, $upgraded);
+            }
         }
 
         return $payment;

@@ -75,7 +75,7 @@ final class ReconcilePayments extends Command
 
                     // Paye/expire/echoue : on regle. En cours ou indetermine : on laisse en attente.
                     match ($event->outcome) {
-                        PaymentEventOutcome::Paid => $this->confirmPayment($payment, $event->providerReference, $dry, $confirmed),
+                        PaymentEventOutcome::Paid => $this->confirmPayment($payment, $event->providerReference, $event->amountCents, $dry, $confirmed),
                         PaymentEventOutcome::Expired => $this->settlePayment(fn () => $this->markPaymentExpired->execute($payment), $dry, $settled),
                         PaymentEventOutcome::Failed => $this->settlePayment(fn () => $this->markPaymentFailed->execute($payment), $dry, $settled),
                         default => null,
@@ -88,11 +88,11 @@ final class ReconcilePayments extends Command
         return self::SUCCESS;
     }
 
-    private function confirmPayment(Payment $payment, string $providerReference, bool $dry, int &$confirmed): void
+    private function confirmPayment(Payment $payment, string $providerReference, ?int $chargedCents, bool $dry, int &$confirmed): void
     {
         $confirmed++;
         if (! $dry) {
-            $this->markPaymentSucceeded->execute($payment, $providerReference);
+            $this->markPaymentSucceeded->execute($payment, $providerReference, $chargedCents);
             Log::channel('payments')->notice('Payment.reconciled', ['payment' => $payment->id, 'provider' => $payment->provider]);
         }
     }

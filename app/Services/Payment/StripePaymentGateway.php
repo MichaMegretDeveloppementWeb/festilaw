@@ -209,6 +209,7 @@ final class StripePaymentGateway implements PaymentGatewayInterface
                 (string) Arr::get($session, 'payment_status'),
             ),
             clientReference: ((string) Arr::get($session, 'client_reference_id', '')) ?: null,
+            amountCents: $this->amountTotal($session),
         );
     }
 
@@ -255,7 +256,21 @@ final class StripePaymentGateway implements PaymentGatewayInterface
             outcome: $this->webhookOutcome($type, (string) Arr::get($object, 'payment_status')),
             // Notre payment id (envoye en client_reference_id) : rapprochement de secours.
             clientReference: ((string) Arr::get($object, 'client_reference_id', '')) ?: null,
+            amountCents: $this->amountTotal($object),
         );
+    }
+
+    /**
+     * Montant reellement encaisse d'une session Checkout (amount_total, en centimes), compare au montant
+     * attendu a la confirmation (ReviewConfirmedPaymentAction). Null s'il est absent.
+     *
+     * @param  array<string, mixed>  $session
+     */
+    private function amountTotal(array $session): ?int
+    {
+        $amount = Arr::get($session, 'amount_total');
+
+        return is_numeric($amount) ? (int) $amount : null;
     }
 
     /**

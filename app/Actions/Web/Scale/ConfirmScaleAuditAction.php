@@ -37,7 +37,7 @@ final readonly class ConfirmScaleAuditAction
                 $event = $this->gateways->get((string) $payment->provider)->checkStatus($payment);
 
                 if ($event->isPaid()) {
-                    $this->markPaymentSucceeded->execute($payment, $event->providerReference);
+                    $this->markPaymentSucceeded->execute($payment, $event->providerReference, $event->amountCents);
                 }
             } catch (Throwable $e) {
                 Log::channel('payments')->error('SCALE audit confirm-on-return failed.', [

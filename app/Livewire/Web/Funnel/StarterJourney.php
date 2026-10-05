@@ -688,7 +688,7 @@ class StarterJourney extends Component
             return false;
         }
 
-        $markPaymentSucceeded->execute($payment, $event->providerReference);
+        $markPaymentSucceeded->execute($payment, $event->providerReference, $event->amountCents);
         $this->submission->refresh();
 
         session()->now('starter_status', 'paid');

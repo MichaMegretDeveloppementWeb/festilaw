@@ -75,7 +75,7 @@ final class PaymentWebhookController extends Controller
             }
 
             match ($event->outcome) {
-                PaymentEventOutcome::Paid => $markPaymentSucceeded->execute($payment, $event->providerReference),
+                PaymentEventOutcome::Paid => $markPaymentSucceeded->execute($payment, $event->providerReference, $event->amountCents),
                 PaymentEventOutcome::Failed => $markPaymentFailed->execute($payment),
                 PaymentEventOutcome::Processing => $markPaymentProcessing->execute($payment),
                 PaymentEventOutcome::Expired => $markPaymentExpired->execute($payment),

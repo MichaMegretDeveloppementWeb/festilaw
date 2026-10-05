@@ -54,7 +54,7 @@ final readonly class CheckPaymentStatusAction
 
         if ($event->isPaid()) {
             // Fausse-echec : le provider dit paye -> on corrige (Failed/Expired/Pending/Processing -> Succeeded).
-            $this->markPaymentSucceeded->reconcile($payment, $event->providerReference);
+            $this->markPaymentSucceeded->reconcile($payment, $event->providerReference, $event->amountCents);
 
             return new PaymentStatusCheckResult(PaymentEventOutcome::Paid, corrected: true, providerReference: $event->providerReference);
         }

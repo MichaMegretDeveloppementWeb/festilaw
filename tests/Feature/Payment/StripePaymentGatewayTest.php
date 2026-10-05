@@ -184,6 +184,26 @@ it('confirms a paid checkout session via polling', function () {
         ->and($event->providerReference)->toBe('cs_1');
 });
 
+it('carries the amount Stripe actually charged, from the session and from the webhook', function () {
+    Http::fake(['*/v1/checkout/sessions/*' => Http::response(['id' => 'cs_1', 'status' => 'complete', 'payment_status' => 'paid', 'amount_total' => 33300])]);
+    $payment = stripePendingPayment();
+    $payment->update(['provider_reference' => 'cs_1']);
+
+    expect(app(StripePaymentGateway::class)->checkStatus($payment)->amountCents)->toBe(33300);
+
+    $event = app(StripePaymentGateway::class)->parseWebhook(stripeWebhookRequest([
+        'type' => 'checkout.session.completed',
+        'data' => ['object' => ['id' => 'cs_1', 'payment_status' => 'paid', 'amount_total' => 9900]],
+    ]));
+    expect($event->amountCents)->toBe(9900);
+
+    $withoutAmount = app(StripePaymentGateway::class)->parseWebhook(stripeWebhookRequest([
+        'type' => 'checkout.session.completed',
+        'data' => ['object' => ['id' => 'cs_1', 'payment_status' => 'paid']],
+    ]));
+    expect($withoutAmount->amountCents)->toBeNull();
+});
+
 it('reports an unpaid checkout session as still pending', function () {
     Http::fake(['*/v1/checkout/sessions/*' => Http::response(['id' => 'cs_1', 'payment_status' => 'unpaid'])]);
 

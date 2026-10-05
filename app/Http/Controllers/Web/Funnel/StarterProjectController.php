@@ -135,7 +135,7 @@ final class StarterProjectController extends Controller
                 $event = $gateways->get((string) $payment->provider)->checkStatus($payment);
 
                 if ($event->isPaid()) {
-                    $markPaymentSucceeded->execute($payment, $event->providerReference);
+                    $markPaymentSucceeded->execute($payment, $event->providerReference, $event->amountCents);
                 }
             } catch (Throwable $e) {
                 Log::channel('payments')->error('Confirm-on-return failed.', ['exception' => $e, 'submission' => $dossier->id, 'payment' => $payment->id, 'type' => $type->value]);

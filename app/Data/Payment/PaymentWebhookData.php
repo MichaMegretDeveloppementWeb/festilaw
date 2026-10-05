@@ -10,7 +10,8 @@ use App\Enums\Payment\PaymentEventOutcome;
  * Provider-agnostic result of parsing a payment webhook (or a status poll). `outcome` is the normalized
  * verdict our state machine acts on; `clientReference` carries our own Payment id (Stripe
  * client_reference_id / metadata) so the event can be reconciled even if the provider reference was
- * never stored · match by provider ref OR our id.
+ * never stored · match by provider ref OR our id. `amountCents` is the amount the provider actually
+ * charged (Stripe amount_total), when the event carries it.
  */
 final readonly class PaymentWebhookData
 {
@@ -18,6 +19,7 @@ final readonly class PaymentWebhookData
         public string $providerReference,
         public PaymentEventOutcome $outcome,
         public ?string $clientReference = null,
+        public ?int $amountCents = null,
     ) {}
 
     /** Optimistic-return / reconcile convenience: is the payment definitively paid? */
