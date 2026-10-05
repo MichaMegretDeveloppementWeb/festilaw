@@ -74,6 +74,22 @@ final class StarterException extends BaseAppException
         );
     }
 
+    public static function packUpgradeUnavailable(int $submissionId, string $reason): self
+    {
+        return new self(
+            technicalMessage: "STARTER submission [{$submissionId}] cannot switch to Pro: {$reason}.",
+            userMessage: 'Switching to the Pro Pack is not available for your file right now. Please contact us.',
+        );
+    }
+
+    public static function packUpgradeNotSigned(int $submissionId): self
+    {
+        return new self(
+            technicalMessage: "STARTER submission [{$submissionId}] cannot pay the Pro upgrade: the Pro mandate is not signed.",
+            userMessage: 'Please sign your Pro Pack mandate before paying.',
+        );
+    }
+
     /** @param  list<string>  $missingTypes */
     public static function documentsMissing(int $submissionId, array $missingTypes): self
     {

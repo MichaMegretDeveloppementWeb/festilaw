@@ -11,6 +11,7 @@ use App\Enums\Billing\RenewalStatus;
 use App\Enums\Payment\PaymentStatus;
 use App\Enums\Payment\PaymentType;
 use App\Enums\Submission\SubmissionStatus;
+use App\Enums\Submission\SubmissionType;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\Submission;
@@ -45,10 +46,16 @@ final class StarterProjectController extends Controller
     ): View {
         abort_unless($dossier->type->hasOnlineJourney(), 404);
 
-        // Retour d'un paiement de renouvellement : on confirme la synchrone au retour (le webhook reste
-        // le filet cote serveur en prod ; en local il ne peut pas joindre le site).
+        // Retour d'un paiement de renouvellement ou de passage au Pro (SC12) : on confirme la synchrone au
+        // retour (le webhook reste le filet cote serveur en prod ; en local il ne peut pas joindre le site).
         if ($request->boolean('renewal_return')) {
-            $this->confirmPendingRenewal($dossier, $gateways, $markPaymentSucceeded);
+            $this->confirmPending($dossier, PaymentType::AnnualRenewal, $gateways, $markPaymentSucceeded);
+        }
+        $justUpgraded = false;
+        if ($request->boolean('upgrade_return')) {
+            $this->confirmPending($dossier, PaymentType::PackUpgrade, $gateways, $markPaymentSucceeded);
+            $dossier->refresh();
+            $justUpgraded = $dossier->type === SubmissionType::Pro;
         }
 
         $dossier->loadMissing(['contract', 'uploadedDocuments', 'payments']);
@@ -97,23 +104,29 @@ final class StarterProjectController extends Controller
             documents: $documents,
         );
 
-        return view('web.my-project', ['project' => $project]);
+        return view('web.my-project', [
+            'project' => $project,
+            // Le panneau "changer de pack" (SC12) travaille sur le dossier lui-meme (composant Livewire).
+            'dossier' => $dossier,
+            'justUpgraded' => $justUpgraded,
+        ]);
     }
 
     /**
-     * Confirme (au retour du checkout) le paiement de renouvellement en attente : on interroge le
-     * provider (checkStatus) et, s'il est paye, on marque le paiement reussi. Erreur non bloquante :
-     * on log et on laisse le webhook confirmer cote serveur en prod.
+     * Confirme (au retour du checkout) les paiements en attente du type donne (renouvellement ou passage au
+     * Pro) : on interroge le provider (checkStatus) et, s'il est paye, on marque le paiement reussi. Erreur
+     * non bloquante : on log et on laisse le webhook confirmer cote serveur en prod.
      */
-    private function confirmPendingRenewal(
+    private function confirmPending(
         Submission $dossier,
+        PaymentType $type,
         PaymentGatewayRegistry $gateways,
         MarkPaymentSucceededAction $markPaymentSucceeded,
     ): void {
-        // On interroge chaque paiement de renouvellement en attente (il peut en trainer plusieurs d'un
-        // essai anterieur) et on confirme ceux reellement payes chez le provider.
+        // On interroge chaque paiement en attente (il peut en trainer plusieurs d'un essai anterieur) et on
+        // confirme ceux reellement payes chez le provider.
         $pending = $dossier->payments()
-            ->where('type', PaymentType::AnnualRenewal)
+            ->where('type', $type)
             ->whereIn('status', PaymentStatus::confirmable())
             ->get();
 
@@ -125,7 +138,7 @@ final class StarterProjectController extends Controller
                     $markPaymentSucceeded->execute($payment, $event->providerReference);
                 }
             } catch (Throwable $e) {
-                Log::channel('payments')->error('Renewal confirm-on-return failed.', ['exception' => $e, 'submission' => $dossier->id, 'payment' => $payment->id]);
+                Log::channel('payments')->error('Confirm-on-return failed.', ['exception' => $e, 'submission' => $dossier->id, 'payment' => $payment->id, 'type' => $type->value]);
             }
         }
     }

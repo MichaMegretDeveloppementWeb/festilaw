@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Actions\Web\Payment;
 
+use App\Actions\Web\Starter\ApplyPackUpgradeAction;
 use App\Enums\Notification\FunnelNotificationReason;
 use App\Enums\Payment\PaymentStatus;
 use App\Enums\Payment\PaymentType;
 use App\Enums\Submission\SubmissionStatus;
 use App\Mail\FunnelNotification;
+use App\Mail\PackUpgradeConfirmed;
 use App\Mail\ScaleAuditConfirmed;
 use App\Mail\StarterPaymentConfirmed;
 use App\Models\Payment;
@@ -21,11 +23,15 @@ use Throwable;
 /**
  * Records a successful payment (called by the Stripe webhook), whatever the parcours
  * (STARTER subscription or SCALE audit). Idempotent AND concurrency-safe: only the first of
- * two redelivered webhooks transitions the state and notifies. Advances the submission to "paid".
+ * two redelivered webhooks transitions the state and notifies. Advances the submission to "paid". A pack
+ * upgrade payment (SC12) also applies the switch to Pro, in the same transaction.
  */
 final readonly class MarkPaymentSucceededAction
 {
-    public function __construct(private TeamNotifier $teamNotifier) {}
+    public function __construct(
+        private TeamNotifier $teamNotifier,
+        private ApplyPackUpgradeAction $applyPackUpgrade,
+    ) {}
 
     /**
      * Nominal confirmation (webhook, poll-on-return, cron de reconciliation) : conservateur, ne
@@ -56,7 +62,8 @@ final readonly class MarkPaymentSucceededAction
      */
     private function confirm(Payment $payment, ?string $providerReference, array $fromStatuses): Payment
     {
-        $processed = DB::transaction(function () use ($payment, $providerReference, $fromStatuses): bool {
+        $upgraded = false;
+        $processed = DB::transaction(function () use ($payment, $providerReference, $fromStatuses, &$upgraded): bool {
             // Update conditionnel atomique : seule la 1re livraison concurrente affecte une ligne, et
             // seuls les etats sources autorises transitionnent (un Succeeded/Refunded n'est jamais ecrase).
             $affected = Payment::query()
@@ -89,6 +96,11 @@ final readonly class MarkPaymentSucceededAction
                     'resume_expires_at' => null,
                 ]);
 
+            // Passage au Pro (SC12) : la difference est payee, le dossier passe au Pro (une seule fois).
+            if ($payment->type === PaymentType::PackUpgrade) {
+                $upgraded = $this->applyPackUpgrade->execute($payment);
+            }
+
             return true;
         });
 
@@ -97,8 +109,9 @@ final readonly class MarkPaymentSucceededAction
         if ($processed) {
             // Notification synchrone a Festilaw, apres commit (une seule fois) ; un echec est logue
             // sans casser la confirmation (important pour le webhook, qui doit repondre 200).
-            $this->teamNotifier->notify(new FunnelNotification($payment->submission, FunnelNotificationReason::PaymentReceived));
-            $this->emailBuyerConfirmation($payment);
+            $reason = $upgraded ? FunnelNotificationReason::PackUpgraded : FunnelNotificationReason::PaymentReceived;
+            $this->teamNotifier->notify(new FunnelNotification($payment->submission, $reason));
+            $this->emailBuyerConfirmation($payment, $upgraded);
         }
 
         return $payment;
@@ -110,7 +123,7 @@ final readonly class MarkPaymentSucceededAction
      * payments. Peripheral side effect: a failure is logged but never breaks the confirmation. Never sent
      * on a dossier left cancelled (we don't tell a cancelled client their service is live).
      */
-    private function emailBuyerConfirmation(Payment $payment): void
+    private function emailBuyerConfirmation(Payment $payment, bool $upgraded): void
     {
         $submission = $payment->submission;
         if ($submission === null || (string) $submission->email === '' || $submission->status === SubmissionStatus::Cancelled) {
@@ -121,6 +134,8 @@ final readonly class MarkPaymentSucceededAction
             $payment->type->isSubscription() => new StarterPaymentConfirmed($submission),
             // Audit SCALE : invite a reserver la consultation (sauf dossier deja reserve avant de payer).
             $payment->type === PaymentType::ScaleAudit => new ScaleAuditConfirmed($submission, $submission->appointment()->exists()),
+            // Passage au Pro applique : confirmation du nouveau pack (rien si la montee n'a pas pu s'appliquer).
+            $upgraded => new PackUpgradeConfirmed($submission, $payment),
             default => null,
         };
 

@@ -398,6 +398,52 @@
                 </section>
             @endif
 
+            {{-- Changements de pack apres paiement (SC12) : historique, et le "dernier mot" de Festilaw. --}}
+            @if ($submission->packChanges->isNotEmpty())
+                <section class="rounded-xl border border-base bg-surface">
+                    <div class="border-b border-subtle px-5 py-3.5">
+                        <h2 class="text-[13px] font-semibold text-primary">{{ __('Changement de pack') }}</h2>
+                    </div>
+                    <div class="divide-y divide-subtle px-5">
+                        @foreach ($submission->packChanges as $change)
+                            @php
+                                $changeColor = match ($change->status) {
+                                    \App\Enums\Submission\PackChangeStatus::Completed, \App\Enums\Submission\PackChangeStatus::Applied, \App\Enums\Submission\PackChangeStatus::Approved => 'emerald',
+                                    \App\Enums\Submission\PackChangeStatus::Open, \App\Enums\Submission\PackChangeStatus::Requested => 'amber',
+                                    \App\Enums\Submission\PackChangeStatus::Rejected, \App\Enums\Submission\PackChangeStatus::Reverted => 'red',
+                                    default => 'gray',
+                                };
+                                $revertible = $change->isUpgrade()
+                                    && $change->status === \App\Enums\Submission\PackChangeStatus::Completed
+                                    && $change->payment?->status === \App\Enums\Payment\PaymentStatus::Succeeded;
+                            @endphp
+                            <div class="py-3.5 text-[13px]">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="font-medium text-primary">{{ $change->from_pack->label() }} → {{ $change->to_pack->label() }}</span>
+                                    <x-ui.badge :color="$changeColor" ring>{{ $change->status->label() }}</x-ui.badge>
+                                </div>
+                                <p class="mt-1 text-[12px] text-muted">
+                                    {{ __('Demandé le') }} {{ $change->created_at->format('d/m/Y') }}
+                                    @if ($change->isUpgrade() && $change->amount_cents)
+                                        · {{ number_format($change->amount_cents / 100, 2, ',', ' ') }} EUR
+                                    @endif
+                                    @if ($change->applied_at)
+                                        · {{ __('appliqué le') }} {{ $change->applied_at->format('d/m/Y') }}
+                                    @endif
+                                </p>
+                                @if ($revertible)
+                                    <x-ui.button variant="danger" size="compact" class="mt-2.5 w-full justify-center"
+                                        wire:click="revertPackUpgrade({{ $change->id }})" :loading="true" target="revertPackUpgrade"
+                                        wire:confirm="{{ __('Annuler le passage au Pro et rembourser :amount EUR au client ? Le dossier reviendra au Creator avec son mandat Creator.', ['amount' => number_format($change->amount_cents / 100, 2, ',', ' ')]) }}">
+                                        {{ __('Annuler le passage au Pro et rembourser') }}
+                                    </x-ui.button>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                </section>
+            @endif
+
             <section class="rounded-xl border border-base bg-surface">
                 <div class="border-b border-subtle px-5 py-3.5">
                     <h2 class="text-[13px] font-semibold text-primary">{{ __('Actions') }}</h2>

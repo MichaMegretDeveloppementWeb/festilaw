@@ -46,6 +46,13 @@
                     <p class="my-project__note">{{ __('This project was cancelled. Get in touch if you\'d like to reopen it.') }}</p>
                     <a href="{{ route('contact') }}" class="btn btn--outline-dark btn--sm">{{ __('Contact us') }}</a>
                 @else
+                    @if ($justUpgraded)
+                        {{-- Retour du paiement du passage au Pro (SC12), confirme au retour. --}}
+                        <div class="journey-flash">
+                            <svg class="journey-flash__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            <span>{{ __('You\'re now on the :pack. Thank you!', ['pack' => __($project->packLabel)]) }}</span>
+                        </div>
+                    @endif
                     <ul class="project-steps">
                         <li @class(['project-step', 'is-done' => $project->documentsDone])>
                             <span class="project-step__mark" aria-hidden="true">
@@ -114,6 +121,9 @@
                                 </form>
                             </div>
                         @endif
+
+                        {{-- Changement de pack apres paiement (SC12). --}}
+                        <livewire:web.funnel.pack-change-panel :submission="$dossier" />
                     @else
                         <p class="my-project__resume-text">{{ __('Your project isn\'t finished yet. Pick up right where you left off.') }}</p>
                         <a href="{{ $project->resumeUrl }}" class="btn btn--coral">{{ __('Resume my project') }}</a>

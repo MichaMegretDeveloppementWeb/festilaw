@@ -12,6 +12,9 @@ enum FunnelNotificationReason: string
     case PaymentReceived = 'payment_received';
     case ConsultationBooked = 'consultation_booked';
     case PackChanged = 'pack_changed';
+    // Changement de pack apres paiement (SC12).
+    case PackUpgradeStarted = 'pack_upgrade_started';
+    case PackUpgraded = 'pack_upgraded';
 
     public function subject(): string
     {
@@ -22,6 +25,8 @@ enum FunnelNotificationReason: string
             self::PaymentReceived => __('Payment received'),
             self::ConsultationBooked => __('New Scale consultation booked'),
             self::PackChanged => __('Pack changed by the client'),
+            self::PackUpgradeStarted => __('Switch to the Pro Pack started by the client'),
+            self::PackUpgraded => __('Client switched to the Pro Pack (paid)'),
         };
     }
 }

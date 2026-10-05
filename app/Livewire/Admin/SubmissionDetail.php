@@ -7,6 +7,7 @@ namespace App\Livewire\Admin;
 use App\Actions\Admin\AddSubmissionNoteAction;
 use App\Actions\Admin\ChangeSubmissionStatusAction;
 use App\Actions\Admin\IssueResponsiblePersonAction;
+use App\Actions\Admin\RevertPackUpgradeAction;
 use App\Actions\Admin\SendAdminMessageAction;
 use App\Actions\Admin\UpdateAppointmentAction;
 use App\Actions\Admin\UploadCountersignedContractAction;
@@ -195,6 +196,36 @@ class SubmissionDetail extends Component
      * Re-interroge le prestataire (Stripe...) pour un paiement du dossier, a la demande du support. Si le
      * prestataire dit "paye", une fausse-echec est corrigee et le dossier reactive (source de verite).
      */
+    /**
+     * Le "dernier mot" de Festilaw sur un passage au Pro (SC12) : rembourse la difference et ramene le dossier
+     * au Creator. Rien n'est modifie si le remboursement echoue chez le prestataire.
+     */
+    public function revertPackUpgrade(int $packChangeId, RevertPackUpgradeAction $revertPackUpgrade): void
+    {
+        $change = $this->submission->packChanges->firstWhere('id', $packChangeId);
+        if ($change === null) {
+            $this->toast(__('Changement de pack introuvable.'), 'error');
+
+            return;
+        }
+
+        try {
+            $revertPackUpgrade->execute($change, auth()->id());
+        } catch (BaseAppException $e) {
+            Log::warning($e->getMessage(), ['exception' => $e, 'submission' => $this->submission->id]);
+            $this->toast(__($e->getUserMessage()), 'error');
+
+            return;
+        } catch (Throwable $e) {
+            $this->reportAdminError($e, 'Admin revert pack upgrade');
+
+            return;
+        }
+
+        $this->submission->refresh()->load(['contract', 'contracts', 'payments', 'packChanges.contract', 'packChanges.payment']);
+        $this->toast(__('Passage au Pro annulé et remboursé : le dossier est revenu au Creator.'));
+    }
+
     public function recheckPayment(int $paymentId, CheckPaymentStatusAction $checkPaymentStatus): void
     {
         $payment = $this->submission->payments()->whereKey($paymentId)->first();
