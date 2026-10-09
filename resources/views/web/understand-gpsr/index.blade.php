@@ -50,23 +50,23 @@
         </div>
     </section>
 
-    <section class="gtabs" x-data="{ tab: 0 }">
+    <section class="gtabs" data-tabs>
         <div class="gtabs__inner">
-            <div class="gtabs__nav" role="tablist">
-                <button type="button" class="gtabs__tab" :class="{ 'is-active': tab === 0 }" x-on:click="tab = 0">{{ __('What is the GPSR?') }}</button>
-                <button type="button" class="gtabs__tab" :class="{ 'is-active': tab === 1 }" x-on:click="tab = 1">{{ __('The 3 core pillars') }}</button>
-                <button type="button" class="gtabs__tab" :class="{ 'is-active': tab === 2 }" x-on:click="tab = 2">{{ __('Does it apply to you?') }}</button>
-                <button type="button" class="gtabs__tab" :class="{ 'is-active': tab === 3 }" x-on:click="tab = 3">{{ __('Specialized products') }}</button>
+            <div class="gtabs__nav" role="tablist" aria-label="{{ __('Understand GPSR') }}">
+                <button type="button" class="gtabs__tab is-active" role="tab" id="gpsr-tab-0" aria-controls="gpsr-panel-0" aria-selected="true" tabindex="0">{{ __('What is the GPSR?') }}</button>
+                <button type="button" class="gtabs__tab" role="tab" id="gpsr-tab-1" aria-controls="gpsr-panel-1" aria-selected="false" tabindex="-1">{{ __('The 3 core pillars') }}</button>
+                <button type="button" class="gtabs__tab" role="tab" id="gpsr-tab-2" aria-controls="gpsr-panel-2" aria-selected="false" tabindex="-1">{{ __('Does it apply to you?') }}</button>
+                <button type="button" class="gtabs__tab" role="tab" id="gpsr-tab-3" aria-controls="gpsr-panel-3" aria-selected="false" tabindex="-1">{{ __('Specialized products') }}</button>
             </div>
 
             <div class="gtabs__panels">
-                <div class="gtabs__panel" x-show="tab === 0" x-cloak>
+                <div class="gtabs__panel" role="tabpanel" id="gpsr-panel-0" aria-labelledby="gpsr-tab-0" tabindex="0">
                     <h2 class="gtabs__panel-title">{{ __('What is the GPSR?') }}</h2>
                     <p>{{ __('The General Product Safety Regulation (GPSR) is a major European Union regulation designed to ensure that all consumer products on the EU market are safe, traceable, and well-regulated.') }}</p>
                     <p>{{ __('Unlike older directives, the GPSR adapts European law to modern commerce, holding manufacturers, importers, and online marketplaces collectively responsible for product safety.') }}</p>
                 </div>
 
-                <div class="gtabs__panel" x-show="tab === 1" x-cloak>
+                <div class="gtabs__panel" role="tabpanel" id="gpsr-panel-1" aria-labelledby="gpsr-tab-1" tabindex="0" hidden>
                     <h2 class="gtabs__panel-title">{{ __('The 3 core pillars of GPSR compliance') }}</h2>
                     <p>{{ __('To keep your products moving freely into the European Union, you must satisfy three fundamental requirements:') }}</p>
                     <div class="gtabs__pillar">
@@ -88,14 +88,14 @@
                     </div>
                 </div>
 
-                <div class="gtabs__panel" x-show="tab === 2" x-cloak>
+                <div class="gtabs__panel" role="tabpanel" id="gpsr-panel-2" aria-labelledby="gpsr-tab-2" tabindex="0" hidden>
                     <h2 class="gtabs__panel-title">{{ __('Does this apply to your business?') }}</h2>
                     <p>{{ __('If you sell non-food consumer products to customers inside the European Union, whether you are an e-commerce brand, an international manufacturer, or a marketplace seller, then yes, the GPSR applies directly to you.') }}</p>
                     <p class="gtabs__good"><strong>{{ __('The good news:') }}</strong> {{ __('you don\'t have to navigate the European legal maze alone. Festilaw is here to assess your products, define your exact documentation blueprint, and handle the authority liaison so you can focus entirely on what you do best: growing your business.') }}</p>
                     <p><a href="{{ route('services') }}" class="gtabs__link">{{ __('See how Festilaw handles your GPSR compliance') }} →</a></p>
                 </div>
 
-                <div class="gtabs__panel" x-show="tab === 3" x-cloak>
+                <div class="gtabs__panel" role="tabpanel" id="gpsr-panel-3" aria-labelledby="gpsr-tab-3" tabindex="0" hidden>
                     <h2 class="gtabs__panel-title">{{ __('Products requiring specialized services') }}</h2>
                     <p>{{ __('While the GPSR covers the vast majority of non-food consumer goods, certain high-risk categories are governed by separate European frameworks. Festilaw focuses on standard consumer products compliance and does not handle the specialized technical certifications required for:') }}</p>
                     <ul class="gtabs__list">
@@ -116,3 +116,7 @@
     @include('web.sections.why-gpsr')
     @include('web.sections.quiz')
 @endsection
+
+@push('scripts')
+    @vite('resources/js/web/tabs.js')
+@endpush

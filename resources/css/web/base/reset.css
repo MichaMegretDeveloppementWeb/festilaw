@@ -52,3 +52,8 @@ a {
 [x-cloak] {
     display: none !important;
 }
+
+/* L'etat natif hidden doit primer sur les composants flex/grid (quiz et onglets). */
+[hidden] {
+    display: none !important;
+}

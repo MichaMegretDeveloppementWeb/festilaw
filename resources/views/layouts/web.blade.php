@@ -62,9 +62,9 @@
     {{-- Polices auto-hebergees (declarations dans resources/css/web/base/fonts.css). --}}
     <link rel="preload" href="{{ asset('fonts/inter-latin-400-normal.woff2') }}" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="{{ asset('fonts/poiret-one-latin-400-normal.woff2') }}" as="font" type="font/woff2" crossorigin>
-    <link rel="preload" href="{{ asset('fonts/satisfy-latin-400-normal.woff2') }}" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="{{ asset('fonts/inter-latin-600-normal.woff2') }}" as="font" type="font/woff2" crossorigin>
 
-    @livewireStyles
+    {{-- Livewire injecte ses assets uniquement lorsqu'un composant est rendu sur cette page. --}}
 
     {{-- CSS global de l'espace web (base + coquille) --}}
     @vite('resources/css/web.css')
@@ -83,9 +83,7 @@
 
     @vite('resources/js/web.js')
 
-    {{-- JS de la page, avant le boot de Livewire/Alpine. --}}
+    {{-- JS propre a la page. Les formulaires conservent l'injection automatique de Livewire. --}}
     @stack('scripts')
-
-    @livewireScripts
 </body>
 </html>

@@ -5,6 +5,14 @@
 @section('title', __('Link no longer valid · Festilaw'))
 @section('robots', 'noindex, nofollow')
 
+{{-- Livewire n'injecte automatiquement ses assets que sur les reponses 200 ; ici le statut reste 404. --}}
+@push('meta')
+    @livewireStyles
+@endpush
+@push('scripts')
+    @livewireScripts
+@endpush
+
 @push('styles')
     @vite('resources/css/web/get-started/journey.css')
 @endpush

@@ -18,7 +18,7 @@
     "isEntry": true
   },
   "resources/css/web.css": {
-    "file": "assets/web-v-l70-bX.css",
+    "file": "assets/web-DNNvhTDU.css",
     "name": "web",
     "names": [
       "web.css"
@@ -27,7 +27,7 @@
     "isEntry": true
   },
   "resources/css/web/about/index.css": {
-    "file": "assets/index-DANkkdXJ.css",
+    "file": "assets/index-CEFawGHy.css",
     "name": "index",
     "names": [
       "index.css"
@@ -81,7 +81,7 @@
     "isEntry": true
   },
   "resources/css/web/home/index.css": {
-    "file": "assets/index-UR9ZrNXD.css",
+    "file": "assets/index-Bp01-_Jp.css",
     "name": "index",
     "names": [
       "index.css"
@@ -141,6 +141,18 @@
     "file": "assets/web-R1LAz7ek.js",
     "name": "web",
     "src": "resources/js/web.js",
+    "isEntry": true
+  },
+  "resources/js/web/quiz.js": {
+    "file": "assets/quiz-rGup2Wed.js",
+    "name": "quiz",
+    "src": "resources/js/web/quiz.js",
+    "isEntry": true
+  },
+  "resources/js/web/tabs.js": {
+    "file": "assets/tabs-BdgNtm85.js",
+    "name": "tabs",
+    "src": "resources/js/web/tabs.js",
     "isEntry": true
   }
 }

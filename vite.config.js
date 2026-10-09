@@ -12,6 +12,8 @@ export default defineConfig({
                 'resources/js/app.js',
                 // Manifeste JS de l'espace public (coquille), charge sur toutes les pages web.
                 'resources/js/web.js',
+                'resources/js/web/quiz.js',
+                'resources/js/web/tabs.js',
                 // Manifeste CSS de l'espace public (base + coquille), charge sur toutes les pages web.
                 'resources/css/web.css',
                 // Back-office (auth) : espace separe, styles sur-mesure.

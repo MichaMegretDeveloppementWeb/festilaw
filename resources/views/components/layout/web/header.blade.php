@@ -7,7 +7,10 @@
     </nav>
 
     <a href="{{ route('home') }}" class="brand-logo" aria-label="Festilaw">
-        <img src="{{ asset('logo-festilaw.png') }}" alt="Festilaw" width="104" height="104">
+        <picture>
+            <source srcset="{{ asset('images/logo-festilaw-272.webp') }}" type="image/webp">
+            <img src="{{ asset('images/logo-festilaw-272.png') }}" alt="Festilaw" width="104" height="104">
+        </picture>
     </a>
 
     <div class="site-header__menu site-header__menu--right">

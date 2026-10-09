@@ -6,12 +6,27 @@
         '@context' => 'https://schema.org',
         '@graph' => array_merge([
             [
-                '@type' => 'Organization',
+                '@type' => ['Organization', 'LegalService'],
+                '@id' => url('/').'#organization',
                 'name' => config('app.name'),
+                'legalName' => 'Festilaw B.V.',
                 'url' => url('/'),
-                'logo' => asset('logo-festilaw.jpg'),
+                'logo' => asset('images/logo-festilaw-272.png'),
                 'description' => __('Your GPSR Responsible Person in the EU for non-EU sellers.'),
                 'email' => 'team@festilaw.com',
+                'address' => [
+                    '@type' => 'PostalAddress',
+                    'streetAddress' => 'Spoorstraat 30A',
+                    'postalCode' => '6511 AN',
+                    'addressLocality' => 'Nijmegen',
+                    'addressCountry' => 'NL',
+                ],
+                'identifier' => [
+                    '@type' => 'PropertyValue',
+                    'propertyID' => 'KvK',
+                    'value' => '77058720',
+                ],
+                'vatID' => 'NL860886761B01',
                 'contactPoint' => [
                     '@type' => 'ContactPoint',
                     'email' => 'team@festilaw.com',

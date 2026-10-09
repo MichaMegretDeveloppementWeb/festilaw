@@ -148,3 +148,8 @@ it('translates the footer legal line', function () {
         ->assertSee('TVA NL860886761B01', false)
         ->assertSee('Certification Consumer Law Ready', false);
 });
+
+it('keeps administration accessible directly without advertising it in the public footer', function () {
+    get(route('home'))->assertOk()->assertDontSee(route('admin.login'), false);
+    get(route('admin.login'))->assertOk();
+});

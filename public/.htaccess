@@ -5,6 +5,11 @@
 
     RewriteEngine On
 
+    # Canonical production host, before Laravel and static-file handling.
+    # No query string in the target: Apache/LiteSpeed preserves it unchanged.
+    RewriteCond %{HTTP_HOST} ^www\.festilaw\.com(?::\d+)?$ [NC]
+    RewriteRule ^ https://festilaw.com%{REQUEST_URI} [R=301,L,NE]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
@@ -22,4 +27,15 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
+</IfModule>
+
+# Cache only fingerprinted Vite assets. HTML, forms and private documents are excluded.
+<IfModule mod_headers.c>
+    <FilesMatch "-[A-Za-z0-9_-]{8}\.(css|js)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+</IfModule>
+
+<IfModule mod_mime.c>
+    AddType image/avif .avif
 </IfModule>

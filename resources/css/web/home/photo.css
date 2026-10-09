@@ -2,7 +2,11 @@
    par-dessus (background-attachment: fixed). Pas d'overlay. */
 .home-photo {
     height: clamp(340px, 62vh, 640px);
-    background-image: url('/images/home-transport.webp');
+    background-image: url('/images/home-transport-optimized.webp');
+    background-image: image-set(
+        url('/images/home-transport-optimized.avif') type('image/avif'),
+        url('/images/home-transport-optimized.webp') type('image/webp')
+    );
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
