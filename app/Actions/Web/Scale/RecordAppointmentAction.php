@@ -91,7 +91,7 @@ final readonly class RecordAppointmentAction
         if ((string) $submission->email !== '') {
             try {
                 Mail::to($submission->email)
-                    ->locale($submission->locale ?: config('app.locale'))
+                    ->locale($submission->locale ?: config('festilaw.default_locale'))
                     ->send(new ScaleConsultationBooked($submission));
             } catch (Throwable $e) {
                 Log::error('Failed to send the SCALE booking confirmation to the client.', [

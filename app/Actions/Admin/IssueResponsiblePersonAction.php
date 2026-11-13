@@ -38,7 +38,7 @@ final readonly class IssueResponsiblePersonAction
 
         try {
             Mail::to($submission->email)
-                ->locale($submission->locale ?: config('app.locale'))
+                ->locale($submission->locale ?: config('festilaw.default_locale'))
                 ->send(new StarterResponsiblePersonIssued($submission));
         } catch (Throwable $e) {
             Log::error('Failed to send the Responsible Person issued email.', [

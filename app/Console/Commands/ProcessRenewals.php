@@ -179,7 +179,7 @@ final class ProcessRenewals extends Command
 
         try {
             Mail::to($dossier->email)
-                ->locale($dossier->locale ?: config('app.locale'))
+                ->locale($dossier->locale ?: config('festilaw.default_locale'))
                 ->send(new RenewalReminder($dossier, $year, $overdue));
 
             return true;

@@ -33,7 +33,7 @@ final readonly class SendStarterResumeLinkAction
 
         try {
             Mail::to($submission->email)
-                ->locale($submission->locale ?: config('app.locale'))
+                ->locale($submission->locale ?: config('festilaw.default_locale'))
                 ->send(new StarterResumeLink($submission));
         } catch (Throwable $e) {
             Log::error('Failed to send the STARTER resume link.', [

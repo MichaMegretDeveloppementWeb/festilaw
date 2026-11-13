@@ -62,7 +62,7 @@ final readonly class CreateScaleSubmissionAction
 
         try {
             Mail::to($submission->email)
-                ->locale($submission->locale ?: config('app.locale'))
+                ->locale($submission->locale ?: config('festilaw.default_locale'))
                 ->send(new ScaleSpaceLink($submission));
         } catch (Throwable $e) {
             Log::error('Failed to send the SCALE space link.', [

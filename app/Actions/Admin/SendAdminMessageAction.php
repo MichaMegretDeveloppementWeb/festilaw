@@ -19,7 +19,7 @@ final readonly class SendAdminMessageAction
     public function execute(Submission $submission, string $subject, string $body): void
     {
         Mail::to($submission->email)
-            ->locale($submission->locale ?: config('app.locale'))
+            ->locale($submission->locale ?: config('festilaw.default_locale'))
             ->send(new AdminMessageToClient($submission, $subject, $body));
 
         $submission->touch();

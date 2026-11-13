@@ -235,7 +235,7 @@ final class SignWellSignatureGateway implements SignatureGatewayInterface
      */
     private function signerLanguage(Submission $submission): string
     {
-        $locale = (string) ($submission->locale ?: config('app.locale'));
+        $locale = (string) ($submission->locale ?: config('festilaw.default_locale'));
 
         return in_array($locale, ['en', 'fr', 'es'], true) ? $locale : 'en';
     }

@@ -51,7 +51,7 @@ final readonly class UploadCountersignedContractAction
 
         try {
             Mail::to($submission->email)
-                ->locale($submission->locale ?: config('app.locale'))
+                ->locale($submission->locale ?: config('festilaw.default_locale'))
                 ->send(new CountersignedContractAvailable($submission));
         } catch (Throwable $e) {
             Log::error('Failed to send the counter-signed contract email.', [

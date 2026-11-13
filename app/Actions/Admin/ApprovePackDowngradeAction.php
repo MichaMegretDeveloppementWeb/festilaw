@@ -46,7 +46,7 @@ final readonly class ApprovePackDowngradeAction
 
         try {
             Mail::to($submission->email)
-                ->locale($submission->locale ?: config('app.locale'))
+                ->locale($submission->locale ?: config('festilaw.default_locale'))
                 ->send(new PackDowngradeApproved($submission->fresh(), $downgrade->fresh()));
         } catch (Throwable $e) {
             Log::error('Failed to send the pack downgrade approval email.', ['exception' => $e, 'submission' => $submission->id]);

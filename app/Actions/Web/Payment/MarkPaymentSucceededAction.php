@@ -154,7 +154,7 @@ final readonly class MarkPaymentSucceededAction
 
         try {
             Mail::to($submission->email)
-                ->locale($submission->locale ?: config('app.locale'))
+                ->locale($submission->locale ?: config('festilaw.default_locale'))
                 ->send($mailable);
         } catch (Throwable $e) {
             Log::error('Failed to send the payment confirmation email.', [
