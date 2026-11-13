@@ -13,7 +13,7 @@
             @else
                 <p class="funnel-success__text">{!! __('You already have a :pack application in progress. We\'ve just emailed your secure link to :email so you can pick up right where you left off.', ['pack' => e(__($resentPackLabel ?? $packLabel)), 'email' => '<strong>'.e($email).'</strong>']) !!}</p>
             @endif
-            <a href="{{ route('home') }}" class="btn btn--outline-dark btn--sm">{{ __('Back to home') }}</a>
+            <a href="{{ localized_route('home') }}" class="btn btn--outline-dark btn--sm">{{ __('Back to home') }}</a>
         </div>
     @elseif ($sent)
         <div class="funnel-success">
@@ -22,7 +22,7 @@
             </div>
             <h3 class="funnel-success__title">{{ __('Your file is open.') }}</h3>
             <p class="funnel-success__text">{{ __('We\'ve received your details and will be in touch to guide you through the next steps: uploading your documents, signing your mandate and paying securely.') }}</p>
-            <a href="{{ route('home') }}" class="btn btn--outline-dark btn--sm">{{ __('Back to home') }}</a>
+            <a href="{{ localized_route('home') }}" class="btn btn--outline-dark btn--sm">{{ __('Back to home') }}</a>
         </div>
     @else
         <form wire:submit="submit" class="funnel-form" novalidate>

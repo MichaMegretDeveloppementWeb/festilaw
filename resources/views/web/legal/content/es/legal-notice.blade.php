@@ -26,7 +26,7 @@
 <p>Festilaw B.V. no es responsable del contenido de los sitios web de terceros a los que puedan remitir los enlaces.</p>
 
 <h2>6. Datos personales</h2>
-<p>Festilaw B.V. trata los datos personales recogidos a través de este sitio web (formulario de contacto, área de cliente, correspondencia por correo electrónico) en calidad de responsable del tratamiento, de conformidad con el Reglamento (UE) 2016/679 (RGPD). Los detalles del tratamiento y de sus derechos figuran en nuestra <a href="{{ route('privacy-policy') }}">política de privacidad</a>.</p>
+<p>Festilaw B.V. trata los datos personales recogidos a través de este sitio web (formulario de contacto, área de cliente, correspondencia por correo electrónico) en calidad de responsable del tratamiento, de conformidad con el Reglamento (UE) 2016/679 (RGPD). Los detalles del tratamiento y de sus derechos figuran en nuestra <a href="{{ localized_route('privacy-policy') }}">política de privacidad</a>.</p>
 <p>Para ejercer sus derechos: <a href="mailto:team@festilaw.com">team@festilaw.com</a></p>
 <p>Puede presentar una reclamación ante la Autoriteit Persoonsgegevens (la autoridad neerlandesa de protección de datos) o ante la autoridad de control de su Estado miembro de residencia.</p>
 

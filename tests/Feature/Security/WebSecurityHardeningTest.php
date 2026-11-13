@@ -34,13 +34,23 @@ it('sets security headers on a 404 error response too (headers are global, not w
 });
 
 it('redirects the language switch back to a same-origin page', function () {
+    // Page a adresse unique (tunnel) : retour a la meme adresse, la langue est en session.
+    get('/language/fr', ['referer' => route('get-started.index')])
+        ->assertRedirect(route('get-started.index'));
+
+    // Page publique (une adresse par langue) : retour a son equivalent dans la langue demandee.
     get('/language/fr', ['referer' => url('/pricing')])
-        ->assertRedirect(url('/pricing'));
+        ->assertRedirect(url('/fr/pricing'));
 });
 
 it('never follows an external referer on the language switch (no open redirect)', function () {
+    // Jamais vers l'hote externe : accueil du site, dans la langue demandee.
     get('/language/fr', ['referer' => 'https://evil.example/phish'])
-        ->assertRedirect(route('home'));
+        ->assertRedirect(route('fr.home'));
+
+    // Meme chemin qu'une page publique, mais sur un autre hote : il n'est pas "traduit" pour autant.
+    get('/language/es', ['referer' => 'https://evil.example/pricing'])
+        ->assertRedirect(route('es.home'));
 });
 
 it('flags an incomplete production configuration as unfit for production', function () {

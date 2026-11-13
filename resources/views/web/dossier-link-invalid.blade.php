@@ -30,7 +30,7 @@
                 <livewire:web.funnel.access-file-form />
             </div>
 
-            <p class="my-project__support">{!! __('Requested a Scale audit? :contact and we\'ll send you a new link.', ['contact' => '<a href="'.route('contact').'">'.e(__('Contact us')).'</a>']) !!}</p>
+            <p class="my-project__support">{!! __('Requested a Scale audit? :contact and we\'ll send you a new link.', ['contact' => '<a href="'.localized_route('contact').'">'.e(__('Contact us')).'</a>']) !!}</p>
         </div>
     </section>
 @endsection

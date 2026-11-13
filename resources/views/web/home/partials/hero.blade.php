@@ -8,7 +8,7 @@
         </div>
         <div class="hero__actions">
             <a href="{{ route('get-started.index') }}" class="btn btn--coral btn--lg">{{ __('Get compliant in 24h') }}</a>
-            <a href="{{ route('home') }}#quiz" class="btn btn--outline-light btn--lg">{{ __('Am I eligible? Take the quiz') }}</a>
+            <a href="{{ localized_route('home') }}#quiz" class="btn btn--outline-light btn--lg">{{ __('Am I eligible? Take the quiz') }}</a>
         </div>
     </div>
 </section>

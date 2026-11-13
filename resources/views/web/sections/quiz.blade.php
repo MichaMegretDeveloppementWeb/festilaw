@@ -70,9 +70,9 @@
                 <h3 class="quiz__result-title" tabindex="-1">{{ __('Your eligibility result') }}</h3>
                 <p class="quiz__result-text"></p>
                 <div class="quiz__result-actions">
-                    <a data-result-link="concerned" href="{{ route('pricing') }}" class="btn btn--coral btn--sm">{{ __('See the plans') }}</a>
-                    <a data-result-link="excluded" hidden href="{{ route('excluded-products') }}" class="btn btn--coral btn--sm">{{ __('See excluded products') }}</a>
-                    <a data-result-link="notConcerned" hidden href="{{ route('contact') }}" class="btn btn--coral btn--sm">{{ __('Contact us') }}</a>
+                    <a data-result-link="concerned" href="{{ localized_route('pricing') }}" class="btn btn--coral btn--sm">{{ __('See the plans') }}</a>
+                    <a data-result-link="excluded" hidden href="{{ localized_route('excluded-products') }}" class="btn btn--coral btn--sm">{{ __('See excluded products') }}</a>
+                    <a data-result-link="notConcerned" hidden href="{{ localized_route('contact') }}" class="btn btn--coral btn--sm">{{ __('Contact us') }}</a>
                     <button type="button" class="btn btn--outline-dark btn--sm" data-restart>{{ __('Start over') }}</button>
                 </div>
             </div>

@@ -8,7 +8,7 @@
         [
             '@type' => 'ContactPage',
             'name' => __('Contact Festilaw'),
-            'url' => route('contact'),
+            'url' => localized_route('contact'),
         ],
     ];
 @endphp

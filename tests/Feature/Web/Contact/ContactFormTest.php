@@ -55,3 +55,25 @@ it('rejects an invalid email', function () {
 
     expect(Submission::count())->toBe(0);
 });
+
+it('records the language of the page for a contact sent from a translated address', function () {
+    Mail::fake();
+
+    // Page publique francaise : la langue vient de l'adresse et le composant la conserve a chaque echange.
+    $this->get(route('fr.contact'))
+        ->assertOk()
+        ->assertSee('<html lang="fr">', false)
+        ->assertSeeLivewire(ContactForm::class);
+
+    Livewire::test(ContactForm::class)
+        ->set('name', 'Camille Roux')
+        ->set('email', 'camille@example.com')
+        ->set('message', 'Nous vendons des bougies artisanales vers la France.')
+        ->call('save')
+        ->assertHasNoErrors()
+        ->assertSet('sent', true)
+        // Le lien vers la politique de confidentialite reste en francais apres la mise a jour Livewire.
+        ->assertDontSee('href="'.route('privacy-policy').'"', false);
+
+    expect(Submission::sole()->locale)->toBe('fr');
+});

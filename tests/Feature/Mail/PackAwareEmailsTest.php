@@ -32,3 +32,15 @@ it('names the pack in the active-dossier resume link subject', function () {
     (new StarterResumeLink($creator))->assertHasSubject('Your Festilaw Creator Pack');
     (new StarterResumeLink($pro))->assertHasSubject('Your Festilaw Pro Pack');
 });
+
+it('links the email logo to the home page in the language of the recipient', function (string $locale, string $homeRoute) {
+    $submission = Submission::factory()->starter()->create(['locale' => $locale]);
+
+    (new StarterPaymentConfirmed($submission))
+        ->locale($locale)
+        ->assertSeeInHtml('<a href="'.route($homeRoute).'" style="text-decoration:none;">', false);
+})->with([
+    'en' => ['en', 'home'],
+    'fr' => ['fr', 'fr.home'],
+    'es' => ['es', 'es.home'],
+]);

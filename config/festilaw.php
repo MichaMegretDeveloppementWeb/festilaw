@@ -5,9 +5,17 @@ declare(strict_types=1);
 return [
 
     /*
-     | Langues proposees par le selecteur (traduction visuelle uniquement, cf. SetLocale). L'ordre
-     | definit l'affichage. La langue canonique / par defaut vient de config('app.locale') (APP_LOCALE) :
-     | le site n'est PAS un multilingue reference (un seul jeu d'URLs, pas de hreflang).
+     | Langue par defaut du site (APP_LOCALE) : ses pages publiques n'ont pas de prefixe d'adresse. A lire
+     | ICI et non dans config('app.locale'), que Laravel reecrit a chaque app()->setLocale() : en cours de
+     | requete, config('app.locale') est la langue COURANTE, pas la langue par defaut.
+     */
+    'default_locale' => env('APP_LOCALE', 'en'),
+
+    /*
+     | Langues du site. L'ordre definit l'affichage du selecteur. Les pages publiques des langues autres
+     | que la langue par defaut sont servies sous /{langue} (routes/localized.php), avec hreflang et
+     | sitemap. Le tunnel et l'espace client n'ont qu'une adresse : leur langue vient de la session
+     | (cf. SetLocale).
      */
     'supported_locales' => ['en', 'fr', 'es'],
 
@@ -18,6 +26,15 @@ return [
         'en' => 'EN',
         'fr' => 'FR',
         'es' => 'ES',
+    ],
+
+    /*
+     | Valeur des balises og:locale / og:locale:alternate (format langue_TERRITOIRE attendu par Open Graph).
+     */
+    'og_locales' => [
+        'en' => 'en_US',
+        'fr' => 'fr_FR',
+        'es' => 'es_ES',
     ],
 
     /*

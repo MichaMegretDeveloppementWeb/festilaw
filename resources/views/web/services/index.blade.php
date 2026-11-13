@@ -5,8 +5,8 @@
 
 @php
     $breadcrumbs = [
-        ['name' => __('Home'), 'url' => route('home')],
-        ['name' => __('Our Services'), 'url' => route('services')],
+        ['name' => __('Home'), 'url' => localized_route('home')],
+        ['name' => __('Our Services'), 'url' => localized_route('services')],
     ];
     $jsonLdNodes = [
         [
@@ -15,7 +15,7 @@
             'name' => __('GPSR compliance services'),
             'provider' => ['@type' => 'Organization', 'name' => config('app.name')],
             'areaServed' => 'EU',
-            'url' => route('services'),
+            'url' => localized_route('services'),
         ],
     ];
 @endphp
@@ -31,7 +31,7 @@
             <span class="eyebrow page-hero__eyebrow">{{ __('Our Services') }}</span>
             <h1 class="page-hero__title">{{ __('Your full GPSR service,') }} <span class="page-hero__title-em">{{ __('handled') }}</span></h1>
             <p class="page-hero__lead">{{ __('One partner for legal representation, compliance assessment, documentation, authority liaison and ongoing monitoring, so you can sell into Europe with confidence.') }}</p>
-            <p class="page-hero__links"><a href="{{ route('pricing') }}">{{ __('View plans and pricing') }} →</a></p>
+            <p class="page-hero__links"><a href="{{ localized_route('pricing') }}">{{ __('View plans and pricing') }} →</a></p>
         </div>
     </section>
 

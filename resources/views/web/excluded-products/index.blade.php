@@ -5,14 +5,14 @@
 
 @php
     $breadcrumbs = [
-        ['name' => __('Home'), 'url' => route('home')],
-        ['name' => __('Excluded products'), 'url' => route('excluded-products')],
+        ['name' => __('Home'), 'url' => localized_route('home')],
+        ['name' => __('Excluded products'), 'url' => localized_route('excluded-products')],
     ];
     $jsonLdNodes = [
         [
             '@type' => 'WebPage',
             'name' => __('Excluded products'),
-            'url' => route('excluded-products'),
+            'url' => localized_route('excluded-products'),
             'description' => __('Product categories outside Festilaw scope, governed by separate EU frameworks.'),
         ],
     ];
@@ -67,7 +67,7 @@
                 </div>
             </div>
 
-            <p class="excluded__note">{{ __('Not sure whether your products are covered?') }} <a href="{{ route('contact') }}" class="excluded__link">{{ __('Send us an email') }}</a> {{ __('and we\'ll point you in the right direction.') }}</p>
+            <p class="excluded__note">{{ __('Not sure whether your products are covered?') }} <a href="{{ localized_route('contact') }}" class="excluded__link">{{ __('Send us an email') }}</a> {{ __('and we\'ll point you in the right direction.') }}</p>
         </div>
     </section>
 

@@ -5,8 +5,8 @@
 
 @php
     $breadcrumbs = [
-        ['name' => __('Home'), 'url' => route('home')],
-        ['name' => __('Understand GPSR'), 'url' => route('understand-gpsr')],
+        ['name' => __('Home'), 'url' => localized_route('home')],
+        ['name' => __('Understand GPSR'), 'url' => localized_route('understand-gpsr')],
     ];
     $faqItems = [
         ['q' => __('What is the GPSR?'), 'a' => __('The General Product Safety Regulation (Regulation (EU) 2023/988) is the EU law on consumer product safety. It has applied since 13 December 2024 and replaces the former General Product Safety Directive. It requires, among other things, that an economic operator established in the EU be responsible for products sold to EU consumers.')],
@@ -22,7 +22,7 @@
         [
             '@type' => 'WebPage',
             'name' => __('Understand the GPSR'),
-            'url' => route('understand-gpsr'),
+            'url' => localized_route('understand-gpsr'),
             'description' => __('What the EU General Product Safety Regulation (GPSR) is, its three core pillars, who it applies to, and which products need specialized services.'),
         ],
         [
@@ -92,7 +92,7 @@
                     <h2 class="gtabs__panel-title">{{ __('Does this apply to your business?') }}</h2>
                     <p>{{ __('If you sell non-food consumer products to customers inside the European Union, whether you are an e-commerce brand, an international manufacturer, or a marketplace seller, then yes, the GPSR applies directly to you.') }}</p>
                     <p class="gtabs__good"><strong>{{ __('The good news:') }}</strong> {{ __('you don\'t have to navigate the European legal maze alone. Festilaw is here to assess your products, define your exact documentation blueprint, and handle the authority liaison so you can focus entirely on what you do best: growing your business.') }}</p>
-                    <p><a href="{{ route('services') }}" class="gtabs__link">{{ __('See how Festilaw handles your GPSR compliance') }} →</a></p>
+                    <p><a href="{{ localized_route('services') }}" class="gtabs__link">{{ __('See how Festilaw handles your GPSR compliance') }} →</a></p>
                 </div>
 
                 <div class="gtabs__panel" role="tabpanel" id="gpsr-panel-3" aria-labelledby="gpsr-tab-3" tabindex="0" hidden>
@@ -104,8 +104,8 @@
                         <li>{{ __('Aviation, Aerospace & Military Equipment (subject to strict defense and aerospace safety standards).') }}</li>
                         <li>{{ __('Pharmaceuticals & Human Medicines (requires European Medicines Agency (EMA) approval).') }}</li>
                     </ul>
-                    <p><a href="{{ route('excluded-products') }}" class="gtabs__link">{{ __('See the full list of products we don\'t cover') }} →</a></p>
-                    <p>{{ __('If you are in doubt,') }} <a href="{{ route('contact') }}" class="gtabs__link">{{ __('send us an email') }}</a>.</p>
+                    <p><a href="{{ localized_route('excluded-products') }}" class="gtabs__link">{{ __('See the full list of products we don\'t cover') }} →</a></p>
+                    <p>{{ __('If you are in doubt,') }} <a href="{{ localized_route('contact') }}" class="gtabs__link">{{ __('send us an email') }}</a>.</p>
                 </div>
             </div>
         </div>

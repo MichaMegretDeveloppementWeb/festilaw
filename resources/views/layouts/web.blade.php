@@ -14,12 +14,13 @@
     <link rel="manifest" href="{{ asset('site.webmanifest') }}">
 
     {{-- SEO de base. Chaque page surcharge via @section ; sinon, repli calque sur la page d'accueil.
-         Langue canonique du site : anglais. La traduction FR/ES est purement visuelle (locale en
-         session) : un seul jeu d'URLs, un seul canonical, aucun hreflang. --}}
+         Les pages publiques ont une adresse par langue (anglais sans prefixe, /fr, /es) : chaque version
+         est son propre canonical et declare ses equivalents (hreflang, x-default = anglais). --}}
     <title>@yield('title', 'Festilaw · Your GPSR Responsible Person')</title>
     <meta name="description" content="@yield('meta_description', 'Sell safely in the European market. Festilaw is your GPSR Responsible Person, with dedicated support from entrepreneurs for entrepreneurs.')">
     <meta name="robots" content="@yield('robots', 'index, follow')">
     <link rel="canonical" href="{{ url()->current() }}">
+    <x-seo.alternates />
 
     {{-- Open Graph --}}
     <meta property="og:site_name" content="{{ config('app.name') }}">
@@ -31,7 +32,7 @@
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:image:alt" content="Festilaw">
-    <meta property="og:locale" content="{{ str_replace('-', '_', app()->getLocale()) }}">
+    <meta property="og:locale" content="{{ config('festilaw.og_locales.'.app()->getLocale(), 'en_US') }}">
 
     {{-- Twitter --}}
     <meta name="twitter:card" content="summary_large_image">

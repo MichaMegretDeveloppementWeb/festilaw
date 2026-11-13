@@ -44,7 +44,7 @@
 
                 @if ($project->cancelled)
                     <p class="my-project__note">{{ __('This project was cancelled. Get in touch if you\'d like to reopen it.') }}</p>
-                    <a href="{{ route('contact') }}" class="btn btn--outline-dark btn--sm">{{ __('Contact us') }}</a>
+                    <a href="{{ localized_route('contact') }}" class="btn btn--outline-dark btn--sm">{{ __('Contact us') }}</a>
                 @else
                     @if ($justUpgraded)
                         {{-- Retour du paiement du passage au Pro (SC12), confirme au retour. --}}
@@ -159,7 +159,7 @@
                 @endif
             </div>
 
-            <p class="my-project__support">{{ __('Need anything?') }} <a href="{{ route('contact') }}">{{ __('Contact us') }}</a> · {{ __('real humans, happy to help.') }}</p>
+            <p class="my-project__support">{{ __('Need anything?') }} <a href="{{ localized_route('contact') }}">{{ __('Contact us') }}</a> · {{ __('real humans, happy to help.') }}</p>
         </div>
     </section>
 @endsection

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Services\Web\Localization\LocalizedUrlGenerator;
 use Illuminate\Http\Response;
 
 final class SitemapController extends Controller
@@ -23,15 +24,21 @@ final class SitemapController extends Controller
         'contact',
     ];
 
-    public function __invoke(): Response
+    /**
+     * Chaque page figure une fois par langue, avec ses equivalents dans les autres langues (hreflang).
+     */
+    public function __invoke(LocalizedUrlGenerator $localizedUrls): Response
     {
-        $urls = array_map(
-            static fn (string $name): string => route($name),
+        $pages = array_map(
+            static fn (string $name): array => $localizedUrls->inAllLocales($name),
             self::INDEXABLE_ROUTES,
         );
 
         return response()
-            ->view('sitemap', ['urls' => $urls])
+            ->view('sitemap', [
+                'pages' => $pages,
+                'defaultLocale' => $localizedUrls->defaultLocale(),
+            ])
             ->header('Content-Type', 'application/xml');
     }
 }

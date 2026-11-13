@@ -6,9 +6,6 @@ use App\Http\Controllers\Admin\AdminDocumentDownloadController;
 use App\Http\Controllers\Admin\AdminMandateDownloadController;
 use App\Http\Controllers\Admin\LogoutController;
 use App\Http\Controllers\SitemapController;
-use App\Http\Controllers\Web\About\AboutController;
-use App\Http\Controllers\Web\Contact\ContactController;
-use App\Http\Controllers\Web\ExcludedProducts\ExcludedProductsController;
 use App\Http\Controllers\Web\Funnel\GetStartedController;
 use App\Http\Controllers\Web\Funnel\PaymentReturnController;
 use App\Http\Controllers\Web\Funnel\ProController;
@@ -23,12 +20,8 @@ use App\Http\Controllers\Web\Funnel\StarterJourneyController;
 use App\Http\Controllers\Web\Funnel\StarterMandateDownloadController;
 use App\Http\Controllers\Web\Funnel\StarterProjectController;
 use App\Http\Controllers\Web\Funnel\StarterRenewalController;
-use App\Http\Controllers\Web\Home\HomeController;
-use App\Http\Controllers\Web\Pricing\PricingController;
 use App\Http\Controllers\Web\Quiz\StoreQuizResultController;
-use App\Http\Controllers\Web\Services\ServicesController;
 use App\Http\Controllers\Web\SwitchLocaleController;
-use App\Http\Controllers\Web\UnderstandGpsr\UnderstandGpsrController;
 use App\Http\Controllers\Web\Webhook\PaymentWebhookController;
 use App\Http\Controllers\Web\Webhook\SignatureWebhookController;
 use App\Livewire\Admin\AdminProfile;
@@ -40,8 +33,7 @@ use App\Livewire\Admin\SubmissionList;
 use Illuminate\Support\Facades\Route;
 
 /*
- | Fichiers SEO. Le site a un SEUL jeu d'URLs (langue canonique : anglais). La traduction FR/ES est
- | purement visuelle (locale en session, cf. SetLocale), sans prefixe d'URL ni hreflang.
+ | Fichiers SEO. Le sitemap liste les pages publiques dans chaque langue, avec leurs equivalents (hreflang).
  | robots.txt est un fichier statique (public/robots.txt) servi directement par le serveur web,
  | sans PHP ni session : sa reponse ne peut pas varier selon le robot.
  */
@@ -59,30 +51,29 @@ Route::post('/webhooks/payment/{provider}', PaymentWebhookController::class)->na
 Route::post('/webhooks/signature', SignatureWebhookController::class)->name('webhooks.signature');
 
 /*
- | Bascule de langue (traduction visuelle) : memorise la locale en session, recharge la page courante.
+ | Bascule de langue des pages SANS adresse par langue (tunnel, espace client) : memorise la locale en
+ | session, recharge la page courante. Les pages publiques, elles, ont un lien direct par langue.
  */
 Route::get('/language/{locale}', SwitchLocaleController::class)->name('locale.switch');
 
 /*
- | Espace public. La locale est appliquee par le middleware `setlocale` (groupe web) depuis la session.
+ | Espace public indexable : une adresse par langue (routes/localized.php). La langue par defaut garde
+ | ses adresses sans prefixe ; les autres sont servies sous /{langue}, avec des noms prefixes ({langue}.).
+ | La metadonnee `locale` de la route fixe la langue de la page (cf. SetLocale).
  */
-Route::get('/', HomeController::class)->name('home');
-Route::get('/about', AboutController::class)->name('about');
-Route::get('/understand-gpsr', UnderstandGpsrController::class)->name('understand-gpsr');
-Route::get('/services', ServicesController::class)->name('services');
-Route::get('/pricing', PricingController::class)->name('pricing');
-Route::get('/excluded-products', ExcludedProductsController::class)->name('excluded-products');
-Route::get('/contact', ContactController::class)->name('contact');
+foreach (config('festilaw.supported_locales') as $locale) {
+    $localizedRoutes = Route::metadata(['locale' => $locale]);
+
+    if ($locale !== config('festilaw.default_locale')) {
+        $localizedRoutes = $localizedRoutes->prefix($locale)->name($locale.'.');
+    }
+
+    $localizedRoutes->group(base_path('routes/localized.php'));
+}
 
 /*
- | Pages legales (le contenu definitif est fourni et valide par Festilaw). Indexables, faible priorite.
- */
-Route::view('/legal-notice', 'web.legal.legal-notice')->name('legal-notice');
-Route::view('/privacy-policy', 'web.legal.privacy-policy')->name('privacy-policy');
-Route::view('/terms', 'web.legal.terms')->name('terms');
-
-/*
- | Tunnel de souscription (noindex). Chaque page rend un composant Livewire du parcours.
+ | Tunnel de souscription (noindex). Chaque page rend un composant Livewire du parcours. Pas d'adresse
+ | par langue : la langue d'affichage vient de la session.
  */
 Route::prefix('get-started')->name('get-started.')->group(function () {
     Route::get('/', GetStartedController::class)->name('index');

@@ -332,7 +332,7 @@
         <div class="journey-panel">
             <h2 class="journey-panel__title">{{ __('This file was cancelled') }}</h2>
             <p class="journey-panel__text">{{ __('Please get in touch if you\'d like to reopen it.') }}</p>
-            <a href="{{ route('contact') }}" class="btn btn--outline-dark">{{ __('Contact us') }}</a>
+            <a href="{{ localized_route('contact') }}" class="btn btn--outline-dark">{{ __('Contact us') }}</a>
         </div>
     @endif
 </div>

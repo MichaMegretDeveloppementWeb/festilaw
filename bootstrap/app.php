@@ -4,6 +4,7 @@ use App\Http\Middleware\AlertOnStalledScheduler;
 use App\Http\Middleware\EnsureProductionIsConfigured;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetLocale;
+use App\Http\Middleware\SetLocaleFromPathPrefix;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -36,8 +37,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // est leve avant le groupe web) : SecurityHeaders est donc global, pas dans le groupe web.
         $middleware->append(SecurityHeaders::class);
 
-        // Sur chaque requete web (apres StartSession) : SetLocale applique la locale de session
-        // (y compris /livewire/update).
+        // Adresse inconnue sous /fr ou /es : la 404 est rendue avant le groupe web, donc sans SetLocale.
+        // Ce middleware global lui donne la langue du prefixe (sinon elle s'afficherait en anglais).
+        $middleware->append(SetLocaleFromPathPrefix::class);
+
+        // Sur chaque requete web (apres StartSession) : SetLocale applique la langue de la route pour une
+        // page publique (une adresse par langue), celle de la session ailleurs (y compris /livewire/update).
         $middleware->web(append: [SetLocale::class]);
         // ... et AVANT la resolution des liaisons de route : une page rendue des la liaison (ex. lien de
         // dossier expire, cf. DossierLinkInvalidException) doit deja etre dans la langue du visiteur.

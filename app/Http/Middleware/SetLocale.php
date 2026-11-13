@@ -6,29 +6,47 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Route;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Traduction visuelle : la langue d'affichage vit en SESSION, jamais dans l'URL.
+ * Langue d'affichage de chaque requete web.
  *
- * Le site a un seul jeu d'URLs et une langue canonique (l'anglais, `config('app.locale')`). Le
- * selecteur de langue memorise le choix via SwitchLocaleController ; ce middleware le lit et l'applique
- * sur chaque requete web (y compris les updates Livewire sur /livewire/update). Aucune negociation
- * d'URL, aucun hreflang : ce n'est pas un site multilingue reference, seulement une traduction d'affichage.
+ * Deux familles de pages :
+ *  - les pages publiques indexables ont UNE ADRESSE PAR LANGUE (routes/localized.php) : la langue vient
+ *    de la route (metadonnee `locale`) et elle est recopiee en session, pour que le tunnel et l'espace
+ *    client continuent dans la meme langue ;
+ *  - toutes les autres (tunnel, espace client, /livewire/update...) n'ont qu'une adresse : la langue vient
+ *    de la session, memorisee par les pages publiques ou par SwitchLocaleController.
  *
- * Applique globalement au groupe web (apres le demarrage de session).
+ * Applique au groupe web (apres le demarrage de session) et avant la resolution des liaisons de route.
  */
 final class SetLocale
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $default = (string) config('app.locale');
+        // Pas config('app.locale') : Laravel la reecrit a chaque setLocale() (langue courante, pas par defaut).
+        $default = (string) config('festilaw.default_locale');
+        $supported = (array) config('festilaw.supported_locales');
+
+        $route = $request->route();
+        $routeLocale = $route instanceof Route ? $route->getMetadata('locale') : null;
+
+        if (is_string($routeLocale) && in_array($routeLocale, $supported, true)) {
+            if ($request->hasSession() && $request->session()->get('locale') !== $routeLocale) {
+                $request->session()->put('locale', $routeLocale);
+            }
+
+            app()->setLocale($routeLocale);
+
+            return $next($request);
+        }
 
         $locale = $request->hasSession()
             ? (string) $request->session()->get('locale', $default)
             : $default;
 
-        if (! in_array($locale, config('festilaw.supported_locales'), true)) {
+        if (! in_array($locale, $supported, true)) {
             $locale = $default;
         }
 

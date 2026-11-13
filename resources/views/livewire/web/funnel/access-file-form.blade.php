@@ -6,7 +6,7 @@
             </div>
             <h3 class="funnel-success__title">{{ __('Check your inbox') }}</h3>
             <p class="funnel-success__text">{{ __('If a Festilaw project exists for that email, we\'ve just sent a secure link to access it. It can take a minute to arrive.') }}</p>
-            <a href="{{ route('home') }}" class="btn btn--outline-dark btn--sm">{{ __('Back to home') }}</a>
+            <a href="{{ localized_route('home') }}" class="btn btn--outline-dark btn--sm">{{ __('Back to home') }}</a>
         </div>
     @else
         <form wire:submit="submit" class="funnel-form" novalidate>

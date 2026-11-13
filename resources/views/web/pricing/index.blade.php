@@ -5,8 +5,8 @@
 
 @php
     $breadcrumbs = [
-        ['name' => __('Home'), 'url' => route('home')],
-        ['name' => __('Pricing'), 'url' => route('pricing')],
+        ['name' => __('Home'), 'url' => localized_route('home')],
+        ['name' => __('Pricing'), 'url' => localized_route('pricing')],
     ];
     $faqItems = [
         ['q' => __('How does Festilaw work?'), 'a' => __('You choose the plan that fits your size, complete a short form, upload the required documents, sign your mandate online, and pay securely. We then provide your official EU Responsible Person address and your signed mandate, typically within 24 hours.')],

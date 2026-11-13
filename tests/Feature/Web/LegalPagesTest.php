@@ -19,13 +19,12 @@ it('serves each legal page with the final Festilaw content, in English by defaul
 ]);
 
 it('serves the translated legal pages with the English-prevails notice and a link to the English version', function (string $locale, string $routeName, string $needle, string $notice) {
-    get(route('locale.switch', ['locale' => $locale]))->assertRedirect();
-
-    get(route($routeName))
+    get(route($locale.'.'.$routeName))
         ->assertOk()
         ->assertSee($needle, false)
         ->assertSee($notice, false)
-        ->assertSee(route('locale.switch', ['locale' => 'en']), false)
+        // La version qui fait foi : l'adresse anglaise de la MEME page.
+        ->assertSee('<a href="'.route($routeName).'" hreflang="en">', false)
         ->assertDontSee('working draft', false);
 })->with([
     'fr legal-notice' => ['fr', 'legal-notice', '8. Droit applicable', 'la version anglaise prévaut'],
@@ -37,9 +36,7 @@ it('serves the translated legal pages with the English-prevails notice and a lin
 ]);
 
 it('describes in the privacy policy how the site really works (reformulations validated on 04/10/2026)', function (string $locale, array $present, array $absent) {
-    get(route('locale.switch', ['locale' => $locale]))->assertRedirect();
-
-    $response = get(route('privacy-policy'))->assertOk();
+    $response = get(localized_route('privacy-policy', [], $locale))->assertOk();
 
     // Destinataires : Stripe, Google (reservation des consultations) et Resend ; transferts vers les Etats-Unis
     // (SignWell, Resend, maisons meres de Stripe et Google) sur la base des clauses contractuelles types.

@@ -5,8 +5,8 @@
 
 @php
     $breadcrumbs = [
-        ['name' => __('Home'), 'url' => route('home')],
-        ['name' => __('Legal notice'), 'url' => route('legal-notice')],
+        ['name' => __('Home'), 'url' => localized_route('home')],
+        ['name' => __('Legal notice'), 'url' => localized_route('legal-notice')],
     ];
 @endphp
 

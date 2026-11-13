@@ -4,8 +4,8 @@ use function Pest\Laravel\get;
 
 /*
  | Couverture du site public : rendu des pages et SEO (canonical, JSON-LD, sitemap, robots, fil
- | d'Ariane, FAQ). Un seul jeu d'URLs, langue canonique anglaise : pas de prefixe de langue ni de
- | hreflang (la traduction FR/ES est visuelle, cf. LocaleTest). Pas de base de donnees : GET sur vues.
+ | d'Ariane, FAQ), ici dans la langue par defaut (anglais, adresses sans prefixe). Les versions /fr et
+ | /es et leurs hreflang sont couvertes par LocalizedRoutingTest. Pas de base de donnees : GET sur vues.
  */
 
 dataset('indexable_pages', [
@@ -54,10 +54,12 @@ it('marks marketing pages as indexable', function () {
         ->assertSee('name="robots" content="index, follow"', false);
 });
 
-it('emits no hreflang (single-language site, visual translation only)', function () {
+it('declares the other language versions of a marketing page (hreflang)', function () {
     get(route('about'))
         ->assertOk()
-        ->assertDontSee('hreflang', false);
+        ->assertSee('<link rel="alternate" hreflang="fr" href="'.route('fr.about').'">', false)
+        ->assertSee('<link rel="alternate" hreflang="es" href="'.route('es.about').'">', false)
+        ->assertSee('<link rel="alternate" hreflang="x-default" href="'.route('about').'">', false);
 });
 
 it('includes global and page-specific structured data', function () {
@@ -90,14 +92,38 @@ it('renders the FAQ with FAQPage markup on Understand GPSR and Pricing', functio
         ->assertSee('How does Festilaw work?');
 });
 
-it('serves a valid XML sitemap of the indexable pages', function () {
+it('serves a valid XML sitemap of the indexable pages in every language', function () {
     $response = get('/sitemap.xml')->assertOk();
 
     expect($response->headers->get('Content-Type'))->toContain('xml');
 
-    $response->assertSee(route('home'), false)
-        ->assertSee(route('pricing'), false)
-        ->assertDontSee('/get-started', false);
+    $response->assertSee('<loc>'.route('home').'</loc>', false)
+        ->assertSee('<loc>'.route('pricing').'</loc>', false)
+        ->assertSee('<loc>'.route('fr.pricing').'</loc>', false)
+        ->assertSee('<loc>'.route('es.home').'</loc>', false)
+        ->assertDontSee('/get-started', false)
+        ->assertDontSee('/legal-notice', false);
+
+    // 7 pages x 3 langues, chacune avec ses equivalents (hreflang) et l'anglais par defaut.
+    $alternatesByAddress = [];
+
+    foreach (simplexml_load_string($response->getContent())->url as $url) {
+        $alternates = [];
+
+        foreach ($url->children('http://www.w3.org/1999/xhtml')->link as $link) {
+            $alternates[(string) $link->attributes()->hreflang] = (string) $link->attributes()->href;
+        }
+
+        $alternatesByAddress[(string) $url->loc] = $alternates;
+    }
+
+    expect($alternatesByAddress)->toHaveCount(21)
+        ->and($alternatesByAddress[route('fr.pricing')])->toBe([
+            'en' => route('pricing'),
+            'fr' => route('fr.pricing'),
+            'es' => route('es.pricing'),
+            'x-default' => route('pricing'),
+        ]);
 });
 
 it('ships a static robots.txt that allows every crawler and references the sitemap', function () {
@@ -140,9 +166,7 @@ it('shows the company legal line and the certification in the footer and the tru
 });
 
 it('translates the footer legal line', function () {
-    get(route('locale.switch', ['locale' => 'fr']))->assertRedirect();
-
-    get(route('home'))
+    get(route('fr.home'))
         ->assertOk()
         ->assertSee('Siège social : Nijmegen, Pays-Bas', false)
         ->assertSee('TVA NL860886761B01', false)

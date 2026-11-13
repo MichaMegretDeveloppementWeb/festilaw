@@ -6,7 +6,7 @@
             </div>
             <h3 class="funnel-success__title">{{ __('Audit requested.') }}</h3>
             <p class="funnel-success__text">{{ __('We\'ve received your request and will be in touch shortly with the next steps and the €75 audit payment (deducted from your final contract).') }}</p>
-            <a href="{{ route('home') }}" class="btn btn--outline-dark btn--sm">{{ __('Back to home') }}</a>
+            <a href="{{ localized_route('home') }}" class="btn btn--outline-dark btn--sm">{{ __('Back to home') }}</a>
         </div>
     @else
         <form wire:submit="submit" class="funnel-form" novalidate>

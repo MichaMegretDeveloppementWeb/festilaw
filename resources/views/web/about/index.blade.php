@@ -5,14 +5,14 @@
 
 @php
     $breadcrumbs = [
-        ['name' => __('Home'), 'url' => route('home')],
-        ['name' => __('About'), 'url' => route('about')],
+        ['name' => __('Home'), 'url' => localized_route('home')],
+        ['name' => __('About'), 'url' => localized_route('about')],
     ];
     $jsonLdNodes = [
         [
             '@type' => 'AboutPage',
             'name' => __('About Festilaw'),
-            'url' => route('about'),
+            'url' => localized_route('about'),
             'description' => __('Festilaw is a GPSR compliance partner for brands selling into Europe, built by entrepreneurs, for entrepreneurs.'),
         ],
     ];
