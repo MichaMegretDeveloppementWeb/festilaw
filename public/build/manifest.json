@@ -18,7 +18,7 @@
     "isEntry": true
   },
   "resources/css/web.css": {
-    "file": "assets/web-DNNvhTDU.css",
+    "file": "assets/web-DGiZIKtk.css",
     "name": "web",
     "names": [
       "web.css"
@@ -33,6 +33,24 @@
       "index.css"
     ],
     "src": "resources/css/web/about/index.css",
+    "isEntry": true
+  },
+  "resources/css/web/blog/article.css": {
+    "file": "assets/article-BTk0PPFO.css",
+    "name": "article",
+    "names": [
+      "article.css"
+    ],
+    "src": "resources/css/web/blog/article.css",
+    "isEntry": true
+  },
+  "resources/css/web/blog/index.css": {
+    "file": "assets/index-sSl0BpnP.css",
+    "name": "index",
+    "names": [
+      "index.css"
+    ],
+    "src": "resources/css/web/blog/index.css",
     "isEntry": true
   },
   "resources/css/web/contact/index.css": {
@@ -81,7 +99,7 @@
     "isEntry": true
   },
   "resources/css/web/home/index.css": {
-    "file": "assets/index-Bp01-_Jp.css",
+    "file": "assets/index-BkE5Z_cR.css",
     "name": "index",
     "names": [
       "index.css"

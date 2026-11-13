@@ -30,6 +30,8 @@ export default defineConfig({
                 'resources/css/web/contact/index.css',
                 'resources/css/web/legal/index.css',
                 'resources/css/web/errors/index.css',
+                'resources/css/web/blog/index.css',
+                'resources/css/web/blog/article.css',
                 // Back-office : design system Falcon UI Kit (Tailwind + preset + composants).
                 'resources/css/ui-kit.css',
                 'resources/js/ui-kit.js',

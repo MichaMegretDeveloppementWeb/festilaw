@@ -18,6 +18,9 @@
 
     <div class="site-header__menu site-header__menu--right">
         <a href="{{ localized_route('pricing') }}" @class(['site-header__link', 'is-active' => $localizedUrls->isCurrent('pricing')])>{{ __('Pricing') }}</a>
+        @if ($showBlogLink ?? false)
+            <a href="{{ localized_route('blog.index') }}" @class(['site-header__link', 'is-active' => $localizedUrls->isCurrent('blog.index', 'blog.category', 'blog.show')])>{{ __('Blog') }}</a>
+        @endif
         <a href="{{ localized_route('contact') }}" @class(['site-header__link', 'is-active' => $localizedUrls->isCurrent('contact')])>{{ __('Contact') }}</a>
         <x-layout.web.lang-switch />
         <a href="{{ route('get-started.index') }}" class="btn btn--coral btn--sm">{{ __('Get compliant in 24h') }}</a>
@@ -32,6 +35,9 @@
         <a href="{{ localized_route('understand-gpsr') }}">{{ __('Understand GPSR') }}</a>
         <a href="{{ localized_route('services') }}">{{ __('Our Services') }}</a>
         <a href="{{ localized_route('pricing') }}">{{ __('Pricing') }}</a>
+        @if ($showBlogLink ?? false)
+            <a href="{{ localized_route('blog.index') }}">{{ __('Blog') }}</a>
+        @endif
         <a href="{{ localized_route('contact') }}">{{ __('Contact') }}</a>
         <x-layout.web.lang-switch class="site-header__mobile-lang" />
         <a href="{{ route('get-started.index') }}" class="btn btn--coral">{{ __('Get compliant in 24h') }}</a>

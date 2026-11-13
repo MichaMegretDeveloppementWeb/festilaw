@@ -1,6 +1,11 @@
 <?php
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
 use function Pest\Laravel\get;
+
+// Les pages publiques lisent la base : lien "Blog" de l'en-tete et du pied de page, bloc de l'accueil.
+uses(RefreshDatabase::class);
 
 it('links content pages contextually to the GPSR hub, services, pricing and excluded products', function () {
     // Home -> Understand GPSR (hub), masque sur la page hub elle-meme.

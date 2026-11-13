@@ -1,0 +1,44 @@
+/* Point d'entree CSS du hub du blog et des pages de categorie : en-tete partage, cartes, menu des
+   categories, pagination, puis l'appel a l'action final commun au site. */
+@import '../sections/page-hero.css';
+@import './card.css';
+@import '../sections/final-cta.css';
+
+.blog-list { background: var(--color-cream); padding: clamp(40px, 5vw, 72px) var(--gutter) var(--section-y); }
+.blog-list__inner { max-width: var(--max-width); margin: 0 auto; }
+.blog-list__empty { padding: 40px 0; text-align: center; color: var(--color-ink-soft); font-size: 18px; }
+
+/* Menu des categories : pastilles centrees, la page courante en bleu. */
+.blog-cats { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: clamp(28px, 3.6vw, 44px); }
+.blog-cats__link {
+    padding: 9px 18px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-pill);
+    background: var(--color-card);
+    color: var(--color-ink);
+    font-weight: 600;
+    font-size: 14.5px;
+    transition: border-color 0.2s ease, color 0.2s ease;
+}
+.blog-cats__link:hover { border-color: var(--color-coral); color: var(--color-blue); }
+.blog-cats__link.is-active { background: var(--color-blue); border-color: var(--color-blue); color: var(--color-cream); }
+
+.blog-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 14px 22px; margin-top: clamp(36px, 4.5vw, 56px); }
+.blog-pagination__pages { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.blog-pagination__page {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    height: 44px;
+    padding: 0 10px;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    background: var(--color-card);
+    color: var(--color-ink);
+    font-weight: 600;
+}
+a.blog-pagination__page:hover { border-color: var(--color-coral); color: var(--color-blue); }
+.blog-pagination__page.is-current { background: var(--color-blue); border-color: var(--color-blue); color: var(--color-cream); }
+.blog-pagination__step { color: var(--color-blue); font-weight: 600; }
+.blog-pagination__step:hover { color: var(--color-coral); }

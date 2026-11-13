@@ -1,0 +1,11 @@
+/* Bloc "derniers articles" de l'accueil : trois cartes d'articles et un lien vers le blog. */
+@import '../blog/card.css';
+
+.latest-posts { background: var(--color-cream); padding: var(--section-y) var(--gutter); }
+.latest-posts__inner { max-width: var(--max-width); margin: 0 auto; }
+.latest-posts__head { margin: 0 auto clamp(38px, 4.5vw, 56px); text-align: center; }
+.latest-posts__head .eyebrow { display: inline-block; margin-bottom: 16px; }
+.latest-posts__title { font-size: clamp(30px, 4.2vw, 52px); }
+.latest-posts__more { margin-top: clamp(28px, 3.4vw, 40px); text-align: center; }
+.latest-posts__more-link { color: var(--color-coral); font-weight: 600; }
+.latest-posts__more-link:hover { text-decoration: underline; }

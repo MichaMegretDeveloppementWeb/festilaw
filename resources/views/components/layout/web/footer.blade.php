@@ -15,6 +15,9 @@
                     <a href="{{ localized_route('understand-gpsr') }}">{{ __('Understand GPSR') }}</a>
                     <a href="{{ localized_route('services') }}">{{ __('Our Services') }}</a>
                     <a href="{{ localized_route('pricing') }}">{{ __('Pricing') }}</a>
+                    @if ($showBlogLink ?? false)
+                        <a href="{{ localized_route('blog.index') }}">{{ __('Blog') }}</a>
+                    @endif
                     <a href="{{ localized_route('contact') }}">{{ __('Contact') }}</a>
                     <a href="{{ route('find-my-project') }}">{{ __('Access my project') }}</a>
                 </div>

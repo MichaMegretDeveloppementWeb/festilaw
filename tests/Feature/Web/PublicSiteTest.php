@@ -1,12 +1,17 @@
 <?php
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
 use function Pest\Laravel\get;
 
 /*
  | Couverture du site public : rendu des pages et SEO (canonical, JSON-LD, sitemap, robots, fil
  | d'Ariane, FAQ), ici dans la langue par defaut (anglais, adresses sans prefixe). Les versions /fr et
- | /es et leurs hreflang sont couvertes par LocalizedRoutingTest. Pas de base de donnees : GET sur vues.
+ | /es et leurs hreflang sont couvertes par LocalizedRoutingTest.
  */
+
+// Les pages publiques lisent la base : lien "Blog" de l'en-tete et du pied de page, bloc de l'accueil.
+uses(RefreshDatabase::class);
 
 dataset('indexable_pages', [
     'home' => ['home', 'Your GPSR'],

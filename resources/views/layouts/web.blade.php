@@ -19,7 +19,8 @@
     <title>@yield('title', 'Festilaw · Your GPSR Responsible Person')</title>
     <meta name="description" content="@yield('meta_description', 'Sell safely in the European market. Festilaw is your GPSR Responsible Person, with dedicated support from entrepreneurs for entrepreneurs.')">
     <meta name="robots" content="@yield('robots', 'index, follow')">
-    <link rel="canonical" href="{{ url()->current() }}">
+    {{-- Une page paginee (blog) fournit son canonical : url()->current() ignore ?page=N. --}}
+    <link rel="canonical" href="@yield('canonical', url()->current())">
     <x-seo.alternates />
 
     {{-- Open Graph --}}
@@ -27,11 +28,11 @@
     <meta property="og:type" content="@yield('og_type', 'website')">
     <meta property="og:title" content="@yield('title', 'Festilaw · Your GPSR Responsible Person')">
     <meta property="og:description" content="@yield('meta_description', 'Sell safely in the European market. Festilaw is your GPSR Responsible Person, with dedicated support from entrepreneurs for entrepreneurs.')">
-    <meta property="og:url" content="{{ url()->current() }}">
+    <meta property="og:url" content="@yield('canonical', url()->current())">
     <meta property="og:image" content="@yield('og_image', asset('og-default.png'))">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
-    <meta property="og:image:alt" content="Festilaw">
+    <meta property="og:image:alt" content="@yield('og_image_alt', 'Festilaw')">
     <meta property="og:locale" content="{{ config('festilaw.og_locales.'.app()->getLocale(), 'en_US') }}">
 
     {{-- Twitter --}}

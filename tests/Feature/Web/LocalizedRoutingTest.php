@@ -1,6 +1,9 @@
 <?php
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 
 use function Pest\Laravel\from;
 use function Pest\Laravel\get;
@@ -11,9 +14,12 @@ use function Pest\Laravel\get;
  | session, pour que le tunnel et l'espace client (une seule adresse, langue de session) suivent.
  */
 
+// Les pages publiques lisent la base : lien "Blog" de l'en-tete et du pied de page, bloc de l'accueil.
+uses(RefreshDatabase::class);
+
 dataset('localized_pages', [
     'home', 'about', 'understand-gpsr', 'services', 'pricing', 'excluded-products', 'contact',
-    'legal-notice', 'privacy-policy', 'terms',
+    'legal-notice', 'privacy-policy', 'terms', 'blog.index',
 ]);
 
 dataset('site_locales', ['en', 'fr', 'es']);
@@ -129,8 +135,15 @@ it('never redirects a language switch to another host', function () {
 });
 
 it('forbids public views from linking to a localized page with route()', function () {
-    $localizedPages = 'home|about|understand-gpsr|services|pricing|excluded-products|contact|legal-notice|privacy-policy|terms';
+    // La liste est lue dans le routeur : une page ajoutee a routes/localized.php est couverte d'office.
+    $localizedPages = collect(Route::getRoutes()->getRoutesByName())
+        ->filter(fn ($route): bool => $route->getMetadata('locale') === 'fr')
+        ->keys()
+        ->map(fn (string $name): string => preg_quote(Str::after($name, 'fr.'), '/'))
+        ->implode('|');
     $offenders = [];
+
+    expect(explode('|', $localizedPages))->toContain('pricing', 'terms', 'blog\.index', 'blog\.show');
 
     foreach (File::allFiles(resource_path('views')) as $file) {
         $path = str_replace('\\', '/', $file->getRelativePathname());

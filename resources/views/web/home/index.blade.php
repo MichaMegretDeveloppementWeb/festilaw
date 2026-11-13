@@ -22,5 +22,6 @@
     @include('web.sections.pricing')
     @include('web.sections.why-gpsr')
     @include('web.sections.trust')
+    @include('web.sections.latest-posts', ['posts' => $latestPosts ?? []])
     @include('web.sections.final-cta')
 @endsection

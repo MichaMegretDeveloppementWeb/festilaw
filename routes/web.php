@@ -68,7 +68,12 @@ foreach (config('festilaw.supported_locales') as $locale) {
         $localizedRoutes = $localizedRoutes->prefix($locale)->name($locale.'.');
     }
 
-    $localizedRoutes->group(base_path('routes/localized.php'));
+    // Fonction plutot que chemin de fichier : `$locale` est ainsi en portee dans routes/localized.php, ou
+    // certaines adresses ont un segment traduit (blog). Aucune route n'a de fermeture pour action : le
+    // cache des routes reste possible.
+    $localizedRoutes->group(function () use ($locale): void {
+        require base_path('routes/localized.php');
+    });
 }
 
 /*

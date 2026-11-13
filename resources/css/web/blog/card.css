@@ -1,0 +1,109 @@
+/* Cartes d'articles du blog : grille, carte, carte "a la une". Fichier partage, importe par le hub,
+   la page d'article (articles associes) et l'accueil (derniers articles). */
+
+.post-grid { display: grid; grid-template-columns: 1fr; gap: 26px; }
+
+.post-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: var(--color-card);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: border-color 0.2s ease, transform 0.2s ease;
+}
+.post-card:hover { border-color: var(--color-coral); transform: translateY(-2px); }
+.post-card__media { display: block; aspect-ratio: 16 / 10; background: var(--color-line); overflow: hidden; }
+.post-card__image { display: block; width: 100%; height: 100%; object-fit: cover; }
+.post-card__body { display: flex; flex-direction: column; flex: 1; gap: 10px; padding: 22px 24px 24px; }
+/* Le lien de categorie reste cliquable au-dessus du lien etendu du titre. */
+.post-card__category { position: relative; z-index: 1; align-self: flex-start; font-size: 11.5px; }
+.post-card__category:hover { text-decoration: underline; }
+.post-card__title { font-family: var(--font-sans); font-weight: 600; font-size: 19px; line-height: 1.35; color: var(--color-blue); }
+.post-card__title a { color: inherit; }
+/* Toute la carte est cliquable : le lien du titre s'etend sur la carte entiere. */
+.post-card__title a::after { content: ''; position: absolute; inset: 0; }
+.post-card__title a:hover,
+.post-card__title a:focus-visible { color: var(--color-coral); }
+.post-card__excerpt {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
+    color: var(--color-ink-soft);
+    font-size: 15px;
+    line-height: 1.6;
+}
+.post-card__date { margin-top: auto; padding-top: 4px; color: var(--color-ink-soft); font-size: 13.5px; }
+
+/* Article "a la une" : le plus recent, en grand, au-dessus de la grille du hub. */
+.post-featured {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr;
+    margin-bottom: 34px;
+    background: var(--color-card);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: border-color 0.2s ease;
+}
+.post-featured:hover { border-color: var(--color-coral); }
+.post-featured__media { display: block; aspect-ratio: 16 / 10; background: var(--color-line); overflow: hidden; }
+.post-featured__image { display: block; width: 100%; height: 100%; object-fit: cover; }
+.post-featured__body { display: flex; flex-direction: column; justify-content: center; gap: 14px; padding: clamp(24px, 3.4vw, 46px); }
+.post-featured__flag {
+    align-self: flex-start;
+    padding: 6px 13px;
+    border-radius: var(--radius-pill);
+    background: var(--color-blue);
+    color: var(--color-cream);
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+.post-featured__category { position: relative; z-index: 1; align-self: flex-start; }
+.post-featured__category:hover { text-decoration: underline; }
+.post-featured__title { font-size: clamp(27px, 3.1vw, 40px); line-height: 1.14; }
+.post-featured__title a { color: inherit; }
+.post-featured__title a::after { content: ''; position: absolute; inset: 0; }
+.post-featured__title a:hover,
+.post-featured__title a:focus-visible { color: var(--color-coral); }
+.post-featured__excerpt { color: var(--color-ink-soft); font-size: 16.5px; line-height: 1.65; }
+.post-featured__foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 18px; margin-top: 4px; }
+.post-featured__date { color: var(--color-ink-soft); font-size: 14px; }
+.post-featured__more { color: var(--color-coral); font-weight: 600; font-size: 15px; }
+
+/* Texte lu par les lecteurs d'ecran seulement (ex. "Page" devant un numero de pagination). */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+@media (min-width: 680px) {
+    .post-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (min-width: 900px) {
+    .post-featured { grid-template-columns: 1.15fr 1fr; }
+    .post-featured__media { aspect-ratio: auto; min-height: 380px; }
+}
+
+@media (min-width: 1000px) {
+    .post-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .post-card, .post-featured { transition: none; }
+    .post-card:hover { transform: none; }
+}

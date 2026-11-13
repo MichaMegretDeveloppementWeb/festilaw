@@ -25,6 +25,11 @@ use App\Services\Blog\Post\BlogPostReadinessCalculator;
 use App\Services\Blog\Slug\BlogPostSlugAssigner;
 use App\Services\Blog\Slug\BlogSlugGenerator;
 use App\Services\System\SchedulerHealthService;
+use App\Services\Web\Blog\BlogArticlePageService;
+use App\Services\Web\Blog\BlogCategoryPageService;
+use App\Services\Web\Blog\BlogHomeBlockService;
+use App\Services\Web\Blog\BlogHubPageWindow;
+use App\Services\Web\Blog\BlogNavigationService;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -85,6 +90,11 @@ class AppServiceProvider extends ServiceProvider
         ])->needs('$locales')->giveConfig('festilaw.supported_locales');
         $this->app->when(BlogAuthorProvider::class)->needs('$author')->giveConfig('blog.author');
         $this->app->when(BlogAuthorProvider::class)->needs('$defaultLocale')->giveConfig('festilaw.default_locale');
+
+        $this->app->when(BlogHubPageWindow::class)->needs('$perPage')->giveConfig('blog.per_page');
+        $this->app->when(BlogCategoryPageService::class)->needs('$perPage')->giveConfig('blog.per_page');
+        $this->app->when(BlogArticlePageService::class)->needs('$relatedLimit')->giveConfig('blog.related');
+        $this->app->when(BlogHomeBlockService::class)->needs('$limit')->giveConfig('blog.home_latest');
     }
 
     /**
@@ -116,6 +126,12 @@ class AppServiceProvider extends ServiceProvider
                 'creatorAnnualCents' => $pricing->annualCents(SubmissionType::Starter),
                 'proAnnualCents' => $pricing->annualCents(SubmissionType::Pro),
             ]);
+        });
+
+        // Lien "Blog" de l'en-tete et du pied de page : affiche a partir du premier article publie. La
+        // condition vient d'ici (une requete par page, memorisee), jamais d'une requete dans le composant.
+        View::composer(['components.layout.web.header', 'components.layout.web.footer'], static function ($view): void {
+            $view->with('showBlogLink', app(BlogNavigationService::class)->hasPublishedPosts());
         });
 
         // Back-office : etat des taches automatiques (cron), en prod seulement (pas de cron en local).

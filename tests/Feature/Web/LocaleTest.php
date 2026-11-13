@@ -1,5 +1,7 @@
 <?php
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
 use function Pest\Laravel\from;
 use function Pest\Laravel\get;
 
@@ -8,6 +10,9 @@ use function Pest\Laravel\get;
  | (cf. LocalizedRoutingTest). Les pages a adresse unique (tunnel, espace client) gardent la langue en
  | session, changee par le selecteur.
  */
+
+// Les pages publiques lisent la base : lien "Blog" de l'en-tete et du pied de page, bloc de l'accueil.
+uses(RefreshDatabase::class);
 
 it('displays English by default at the unprefixed address', function () {
     get(route('pricing'))

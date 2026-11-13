@@ -1,0 +1,60 @@
+/* Point d'entree CSS de la page d'un article : bandeau, image principale, colonne de lecture, sources,
+   incitation (quiz et tarifs), articles associes. Le fil d'Ariane vient de page-hero.css. */
+@import '../sections/page-hero.css';
+@import './card.css';
+@import './prose.css';
+
+.article { background: var(--color-cream); }
+
+/* Bandeau bleu : comme .page-hero, avec un titre en casse normale (un titre d'article est long). */
+.article-hero { background: var(--color-blue); padding: clamp(34px, 4.6vw, 64px) var(--gutter) clamp(44px, 5.6vw, 80px); text-align: center; }
+.article-hero .breadcrumb { margin-bottom: 22px; }
+.article-hero__inner { max-width: 860px; margin: 0 auto; }
+.article-hero__category { display: inline-block; margin-bottom: 16px; color: var(--color-salmon); }
+.article-hero__category:hover { text-decoration: underline; }
+.article-hero__title { margin-bottom: 18px; color: var(--color-cream); font-size: clamp(30px, 4.6vw, 54px); line-height: 1.12; -webkit-text-stroke: 0.5px currentColor; }
+.article-hero__lead { max-width: 720px; margin: 0 auto 22px; color: var(--color-on-blue); font-size: clamp(16px, 1.8vw, 19px); line-height: 1.6; }
+.article-hero__meta { display: flex; flex-direction: column; gap: 2px; color: var(--color-on-blue); font-size: 14.5px; line-height: 1.7; }
+.article-hero__meta a { color: var(--color-cream); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.article-hero__meta a:hover { color: var(--color-salmon); }
+
+/* L'image principale chevauche le bas du bandeau ; le bandeau lui fait alors de la place. */
+.article:has(.article__cover) .article-hero { padding-bottom: clamp(96px, 12vw, 170px); }
+.article__cover { max-width: 960px; margin: calc(-1 * clamp(64px, 8.5vw, 124px)) auto 0; padding: 0 var(--gutter); }
+.article__cover-image {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: var(--radius-lg);
+    background: var(--color-line);
+    box-shadow: 0 20px 50px rgba(6, 8, 30, 0.28);
+}
+
+/* Colonne de lecture : meme largeur que les pages legales. */
+.article__main { max-width: 760px; margin: 0 auto; padding: clamp(36px, 5vw, 64px) var(--gutter) var(--section-y); box-sizing: content-box; }
+
+.article__sources { margin-top: 44px; padding-top: 28px; border-top: 1px solid var(--color-line); }
+.article__sources-title { margin-bottom: 12px; font-size: 24px; }
+.article__sources-list { padding-left: 22px; list-style: decimal; color: var(--color-ink-soft); font-size: 15px; line-height: 1.7; }
+.article__sources-list li + li { margin-top: 4px; }
+.article__sources-list a { color: var(--color-coral); overflow-wrap: anywhere; }
+.article__sources-list a:hover { text-decoration: underline; }
+
+.article-cta {
+    margin-top: 48px;
+    padding: clamp(24px, 3vw, 36px);
+    border: 1px solid var(--color-line);
+    border-left: 4px solid var(--color-coral);
+    border-radius: var(--radius);
+    background: var(--color-card);
+}
+.article-cta__title { margin-bottom: 10px; font-size: clamp(24px, 2.8vw, 32px); }
+.article-cta__text { margin-bottom: 20px; color: var(--color-ink-soft); }
+.article-cta__actions { display: flex; flex-wrap: wrap; gap: 12px; }
+
+.article-related { padding: var(--section-y) var(--gutter); border-top: 1px solid var(--color-line); background: var(--color-card); }
+.article-related__inner { max-width: var(--max-width); margin: 0 auto; }
+.article-related__title { margin-bottom: clamp(28px, 3.6vw, 44px); text-align: center; font-size: clamp(28px, 3.6vw, 44px); }
+.article-related .post-card { background: var(--color-cream); }

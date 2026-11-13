@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\Web\About\AboutController;
+use App\Http\Controllers\Web\Blog\BlogCategoryController;
+use App\Http\Controllers\Web\Blog\BlogIndexController;
+use App\Http\Controllers\Web\Blog\BlogPostController;
 use App\Http\Controllers\Web\Contact\ContactController;
 use App\Http\Controllers\Web\ExcludedProducts\ExcludedProductsController;
 use App\Http\Controllers\Web\Home\HomeController;
@@ -25,6 +28,23 @@ Route::get('/services', ServicesController::class)->name('services');
 Route::get('/pricing', PricingController::class)->name('pricing');
 Route::get('/excluded-products', ExcludedProductsController::class)->name('excluded-products');
 Route::get('/contact', ContactController::class)->name('contact');
+
+/*
+ | Blog. Le slug d'un article ou d'une categorie est propre a chaque langue, et le segment de categorie
+ | est traduit (category, categorie, categoria) : `$locale` est fourni par routes/web.php. La page
+ | declare elle-meme ses equivalents dans les autres langues (LocalizedUrlGenerator::declareAlternates) ;
+ | `locale_fallback` dit vers quelle page renvoyer quand une adresse ne peut pas etre transposee telle
+ | quelle dans une autre langue.
+ */
+Route::get('/blog', BlogIndexController::class)->name('blog.index');
+Route::get('/blog/'.config('blog.routes.category_segment')[$locale].'/{slug}', BlogCategoryController::class)
+    ->where('slug', '[a-z0-9-]+')
+    ->name('blog.category')
+    ->metadata(['locale_fallback' => 'blog.index']);
+Route::get('/blog/{slug}', BlogPostController::class)
+    ->where('slug', '[a-z0-9-]+')
+    ->name('blog.show')
+    ->metadata(['locale_fallback' => 'blog.index']);
 
 /*
  | Pages legales (le contenu definitif est fourni et valide par Festilaw). Indexables, faible priorite.

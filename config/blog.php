@@ -20,9 +20,29 @@ return [
     ],
 
     /*
-     | Nombre d'articles par page sur le hub et les pages de categorie.
+     | Adresses publiques. Segment de l'adresse d'une categorie dans chaque langue
+     | (/blog/category/..., /fr/blog/categorie/..., /es/blog/categoria/...). Ces mots sont aussi des slugs
+     | reserves pour un article (cf. slug.reserved).
+     */
+    'routes' => [
+        'category_segment' => [
+            'en' => 'category',
+            'fr' => 'categorie',
+            'es' => 'categoria',
+        ],
+    ],
+
+    /*
+     | Nombre d'articles par page sur le hub et les pages de categorie. La premiere page du hub en montre
+     | un de plus : le dernier article y est affiche "a la une", au-dessus de la grille.
      */
     'per_page' => 12,
+
+    /*
+     | Nombre d'articles du bloc "derniers articles" de l'accueil, et d'articles associes en bas d'un article.
+     */
+    'home_latest' => 3,
+    'related' => 3,
 
     /*
      | Slugs. Longueur au-dela de laquelle le slug genere est coupe (entre deux mots), et mots interdits

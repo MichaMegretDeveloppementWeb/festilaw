@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureProductionIsConfigured;
 use App\Services\System\ProductionSafetyService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Mail\Transport\ResendTransport;
 use Illuminate\Support\Facades\Cache;
@@ -22,6 +23,9 @@ function cleanProductionConfig(): void
     config()->set('mail.default', 'smtp');
     config()->set('app.debug', false);
 }
+
+// Les pages publiques lisent la base : lien "Blog" de l'en-tete et du pied de page, bloc de l'accueil.
+uses(RefreshDatabase::class);
 
 it('sets security headers on a normal 200 response', function () {
     get('/')->assertHeader('X-Content-Type-Options', 'nosniff');

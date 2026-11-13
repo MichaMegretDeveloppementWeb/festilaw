@@ -1,6 +1,11 @@
 <?php
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
 use function Pest\Laravel\get;
+
+// Les pages publiques lisent la base : lien "Blog" de l'en-tete et du pied de page, bloc de l'accueil.
+uses(RefreshDatabase::class);
 
 it('renders a branded, translated 404 page with a way back home', function () {
     get('/this-page-does-not-exist')

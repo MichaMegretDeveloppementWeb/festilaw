@@ -40,3 +40,14 @@ it('exposes named tab and panel relationships without Alpine', function () {
             ->assertSee('role="tabpanel" id="gpsr-panel-'.$index.'" aria-labelledby="gpsr-tab-'.$index.'"', false);
     }
 });
+
+it('caches blog images for a long time by their path, never by a file-name pattern', function () {
+    $htaccess = file_get_contents(public_path('.htaccess'));
+
+    // Le serveur local (Nginx) n'execute pas .htaccess : la regle se verifie en production, on garde ici sa forme.
+    expect($htaccess)
+        ->toContain('RewriteRule ^storage/blog/ - [E=BLOG_IMAGE:1]')
+        ->toContain('Header set Cache-Control "public, max-age=31536000, immutable" env=BLOG_IMAGE')
+        // La regle qui marque les images passe avant l'envoi au controleur frontal.
+        ->and(strpos($htaccess, 'E=BLOG_IMAGE:1'))->toBeLessThan(strpos($htaccess, 'RewriteRule ^ index.php [L]'));
+});

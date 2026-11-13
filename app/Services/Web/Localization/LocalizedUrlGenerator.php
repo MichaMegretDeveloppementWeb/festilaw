@@ -24,6 +24,11 @@ use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
  */
 final readonly class LocalizedUrlGenerator
 {
+    /** Request attributes holding what the current page declared (see declareAlternates()). */
+    private const ALTERNATES_ATTRIBUTE = 'localized.alternates';
+
+    private const SWITCHER_ATTRIBUTE = 'localized.switcher';
+
     public function __construct(
         private Router $router,
         private UrlGenerator $url,
@@ -97,6 +102,12 @@ final readonly class LocalizedUrlGenerator
      */
     public function alternates(): array
     {
+        $declared = $this->declared(self::ALTERNATES_ATTRIBUTE);
+
+        if ($declared !== null) {
+            return $declared;
+        }
+
         $route = $this->currentRoute();
         $baseName = $this->baseName($route);
 
@@ -115,6 +126,12 @@ final readonly class LocalizedUrlGenerator
      */
     public function switcherLinks(): array
     {
+        $declared = $this->declared(self::SWITCHER_ATTRIBUTE);
+
+        if ($declared !== null) {
+            return $declared;
+        }
+
         $alternates = $this->alternates();
 
         if ($alternates !== []) {
@@ -154,10 +171,60 @@ final readonly class LocalizedUrlGenerator
             return null;
         }
 
-        $target = $this->route($baseName, $this->uriParameters($route), $locale);
+        $parameters = $this->uriParameters($route);
+        $fallback = $route->getMetadata('locale_fallback');
+
+        // A slug belongs to one language: the address cannot be rebuilt as is in another one. The route says
+        // which parameterless page to land on instead (the blog hub for an article or a category).
+        if ($parameters !== [] && is_string($fallback)) {
+            return $this->route($fallback, [], $locale);
+        }
+
+        $target = $this->route($baseName, $parameters, $locale);
         $query = $request->getQueryString();
 
         return $query === null ? $target : $target.'?'.$query;
+    }
+
+    /**
+     * Lets a page state its own equivalents in the other languages, when they cannot be derived from the
+     * current address: a blog article or category has a different slug in each language. The declaration
+     * lives on the current request (no shared state) and feeds both the hreflang tags and the language
+     * switcher.
+     *
+     * @param  array<string, string>  $urlsByLocale  locale => URL
+     */
+    public function declareAlternates(array $urlsByLocale): void
+    {
+        $request = $this->router->getCurrentRequest();
+
+        $request?->attributes->set(self::ALTERNATES_ATTRIBUTE, $urlsByLocale);
+        $request?->attributes->remove(self::SWITCHER_ATTRIBUTE);
+    }
+
+    /**
+     * For a page that has no equivalent in the other languages although it sits on a localized route (an
+     * error page for an unknown or deleted article): no hreflang tag at all, and the language switcher
+     * leads to the given pages instead (typically the blog hub of each language).
+     *
+     * @param  array<string, string>  $switcherLinks  locale => URL
+     */
+    public function declareNoAlternates(array $switcherLinks): void
+    {
+        $request = $this->router->getCurrentRequest();
+
+        $request?->attributes->set(self::ALTERNATES_ATTRIBUTE, []);
+        $request?->attributes->set(self::SWITCHER_ATTRIBUTE, $switcherLinks);
+    }
+
+    /**
+     * @return array<string, string>|null null when the current page declared nothing
+     */
+    private function declared(string $attribute): ?array
+    {
+        $value = $this->router->getCurrentRequest()?->attributes->get($attribute);
+
+        return is_array($value) ? $value : null;
     }
 
     private function isLocalized(string $name): bool

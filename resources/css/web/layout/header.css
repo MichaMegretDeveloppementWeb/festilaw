@@ -102,6 +102,19 @@
 
 .site-header__mobile.is-open { display: flex; }
 
+/* Menu de bureau : un libelle ne passe jamais sur deux lignes. Entre 1080 et 1279 px, sept liens, le
+   selecteur de langue et le bouton ne tiennent qu'en version resserree (mesure dans les trois langues). */
+.site-header__link,
+.site-header__menu .btn { white-space: nowrap; }
+
+@media (min-width: 1080px) and (max-width: 1279px) {
+    .site-header { padding-left: 28px; padding-right: 28px; gap: 12px; }
+    .site-header__menu { gap: 14px; }
+    .site-header__link { font-size: 15px; }
+    .site-header__menu .btn--sm { padding: 10px 14px; font-size: 13px; }
+    .site-header__menu .lang-switch { gap: 6px; }
+}
+
 @media (min-width: 1080px) {
     .site-header__menu { display: flex; }
     .site-header__burger,
