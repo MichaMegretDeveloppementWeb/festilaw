@@ -1,0 +1,1 @@
+var e={async suggestSlug(e){if(this.$wire.slugEdited[e])return;let t=await this.$wire.suggestSlug(e);this.$wire.slugEdited[e]||(this.$wire.texts[e].slug=t??``)},resetSlug(e){return this.$wire.slugEdited[e]=!1,this.dirty=!0,this.suggestSlug(e)}},t=(e,t)=>{let n=()=>window.Alpine.data(e,t);window.Alpine?n():document.addEventListener(`alpine:init`,n)};export{e as n,t};

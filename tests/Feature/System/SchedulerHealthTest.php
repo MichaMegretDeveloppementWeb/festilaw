@@ -138,7 +138,7 @@ it('shows the last passage in the back-office while the cron runs, and nothing o
     actingAs($admin)->get(route('admin.submissions.index'))
         ->assertOk()
         ->assertSee('Tâches automatiques · il y a 1 min')
-        ->assertSee('inline-block h-2 w-2 rounded-full align-middle bg-emerald-500')
+        ->assertSee('data-scheduler-state="ok"', false)
         ->assertDontSee('ne tournent plus');
 
     $this->artisan('festilaw:scheduler-heartbeat');

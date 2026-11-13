@@ -261,7 +261,7 @@ it('sends a free-form email to the client from the detail screen', function () {
         ->assertSet('emailSubject', '')
         ->assertSet('emailBody', '')
         ->assertDispatched('email-sent')
-        ->assertDispatched('admin-toast');
+        ->assertDispatched('ui-toast');
 
     Mail::assertSent(AdminMessageToClient::class, fn ($mail) => $mail->hasTo($submission->email)
         && $mail->hasSubject('Un point sur votre dossier'));
@@ -346,7 +346,7 @@ it('refuses to issue the RP when the dossier has no active payment', function ()
     Livewire::test(SubmissionDetail::class, ['submission' => $submission])
         ->set('rpAddress', 'Festilaw SAS, Paris')
         ->call('issueResponsiblePerson')
-        ->assertDispatched('admin-toast', type: 'error');
+        ->assertDispatched('ui-toast', type: 'error');
 
     expect($submission->fresh()->status)->toBe(SubmissionStatus::Paid);
     Mail::assertNotSent(StarterResponsiblePersonIssued::class);
@@ -361,7 +361,7 @@ it('refuses to issue the RP when the mandate is not signed', function () {
     Livewire::test(SubmissionDetail::class, ['submission' => $submission])
         ->set('rpAddress', 'Festilaw SAS, Paris')
         ->call('issueResponsiblePerson')
-        ->assertDispatched('admin-toast', type: 'error');
+        ->assertDispatched('ui-toast', type: 'error');
 
     expect($submission->fresh()->status)->toBe(SubmissionStatus::Paid);
     Mail::assertNotSent(StarterResponsiblePersonIssued::class);
@@ -385,7 +385,7 @@ it('refuses to issue the RP when required documents are missing', function () {
     Livewire::test(SubmissionDetail::class, ['submission' => $submission->fresh()])
         ->set('rpAddress', 'Festilaw SAS, Paris')
         ->call('issueResponsiblePerson')
-        ->assertDispatched('admin-toast', type: 'error');
+        ->assertDispatched('ui-toast', type: 'error');
 
     expect($submission->fresh()->status)->toBe(SubmissionStatus::Paid);
     Mail::assertNotSent(StarterResponsiblePersonIssued::class);
@@ -716,7 +716,7 @@ it('re-downloads the signed PDF from the recovery button', function () {
     Livewire::test(SubmissionDetail::class, ['submission' => $submission])
         ->call('recoverSignedMandate')
         ->assertHasNoErrors()
-        ->assertDispatched('admin-toast');
+        ->assertDispatched('ui-toast');
 
     expect($submission->contract->fresh()->signed_file_path)->toBe('contracts/recovered.pdf');
 });
@@ -732,7 +732,7 @@ it('reports an error and keeps the file empty when the provider still has no PDF
 
     Livewire::test(SubmissionDetail::class, ['submission' => $submission])
         ->call('recoverSignedMandate')
-        ->assertDispatched('admin-toast', type: 'error');
+        ->assertDispatched('ui-toast', type: 'error');
 
     expect($submission->contract->fresh()->signed_file_path)->toBeNull();
 });
@@ -753,4 +753,32 @@ it('shows the payments section on a real dossier detail', function () {
 
     Livewire::test(SubmissionDetail::class, ['submission' => Submission::factory()->starter()->create()])
         ->assertSee(__('Paiements'));
+});
+
+it('asks to confirm the deletion of a dossier in a window, not in the browser box', function () {
+    actingAs(User::factory()->create());
+    $submission = Submission::factory()->starter()->create();
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $submission])
+        ->assertSeeHtml("ui-open-modal', 'delete-dossier'")
+        ->assertSee('Supprimer définitivement ce dossier et tous ses fichiers ?')
+        ->assertSee('Action irréversible.')
+        ->assertSeeHtml('wire:click="deleteDossier"')
+        ->assertDontSeeHtml('wire:confirm');
+
+    $contact = Submission::factory()->create(['type' => SubmissionType::Contact]);
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $contact])
+        ->assertSee('Supprimer définitivement cette prise de contact ?')
+        ->assertDontSeeHtml('wire:confirm');
+});
+
+it('shows the client of a dossier in the description list of the kit', function () {
+    actingAs(User::factory()->create());
+    $submission = Submission::factory()->starter()->create(['company_name' => 'Atelier Durand', 'email' => 'contact@atelier-durand.test']);
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $submission])
+        ->assertSeeHtml('ui-description-list')
+        ->assertSee('Atelier Durand')
+        ->assertSeeHtml('href="mailto:contact@atelier-durand.test"');
 });

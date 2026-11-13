@@ -63,7 +63,7 @@ class PricingSettings extends Component
             return;
         }
 
-        $this->dispatch('admin-toast', message: __('Tarifs mis à jour.'), type: 'success');
+        $this->dispatch('ui-toast', title: __('Tarifs mis à jour.'), type: 'success');
     }
 
     private function toEuros(int $cents): string
@@ -81,6 +81,6 @@ class PricingSettings extends Component
         return view('livewire.admin.pricing-settings', [
             'creatorDefault' => $this->toEuros($pricing->defaultCents(SubmissionType::Starter)),
             'proDefault' => $this->toEuros($pricing->defaultCents(SubmissionType::Pro)),
-        ])->title(__('Tarifs').' · Festilaw');
+        ])->title(__('Tarifs'));
     }
 }

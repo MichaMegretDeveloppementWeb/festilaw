@@ -1,254 +1,131 @@
+{{-- Mise en page du back-office : la notre, pas une coquille du kit Falcon (le kit en propose une, sans
+     l'imposer). Elle se declare au kit par ses deux marques : @falconStyles AVANT la feuille de
+     l'application, @falconScripts avant </body> (il pose le conteneur des notifications). Rien a regler
+     dans la configuration du kit ; `php artisan ui-kit:check` verifie l'ensemble.
+     `lang="fr"` : le back-office est redige en francais, quelle que soit la langue du site public.
+     Le titre vient du composant de l'ecran (->title('Dossiers')) : barre du haut et onglet du navigateur.
+     $adminNav et $schedulerStatus : fournis par le View::composer de AppServiceProvider. --}}
+@php($pageTitle = $title ?? __('Back-office'))
 <!DOCTYPE html>
-<html lang="fr" class="h-full bg-page">
+{{-- Une seule classe `class`, le theme du kit dedans, a cote de bg-page (meme element : sinon bande claire). --}}
+<html lang="fr" class="h-full bg-page {{ falcon_theme_class() }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="robots" content="noindex, nofollow">
     <meta name="referrer" content="same-origin">
-    <title>@yield('title', 'Back-office · Festilaw')</title>
+    <title>{{ $pageTitle }} · {{ config('app.name') }}</title>
 
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
 
-    @uiKitHead
-    @vite(['resources/css/ui-kit.css', 'resources/css/admin.css', 'resources/js/ui-kit.js'])
+    @falconStyles
+
+    {{-- La police de la suite (DM Sans), puis la feuille de nos propres vues. --}}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap">
+    @vite(['resources/css/admin.css'])
     @livewireStyles
-    @stack('styles')
 </head>
-<body class="h-full text-primary antialiased">
-    @auth
-        @php($routeSubmission = request()->route('submission'))
-        @php($viewingContact = $routeSubmission instanceof \App\Models\Submission && $routeSubmission->type === \App\Enums\Submission\SubmissionType::Contact)
-        @php($isProfile = request()->routeIs('admin.profile'))
-        @php($isSettings = request()->routeIs('admin.settings'))
-        @php($isQuiz = request()->routeIs('admin.quiz.*'))
-        @php($isContacts = request()->routeIs('admin.contacts.*') || $viewingContact)
-        @php($isDossiers = request()->routeIs('admin.submissions.*') && ! $viewingContact)
+@auth
+    <body class="min-h-full text-primary antialiased">
+        <x-ui::sidebar.frame>
+            <x-slot:bar>
+                <x-ui::sidebar brand="Festilaw">
+                    <x-slot:logo>
+                        <a href="{{ route('admin.submissions.index') }}" aria-label="{{ __('Festilaw, back-office') }}"
+                            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-900 text-sm font-bold text-white dark:bg-white dark:text-gray-900">F</a>
+                    </x-slot:logo>
 
-        <div x-data="{ mobileOpen: false }" @keydown.escape.window="mobileOpen = false" class="md:hidden">
-            <div x-show="mobileOpen" x-cloak x-transition.opacity @click="mobileOpen = false" class="fixed inset-0 z-30 bg-gray-900/20"></div>
+                    @foreach ($adminNav as $group)
+                        <x-ui::sidebar.group :label="$group->title">
+                            @foreach ($group->items as $item)
+                                <x-ui::sidebar.link :href="$item->url" :icon="$item->icon" :active="$item->active">{{ $item->label }}</x-ui::sidebar.link>
+                            @endforeach
+                        </x-ui::sidebar.group>
+                    @endforeach
 
-            <div class="sticky top-0 z-40 border-b border-base bg-surface">
-                <div class="flex items-center justify-between px-4 py-3">
-                    <a href="{{ route('admin.submissions.index') }}" class="flex items-center gap-2">
-                        <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-900 text-sm font-bold text-white">F</span>
-                        <span class="text-[13px] font-semibold text-primary">Festilaw</span>
-                        <span class="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary">Admin</span>
-                    </a>
-                    <button type="button" @click="mobileOpen = ! mobileOpen" :aria-expanded="mobileOpen" aria-label="{{ __('Menu') }}"
-                        class="-mr-1.5 rounded-lg p-1.5 text-secondary transition hover:bg-elevated">
-                        <x-ui.icon x-show="! mobileOpen" name="bars-3" class="h-6 w-6" />
-                        <x-ui.icon x-show="mobileOpen" x-cloak name="x-mark" class="h-6 w-6" />
-                    </button>
+                    <x-ui::sidebar.group>
+                        <x-ui::sidebar.link :href="route('home')" icon="arrow-top-right-on-square" target="_blank" rel="noopener">{{ __('Voir le site public') }}</x-ui::sidebar.link>
+                    </x-ui::sidebar.group>
+
+                    <x-slot:user>
+                        <x-ui::sidebar.user :name="__('Mon compte')" :email="auth()->user()->email" :href="route('admin.profile')" />
+                    </x-slot:user>
+                </x-ui::sidebar>
+            </x-slot:bar>
+
+            <header class="flex h-14 shrink-0 items-center justify-between gap-x-3 border-b border-default bg-surface px-4 sm:px-6">
+                <div class="flex min-w-0 items-center gap-x-3">
+                    <x-ui::sidebar.trigger />
+                    <span class="truncate text-[13px] font-medium text-secondary">{{ $pageTitle }}</span>
                 </div>
-                <div x-show="mobileOpen" x-cloak x-transition class="absolute inset-x-0 top-full z-40 border-t border-base bg-surface px-3 py-3">
-                    <nav class="space-y-1">
-                        <a href="{{ route('admin.submissions.index') }}" @click="mobileOpen = false" @class([
-                            'flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium',
-                            'bg-gray-100 text-gray-900' => $isDossiers,
-                            'text-secondary hover:bg-elevated hover:text-primary' => ! $isDossiers,
-                        ])>
-                            <x-ui.icon name="rectangle-stack" class="h-[18px] w-[18px]" />
-                            {{ __('Dossiers') }}
-                        </a>
-                        <a href="{{ route('admin.contacts.index') }}" @click="mobileOpen = false" @class([
-                            'flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium',
-                            'bg-gray-100 text-gray-900' => $isContacts,
-                            'text-secondary hover:bg-elevated hover:text-primary' => ! $isContacts,
-                        ])>
-                            <x-ui.icon name="envelope" class="h-[18px] w-[18px]" />
-                            {{ __('Prises de contact') }}
-                        </a>
-                        <a href="{{ route('admin.quiz.index') }}" @click="mobileOpen = false" @class([
-                            'flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium',
-                            'bg-gray-100 text-gray-900' => $isQuiz,
-                            'text-secondary hover:bg-elevated hover:text-primary' => ! $isQuiz,
-                        ])>
-                            <x-ui.icon name="question-mark-circle" class="h-[18px] w-[18px]" />
-                            {{ __('Quiz') }}
-                        </a>
-                        <a href="{{ route('admin.settings') }}" @click="mobileOpen = false" @class([
-                            'flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium',
-                            'bg-gray-100 text-gray-900' => $isSettings,
-                            'text-secondary hover:bg-elevated hover:text-primary' => ! $isSettings,
-                        ])>
-                            <x-ui.icon name="currency-euro" class="h-[18px] w-[18px]" />
-                            {{ __('Tarifs') }}
-                        </a>
-                        <a href="{{ route('home') }}" target="_blank" rel="noopener" @click="mobileOpen = false"
-                            class="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-secondary hover:bg-elevated hover:text-primary">
-                            <x-ui.icon name="arrow-top-right-on-square" class="h-[18px] w-[18px]" />
-                            {{ __('Voir le site public') }}
-                        </a>
-                    </nav>
-                    <div class="mt-3 border-t border-base pt-3">
-                        <a href="{{ route('admin.profile') }}" @click="mobileOpen = false" @class([
-                            'flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium',
-                            'bg-gray-100 text-gray-900' => $isProfile,
-                            'text-secondary hover:bg-elevated hover:text-primary' => ! $isProfile,
-                        ])>
-                            <x-ui.icon name="user-circle" class="h-[18px] w-[18px]" />
-                            {{ __('Mon compte') }}
-                        </a>
-                        <div class="mb-2 mt-1 px-3 text-[12px] text-muted">{{ auth()->user()->email }}</div>
-                        <form method="POST" action="{{ route('admin.logout') }}">
-                            @csrf
-                            <button type="submit" class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-secondary hover:bg-elevated hover:text-primary">
-                                <x-ui.icon name="arrow-right-start-on-rectangle" class="h-[18px] w-[18px]" />
-                                {{ __('Se déconnecter') }}
-                            </button>
-                        </form>
-                    </div>
+
+                <div class="flex shrink-0 items-center gap-x-3">
+                    {{-- Etat des taches automatiques (cron), en production seulement. --}}
+                    @if ($schedulerStatus)
+                        @php($schedulerState = $schedulerStatus['stalled'] ? 'stalled' : ($schedulerStatus['lastRunAt'] ? 'ok' : 'unknown'))
+                        <x-ui::badge :dot="true" class="hidden sm:inline-flex" data-scheduler-state="{{ $schedulerState }}"
+                            :color="['stalled' => 'red', 'ok' => 'emerald', 'unknown' => 'gray'][$schedulerState]"
+                            title="{{ $schedulerStatus['lastRunAt'] ? __('Dernier passage : :date (UTC)', ['date' => $schedulerStatus['lastRunAt']->format('d/m/Y H:i')]) : '' }}">
+                            @if ($schedulerStatus['stalled'])
+                                {{ __('Tâches automatiques à l\'arrêt') }}
+                            @elseif ($schedulerStatus['minutesAgo'] === 0)
+                                {{ __('Tâches automatiques · à l\'instant') }}
+                            @elseif ($schedulerStatus['lastRunAt'])
+                                {{ __('Tâches automatiques · il y a :minutes min', ['minutes' => $schedulerStatus['minutesAgo']]) }}
+                            @else
+                                {{ __('Tâches automatiques · aucun passage') }}
+                            @endif
+                        </x-ui::badge>
+                    @endif
+
+                    <form method="POST" action="{{ route('admin.logout') }}">
+                        @csrf
+                        <x-ui::button type="submit" variant="ghost" size="compact" aria-label="{{ __('Se déconnecter') }}">
+                            <x-ui::icon name="arrow-right-start-on-rectangle" />
+                            <span class="hidden sm:inline">{{ __('Se déconnecter') }}</span>
+                        </x-ui::button>
+                    </form>
+
+                    <x-ui::theme-toggle />
                 </div>
-            </div>
-        </div>
+            </header>
 
-        <aside class="admin-sidebar fixed inset-y-0 left-0 z-30 hidden flex-col overflow-hidden border-r border-base bg-surface md:flex">
-            <div class="admin-navitem flex h-16 items-center gap-2 border-b border-base">
-                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-900 text-sm font-bold text-white">F</span>
-                <span class="admin-navlabel text-[15px] font-semibold tracking-tight text-primary">Festilaw</span>
-                <span class="admin-navlabel rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary">Admin</span>
-            </div>
-            <nav class="flex-1 space-y-1 py-3">
-                <a href="{{ route('admin.submissions.index') }}" @class([
-                    'admin-navitem flex items-center gap-2.5 rounded-lg py-2 text-[13px] font-medium transition',
-                    'bg-gray-100 text-gray-900' => $isDossiers,
-                    'text-secondary hover:bg-elevated hover:text-primary' => ! $isDossiers,
-                ])>
-                    <x-ui.icon name="rectangle-stack" class="h-[18px] w-[18px] shrink-0" />
-                    <span class="admin-navlabel">{{ __('Dossiers') }}</span>
-                </a>
-                <a href="{{ route('admin.contacts.index') }}" @class([
-                    'admin-navitem flex items-center gap-2.5 rounded-lg py-2 text-[13px] font-medium transition',
-                    'bg-gray-100 text-gray-900' => $isContacts,
-                    'text-secondary hover:bg-elevated hover:text-primary' => ! $isContacts,
-                ])>
-                    <x-ui.icon name="envelope" class="h-[18px] w-[18px] shrink-0" />
-                    <span class="admin-navlabel">{{ __('Prises de contact') }}</span>
-                </a>
-                <a href="{{ route('admin.quiz.index') }}" @class([
-                    'admin-navitem flex items-center gap-2.5 rounded-lg py-2 text-[13px] font-medium transition',
-                    'bg-gray-100 text-gray-900' => $isQuiz,
-                    'text-secondary hover:bg-elevated hover:text-primary' => ! $isQuiz,
-                ])>
-                    <x-ui.icon name="question-mark-circle" class="h-[18px] w-[18px] shrink-0" />
-                    <span class="admin-navlabel">{{ __('Quiz') }}</span>
-                </a>
-                <a href="{{ route('admin.settings') }}" @class([
-                    'admin-navitem flex items-center gap-2.5 rounded-lg py-2 text-[13px] font-medium transition',
-                    'bg-gray-100 text-gray-900' => $isSettings,
-                    'text-secondary hover:bg-elevated hover:text-primary' => ! $isSettings,
-                ])>
-                    <x-ui.icon name="currency-euro" class="h-[18px] w-[18px] shrink-0" />
-                    <span class="admin-navlabel">{{ __('Tarifs') }}</span>
-                </a>
-            </nav>
-            <div class="mt-auto border-t border-base py-3">
-                <a href="{{ route('admin.profile') }}" @class([
-                    'admin-navitem flex items-center gap-2.5 rounded-lg py-2 text-[13px] font-medium transition',
-                    'bg-gray-100 text-gray-900' => $isProfile,
-                    'text-secondary hover:bg-elevated hover:text-primary' => ! $isProfile,
-                ])>
-                    <x-ui.icon name="user-circle" class="h-[18px] w-[18px] shrink-0" />
-                    <span class="admin-navlabel">{{ __('Mon compte') }}</span>
-                </a>
-                <a href="{{ route('home') }}" target="_blank" rel="noopener"
-                    class="admin-navitem flex items-center gap-2.5 rounded-lg py-2 text-[13px] font-medium text-secondary transition hover:bg-elevated hover:text-primary">
-                    <x-ui.icon name="arrow-top-right-on-square" class="h-[18px] w-[18px] shrink-0" />
-                    <span class="admin-navlabel">{{ __('Voir le site public') }}</span>
-                </a>
-                @if ($schedulerStatus)
-                    {{-- admin-navlabel force display:inline : la pastille est donc un inline-block, pas un enfant flex. --}}
-                    <div class="admin-navlabel px-3 py-1 text-[11px] text-muted" title="{{ $schedulerStatus['lastRunAt'] ? __('Dernier passage : :date (UTC)', ['date' => $schedulerStatus['lastRunAt']->format('d/m/Y H:i')]) : '' }}">
-                        <span @class([
-                            'mr-1 inline-block h-2 w-2 rounded-full align-middle',
-                            'bg-red-500' => $schedulerStatus['stalled'],
-                            'bg-emerald-500' => ! $schedulerStatus['stalled'] && $schedulerStatus['lastRunAt'],
-                            'bg-gray-300' => ! $schedulerStatus['lastRunAt'],
-                        ])></span>
-                        @if ($schedulerStatus['stalled'])
-                            {{ __('Tâches automatiques à l\'arrêt') }}
-                        @elseif ($schedulerStatus['minutesAgo'] === 0)
-                            {{ __('Tâches automatiques · à l\'instant') }}
-                        @elseif ($schedulerStatus['lastRunAt'])
-                            {{ __('Tâches automatiques · il y a :minutes min', ['minutes' => $schedulerStatus['minutesAgo']]) }}
-                        @else
-                            {{ __('Tâches automatiques · aucun passage') }}
-                        @endif
-                    </div>
-                @endif
-                <div class="admin-navlabel px-3 py-1.5 text-[12px] text-muted" title="{{ auth()->user()->email }}">{{ auth()->user()->email }}</div>
-                <form method="POST" action="{{ route('admin.logout') }}">
-                    @csrf
-                    <button type="submit" class="admin-navitem flex w-full items-center gap-2.5 rounded-lg py-2 text-[13px] font-medium text-secondary transition hover:bg-elevated hover:text-primary">
-                        <x-ui.icon name="arrow-right-start-on-rectangle" class="h-[18px] w-[18px] shrink-0" />
-                        <span class="admin-navlabel">{{ __('Se déconnecter') }}</span>
-                    </button>
-                </form>
-            </div>
-        </aside>
+            <main class="flex-1">
+                <div class="mx-auto max-w-[90em] px-4 py-6 sm:px-6 sm:py-8">
+                    @if ($schedulerStatus['stalled'] ?? false)
+                        <x-ui::alert type="error" class="mb-6" :title="__('Les tâches automatiques ne tournent plus depuis le :date (UTC)', ['date' => $schedulerStatus['lastRunAt']->format('d/m/Y à H:i')])">
+                            {{ __('Rappels de renouvellement, vérification des paiements et des signatures, récupération des mandats signés et purges RGPD ne s\'exécutent plus. À vérifier côté hébergement (tâche cron).') }}
+                        </x-ui::alert>
+                    @endif
 
-        <div class="admin-content">
-            <main class="mx-auto max-w-[90em] px-4 py-6 sm:px-6 sm:py-8">
-                @if ($schedulerStatus['stalled'] ?? false)
-                    <x-ui.alert type="error" class="mb-6" :title="__('Les tâches automatiques ne tournent plus depuis le :date (UTC)', ['date' => $schedulerStatus['lastRunAt']->format('d/m/Y à H:i')])">
-                        {{ __('Rappels de renouvellement, vérification des paiements et des signatures, récupération des mandats signés et purges RGPD ne s\'exécutent plus. À vérifier côté hébergement (tâche cron).') }}
-                    </x-ui.alert>
-                @endif
-                {{ $slot ?? '' }}
-                @yield('content')
+                    {{ $slot }}
+                </div>
             </main>
+        </x-ui::sidebar.frame>
+
+        @falconScripts
+        @livewireScripts
+    </body>
+@else
+    {{-- Connexion : une carte au milieu de l'ecran, sans menu. --}}
+    <body class="flex min-h-full items-center justify-center px-4 py-12 text-primary antialiased">
+        <div class="w-full max-w-sm">
+            <div class="mb-8 flex items-center justify-center gap-2">
+                <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-900 text-base font-bold text-white dark:bg-white dark:text-gray-900">F</span>
+                <span class="text-lg font-semibold tracking-tight text-primary">Festilaw</span>
+                <span class="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary dark:bg-gray-800">Admin</span>
+            </div>
+
+            <x-ui::card>
+                {{ $slot }}
+            </x-ui::card>
         </div>
-    @else
-        <main>
-            {{ $slot ?? '' }}
-            @yield('content')
-        </main>
-    @endauth
 
-    {{-- Toast ephemere : retour d'action (evenement admin-toast + flash de session apres redirect). --}}
-    @php($serverFlash = session('admin_flash'))
-    <div
-        x-data="{
-            show: false,
-            msg: '',
-            type: 'success',
-            duration: 4500,
-            timer: null,
-            fire(message, type) {
-                if (! message) { return; }
-                this.msg = message;
-                this.type = type || 'success';
-                this.show = true;
-                clearTimeout(this.timer);
-                this.$nextTick(() => {
-                    const bar = this.$refs.bar;
-                    if (bar) {
-                        bar.style.animation = 'none';
-                        void bar.offsetWidth;
-                        bar.style.animation = 'admin-toast-bar ' + this.duration + 'ms linear forwards';
-                    }
-                });
-                this.timer = setTimeout(() => { this.show = false; }, this.duration);
-            }
-        }"
-        x-init="fire(@js($serverFlash), 'success')"
-        @admin-toast.window="fire($event.detail.message, $event.detail.type)"
-        x-show="show"
-        x-transition.opacity.duration.200ms
-        x-cloak
-        class="fixed bottom-6 right-6 z-50 w-[320px] max-w-[calc(100vw-3rem)] overflow-hidden rounded-xl border border-base bg-surface py-3.5 pl-4 pr-10 shadow-lg"
-        :class="type === 'error' ? 'border-l-4 border-l-red-500' : 'border-l-4 border-l-emerald-500'"
-        role="status"
-        aria-live="polite"
-        style="display: none;"
-    >
-        <p class="text-[13px] font-medium text-primary" x-text="msg"></p>
-        <button type="button" class="absolute right-2 top-2 text-muted transition hover:text-secondary" @click="show = false" aria-label="{{ __('Fermer') }}">
-            <x-ui.icon name="x-mark" class="h-4 w-4" />
-        </button>
-        <span class="absolute bottom-0 left-0 h-0.5 w-full origin-left" :class="type === 'error' ? 'bg-red-500' : 'bg-emerald-500'" x-ref="bar"></span>
-    </div>
-
-    @livewireScripts
-</body>
+        @falconScripts
+        @livewireScripts
+    </body>
+@endauth
 </html>

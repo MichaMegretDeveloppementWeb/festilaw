@@ -18,7 +18,7 @@ use Throwable;
  * par la commande festilaw:create-admin). Limite par IP contre le bruteforce.
  */
 #[Layout('layouts.admin')]
-#[Title('Connexion · Back-office Festilaw')]
+#[Title('Connexion')]
 class LoginForm extends Component
 {
     use HandlesUnexpectedErrors;

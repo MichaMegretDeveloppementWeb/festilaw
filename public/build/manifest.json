@@ -1,20 +1,15 @@
 {
+  "_slug-field-SLrGJlsK.js": {
+    "file": "assets/slug-field-SLrGJlsK.js",
+    "name": "slug-field"
+  },
   "resources/css/admin.css": {
-    "file": "assets/admin-DZZPcf4b.css",
+    "file": "assets/admin-CuBbYaO0.css",
     "name": "admin",
     "names": [
       "admin.css"
     ],
     "src": "resources/css/admin.css",
-    "isEntry": true
-  },
-  "resources/css/ui-kit.css": {
-    "file": "assets/ui-kit-DR5yhALi.css",
-    "name": "ui-kit",
-    "names": [
-      "ui-kit.css"
-    ],
-    "src": "resources/css/ui-kit.css",
     "isEntry": true
   },
   "resources/css/web.css": {
@@ -36,7 +31,7 @@
     "isEntry": true
   },
   "resources/css/web/blog/article.css": {
-    "file": "assets/article-C0JRi1Fz.css",
+    "file": "assets/article-DyQrebCE.css",
     "name": "article",
     "names": [
       "article.css"
@@ -143,16 +138,28 @@
     "src": "resources/css/web/understand-gpsr/index.css",
     "isEntry": true
   },
+  "resources/js/admin/blog-category-form.js": {
+    "file": "assets/blog-category-form-CgdPKnPy.js",
+    "name": "blog-category-form",
+    "src": "resources/js/admin/blog-category-form.js",
+    "isEntry": true,
+    "imports": [
+      "_slug-field-SLrGJlsK.js"
+    ]
+  },
+  "resources/js/admin/blog-post-form.js": {
+    "file": "assets/blog-post-form-pxfkttCh.js",
+    "name": "blog-post-form",
+    "src": "resources/js/admin/blog-post-form.js",
+    "isEntry": true,
+    "imports": [
+      "_slug-field-SLrGJlsK.js"
+    ]
+  },
   "resources/js/app.js": {
     "file": "assets/app-BvRk9kiK.js",
     "name": "app",
     "src": "resources/js/app.js",
-    "isEntry": true
-  },
-  "resources/js/ui-kit.js": {
-    "file": "assets/ui-kit-DGC2G-_5.js",
-    "name": "ui-kit",
-    "src": "resources/js/ui-kit.js",
     "isEntry": true
   },
   "resources/js/web.js": {

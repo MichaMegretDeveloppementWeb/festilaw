@@ -8,4 +8,4 @@
         default => 'gray', // done, muted
     };
 @endphp
-<x-ui.badge :color="$color" dot>{{ $state->label() }}</x-ui.badge>
+<x-ui::badge :color="$color" dot>{{ $state->label() }}</x-ui::badge>

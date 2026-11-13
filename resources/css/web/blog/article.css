@@ -6,6 +6,9 @@
 
 .article { background: var(--color-cream); }
 
+/* Bandeau de l'apercu du back-office : l'article n'est pas (ou pas encore) en ligne sous cette forme. */
+.article-preview { padding: 10px var(--gutter); background: var(--color-ink); color: var(--color-cream); font-size: 14px; font-weight: 600; text-align: center; }
+
 /* Bandeau bleu : comme .page-hero, avec un titre en casse normale (un titre d'article est long). */
 .article-hero { background: var(--color-blue); padding: clamp(10px, 1.6vw, 22px) var(--gutter) clamp(36px, 4.6vw, 64px); text-align: center; }
 .article-hero .breadcrumb { margin-bottom: clamp(16px, 2vw, 24px); }

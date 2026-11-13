@@ -505,7 +505,7 @@ class SubmissionDetail extends Component
             return null;
         }
 
-        session()->flash('admin_flash', $isContact ? __('Prise de contact supprimée.') : __('Dossier supprimé.'));
+        session()->flash('toast-success', $isContact ? __('Prise de contact supprimée.') : __('Dossier supprimé.'));
 
         return $this->redirectRoute($isContact ? 'admin.contacts.index' : 'admin.submissions.index', navigate: true);
     }
@@ -541,12 +541,12 @@ class SubmissionDetail extends Component
             'isScale' => $this->submission->type === SubmissionType::Scale,
             'scaleAuditPaid' => $this->scaleAuditPaid(),
             'appointmentStatuses' => AppointmentStatus::cases(),
-        ])->title(($isContact ? __('Prise de contact') : __('Dossier')).' '.$this->submission->reference.' · Festilaw');
+        ])->title(($isContact ? __('Prise de contact') : __('Dossier')).' '.$this->submission->reference);
     }
 
     /** Retour d'action ephemere cote client : un toast qui s'efface tout seul (cf. layout admin). */
     private function toast(string $message, string $type = 'success'): void
     {
-        $this->dispatch('admin-toast', message: $message, type: $type);
+        $this->dispatch('ui-toast', title: $message, type: $type);
     }
 }

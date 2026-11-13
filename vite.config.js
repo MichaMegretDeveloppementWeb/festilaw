@@ -6,6 +6,7 @@ export default defineConfig({
     plugins: [
         // Tailwind : utilise uniquement par le back-office (resources/css/admin.css importe "tailwindcss").
         // L'espace public reste en CSS modulaire pur (aucun @import "tailwindcss").
+        // Les composants du kit Falcon sont servis deja compiles (public/vendor/falcon) : rien a compiler ici.
         tailwindcss(),
         laravel({
             input: [
@@ -15,9 +16,11 @@ export default defineConfig({
                 'resources/js/web/quiz.js',
                 'resources/js/web/tabs.js',
                 'resources/js/web/blog-categories.js',
+                'resources/js/admin/blog-post-form.js',
+                'resources/js/admin/blog-category-form.js',
                 // Manifeste CSS de l'espace public (base + coquille), charge sur toutes les pages web.
                 'resources/css/web.css',
-                // Back-office (auth) : espace separe, styles sur-mesure.
+                // Back-office (auth) : la feuille de nos propres vues, a cote de celle du kit Falcon.
                 'resources/css/admin.css',
                 // Un point d'entree CSS par page (charge uniquement par la page concernee).
                 'resources/css/web/home/index.css',
@@ -33,9 +36,6 @@ export default defineConfig({
                 'resources/css/web/errors/index.css',
                 'resources/css/web/blog/index.css',
                 'resources/css/web/blog/article.css',
-                // Back-office : design system Falcon UI Kit (Tailwind + preset + composants).
-                'resources/css/ui-kit.css',
-                'resources/js/ui-kit.js',
             ],
             refresh: true,
         }),

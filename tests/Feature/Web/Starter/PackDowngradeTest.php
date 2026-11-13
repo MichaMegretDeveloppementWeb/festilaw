@@ -128,7 +128,7 @@ it('lets Festilaw approve the request: Pro until 31 December, client told by ema
     Livewire::test(SubmissionDetail::class, ['submission' => $dossier->fresh()])
         ->assertSee('Demande de passage au Creator à valider')
         ->call('approvePackDowngrade', PackChange::sole()->id)
-        ->assertDispatched('admin-toast', type: 'success');
+        ->assertDispatched('ui-toast', type: 'success');
 
     $request = PackChange::sole();
     expect($request->status)->toBe(PackChangeStatus::Approved)
@@ -151,7 +151,7 @@ it('lets Festilaw reject the request with a message to the client', function () 
     Livewire::test(SubmissionDetail::class, ['submission' => $dossier->fresh()])
         ->set('packDowngradeNote', 'Your turnover proof shows more than 35,000 EUR.')
         ->call('rejectPackDowngrade', PackChange::sole()->id)
-        ->assertDispatched('admin-toast', type: 'success');
+        ->assertDispatched('ui-toast', type: 'success');
 
     expect(PackChange::sole()->status)->toBe(PackChangeStatus::Rejected)
         ->and(PackChange::sole()->note)->toBe('Your turnover proof shows more than 35,000 EUR.');
@@ -219,4 +219,20 @@ it('does not apply a request withdrawn by the client after approval', function (
 
     expect($dossier->fresh()->type)->toBe(SubmissionType::Pro)
         ->and(PackChange::sole()->status)->toBe(PackChangeStatus::Withdrawn);
+});
+
+it('asks Festilaw to confirm in a window before approving or refusing the request', function () {
+    $dossier = activePro();
+    requestDowngrade($dossier);
+    actingAs(User::factory()->create());
+    $requestId = PackChange::sole()->id;
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $dossier->fresh()])
+        ->assertSeeHtml("ui-open-modal', 'approve-downgrade-{$requestId}'")
+        ->assertSeeHtml("ui-open-modal', 'reject-downgrade-{$requestId}'")
+        ->assertSee('Valider le passage au Creator au 1er janvier ?')
+        ->assertSee('Refuser le passage au Creator ?')
+        ->assertSeeHtml('wire:click="approvePackDowngrade('.$requestId.')"')
+        ->assertSeeHtml('wire:click="rejectPackDowngrade('.$requestId.')"')
+        ->assertDontSeeHtml('wire:confirm');
 });

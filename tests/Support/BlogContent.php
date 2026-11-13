@@ -103,6 +103,34 @@ final class BlogContent
         return range($firstPost, $firstPost + $count - 1);
     }
 
+    /**
+     * Document de contenu minimal (un paragraphe), tel que l'editeur le produit.
+     *
+     * @return array{type: string, content: list<array<string, mixed>>}
+     */
+    public static function document(string $text = 'Some words here.'): array
+    {
+        return ['type' => 'doc', 'content' => [
+            ['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => $text]]],
+        ]];
+    }
+
+    /**
+     * Contenu des trois langues d'un article, tel que le navigateur le renvoie a l'enregistrement.
+     *
+     * @return array<string, array<string, mixed>|null>
+     */
+    public static function contentsOf(BlogPost $post): array
+    {
+        $contents = [];
+
+        foreach (self::LOCALES as $locale) {
+            $contents[$locale] = $post->translations()->where('locale', $locale)->value('content');
+        }
+
+        return $contents;
+    }
+
     private static function named(BlogPost $post, string $key): BlogPost
     {
         foreach (self::LOCALES as $locale) {

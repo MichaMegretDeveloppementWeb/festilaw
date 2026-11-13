@@ -8,11 +8,13 @@ use App\Data\Admin\SubmissionListFilters;
 use App\Enums\Submission\DossierState;
 use App\Enums\Submission\SubmissionType;
 use App\Services\Admin\SubmissionListService;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Throwable;
 
 /**
  * Back-office : liste filtrable des dossiers, ou des prises de contact selon la route (une prise de
@@ -64,23 +66,33 @@ class SubmissionList extends Component
 
     public function render(SubmissionListService $submissions): View
     {
-        $result = $submissions->list(
-            new SubmissionListFilters(
-                contactsMode: $this->contactsMode,
-                type: $this->type,
-                state: $this->state,
-                search: $this->search,
-            ),
-            perPage: 20,
-            currentYear: (int) now()->year,
-        );
+        $result = null;
+
+        try {
+            $result = $submissions->list(
+                new SubmissionListFilters(
+                    contactsMode: $this->contactsMode,
+                    type: $this->type,
+                    state: $this->state,
+                    search: $this->search,
+                ),
+                perPage: 20,
+                currentYear: (int) now()->year,
+            );
+            $this->resetErrorBag('submissions-load-failed');
+        } catch (Throwable $e) {
+            Log::error('Unexpected error while loading the admin submission list.', ['contacts_mode' => $this->contactsMode, 'exception' => $e]);
+            $this->addError('submissions-load-failed', $this->contactsMode
+                ? __('Le chargement des prises de contact a échoué.')
+                : __('Le chargement des dossiers a échoué.'));
+        }
 
         return view('livewire.admin.submission-list', [
-            'submissions' => $result->submissions,
+            'submissions' => $result?->submissions,
             'stateFilters' => $this->stateFilterOptions(),
             'types' => [SubmissionType::Starter, SubmissionType::Pro, SubmissionType::Scale],
-            'dossierStates' => $result->dossierStates,
-        ])->title(($this->contactsMode ? __('Prises de contact') : __('Dossiers')).' · Back-office Festilaw');
+            'dossierStates' => $result?->dossierStates ?? [],
+        ])->title(($this->contactsMode ? __('Prises de contact') : __('Dossiers')));
     }
 
     /**

@@ -5,6 +5,9 @@
     @section('meta_description', $page->metaDescription)
 @endif
 @section('canonical', $page->url)
+@if ($isPreview ?? false)
+    @section('robots', 'noindex, nofollow')
+@endif
 @section('og_type', 'article')
 @if ($page->shareImageUrl)
     @section('og_image', $page->shareImageUrl)
@@ -21,7 +24,7 @@
         $page->category ? ['name' => $page->category->name, 'url' => $page->category->url] : null,
         ['name' => $page->title, 'url' => $page->url],
     ]));
-    $jsonLdNodes = [$articleNode];
+    $jsonLdNodes = array_values(array_filter([$articleNode ?? null]));
 @endphp
 
 @push('meta')
@@ -37,6 +40,10 @@
 @endpush
 
 @section('content')
+    @if ($isPreview ?? false)
+        <p class="article-preview" role="status">{{ __('Preview · this is how the article will look once published.') }}</p>
+    @endif
+
     <article class="article">
         <header class="article-hero">
             <x-web.breadcrumb :items="$breadcrumbs" />

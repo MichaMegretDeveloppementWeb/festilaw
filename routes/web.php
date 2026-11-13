@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AdminContractMandateDownloadController;
 use App\Http\Controllers\Admin\AdminCountersignedDownloadController;
 use App\Http\Controllers\Admin\AdminDocumentDownloadController;
 use App\Http\Controllers\Admin\AdminMandateDownloadController;
+use App\Http\Controllers\Admin\Blog\BlogPostPreviewController;
 use App\Http\Controllers\Admin\LogoutController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\Web\Funnel\GetStartedController;
@@ -25,6 +26,10 @@ use App\Http\Controllers\Web\SwitchLocaleController;
 use App\Http\Controllers\Web\Webhook\PaymentWebhookController;
 use App\Http\Controllers\Web\Webhook\SignatureWebhookController;
 use App\Livewire\Admin\AdminProfile;
+use App\Livewire\Admin\Blog\CategoryForm as BlogCategoryForm;
+use App\Livewire\Admin\Blog\CategoryList as BlogCategoryList;
+use App\Livewire\Admin\Blog\PostForm as BlogPostForm;
+use App\Livewire\Admin\Blog\PostList as BlogPostList;
 use App\Livewire\Admin\LoginForm;
 use App\Livewire\Admin\PricingSettings;
 use App\Livewire\Admin\QuizResultList;
@@ -130,6 +135,20 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/quiz', QuizResultList::class)->name('quiz.index');
         Route::get('/profile', AdminProfile::class)->name('profile');
         Route::get('/settings', PricingSettings::class)->name('settings');
+
+        // Blog : articles, categories, apercu d'un article quel que soit son statut.
+        Route::prefix('blog')->name('blog.')->group(function () {
+            Route::get('/posts', BlogPostList::class)->name('posts.index');
+            Route::get('/posts/create', BlogPostForm::class)->name('posts.create');
+            Route::get('/posts/{post}/edit', BlogPostForm::class)->whereNumber('post')->name('posts.edit');
+            Route::get('/posts/{post}/preview/{locale}', BlogPostPreviewController::class)
+                ->whereNumber('post')
+                ->whereIn('locale', config('festilaw.supported_locales'))
+                ->name('posts.preview');
+            Route::get('/categories', BlogCategoryList::class)->name('categories.index');
+            Route::get('/categories/create', BlogCategoryForm::class)->name('categories.create');
+            Route::get('/categories/{category}/edit', BlogCategoryForm::class)->whereNumber('category')->name('categories.edit');
+        });
         Route::get('/submissions/{submission:id}', SubmissionDetail::class)->name('submissions.show');
         Route::get('/submissions/{submission:id}/documents/{document:id}', AdminDocumentDownloadController::class)
             ->name('submissions.document')

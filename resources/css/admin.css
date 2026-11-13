@@ -1,32 +1,24 @@
-/* Back-office Festilaw : regles de shell NON-Tailwind uniquement. Tout le style (couleurs, tokens,
-   composants) vient du design system Falcon UI Kit via ui-kit.css. Ce fichier ne contient donc PAS de
-   @import "tailwindcss" (sinon double instance) : seulement la sidebar responsive, x-cloak et le toast. */
+/* Back-office Festilaw · la feuille de NOS vues, a cote de celle du kit Falcon.
+   Le kit sert ses composants <x-ui::…> deja compiles (public/vendor/falcon) ; cette entree ne fabrique
+   que les classes ecrites dans nos propres balises du back-office.
+   La premiere ligne fixe l'ordre des neuf couches de la suite : elle reste EN TETE, avant tout autre
+   import (verifie par `php artisan ui-kit:check`). */
+@import '../../vendor/falcon/ui-kit/resources/css/layers.css';
+/* Les noms du kit dans nos balises : bg-surface, border-default, text-muted… */
+@import '../../vendor/falcon/ui-kit/resources/css/theme.css';
+/* La police de la suite (DM Sans), chargee par la mise en page du back-office. */
+@import '../../vendor/falcon/ui-kit/resources/css/typography.css';
 
-/* Alpine : masquer les elements x-show avant hydratation */
+/* Lecture limitee aux vues et scripts du back-office : l'espace public est en CSS ecrit a la main et
+   ne doit rien ajouter a cette feuille. */
+@import 'tailwindcss' source(none);
+@source '../views/layouts/admin.blade.php';
+@source '../views/livewire/admin';
+@source '../views/components/admin';
+@source '../js/admin';
+
+/* Le mode sombre suit la classe posee par le kit (falcon_theme_class), pas le reglage de l'appareil. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Alpine : masquer les elements x-show / x-cloak avant le demarrage. */
 [x-cloak] { display: none !important; }
-
-/* Toast : barre de temps restant (animation one-shot relancee en JS a chaque affichage) */
-@keyframes admin-toast-bar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
-
-/* Sidebar responsive.
-   - Mobile (<768px) : sidebar masquee, menu burger (cf. layout).
-   - Moyen (>=768px) : rail d'icones replie qui se DEPLOIE au survol par-dessus le contenu.
-   - Grand (>=1024px) : sidebar deployee en permanence. */
-.admin-navlabel { white-space: nowrap; }
-
-@media (min-width: 768px) {
-    .admin-sidebar { width: 4rem; transition: width .2s ease, box-shadow .2s ease; }
-    .admin-content { padding-left: 4rem; }
-    .admin-navlabel { display: none; }
-    .admin-navitem { justify-content: center; padding-left: .5rem; padding-right: .5rem; }
-    .admin-sidebar:hover { width: 15rem; box-shadow: 0 12px 34px -8px rgba(17, 24, 39, .16); }
-    .admin-sidebar:hover .admin-navlabel { display: inline; }
-    .admin-sidebar:hover .admin-navitem { justify-content: flex-start; padding-left: .75rem; padding-right: .75rem; }
-}
-
-@media (min-width: 1024px) {
-    .admin-sidebar, .admin-sidebar:hover { width: 15rem; box-shadow: none; }
-    .admin-content { padding-left: 15rem; }
-    .admin-navlabel, .admin-sidebar:hover .admin-navlabel { display: inline; }
-    .admin-navitem, .admin-sidebar:hover .admin-navitem { justify-content: flex-start; padding-left: .75rem; padding-right: .75rem; }
-}

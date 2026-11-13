@@ -336,7 +336,7 @@ it('lets Festilaw cancel a paid switch from the back-office: refund, then back t
     Livewire::test(SubmissionDetail::class, ['submission' => $dossier->fresh()])
         ->assertSee('Annuler le passage au Pro et rembourser')
         ->call('revertPackUpgrade', $upgrade->id)
-        ->assertDispatched('admin-toast', type: 'success');
+        ->assertDispatched('ui-toast', type: 'success');
 
     $dossier->refresh();
     expect($dossier->type)->toBe(SubmissionType::Starter)
@@ -449,7 +449,7 @@ it('voids an approved request when Festilaw cancels the switch to Pro, then rene
     actingAs($admin = User::factory()->create());
     Livewire::test(SubmissionDetail::class, ['submission' => $dossier->fresh()])
         ->call('revertPackUpgrade', PackChange::where('to_pack', SubmissionType::Pro)->sole()->id)
-        ->assertDispatched('admin-toast', type: 'success');
+        ->assertDispatched('ui-toast', type: 'success');
     auth()->logout();
 
     expect($downgrade->fresh()->status)->toBe(PackChangeStatus::Voided)
@@ -495,9 +495,28 @@ it('changes nothing when the refund fails at Stripe', function () {
 
     Livewire::test(SubmissionDetail::class, ['submission' => $dossier->fresh()])
         ->call('revertPackUpgrade', PackChange::sole()->id)
-        ->assertDispatched('admin-toast', type: 'error');
+        ->assertDispatched('ui-toast', type: 'error');
 
     expect($dossier->fresh()->type)->toBe(SubmissionType::Pro)
         ->and(PackChange::sole()->status)->toBe(PackChangeStatus::Completed)
         ->and($payment->fresh()->status)->toBe(PaymentStatus::Succeeded);
+});
+
+it('asks Festilaw to confirm in a window, with the amount, before cancelling a paid switch', function () {
+    Http::fake(['*/v1/checkout/sessions/*' => Http::response(['id' => 'cs_up', 'payment_intent' => 'pi_up'])]);
+    $dossier = activeCreator();
+    $payment = upgradeAwaitingPayment($dossier);
+    app(MarkPaymentSucceededAction::class)->execute($payment, 'cs_up');
+    $upgrade = PackChange::sole();
+    actingAs(User::factory()->create());
+
+    Livewire::test(SubmissionDetail::class, ['submission' => $dossier->fresh()])
+        ->assertSeeHtml("ui-open-modal', 'revert-upgrade-{$upgrade->id}'")
+        ->assertSee('Annuler le passage au Pro et rembourser '.number_format($upgrade->amount_cents / 100, 2, ',', ' ').' EUR au client ?')
+        ->assertSee('Le dossier reviendra au Creator avec son mandat Creator.')
+        ->assertSeeHtml('wire:click="revertPackUpgrade('.$upgrade->id.')"')
+        ->assertDontSeeHtml('wire:confirm');
+
+    // Ouvrir la fenetre ne rembourse rien.
+    Http::assertNotSent(fn ($request) => str_ends_with($request->url(), '/v1/refunds'));
 });

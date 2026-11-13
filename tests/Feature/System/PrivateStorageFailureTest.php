@@ -110,7 +110,7 @@ it('does not mark a contract as countersigned, nor tell the client, when the PDF
         ->set('countersigned', UploadedFile::fake()->create('contract.pdf', 200, 'application/pdf'))
         ->set('notifyClientOnCountersign', true)
         ->call('uploadCountersigned')
-        ->assertDispatched('admin-toast', type: 'error');
+        ->assertDispatched('ui-toast', type: 'error');
 
     expect($dossier->contract->fresh()->countersigned_file_path)->toBeNull()
         ->and($dossier->contract->fresh()->countersigned_at)->toBeNull();

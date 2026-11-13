@@ -52,7 +52,7 @@ class AdminProfile extends Component
             return;
         }
 
-        $this->dispatch('admin-toast', message: __('Adresse email mise à jour.'), type: 'success');
+        $this->dispatch('ui-toast', title: __('Adresse email mise à jour.'), type: 'success');
     }
 
     public function updatePassword(): void
@@ -79,12 +79,12 @@ class AdminProfile extends Component
         }
 
         $this->reset('current_password', 'password', 'password_confirmation');
-        $this->dispatch('admin-toast', message: __('Mot de passe mis à jour.'), type: 'success');
+        $this->dispatch('ui-toast', title: __('Mot de passe mis à jour.'), type: 'success');
     }
 
     public function render(): View
     {
-        return view('livewire.admin.profile')->title(__('Mon compte').' · Back-office Festilaw');
+        return view('livewire.admin.profile')->title(__('Mon compte'));
     }
 
     private function user(): User

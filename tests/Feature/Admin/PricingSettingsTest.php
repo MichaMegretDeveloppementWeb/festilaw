@@ -43,7 +43,7 @@ it('lets an admin change the pack prices, applied everywhere at once', function 
         ->set('proPrice', '2.50')
         ->call('save')
         ->assertHasNoErrors()
-        ->assertDispatched('admin-toast');
+        ->assertDispatched('ui-toast');
 
     // Persiste en centimes...
     expect(Setting::where('key', 'pricing.starter_annual_cents')->value('value'))->toBe('100')

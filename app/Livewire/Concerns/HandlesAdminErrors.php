@@ -19,6 +19,6 @@ trait HandlesAdminErrors
     {
         Log::error("Unexpected error in {$context}.", ['exception' => $e]);
 
-        $this->dispatch('admin-toast', message: __('Une erreur inattendue est survenue. Réessayez ; si le problème persiste, contactez-nous.'), type: 'error');
+        $this->dispatch('ui-toast', title: __('Une erreur inattendue est survenue. Réessayez ; si le problème persiste, contactez-nous.'), type: 'error');
     }
 }

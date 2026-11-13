@@ -9,6 +9,10 @@ use App\Actions\Blog\Post\SaveBlogPostAction;
 use App\Enums\Submission\SubmissionType;
 use App\Exceptions\Web\DossierLinkInvalidException;
 use App\Models\Submission;
+use App\Services\Admin\AdminNavigation;
+use App\Services\Admin\Blog\BlogCategoryAdminService;
+use App\Services\Admin\Blog\BlogPostFormService;
+use App\Services\Admin\Blog\BlogPostPreviewService;
 use App\Services\Billing\AnnualFeeProrator;
 use App\Services\Billing\PackPricingService;
 use App\Services\Blog\Content\BlogContentNormalizer;
@@ -25,7 +29,7 @@ use App\Services\Blog\Post\BlogPostReadinessCalculator;
 use App\Services\Blog\Slug\BlogPostSlugAssigner;
 use App\Services\Blog\Slug\BlogSlugGenerator;
 use App\Services\System\SchedulerHealthService;
-use App\Services\Web\Blog\BlogArticlePageService;
+use App\Services\Web\Blog\BlogArticlePageAssembler;
 use App\Services\Web\Blog\BlogCategoryPageService;
 use App\Services\Web\Blog\BlogHomeBlockService;
 use App\Services\Web\Blog\BlogHubPageWindow;
@@ -93,7 +97,9 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->when(BlogHubPageWindow::class)->needs('$perPage')->giveConfig('blog.per_page');
         $this->app->when(BlogCategoryPageService::class)->needs('$perPage')->giveConfig('blog.per_page');
-        $this->app->when(BlogArticlePageService::class)->needs('$relatedLimit')->giveConfig('blog.related');
+        $this->app->when(BlogArticlePageAssembler::class)->needs('$relatedLimit')->giveConfig('blog.related');
+        $this->app->when([BlogPostFormService::class, BlogCategoryAdminService::class, BlogPostPreviewService::class])
+            ->needs('$locales')->giveConfig('festilaw.supported_locales');
         $this->app->when(BlogHomeBlockService::class)->needs('$limit')->giveConfig('blog.home_latest');
     }
 
@@ -137,6 +143,14 @@ class AppServiceProvider extends ServiceProvider
         // Back-office : etat des taches automatiques (cron), en prod seulement (pas de cron en local).
         // Bandeau si elles sont a l'arret, ligne discrete "dernier passage" dans la barre laterale.
         View::composer('layouts.admin', static function ($view): void {
+            // Menu principal, decrit une fois et rendu deux fois (mobile, barre laterale). Une prise de
+            // contact s'ouvre par la route des dossiers : c'est son type qui dit quel lien est actif.
+            $submission = request()->route('submission');
+            $view->with('adminNav', app(AdminNavigation::class)->groups(
+                request()->route()?->getName(),
+                $submission instanceof Submission && $submission->type === SubmissionType::Contact,
+            ));
+
             if (! app()->isProduction()) {
                 $view->with('schedulerStatus', null);
 
