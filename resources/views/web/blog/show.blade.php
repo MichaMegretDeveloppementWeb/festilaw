@@ -41,24 +41,29 @@
         <header class="article-hero">
             <x-web.breadcrumb :items="$breadcrumbs" />
             <div class="article-hero__inner">
-                @if ($page->category)
-                    <a href="{{ $page->category->url }}" class="eyebrow article-hero__category">{{ $page->category->name }}</a>
-                @endif
                 <h1 class="article-hero__title">{{ $page->title }}</h1>
                 @if ($page->excerpt)
                     <p class="article-hero__lead">{{ $page->excerpt }}</p>
                 @endif
+                {{-- Auteur et date sur une ligne : une icone et la valeur. Le libelle reste lu par les lecteurs
+                     d'ecran. La qualite de l'auteur n'est plus affichee (elle reste dans les donnees enrichies). --}}
                 <p class="article-hero__meta">
-                    <span class="article-hero__author">
-                        {{ __('By') }} <a href="{{ $page->authorUrl }}" rel="author">{{ $page->author->name }}</a>, {{ $page->author->jobTitle }}
+                    <span class="article-hero__meta-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+                        <span class="visually-hidden">{{ __('By') }}</span>
+                        {{ $page->author->name }}
                     </span>
-                    <span class="article-hero__dates">
-                        {{ __('Published on') }} <time datetime="{{ $page->publishedAt->toDateString() }}">{{ $page->publishedLabel($locale) }}</time>
-                        @if ($page->updatedAt)
-                            <span aria-hidden="true">·</span>
+                    <span class="article-hero__meta-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+                        <span class="visually-hidden">{{ __('Published on') }}</span>
+                        <time datetime="{{ $page->publishedAt->toDateString() }}">{{ $page->publishedLabel($locale) }}</time>
+                    </span>
+                    @if ($page->updatedAt)
+                        <span class="article-hero__meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/></svg>
                             {{ __('Updated on') }} <time datetime="{{ $page->updatedAt->toDateString() }}">{{ $page->updatedLabel($locale) }}</time>
-                        @endif
-                    </span>
+                        </span>
+                    @endif
                 </p>
             </div>
         </header>

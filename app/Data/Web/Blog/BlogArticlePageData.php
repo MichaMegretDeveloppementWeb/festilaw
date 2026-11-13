@@ -38,7 +38,6 @@ final readonly class BlogArticlePageData
         public array $sources,
         public array $related,
         public BlogAuthorData $author,
-        public string $authorUrl,
     ) {}
 
     public function publishedLabel(string $locale): string

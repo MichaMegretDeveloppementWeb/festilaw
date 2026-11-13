@@ -24,8 +24,6 @@ it('shows the article with its author, dates, cover, sources and call to action'
     $response->assertSee('<h1 class="article-hero__title">Label '.$locale.'</h1>', false)
         ->assertSee("<p>Body of label in {$locale}.</p>", false)
         ->assertSee('Laëtitia Redonet')
-        ->assertSee(config('blog.author.job_title')[$locale])
-        ->assertSee('href="'.localized_route('about', [], $locale).'" rel="author"', false)
         ->assertSee(CarbonImmutable::parse('2026-11-02')->locale($locale)->isoFormat('LL'))
         ->assertSee(CarbonImmutable::parse('2026-11-10')->locale($locale)->isoFormat('LL'))
         ->assertSee('Rules '.$locale)
@@ -38,6 +36,17 @@ it('shows the article with its author, dates, cover, sources and call to action'
         ->assertSee('href="'.localized_route('pricing', [], $locale).'"', false);
 
     expect(substr_count($response->getContent(), '<h1'))->toBe(1);
+
+    // Bandeau compact : l'auteur est nomme sans lien ni qualite (elle reste dans les donnees enrichies),
+    // et la categorie n'est plus repetee au-dessus du titre (elle est dans le fil d'Ariane).
+    preg_match('/<header class="article-hero">(.*?)<\/header>/s', $response->getContent(), $hero);
+
+    expect($hero[1])->toContain('Laëtitia Redonet')
+        ->toContain('<time datetime="2026-11-02">')
+        ->toContain(__('Updated on', [], $locale))
+        ->not->toContain(config('blog.author.job_title')[$locale])
+        ->not->toContain('rel="author"')
+        ->not->toContain('class="eyebrow');
 })->with(BlogContent::LOCALES);
 
 it('declares the article to search engines and social networks', function () {
@@ -64,7 +73,8 @@ it('declares the article to search engines and social networks', function () {
         ->and($article['inLanguage'])->toBe('en')
         ->and($article['articleSection'])->toBe('Rules en')
         ->and($article['mainEntityOfPage']['@id'])->toBe(url('/blog/label-en'))
-        ->and($article['author'])->toBe(['@type' => 'Person', 'name' => 'Laëtitia Redonet', 'jobTitle' => 'EU Market Access & Compliance Advisor', 'url' => url('/about')])
+        // L'auteur est nomme avec sa qualite, sans adresse : aucune page du site ne le presente.
+        ->and($article['author'])->toBe(['@type' => 'Person', 'name' => 'Laëtitia Redonet', 'jobTitle' => 'EU Market Access & Compliance Advisor'])
         ->and($article['publisher'])->toBe(['@id' => url('/').'#organization'])
         ->and($nodes->firstWhere('@type', 'BreadcrumbList')['itemListElement'])->toHaveCount(4);
 });

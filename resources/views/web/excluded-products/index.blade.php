@@ -26,7 +26,6 @@
     <section class="page-hero">
         <x-web.breadcrumb :items="$breadcrumbs" />
         <div class="page-hero__inner">
-            <span class="eyebrow page-hero__eyebrow">{{ __('Excluded products') }}</span>
             <h1 class="page-hero__title">{{ __('Products we') }} <span class="page-hero__title-em">{{ __('don\'t cover') }}</span></h1>
             <p class="page-hero__lead">{{ __('Festilaw focuses on standard non-food consumer products. Some categories are governed by separate European frameworks and need specialized certifications we don\'t handle.') }}</p>
         </div>

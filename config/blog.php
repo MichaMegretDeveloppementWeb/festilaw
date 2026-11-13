@@ -5,9 +5,10 @@ declare(strict_types=1);
 return [
 
     /*
-     | Auteur des articles. Un seul auteur, donc pas de table : nom, qualite par langue, et route de la
-     | page qui le presente. La qualite est celle de la signature de ses e-mails Festilaw ; elle n'est
-     | JAMAIS presentee comme juriste sur ce site (c'est son autre statut, hors Festilaw).
+     | Auteur des articles. Un seul auteur, donc pas de table : nom et qualite par langue. La qualite est
+     | celle de la signature de ses e-mails Festilaw ; elle n'est JAMAIS presentee comme juriste sur ce site
+     | (c'est son autre statut, hors Festilaw). La page d'un article affiche le nom seul ; la qualite ne sert
+     | qu'aux donnees enrichies. Pas de lien : aucune page du site ne presente l'auteur.
      */
     'author' => [
         'name' => 'Laëtitia Redonet',
@@ -16,7 +17,6 @@ return [
             'fr' => 'Conseillère en accès au marché européen et conformité',
             'es' => 'Asesora de acceso al mercado europeo y cumplimiento normativo',
         ],
-        'profile_route' => 'about',
     ],
 
     /*

@@ -31,11 +31,11 @@ final readonly class BlogStructuredDataBuilder
             'articleSection' => $page->category?->name,
             'url' => $page->url,
             'mainEntityOfPage' => ['@type' => 'WebPage', '@id' => $page->url],
+            // Pas d'adresse pour l'auteur : aucune page du site ne le presente.
             'author' => [
                 '@type' => 'Person',
                 'name' => $page->author->name,
                 'jobTitle' => $page->author->jobTitle,
-                'url' => $page->authorUrl,
             ],
             // L'organisation est deja declaree par le layout : on y renvoie par son identifiant.
             'publisher' => ['@id' => $this->url->to('/').'#organization'],

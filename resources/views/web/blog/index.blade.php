@@ -26,7 +26,6 @@
     <section class="page-hero">
         <x-web.breadcrumb :items="$breadcrumbs" />
         <div class="page-hero__inner">
-            <span class="eyebrow page-hero__eyebrow">{{ __('Blog') }}</span>
             <h1 class="page-hero__title">{{ __('Selling in the EU,') }} <span class="page-hero__title-em">{{ __('explained') }}</span></h1>
             <p class="page-hero__lead">{{ __('Practical guides and news on EU product safety rules for sellers outside the EU.') }}</p>
         </div>

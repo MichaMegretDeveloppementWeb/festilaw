@@ -44,7 +44,6 @@
     <section class="page-hero">
         <x-web.breadcrumb :items="$breadcrumbs" />
         <div class="page-hero__inner">
-            <span class="eyebrow page-hero__eyebrow">{{ __('Understand GPSR') }}</span>
             <h1 class="page-hero__title">{{ __('Understanding the') }} <span class="page-hero__title-em">{{ __('GPSR') }}</span></h1>
             <p class="page-hero__lead">{{ __('Everything you need to know about the EU General Product Safety Regulation, in plain language: what it is, how to comply, and whether it applies to you.') }}</p>
         </div>

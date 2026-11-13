@@ -47,7 +47,6 @@
     <section class="page-hero">
         <x-web.breadcrumb :items="$breadcrumbs" />
         <div class="page-hero__inner">
-            <span class="eyebrow page-hero__eyebrow">{{ __('Pricing') }}</span>
             <h1 class="page-hero__title">{{ __('One clear price,') }} <span class="page-hero__title-em">{{ __('no surprises') }}</span></h1>
             <p class="page-hero__lead">{{ __('A single public rate built for creators and growing brands. No hidden per-SKU fees, no opaque quotes.') }}</p>
         </div>

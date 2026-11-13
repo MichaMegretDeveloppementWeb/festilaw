@@ -70,8 +70,7 @@ it('gives the author with the job title of the requested language', function () 
         ->and($author->forLocale('en')->jobTitle)->toBe('EU Market Access & Compliance Advisor')
         ->and($author->forLocale('fr')->jobTitle)->toBe('Conseillère en accès au marché européen et conformité')
         ->and($author->forLocale('es')->jobTitle)->toBe('Asesora de acceso al mercado europeo y cumplimiento normativo')
-        ->and($author->forLocale('de')->jobTitle)->toBe('EU Market Access & Compliance Advisor')
-        ->and($author->forLocale('fr')->profileRoute)->toBe('about');
+        ->and($author->forLocale('de')->jobTitle)->toBe('EU Market Access & Compliance Advisor');
 });
 
 it('never presents the author as a lawyer', function () {

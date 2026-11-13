@@ -9,12 +9,8 @@ namespace App\Data\Blog;
  */
 final readonly class BlogAuthorData
 {
-    /**
-     * @param  string  $profileRoute  nom de la route (localisee) de la page qui presente l'auteur
-     */
     public function __construct(
         public string $name,
         public string $jobTitle,
-        public string $profileRoute,
     ) {}
 }

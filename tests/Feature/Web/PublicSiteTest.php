@@ -182,3 +182,13 @@ it('keeps administration accessible directly without advertising it in the publi
     get(route('home'))->assertOk()->assertDontSee(route('admin.login'), false);
     get(route('admin.login'))->assertOk();
 });
+
+it('opens each inner page with its breadcrumb straight above the title, without a label repeating it', function (string $routeName) {
+    $content = get(route($routeName))->assertOk()->getContent();
+
+    preg_match('/<section class="page-hero[^"]*">(.*?)<\/section>/s', $content, $hero);
+
+    expect($hero[1])->toContain('class="breadcrumb"')
+        ->toContain('<h1 class="page-hero__title">')
+        ->not->toContain('page-hero__eyebrow');
+})->with(['about', 'understand-gpsr', 'services', 'pricing', 'excluded-products', 'legal-notice', 'privacy-policy', 'terms', 'blog.index']);

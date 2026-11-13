@@ -18,7 +18,6 @@
     <section class="page-hero page-hero--tight">
         <div class="page-hero__inner">
             <x-web.breadcrumb :items="$breadcrumbs" />
-            <span class="eyebrow page-hero__eyebrow">{{ __('Legal') }}</span>
             <h1 class="page-hero__title">{{ __('Legal notice') }}</h1>
         </div>
     </section>

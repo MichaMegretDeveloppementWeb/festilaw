@@ -13,7 +13,7 @@ use App\Data\Blog\BlogAuthorData;
 final readonly class BlogAuthorProvider
 {
     /**
-     * @param  array{name: string, job_title: array<string, string>, profile_route: string}  $author
+     * @param  array{name: string, job_title: array<string, string>}  $author
      */
     public function __construct(
         private array $author,
@@ -28,7 +28,6 @@ final readonly class BlogAuthorProvider
         return new BlogAuthorData(
             name: $this->author['name'],
             jobTitle: $titles[$locale] ?? $titles[$this->defaultLocale] ?? '',
-            profileRoute: $this->author['profile_route'],
         );
     }
 }

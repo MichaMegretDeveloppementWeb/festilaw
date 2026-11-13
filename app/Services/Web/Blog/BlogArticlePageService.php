@@ -88,7 +88,6 @@ final readonly class BlogArticlePageService
             sources: $row->sources,
             related: $this->cards->fromRows($related, $locale),
             author: $author,
-            authorUrl: $this->urls->route($author->profileRoute, [], $locale),
         );
     }
 }

@@ -7,19 +7,18 @@
 .article { background: var(--color-cream); }
 
 /* Bandeau bleu : comme .page-hero, avec un titre en casse normale (un titre d'article est long). */
-.article-hero { background: var(--color-blue); padding: clamp(34px, 4.6vw, 64px) var(--gutter) clamp(44px, 5.6vw, 80px); text-align: center; }
-.article-hero .breadcrumb { margin-bottom: 22px; }
+.article-hero { background: var(--color-blue); padding: clamp(10px, 1.6vw, 22px) var(--gutter) clamp(36px, 4.6vw, 64px); text-align: center; }
+.article-hero .breadcrumb { margin-bottom: clamp(16px, 2vw, 24px); }
 .article-hero__inner { max-width: 1000px; margin: 0 auto; }
-.article-hero__category { display: inline-block; margin-bottom: 16px; color: var(--color-salmon); }
-.article-hero__category:hover { text-decoration: underline; }
-.article-hero__title { margin-bottom: 18px; color: var(--color-cream); font-size: clamp(30px, 4.6vw, 54px); line-height: 1.12; -webkit-text-stroke: 0.5px currentColor; }
-.article-hero__lead { max-width: 820px; margin: 0 auto 22px; color: var(--color-on-blue); font-size: clamp(16px, 1.8vw, 19px); line-height: 1.6; }
-.article-hero__meta { display: flex; flex-direction: column; gap: 2px; color: var(--color-on-blue); font-size: 14.5px; line-height: 1.7; }
-.article-hero__meta a { color: var(--color-cream); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
-.article-hero__meta a:hover { color: var(--color-salmon); }
+.article-hero__title { margin-bottom: 14px; color: var(--color-cream); font-size: clamp(30px, 4.6vw, 54px); line-height: 1.12; -webkit-text-stroke: 0.5px currentColor; }
+.article-hero__lead { max-width: 820px; margin: 0 auto 16px; color: var(--color-on-blue); font-size: clamp(16px, 1.8vw, 19px); line-height: 1.6; }
+/* Auteur et date : une ligne discrete, une icone et la valeur. */
+.article-hero__meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 20px; color: var(--color-on-blue); font-size: 13.5px; line-height: 1.5; }
+.article-hero__meta-item { display: inline-flex; align-items: center; gap: 7px; }
+.article-hero__meta svg { flex: none; width: 15px; height: 15px; }
 
 /* L'image principale chevauche le bas du bandeau ; le bandeau lui fait alors de la place. */
-.article:has(.article__cover) .article-hero { padding-bottom: clamp(96px, 12vw, 170px); }
+.article:has(.article__cover) .article-hero { padding-bottom: clamp(88px, 11.4vw, 164px); }
 .article__cover { max-width: 1100px; margin: calc(-1 * clamp(64px, 8.5vw, 124px)) auto 0; padding: 0 var(--gutter); }
 .article__cover-image {
     display: block;

@@ -21,7 +21,6 @@
     <section class="page-hero">
         <x-web.breadcrumb :items="$breadcrumbs" />
         <div class="page-hero__inner">
-            <span class="eyebrow page-hero__eyebrow">{{ __('Blog') }}</span>
             <h1 class="page-hero__title">{{ $page->name }}</h1>
             @if ($page->description)
                 <p class="page-hero__lead">{{ $page->description }}</p>
