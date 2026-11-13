@@ -52,6 +52,16 @@ final class ProductionSafetyService
             $violations[] = 'APP_DEBUG est active : fuite d\'informations en cas d\'erreur. Mettez APP_DEBUG=false.';
         }
 
+        // Blog : sans GD et son support WebP, aucune image d'article ne peut etre traitee.
+        if (! $this->canProcessBlogImages()) {
+            $violations[] = 'L\'extension PHP GD avec le support WebP est absente : les images du blog ne peuvent pas etre traitees.';
+        }
+
         return $violations;
+    }
+
+    private function canProcessBlogImages(): bool
+    {
+        return extension_loaded('gd') && function_exists('imagewebp') && function_exists('imagecreatefromwebp');
     }
 }

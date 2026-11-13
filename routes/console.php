@@ -48,6 +48,19 @@ Schedule::command('festilaw:reconcile-signatures')->everyFiveMinutes()->withoutO
 Schedule::command('festilaw:backfill-signed-pdfs')->everyMinute()->withoutOverlapping();
 
 /*
+ | Blog : publication des articles programmes dont l'heure est passee. Chaque minute, requete legere
+ | (index status + scheduled_for). Idempotent. Le verrou expire au bout de 5 minutes : un passage tue
+ | brutalement ne bloque pas la publication pendant 24 h (duree par defaut de withoutOverlapping).
+ */
+Schedule::command('festilaw:blog-publish-scheduled')->everyMinute()->withoutOverlapping(5);
+
+/*
+ | Blog : menage quotidien des images sans article (envoyees puis jamais rattachees, ou orphelines
+ | depuis une suppression) et des dossiers d'image sans ligne. Idempotent.
+ */
+Schedule::command('festilaw:blog-purge-orphan-images')->dailyAt('03:30')->withoutOverlapping(60);
+
+/*
  | Battement : note chaque passage du cron. S'il s'arrete, le back-office l'affiche et le prestataire
  | technique est prevenu par e-mail (SchedulerHealthService, AlertOnStalledScheduler).
  */

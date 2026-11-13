@@ -41,12 +41,14 @@ return [
             'report' => false,
         ],
 
+        // Disque public (images du blog). throw : meme regle que le disque prive, un echec d'ecriture ou de
+        // suppression leve une exception au lieu de renvoyer false en silence.
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
             'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
             'visibility' => 'public',
-            'throw' => false,
+            'throw' => true,
             'report' => false,
         ],
 

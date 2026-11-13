@@ -1,0 +1,213 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services\Blog\Content;
+
+use App\Models\BlogImage;
+use App\Services\Blog\Content\BlogContentSchema as Schema;
+use App\Services\Blog\Image\BlogImagePaths;
+use App\Services\Blog\Slug\BlogSlugGenerator;
+
+/**
+ * Produit le HTML d'un document de contenu DEJA normalise (cf. BlogContentNormalizer). Calcul pur :
+ * les images citees sont fournies par l'appelant, aucune lecture en base ni sur le disque.
+ *
+ * Tout texte est echappe ; le HTML ne contient que des balises ecrites ici. C'est ce HTML qui est
+ * enregistre puis servi au public.
+ */
+final class BlogContentRenderer
+{
+    /** Largeur de la variante servie par defaut (attribut src) quand elle existe. */
+    private const DEFAULT_WIDTH = 1200;
+
+    /** @var array<string, int> */
+    private array $anchors = [];
+
+    public function __construct(
+        private readonly BlogImagePaths $paths,
+        private readonly BlogSlugGenerator $slugs,
+        private readonly BlogLinkPolicy $links,
+        private readonly string $imageSizes = '100vw',
+    ) {}
+
+    /**
+     * @param  array{type: string, content: list<array<string, mixed>>}|null  $document
+     * @param  iterable<BlogImage>  $images  images citees par le document (les autres sont ignorees)
+     */
+    public function render(?array $document, string $locale, iterable $images = []): string
+    {
+        if ($document === null) {
+            return '';
+        }
+
+        $this->anchors = [];
+
+        $imagesById = [];
+
+        foreach ($images as $image) {
+            $imagesById[$image->id] = $image;
+        }
+
+        return implode("\n", array_filter(
+            array_map(fn (array $block): string => $this->block($block, $locale, $imagesById), $document['content']),
+            static fn (string $html): bool => $html !== '',
+        ));
+    }
+
+    /**
+     * @param  array<string, mixed>  $block
+     * @param  array<int, BlogImage>  $images
+     */
+    private function block(array $block, string $locale, array $images): string
+    {
+        return match ($block['type']) {
+            Schema::PARAGRAPH => '<p>'.$this->inline($block['content']).'</p>',
+            Schema::HEADING => $this->heading($block),
+            Schema::BULLET_LIST => '<ul>'.$this->items($block['content'], $locale, $images).'</ul>',
+            Schema::ORDERED_LIST => '<ol>'.$this->items($block['content'], $locale, $images).'</ol>',
+            Schema::BLOCKQUOTE => '<blockquote>'.implode('', array_map(fn (array $child): string => $this->block($child, $locale, $images), $block['content'])).'</blockquote>',
+            Schema::IMAGE => $this->figure($images[$block['attrs']['imageId']] ?? null, $locale),
+            default => '',
+        };
+    }
+
+    /**
+     * Intertitre avec une ancre tiree de son texte, unique dans la page.
+     *
+     * @param  array<string, mixed>  $block
+     */
+    private function heading(array $block): string
+    {
+        $level = $block['attrs']['level'];
+        $text = $block['content'][0]['text'];
+
+        $anchor = $this->slugs->fromText($text);
+        $anchor = $anchor === '' ? 'section' : $anchor;
+
+        $this->anchors[$anchor] = ($this->anchors[$anchor] ?? 0) + 1;
+
+        if ($this->anchors[$anchor] > 1) {
+            $anchor .= '-'.$this->anchors[$anchor];
+        }
+
+        return "<h{$level} id=\"{$this->escape($anchor)}\">{$this->escape($text)}</h{$level}>";
+    }
+
+    /**
+     * Elements d'une liste. Un element fait d'un seul paragraphe (suivi ou non de sous-listes) est
+     * rendu sans balise <p>, comme une liste ordinaire.
+     *
+     * @param  list<array<string, mixed>>  $items
+     * @param  array<int, BlogImage>  $images
+     */
+    private function items(array $items, string $locale, array $images): string
+    {
+        $html = '';
+
+        foreach ($items as $item) {
+            $paragraphs = array_filter($item['content'], static fn (array $child): bool => $child['type'] === Schema::PARAGRAPH);
+            $tight = count($paragraphs) === 1 && $item['content'][0]['type'] === Schema::PARAGRAPH;
+
+            $html .= '<li>';
+
+            foreach ($item['content'] as $child) {
+                $html .= $tight && $child['type'] === Schema::PARAGRAPH
+                    ? $this->inline($child['content'])
+                    : $this->block($child, $locale, $images);
+            }
+
+            $html .= '</li>';
+        }
+
+        return $html;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $nodes
+     */
+    private function inline(array $nodes): string
+    {
+        $html = '';
+
+        foreach ($nodes as $node) {
+            if ($node['type'] === Schema::HARD_BREAK) {
+                $html .= '<br>';
+
+                continue;
+            }
+
+            $text = $this->escape($node['text']);
+
+            // Marques dans l'ordre canonique (lien, gras, italique) : le lien enveloppe le reste.
+            foreach (array_reverse($node['marks'] ?? []) as $mark) {
+                $text = match ($mark['type']) {
+                    Schema::MARK_ITALIC => "<em>{$text}</em>",
+                    Schema::MARK_BOLD => "<strong>{$text}</strong>",
+                    Schema::MARK_LINK => $this->link($mark['attrs']['href'], $text),
+                    default => $text,
+                };
+            }
+
+            $html .= $text;
+        }
+
+        return $html;
+    }
+
+    private function link(string $href, string $html): string
+    {
+        $attributes = 'href="'.$this->escape($href).'"';
+
+        if ($this->links->isExternal($href)) {
+            $attributes .= ' target="_blank" rel="noopener"';
+        }
+
+        return "<a {$attributes}>{$html}</a>";
+    }
+
+    /** Image adaptative. Une image citee mais introuvable n'est pas rendue. */
+    private function figure(?BlogImage $image, string $locale): string
+    {
+        if ($image === null) {
+            return '';
+        }
+
+        $widths = $image->widths();
+
+        if ($widths === []) {
+            return '';
+        }
+
+        $default = in_array(self::DEFAULT_WIDTH, $widths, true) ? self::DEFAULT_WIDTH : max($widths);
+
+        $srcset = implode(', ', array_map(
+            fn (int $width): string => $this->paths->url($this->paths->variantOf($image, $width))." {$width}w",
+            $widths,
+        ));
+
+        $attributes = [
+            'src' => $this->paths->url($this->paths->variantOf($image, $default)),
+            'srcset' => $srcset,
+            'sizes' => $this->imageSizes,
+            'width' => (string) $image->width,
+            'height' => (string) $image->height,
+            'alt' => $image->altFor($locale),
+            'loading' => 'lazy',
+            'decoding' => 'async',
+        ];
+
+        $html = '';
+
+        foreach ($attributes as $name => $value) {
+            $html .= " {$name}=\"{$this->escape($value)}\"";
+        }
+
+        return "<figure class=\"blog-figure\"><img{$html}></figure>";
+    }
+
+    private function escape(string $value): string
+    {
+        return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, 'UTF-8');
+    }
+}

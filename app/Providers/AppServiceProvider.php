@@ -4,11 +4,26 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Actions\Blog\Category\SaveBlogCategoryAction;
+use App\Actions\Blog\Post\SaveBlogPostAction;
 use App\Enums\Submission\SubmissionType;
 use App\Exceptions\Web\DossierLinkInvalidException;
 use App\Models\Submission;
 use App\Services\Billing\AnnualFeeProrator;
 use App\Services\Billing\PackPricingService;
+use App\Services\Blog\Content\BlogContentNormalizer;
+use App\Services\Blog\Content\BlogContentRenderer;
+use App\Services\Blog\Content\BlogLinkPolicy;
+use App\Services\Blog\Content\BlogMarkdownConverter;
+use App\Services\Blog\Image\BlogImageInspector;
+use App\Services\Blog\Image\BlogImagePaths;
+use App\Services\Blog\Image\BlogImageProcessor;
+use App\Services\Blog\Image\BlogImageStorage;
+use App\Services\Blog\Image\BlogImageTextCleaner;
+use App\Services\Blog\Post\BlogAuthorProvider;
+use App\Services\Blog\Post\BlogPostReadinessCalculator;
+use App\Services\Blog\Slug\BlogPostSlugAssigner;
+use App\Services\Blog\Slug\BlogSlugGenerator;
 use App\Services\System\SchedulerHealthService;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
@@ -29,6 +44,47 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(AnnualFeeProrator::class, static fn (): AnnualFeeProrator => new AnnualFeeProrator(
             (int) config('festilaw.payment.min_charge_cents', 50),
         ));
+
+        $this->registerBlogSettings();
+    }
+
+    /**
+     * Blog : les services recoivent leurs reglages (config/blog.php) par leur constructeur, pour rester
+     * des classes pures, testables sans conteneur ni configuration.
+     */
+    private function registerBlogSettings(): void
+    {
+        $this->app->when(BlogSlugGenerator::class)->needs('$maxLength')->giveConfig('blog.slug.max_length');
+        $this->app->when(BlogPostSlugAssigner::class)->needs('$reservedWords')->giveConfig('blog.slug.reserved');
+
+        $this->app->when(BlogLinkPolicy::class)->needs('$siteHost')
+            ->give(static fn (): string => (string) parse_url((string) config('app.url'), PHP_URL_HOST));
+        $this->app->when(BlogContentNormalizer::class)->needs('$maxBytes')->giveConfig('blog.content.max_bytes');
+        $this->app->when(BlogContentNormalizer::class)->needs('$maxNodes')->giveConfig('blog.content.max_nodes');
+        $this->app->when(BlogContentNormalizer::class)->needs('$maxDepth')->giveConfig('blog.content.max_depth');
+        $this->app->when(BlogMarkdownConverter::class)->needs('$maxBytes')->giveConfig('blog.content.max_bytes');
+        $this->app->when(BlogContentRenderer::class)->needs('$imageSizes')->giveConfig('blog.content.image_sizes');
+        $this->app->when(BlogImagePaths::class)->needs('$directory')->giveConfig('blog.images.directory');
+
+        $this->app->when(BlogImageStorage::class)->needs('$disk')->giveConfig('blog.images.disk');
+        $this->app->when(BlogImageTextCleaner::class)->needs('$locales')->giveConfig('festilaw.supported_locales');
+        $this->app->when(BlogImageInspector::class)->needs('$maxKilobytes')->giveConfig('blog.images.max_upload_kilobytes');
+        $this->app->when(BlogImageInspector::class)->needs('$maxPixels')->giveConfig('blog.images.max_pixels');
+        $this->app->when(BlogImageInspector::class)->needs('$minFeaturedWidth')->giveConfig('blog.images.min_featured.width');
+        $this->app->when(BlogImageInspector::class)->needs('$minFeaturedHeight')->giveConfig('blog.images.min_featured.height');
+        $this->app->when(BlogImageProcessor::class)->needs('$widths')->giveConfig('blog.images.widths');
+        $this->app->when(BlogImageProcessor::class)->needs('$webpQuality')->giveConfig('blog.images.webp_quality');
+        $this->app->when(BlogImageProcessor::class)->needs('$shareWidth')->giveConfig('blog.images.share.width');
+        $this->app->when(BlogImageProcessor::class)->needs('$shareHeight')->giveConfig('blog.images.share.height');
+        $this->app->when(BlogImageProcessor::class)->needs('$shareQuality')->giveConfig('blog.images.share.jpeg_quality');
+
+        $this->app->when([
+            BlogPostReadinessCalculator::class,
+            SaveBlogPostAction::class,
+            SaveBlogCategoryAction::class,
+        ])->needs('$locales')->giveConfig('festilaw.supported_locales');
+        $this->app->when(BlogAuthorProvider::class)->needs('$author')->giveConfig('blog.author');
+        $this->app->when(BlogAuthorProvider::class)->needs('$defaultLocale')->giveConfig('festilaw.default_locale');
     }
 
     /**
