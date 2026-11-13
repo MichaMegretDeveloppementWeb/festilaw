@@ -36,7 +36,7 @@
     "isEntry": true
   },
   "resources/css/web/blog/article.css": {
-    "file": "assets/article-BTk0PPFO.css",
+    "file": "assets/article-D_YDWlG6.css",
     "name": "article",
     "names": [
       "article.css"
@@ -45,7 +45,7 @@
     "isEntry": true
   },
   "resources/css/web/blog/index.css": {
-    "file": "assets/index-sSl0BpnP.css",
+    "file": "assets/index-CLNR9KVf.css",
     "name": "index",
     "names": [
       "index.css"
@@ -99,7 +99,7 @@
     "isEntry": true
   },
   "resources/css/web/home/index.css": {
-    "file": "assets/index-BkE5Z_cR.css",
+    "file": "assets/index-DNcWD5a3.css",
     "name": "index",
     "names": [
       "index.css"
@@ -159,6 +159,12 @@
     "file": "assets/web-R1LAz7ek.js",
     "name": "web",
     "src": "resources/js/web.js",
+    "isEntry": true
+  },
+  "resources/js/web/blog-categories.js": {
+    "file": "assets/blog-categories-BkVVQCqL.js",
+    "name": "blog-categories",
+    "src": "resources/js/web/blog-categories.js",
     "isEntry": true
   },
   "resources/js/web/quiz.js": {

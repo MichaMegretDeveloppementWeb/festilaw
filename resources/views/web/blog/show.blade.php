@@ -65,7 +65,7 @@
 
         @if ($page->picture)
             <div class="article__cover">
-                <x-web.blog.picture :picture="$page->picture" sizes="(min-width: 1040px) 960px, 100vw" :eager="true" class="article__cover-image" />
+                <x-web.blog.picture :picture="$page->picture" sizes="(min-width: 1280px) 972px, (min-width: 400px) 90vw, calc(100vw - 40px)" :eager="true" class="article__cover-image" />
             </div>
         @endif
 

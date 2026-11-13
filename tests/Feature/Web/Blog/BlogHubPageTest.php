@@ -76,3 +76,21 @@ it('marks the blog as the active section and "all articles" as the active filter
         ->assertSee('class="site-header__link is-active">'.__('Blog'), false)
         ->assertSee('class="blog-cats__link is-active"  aria-current="page" >'.__('All articles'), false);
 });
+
+it('keeps the categories on a single scrollable line, with arrows left to the script to reveal', function (string $locale, string $previous, string $next) {
+    BlogContent::published('guide', BlogContent::category('rules'));
+
+    $response = get(localized_route('blog.index', [], $locale))->assertOk();
+
+    // Les fleches naissent masquees : sans script, la ligne defile au doigt, rien ne recouvre les liens.
+    $response->assertSee('<button type="button" class="blog-cats__arrow blog-cats__arrow--prev" aria-label="'.$previous.'" data-blog-cats-prev hidden>', false)
+        ->assertSee('<button type="button" class="blog-cats__arrow blog-cats__arrow--next" aria-label="'.$next.'" data-blog-cats-next hidden>', false)
+        ->assertSeeInOrder(['data-blog-cats-prev', 'data-blog-cats-track', __('All articles', [], $locale), 'Rules '.$locale, 'data-blog-cats-next'], false);
+
+    // Le script du menu est charge une seule fois (Vite ajoute par ailleurs une balise de prechargement).
+    expect(preg_match_all('/<script[^>]+blog-categories[^>]*>/', $response->getContent()))->toBe(1);
+})->with([
+    'en' => ['en', 'Previous categories', 'Next categories'],
+    'fr' => ['fr', 'Catégories précédentes', 'Catégories suivantes'],
+    'es' => ['es', 'Categorías anteriores', 'Categorías siguientes'],
+]);

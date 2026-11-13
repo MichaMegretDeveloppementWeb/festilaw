@@ -57,13 +57,15 @@ return [
     /*
      | Document de contenu (JSON de l'editeur). Les plafonds protegent le serveur : un document qui les
      | depasse est refuse. `image_sizes` est l'attribut sizes des images du texte (largeur de la colonne
-     | de lecture), ajuste avec la mise en page des pages publiques.
+     | de lecture, marges de la page deduites : sans elles, un telephone chargerait une variante trop
+     | grande), ajuste avec la mise en page des pages publiques. Il est ecrit dans le HTML enregistre
+     | de chaque article : apres l'avoir change, relancer `php artisan festilaw:blog-rerender`.
      */
     'content' => [
         'max_bytes' => 200_000,
         'max_nodes' => 3_000,
         'max_depth' => 12,
-        'image_sizes' => '(min-width: 800px) 760px, 100vw',
+        'image_sizes' => '(min-width: 1048px) 920px, (min-width: 400px) 90vw, calc(100vw - 40px)',
     ],
 
     /*

@@ -30,6 +30,8 @@ it('shows the article with its author, dates, cover, sources and call to action'
         ->assertSee(CarbonImmutable::parse('2026-11-10')->locale($locale)->isoFormat('LL'))
         ->assertSee('Rules '.$locale)
         ->assertSee('fetchpriority="high"', false)
+        // Les marges de la page sont deduites : un telephone charge la variante 768 px, pas la 1200.
+        ->assertSee('sizes="(min-width: 1280px) 972px, (min-width: 400px) 90vw, calc(100vw - 40px)"', false)
         ->assertSee('Regulation (EU) 2023/988')
         ->assertSee('href="https://eur-lex.europa.eu/eli/reg/2023/988/oj" target="_blank" rel="noopener"', false)
         ->assertSee('href="'.localized_route('home', [], $locale).'#quiz"', false)

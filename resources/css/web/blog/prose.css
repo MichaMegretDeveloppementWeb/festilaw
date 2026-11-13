@@ -23,9 +23,8 @@
 .prose li > p + p { margin-top: 0.7em; }
 
 .prose blockquote {
-    padding: 16px 22px;
-    border-left: 4px solid var(--color-coral);
-    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    padding: 18px 24px;
+    border-radius: var(--radius-sm);
     background: var(--color-card);
     color: var(--color-ink-soft);
     font-style: italic;

@@ -8,9 +8,68 @@
 .blog-list__inner { max-width: var(--max-width); margin: 0 auto; }
 .blog-list__empty { padding: 40px 0; text-align: center; color: var(--color-ink-soft); font-size: 18px; }
 
-/* Menu des categories : pastilles centrees, la page courante en bleu. */
-.blog-cats { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: clamp(28px, 3.6vw, 44px); }
+/* Menu des categories : pastilles sur UNE ligne, la page courante en bleu. La ligne est centree quand
+   tout tient (marges automatiques aux deux bouts) et defile quand elle depasse, sans barre visible. */
+.blog-cats { position: relative; margin-bottom: clamp(44px, 5.4vw, 68px); }
+.blog-cats__track {
+    position: relative;
+    display: flex;
+    gap: 10px;
+    padding: 3px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+.blog-cats__track::-webkit-scrollbar { display: none; }
+.blog-cats__track > :first-child { margin-left: auto; }
+.blog-cats__track > :last-child { margin-right: auto; }
+
+/* Fondu de la couleur du fond, du cote ou il reste des categories (classes posees par le script). */
+.blog-cats::before,
+.blog-cats::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 1;
+    width: 72px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+.blog-cats::before { left: 0; background: linear-gradient(to right, var(--color-cream) 34%, rgba(252, 246, 227, 0)); }
+.blog-cats::after { right: 0; background: linear-gradient(to left, var(--color-cream) 34%, rgba(252, 246, 227, 0)); }
+.blog-cats.has-more-before::before,
+.blog-cats.has-more-after::after { opacity: 1; }
+
+/* Fleches : par-dessus le fondu, affichees par le script seulement quand il y a quelque chose a voir. */
+.blog-cats__arrow {
+    position: absolute;
+    top: 50%;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid var(--color-line);
+    border-radius: 50%;
+    background: var(--color-cream);
+    color: var(--color-blue);
+    cursor: pointer;
+    transform: translateY(-50%);
+    transition: border-color 0.2s ease, color 0.2s ease;
+}
+.blog-cats__arrow[hidden] { display: none; }
+.blog-cats__arrow:hover { border-color: var(--color-coral); color: var(--color-coral); }
+.blog-cats__arrow--prev { left: 0; }
+.blog-cats__arrow--next { right: 0; }
+
 .blog-cats__link {
+    flex: none;
+    white-space: nowrap;
     padding: 9px 18px;
     border: 1px solid var(--color-line);
     border-radius: var(--radius-pill);
@@ -23,7 +82,7 @@
 .blog-cats__link:hover { border-color: var(--color-coral); color: var(--color-blue); }
 .blog-cats__link.is-active { background: var(--color-blue); border-color: var(--color-blue); color: var(--color-cream); }
 
-.blog-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 14px 22px; margin-top: clamp(36px, 4.5vw, 56px); }
+.blog-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 14px 22px; margin-top: clamp(56px, 6.6vw, 88px); }
 .blog-pagination__pages { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .blog-pagination__page {
     display: inline-flex;
