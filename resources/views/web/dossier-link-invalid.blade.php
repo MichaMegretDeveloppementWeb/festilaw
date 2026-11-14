@@ -1,17 +1,11 @@
 @extends('layouts.web')
 
 {{-- Lien de dossier qui ne resout plus (remplace par un plus recent, expire ou inconnu) : on explique et on
-     propose d'en recevoir un nouveau (formulaire d'acces, message generique qui ne revele rien). --}}
+     propose d'en recevoir un nouveau (formulaire d'acces, message generique qui ne revele rien).
+     Page a adresse fixe (/link-expired), vers laquelle un lien mort redirige : son formulaire ne pourrait
+     rien envoyer a l'adresse du lien mort (voir DossierLinkInvalidException). --}}
 @section('title', __('Link no longer valid · Festilaw'))
 @section('robots', 'noindex, nofollow')
-
-{{-- Livewire n'injecte automatiquement ses assets que sur les reponses 200 ; ici le statut reste 404. --}}
-@push('meta')
-    @livewireStyles
-@endpush
-@push('scripts')
-    @livewireScripts
-@endpush
 
 @push('styles')
     @vite('resources/css/web/get-started/journey.css')

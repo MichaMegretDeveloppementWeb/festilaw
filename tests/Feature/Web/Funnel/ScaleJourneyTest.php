@@ -351,8 +351,8 @@ it('renders the cancelled state on the Scale space (no pay or book form)', funct
         ->assertDontSee('scale-calendar__frame', false);
 });
 
-it('404s an expired Scale space link (capability binding)', function () {
+it('sends an expired Scale space link to the link-expired page (capability binding)', function () {
     Submission::factory()->scale()->create(['resume_token' => 'expiredtok', 'resume_expires_at' => now()->subDay()]);
 
-    get(route('get-started.scale.space', ['dossier' => 'expiredtok']))->assertNotFound();
+    get(route('get-started.scale.space', ['dossier' => 'expiredtok']))->assertRedirect(route('link-expired'));
 });

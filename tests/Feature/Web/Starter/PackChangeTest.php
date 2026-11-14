@@ -106,8 +106,7 @@ it('switches a Creator dossier to Pro from the journey, carrying over details an
 
     // L'ancien lien est mort ; le nouveau dossier s'ouvre a la signature (pieces completes).
     get(route('get-started.starter.journey', ['dossier' => $oldToken]))
-        ->assertNotFound()
-        ->assertSee('This link is no longer valid');
+        ->assertRedirect(route('link-expired'));
     $this->withSession(['starter_status' => 'pack_changed'])
         ->get(route('get-started.starter.journey', ['dossier' => $new->resume_token]))
         ->assertOk()

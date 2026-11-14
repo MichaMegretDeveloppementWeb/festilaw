@@ -19,8 +19,10 @@ it('still boots Livewire on all public forms', function (string $path) {
     get($path)->assertOk()->assertSee('data-update-uri=', false);
 })->with(['/contact', '/get-started/starter', '/get-started/pro', '/get-started/scale', '/my-project']);
 
-it('keeps the resend-link form functional on a 404 response', function () {
-    get('/my-project/nonexistent-token')->assertNotFound()
+// Un lien mort ne repond plus 404 a sa propre adresse : il redirige vers une page ou le formulaire peut
+// faire ses allers-retours (preuve par une vraie requete dans DossierLinkInvalidTest).
+it('keeps the resend-link form functional on the page a dead link leads to', function () {
+    $this->followingRedirects()->get('/my-project/nonexistent-token')->assertOk()
         ->assertSee('data-update-uri=', false)
         ->assertSee('wire:loading', false);
 });

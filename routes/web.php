@@ -118,6 +118,10 @@ Route::prefix('get-started')->name('get-started.')->group(function () {
 Route::view('/my-project', 'web.find-my-project')->name('find-my-project');
 Route::get('/my-project/{dossier}', StarterProjectController::class)->name('my-project');
 
+// Page ou mene un lien de dossier qui ne resout plus (DossierLinkInvalidException). Adresse fixe, hors de
+// /my-project/{dossier} : elle ne peut pas etre prise pour un lien, quel que soit l'ordre des routes.
+Route::view('/link-expired', 'web.dossier-link-invalid')->name('link-expired');
+
 /*
  | Back-office (ADR-002) : Blade + Livewire sur-mesure, prefixe /admin, noindex, hors sitemap.
  | Auth minimale par session ; comptes crees par la commande festilaw:create-admin (pas d'inscription

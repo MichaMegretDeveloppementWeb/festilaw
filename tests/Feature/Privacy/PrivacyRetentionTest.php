@@ -47,8 +47,7 @@ it('closes the client access of a cancelled dossier: journey, my project and dow
 
     foreach (['get-started.starter.journey', 'my-project', 'get-started.starter.mandate'] as $route) {
         get(route($route, ['dossier' => $token]))
-            ->assertNotFound()
-            ->assertSee('This link is no longer valid');
+            ->assertRedirect(route('link-expired'));
     }
 });
 
@@ -61,7 +60,7 @@ it('closes the Scale space of a cancelled Scale dossier', function () {
 
     app(ChangeSubmissionStatusAction::class)->execute($dossier, SubmissionStatus::Cancelled);
 
-    get(route('get-started.scale.space', ['dossier' => 'scaletok']))->assertNotFound();
+    get(route('get-started.scale.space', ['dossier' => 'scaletok']))->assertRedirect(route('link-expired'));
 });
 
 it('never sends a new link for a cancelled dossier', function () {
@@ -134,7 +133,7 @@ it('closes, once a day, the access of cancelled dossiers whose link is still val
         ->expectsOutputToContain('Acces fermes (dossiers annules) : 1.')
         ->assertOk();
 
-    get(route('my-project', ['dossier' => $cancelled->resume_token]))->assertNotFound();
+    get(route('my-project', ['dossier' => $cancelled->resume_token]))->assertRedirect(route('link-expired'));
     get(route('my-project', ['dossier' => $active->resume_token]))->assertOk();
 });
 

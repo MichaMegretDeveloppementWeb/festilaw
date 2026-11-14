@@ -45,8 +45,8 @@ it('expires the magic link of a dossier that a refund leaves inactive', function
         ->and($dossier->resume_expires_at)->not->toBeNull()
         ->and($dossier->resume_expires_at->isFuture())->toBeFalse();
 
-    // Le lien magique ne resout plus rien (binding {dossier} = resumable -> 404).
-    get(route('my-project', ['dossier' => 'refundme']))->assertNotFound();
+    // Le lien magique ne resout plus rien (binding {dossier} = resumable -> page « lien plus valide »).
+    get(route('my-project', ['dossier' => 'refundme']))->assertRedirect(route('link-expired'));
 });
 
 it('keeps the magic link when another payment still keeps the dossier active', function () {

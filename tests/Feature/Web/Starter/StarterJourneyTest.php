@@ -654,12 +654,12 @@ it('shows an error when a required document is missing on submit', function () {
         ->and($submission->fresh()->uploadedDocuments)->toHaveCount(0);
 });
 
-it('returns 404 for an expired resume token', function () {
+it('sends an expired resume token to the link-expired page', function () {
     $submission = openStarterDossier();
     $submission->update(['resume_expires_at' => now()->subDay()]);
 
     get(route('get-started.starter.journey', ['dossier' => $submission->resume_token]))
-        ->assertNotFound();
+        ->assertRedirect(route('link-expired'));
 });
 
 it('returns 404 when the token belongs to a non-STARTER submission', function () {

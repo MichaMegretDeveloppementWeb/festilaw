@@ -19,10 +19,9 @@ it('rotates the resume token on each link request, killing the previous link', f
     $newToken = $submission->fresh()->resume_token;
     expect($newToken)->not->toBe($oldToken);
 
-    // L'ancien lien ne resout plus le dossier (404, page explicative) ; seul le nouveau fonctionne.
+    // L'ancien lien ne resout plus le dossier (redirige vers la page explicative) ; seul le nouveau fonctionne.
     get(route('get-started.starter.journey', ['dossier' => $oldToken]))
-        ->assertNotFound()
-        ->assertSee('This link is no longer valid');
+        ->assertRedirect(route('link-expired'));
     get(route('get-started.starter.journey', ['dossier' => $newToken]))->assertOk();
 });
 
