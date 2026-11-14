@@ -1,0 +1,71 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Providers;
+
+use App\Actions\Blog\Generation\ProcessNextBlogGenerationAction;
+use App\Actions\Blog\Generation\RunBlogGenerationAction;
+use App\Contracts\Blog\Generation\GenerationPipeline;
+use App\Exceptions\Blog\BlogGenerationException;
+use App\Services\Blog\Generation\BlogAiCostEstimator;
+use App\Services\Blog\Generation\BlogAiSettingsService;
+use App\Services\Blog\Generation\BlogGenerationAlertService;
+use App\Services\Blog\Generation\BlogGenerationStepRunner;
+use App\Services\Blog\Generation\Simulation\SimulatedGenerationPipeline;
+use App\Services\Blog\Generation\UnavailableGenerationPipeline;
+use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Support\ServiceProvider;
+
+/**
+ * Generation d'articles par IA : choix du pipeline (liste des etapes) d'apres la configuration, et reglages
+ * passes aux services par leur constructeur (config/blog.php, section ai), pour qu'ils restent des classes
+ * pures, testables sans conteneur.
+ */
+final class BlogGenerationServiceProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+        $this->app->bind(GenerationPipeline::class, fn (Application $app): GenerationPipeline => $this->pipeline($app));
+
+        $this->app->when(BlogAiSettingsService::class)->needs('$defaults')->giveConfig('blog.ai.defaults');
+        $this->app->when(BlogAiSettingsService::class)->needs('$fallbackEmail')->giveConfig('festilaw.notification_email');
+        $this->app->when(BlogAiSettingsService::class)->needs('$locales')->giveConfig('festilaw.supported_locales');
+
+        $this->app->when(BlogGenerationStepRunner::class)->needs('$maxAttempts')->giveConfig('blog.ai.step.max_attempts');
+        $this->app->when(BlogGenerationStepRunner::class)->needs('$retryWaitSeconds')->giveConfig('blog.ai.step.retry_wait_seconds');
+        $this->app->when(RunBlogGenerationAction::class)->needs('$lockMarginSeconds')->giveConfig('blog.ai.step.lock_margin_seconds');
+        $this->app->when(ProcessNextBlogGenerationAction::class)->needs('$claimSeconds')->giveConfig('blog.ai.step.lock_margin_seconds');
+
+        $this->app->when(BlogGenerationAlertService::class)->needs('$failuresThreshold')->giveConfig('blog.ai.consecutive_failures_alert');
+        $this->app->when(BlogGenerationAlertService::class)->needs('$techEmail')->giveConfig('festilaw.tech_alert_email');
+        $this->app->when(BlogGenerationAlertService::class)->needs('$fallbackEmail')->giveConfig('festilaw.notification_email');
+
+        $this->app->when(BlogAiCostEstimator::class)->needs('$prices')->giveConfig('blog.ai.models');
+        $this->app->when(BlogAiCostEstimator::class)->needs('$webSearchMicrousd')->giveConfig('blog.ai.web_search_microusd');
+    }
+
+    /**
+     * Les etapes factices ne tournent jamais en production : un brouillon « genere » sans aucun modele n'a
+     * rien a y faire. Le pipeline editorial n'existe pas encore (sous-chantier suivant).
+     */
+    private function pipeline(Application $app): GenerationPipeline
+    {
+        $name = (string) config('blog.ai.pipeline');
+
+        if ($name !== 'simulated') {
+            return new UnavailableGenerationPipeline(BlogGenerationException::unknownPipeline($name));
+        }
+
+        if ($app->isProduction()) {
+            return new UnavailableGenerationPipeline(BlogGenerationException::simulatedPipelineInProduction());
+        }
+
+        return new SimulatedGenerationPipeline(
+            secondsPerStep: (int) config('blog.ai.simulation.seconds_per_step'),
+            costMicrousdPerStep: (int) config('blog.ai.simulation.cost_microusd_per_step'),
+            failStep: config('blog.ai.simulation.fail_step'),
+            stopWithoutTopic: (bool) config('blog.ai.simulation.stop_without_topic'),
+        );
+    }
+}

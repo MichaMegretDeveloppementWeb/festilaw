@@ -95,4 +95,123 @@ return [
         'orphan_retention_hours' => 24,
     ],
 
+    /*
+     | Generation d'articles par IA. Une generation est une ligne de blog_generations, traitee etape par
+     | etape par un worker que le planificateur relance chaque minute (routes/console.php).
+     */
+    'ai' => [
+
+        /*
+         | Liste des etapes executees : `simulated` (etapes factices, sans appel a un modele, REFUSEES en
+         | production) ou `editorial` (le vrai pipeline). Le pipeline editorial n'existe pas encore : il
+         | arrive avec le sous-chantier suivant, qui changera cette valeur par defaut.
+         */
+        'pipeline' => env('BLOG_AI_PIPELINE', 'simulated'),
+
+        /*
+         | Valeurs de depart des reglages du back-office (cle `blog.ai` de la table settings). Tant que
+         | rien n'y est enregistre, ce sont elles qui s'appliquent. La generation automatique est eteinte
+         | par defaut : rien ne part sans que quelqu'un l'ait allumee. `notification_email` nul = l'adresse
+         | des notifications internes (festilaw.notification_email). Le plafond de depense est en cents de
+         | dollar : le fournisseur facture en dollars.
+         */
+        'defaults' => [
+            'enabled' => false,
+            'period_count' => 1,
+            'period_unit' => 'week',
+            'articles_per_run' => 1,
+            'pending_drafts_cap' => 3,
+            'monthly_spend_cap_cents' => 1_000,
+            'priority_topics' => '',
+            'avoided_topics' => '',
+            'models' => [
+                'topic' => 'anthropic/claude-sonnet-5.5',
+                'research' => 'anthropic/claude-sonnet-5.5',
+                'writing' => 'anthropic/claude-sonnet-5.5',
+                'verification' => 'anthropic/claude-sonnet-5.5',
+                'translation' => 'anthropic/claude-sonnet-5.5',
+                'image' => 'google/gemini-3.1-flash-image',
+            ],
+            'image_mode' => 'stock',
+            'max_images' => 1,
+            'notification_email' => null,
+            'transparency_notice' => ['en' => '', 'fr' => '', 'es' => ''],
+        ],
+
+        /*
+         | Modeles proposes au back-office (un champ libre accepte tout autre identifiant) et table de
+         | tarifs de repli. Prix en CENTS de dollar par million de jetons (entree, sortie), releves au
+         | catalogue d'OpenRouter le 13/11/2026. Ils ne servent qu'a ESTIMER un cout quand le fournisseur ne
+         | renvoie pas le cout reel ; l'etape est alors marquee « cout estime ». La qualite de ces modeles
+         | n'est pas presumee : le banc d'essai tranche.
+         */
+        'models' => [
+            'anthropic/claude-opus-5.5' => ['input' => 400, 'output' => 2_000],
+            'anthropic/claude-sonnet-5.5' => ['input' => 200, 'output' => 1_000],
+            'anthropic/claude-haiku-5.5' => ['input' => 10, 'output' => 50],
+            'openai/gpt-6.1-sol' => ['input' => 200, 'output' => 1_000],
+            'openai/gpt-6.1-terra' => ['input' => 100, 'output' => 500],
+            'openai/gpt-6-luna' => ['input' => 10, 'output' => 50],
+            'google/gemini-4-carbon' => ['input' => 200, 'output' => 1_000],
+            'google/gemini-4-hydrogen' => ['input' => 150, 'output' => 750],
+            'google/gemini-3.1-flash-lite' => ['input' => 25, 'output' => 150],
+            'x-ai/grok-4.7' => ['input' => 200, 'output' => 600],
+            'mistralai/mistral-large-4-0' => ['input' => 70, 'output' => 210],
+            'deepseek/deepseek-v4.1-flash' => ['input' => 30, 'output' => 120],
+        ],
+
+        /*
+         | Cout estime d'une recherche web, en millioniemes de dollar (10 000 = 0,01 $). Unite a confirmer
+         | par l'essai reel : ne sert, comme la table ci-dessus, qu'au cout de repli.
+         */
+        'web_search_microusd' => 10_000,
+
+        /*
+         | Worker. Il cherche une generation a traiter toutes les `poll_seconds`. A vide, il s'arrete des
+         | qu'un worker plus recent a pris le relais (verifie toutes les `handoff_check_seconds`), ou au
+         | bout de `idle_max_seconds` sans releve : le planificateur en relance un chaque minute, il y en a
+         | donc toujours un a l'ecoute.
+         |
+         | Aucun processus long : passe `max_lifetime_seconds` de vie, un worker qui traite une generation la
+         | rend apres l'etape en cours, et le worker suivant, deja a l'ecoute, la reprend. Une generation de
+         | dix minutes passe ainsi par plusieurs workers courts ; le plus long processus dure cette valeur
+         | plus une etape. L'hebergement ne dit nulle part combien de temps il tolere un processus.
+         */
+        'worker' => [
+            'poll_seconds' => 2,
+            'handoff_check_seconds' => 10,
+            'idle_max_seconds' => 90,
+            'max_lifetime_seconds' => 60,
+        ],
+
+        /*
+         | Etapes. Nombre d'essais avant l'echec de la generation, attente entre deux essais, et marge
+         | ajoutee au delai de l'etape pour la duree du verrou : passe ce delai, la generation est tenue
+         | pour abandonnee par son worker et reprise par un autre.
+         */
+        'step' => [
+            'max_attempts' => 3,
+            'retry_wait_seconds' => 5,
+            'lock_margin_seconds' => 60,
+        ],
+
+        /*
+         | Generation automatique : heure (UTC) du controle quotidien « un lot est-il du ? », et nombre
+         | d'echecs consecutifs qui declenche l'alerte au prestataire technique.
+         */
+        'schedule_time' => '06:00',
+        'consecutive_failures_alert' => 3,
+
+        /*
+         | Etapes factices (pipeline `simulated`) : duree de chaque etape, cout fictif par etape, et etape
+         | a faire echouer ou a faire s'arreter sans sujet, pour essayer la relance et l'abandon a l'ecran.
+         */
+        'simulation' => [
+            'seconds_per_step' => (int) env('BLOG_AI_SIMULATION_SECONDS', 3),
+            'cost_microusd_per_step' => 12_500,
+            'fail_step' => env('BLOG_AI_SIMULATION_FAIL_STEP'),
+            'stop_without_topic' => (bool) env('BLOG_AI_SIMULATION_NO_TOPIC', false),
+        ],
+    ],
+
 ];

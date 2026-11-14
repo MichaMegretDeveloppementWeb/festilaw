@@ -65,3 +65,20 @@ Schedule::command('festilaw:blog-purge-orphan-images')->dailyAt('03:30')->withou
  | technique est prevenu par e-mail (SchedulerHealthService, AlertOnStalledScheduler).
  */
 Schedule::command('festilaw:scheduler-heartbeat')->everyMinute();
+
+/*
+ | Blog, generation par IA : chaque jour, met en file le lot d'articles quand la periode reglee au
+ | back-office est echue. Elle ne genere rien elle-meme (c'est le worker ci-dessous). Rejouable.
+ */
+Schedule::command('festilaw:blog-generation-schedule')
+    ->dailyAt((string) config('blog.ai.schedule_time'))
+    ->withoutOverlapping(10);
+
+/*
+ | Blog, generation par IA : worker. EN DERNIER, parce qu'il ne rend pas la main : il reste a l'ecoute
+ | environ une minute (toutes les deux secondes : « une generation a traiter ? ») et, s'il en prend une, le
+ | temps de la traiter. Le planificateur en relance un chaque minute ; le precedent s'arrete quand le
+ | nouveau s'est inscrit, si bien qu'il y en a toujours un a l'ecoute. Pas de withoutOverlapping : ce
+ | relais et le verrou de chaque generation (blog_generations.locked_until) en tiennent lieu.
+ */
+Schedule::command('festilaw:blog-generation-worker')->everyMinute();
