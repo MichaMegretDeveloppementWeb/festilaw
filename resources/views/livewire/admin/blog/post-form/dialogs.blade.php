@@ -1,4 +1,40 @@
-{{-- Fenetres du formulaire d'article : programmer, depublier, supprimer, ce qui reste a completer. --}}
+{{-- Fenetres du formulaire d'article : lien du texte, descriptions d'une image, programmer, depublier,
+     supprimer, ce qui reste a completer. --}}
+
+{{-- Lien du texte. data-no-dirty : c'est l'editeur qui dit qu'il y a quelque chose a enregistrer. --}}
+<x-ui::modal name="post-link" :title="__('Lien')">
+    <div data-no-dirty>
+        <x-ui::form-group :label="__('Adresse du lien')" for="link-href"
+            :hint="__('Une adresse complète (https://…), une adresse du site (/fr/tarifs) ou mailto:… Vide : le lien est retiré.')">
+            <x-ui::input id="link-href" type="text" x-model="linkForm.href" x-on:keydown.enter.prevent="applyLink()"
+                placeholder="https://" autocomplete="off" autocapitalize="none" spellcheck="false" />
+        </x-ui::form-group>
+        <p x-show="linkForm.error" x-cloak x-text="linkForm.error" class="mt-1.5 text-[12px] text-red-700 dark:text-red-400" role="alert"></p>
+    </div>
+
+    <x-slot:footer>
+        <x-ui::button variant="ghost" class="mr-auto" x-on:click="removeLink()">{{ __('Retirer le lien') }}</x-ui::button>
+        <x-ui::button variant="ghost" x-on:click="$dispatch('ui-close-modal', 'post-link')">{{ __('Annuler') }}</x-ui::button>
+        <x-ui::button x-on:click="applyLink()">{{ __('Appliquer') }}</x-ui::button>
+    </x-slot:footer>
+</x-ui::modal>
+
+{{-- Descriptions d'une image, enregistrees tout de suite (sans attendre l'enregistrement de l'article). --}}
+<x-ui::modal name="image-alt" :title="__('Descriptions de l\'image')">
+    <div data-no-dirty class="space-y-4">
+        <p class="text-[12px] leading-relaxed text-muted">{{ __('Une phrase qui dit ce que montre l\'image, pour les personnes qui ne la voient pas et pour Google. Une par langue ; elle est enregistrée tout de suite.') }}</p>
+        @foreach ($locales as $locale => $language)
+            <x-ui::form-group :label="ucfirst($language)" for="image-alt-{{ $locale }}">
+                <x-ui::textarea id="image-alt-{{ $locale }}" rows="2" maxlength="300" x-model="altForm.{{ $locale }}" lang="{{ $locale }}" />
+            </x-ui::form-group>
+        @endforeach
+    </div>
+
+    <x-slot:footer>
+        <x-ui::button variant="ghost" x-on:click="$dispatch('ui-close-modal', 'image-alt')">{{ __('Annuler') }}</x-ui::button>
+        <x-ui::button x-on:click="saveAlt()" x-bind:disabled="altForm.saving" :loading="true" target="saveImageAlt">{{ __('Enregistrer les descriptions') }}</x-ui::button>
+    </x-slot:footer>
+</x-ui::modal>
 
 @unless ($isPublished)
     <x-ui::modal name="schedule-post" :title="__('Programmer la publication')">

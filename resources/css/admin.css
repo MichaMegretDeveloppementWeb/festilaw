@@ -12,6 +12,8 @@
 /* Lecture limitee aux vues et scripts du back-office : l'espace public est en CSS ecrit a la main et
    ne doit rien ajouter a cette feuille. */
 @import 'tailwindcss' source(none);
+/* Allure du texte dans l'editeur d'article (quelques regles, sans effet sur les autres ecrans). */
+@import './admin/blog-editor.css';
 @source '../views/layouts/admin.blade.php';
 @source '../views/livewire/admin';
 @source '../views/components/admin';

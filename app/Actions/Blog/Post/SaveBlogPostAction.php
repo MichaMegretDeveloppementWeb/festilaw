@@ -32,7 +32,8 @@ use Illuminate\Support\Facades\DB;
  */
 final readonly class SaveBlogPostAction
 {
-    private const MAX_RELATED_POSTS = 6;
+    /** Nombre d'articles lies qu'un article peut garder ; le formulaire n'en propose pas davantage. */
+    public const MAX_RELATED_POSTS = 6;
 
     /**
      * @param  list<string>  $locales  langues du site

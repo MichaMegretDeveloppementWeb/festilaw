@@ -15,14 +15,7 @@
     </x-ui::form-group>
 </div>
 
-<div>
-    <p class="mb-1.5 text-[13px] font-medium text-gray-700 dark:text-gray-300">{{ __('Contenu') }}</p>
-    <div class="rounded-lg border border-dashed border-default bg-elevated px-4 py-5 text-[13px] text-secondary">
-        <p x-show="hasContent('{{ $locale }}')">{{ __('Le contenu en :language de cet article est conservé tel quel à l\'enregistrement.', ['language' => $language]) }}</p>
-        <p x-show="! hasContent('{{ $locale }}')" x-cloak>{{ __('Aucun contenu en :language pour le moment.', ['language' => $language]) }}</p>
-        <p class="mt-1 text-[12px] text-muted">{{ __('L\'éditeur de texte arrive à l\'étape suivante.') }}</p>
-    </div>
-</div>
+@include('livewire.admin.blog.post-form.editor', ['locale' => $locale, 'language' => $language])
 
 <x-admin.blog.google-fields :locale="$locale" :prefix="$addressPrefixes[$locale]"
     :title-fallback="__('le titre de l\'article')" :description-fallback="__('l\'extrait')" />

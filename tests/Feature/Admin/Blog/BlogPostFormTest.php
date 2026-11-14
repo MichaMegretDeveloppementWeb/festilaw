@@ -413,7 +413,9 @@ it('says an article is ready to publish only while it is not published', functio
 
     Livewire::test(PostForm::class, ['post' => $published->id])
         ->assertDontSee('Prêt à publier')
-        ->assertDontSee('à compléter');
+        // La pastille « N points à compléter » ; les mots seuls existent ailleurs (description d'une image).
+        ->assertDontSee('point à compléter')
+        ->assertDontSee('points à compléter');
 });
 
 it('counts what is missing in the header of an incomplete draft', function () {
@@ -439,4 +441,26 @@ it('keeps a single save for the whole article, and the delete out of the way in 
     expect(substr_count($html, 'x-on:click="save()"'))->toBe(1)
         ->and($html)->toContain('ui-combobox')
         ->and($html)->not->toContain('Retour aux articles');
+});
+
+/*
+ | La liste avec recherche garde son choix a travers un rendu parce que le kit lie la liste elle-meme a la
+ | propriete (correctif du kit du 14/11/2026, commit ae4ace9). Avant lui, le lien portait sur un champ cache
+ | que chaque aller-retour vidait : la liste reaffichait « Choisir une catégorie » alors que le choix etait
+ | garde. Si ce test echoue apres une mise a jour du kit, rejouer le parcours du navigateur
+ | (admin-check-redaction.mjs), seul a prouver ce que la liste affiche.
+ */
+it('binds the category list itself to the component property, so it keeps showing the choice through a render', function () {
+    BlogContent::category('rules');
+
+    $html = Livewire::test(PostForm::class)->html();
+
+    expect($html)->toMatch('/<div[^>]*x-modelable="value"[^>]*wire:model="categoryId"/')
+        ->and($html)->not->toMatch('/<input[^>]*type="hidden"[^>]*wire:model="categoryId"/');
+});
+
+it('tells the browser the weight limit of an image, so a file too heavy is refused before it is sent', function () {
+    config(['blog.images.max_upload_kilobytes' => 2048]);
+
+    expect(Livewire::test(PostForm::class)->html())->toContain('maxUploadBytes: 2097152');
 });

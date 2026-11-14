@@ -6,6 +6,8 @@ namespace App\Livewire\Admin\Blog;
 
 use App\Actions\Admin\Blog\SaveAndPublishBlogPostAction;
 use App\Actions\Admin\Blog\SaveAndScheduleBlogPostAction;
+use App\Actions\Blog\Image\StoreBlogImageAction;
+use App\Actions\Blog\Image\UpdateBlogImageAltAction;
 use App\Actions\Blog\Post\DeleteBlogPostAction;
 use App\Actions\Blog\Post\SaveBlogPostAction;
 use App\Actions\Blog\Post\UnpublishBlogPostAction;
@@ -14,6 +16,8 @@ use App\Data\Admin\Blog\BlogPostStatusChangeResult;
 use App\Data\Blog\BlogPostTranslationData;
 use App\Data\Blog\BlogSourceData;
 use App\Data\Blog\SaveBlogPostData;
+use App\Data\Blog\StoreBlogImageData;
+use App\Enums\Blog\BlogImageUsage;
 use App\Exceptions\BaseAppException;
 use App\Livewire\Concerns\HandlesAdminErrors;
 use App\Models\BlogPost;
@@ -26,6 +30,8 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\Renderless;
 use Livewire\Component;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Livewire\WithFileUploads;
 use Throwable;
 
 /**
@@ -35,13 +41,20 @@ use Throwable;
  * et traduit leur issue. Le CONTENU des trois langues n'est pas dans son etat : il vit dans le
  * navigateur (resources/js/admin/blog-post-form.js) et arrive en argument au moment d'enregistrer, pour
  * que les allers-retours restent legers. Aucune requete ici.
+ *
+ * Images : le fichier arrive par l'envoi de Livewire, l'Action l'enregistre "en attente" et le navigateur
+ * garde son apercu ; l'image n'est rattachee a l'article qu'a l'enregistrement de celui-ci.
  */
 #[Layout('layouts.admin')]
 class PostForm extends Component
 {
     use HandlesAdminErrors;
+    use WithFileUploads;
 
     private const LOCALES = ['en' => 'anglais', 'fr' => 'français', 'es' => 'espagnol'];
+
+    /** Duree d'affichage d'un refus d'image : le message dit quoi corriger, il se lit en entier. */
+    private const IMAGE_REFUSAL_LIFE = 9000;
 
     private const MAX_SOURCES = 30;
 
@@ -76,6 +89,17 @@ class PostForm extends Component
 
     /** Date de programmation, heure UTC, au format du champ (BlogPostFormService::DATETIME_FORMAT). */
     public string $scheduledFor = '';
+
+    /**
+     * Fichier d'image en cours d'envoi (image principale, de partage ou du texte). Il ne reste dans
+     * l'etat que le temps d'etre enregistre par storeImage().
+     *
+     * @var TemporaryUploadedFile|null
+     */
+    public $imageUpload = null;
+
+    /** La liste des articles a proposer comme articles lies est ouverte : elle n'est lue que dans ce cas. */
+    public bool $pickingRelated = false;
 
     /** Charge a l'ouverture seulement : n'existe que pendant la premiere requete (jamais serialise). */
     private ?BlogPostFormOpening $opening = null;
@@ -337,6 +361,148 @@ class PostForm extends Component
         }
     }
 
+    /**
+     * Enregistre l'image qui vient d'etre envoyee. Elle nait sans article : c'est l'enregistrement de
+     * l'article qui la rattache. Rend ce que le navigateur garde de l'image, ou null si elle est refusee.
+     *
+     * @param  string  $usage  valeur de BlogImageUsage (featured, share, content)
+     * @return array{id: int, url: ?string, alt: array<string, string>}|null
+     */
+    public function storeImage(string $usage, StoreBlogImageAction $storeImage, BlogPostFormService $form): ?array
+    {
+        $imageUsage = BlogImageUsage::tryFrom($usage);
+        $file = $this->imageUpload;
+
+        if ($imageUsage === null || ! $file instanceof TemporaryUploadedFile) {
+            $this->reset('imageUpload');
+            $this->dispatch('ui-toast', type: 'error', title: __('Aucun fichier n\'a été reçu. Réessayez.'));
+
+            return null;
+        }
+
+        try {
+            $image = $storeImage->execute(new StoreBlogImageData(
+                path: $file->getRealPath(),
+                usage: $imageUsage,
+                nameHint: $this->nameHint(),
+            ));
+        } catch (BaseAppException $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            $this->dispatch('ui-toast', type: 'error', title: $e->getUserMessage(), life: self::IMAGE_REFUSAL_LIFE);
+
+            return null;
+        } catch (Throwable $e) {
+            $this->reportAdminError($e, 'Admin store blog image');
+
+            return null;
+        } finally {
+            // Le fichier temporaire ne sert plus, que l'image ait ete acceptee ou non.
+            $this->discardUpload($file);
+        }
+
+        match ($imageUsage) {
+            BlogImageUsage::Featured => $this->featuredImageId = $image->id,
+            BlogImageUsage::Share => $this->shareImageId = $image->id,
+            BlogImageUsage::Content => null,
+        };
+
+        return $form->imageSummary($image);
+    }
+
+    /** Retire l'image principale de l'article (pris en compte a l'enregistrement). */
+    public function removeFeaturedImage(): void
+    {
+        $this->featuredImageId = null;
+    }
+
+    /** Retire l'image de partage : les reseaux sociaux reprendront l'image principale. */
+    public function removeShareImage(): void
+    {
+        $this->shareImageId = null;
+    }
+
+    /**
+     * Enregistre tout de suite les descriptions d'une image de l'article, dans les trois langues.
+     *
+     * @param  array<string, mixed>  $alt  description par langue
+     * @return array<string, string>|null descriptions enregistrees pour chaque langue, ou null en cas d'echec
+     */
+    public function saveImageAlt(int $imageId, array $alt, UpdateBlogImageAltAction $updateAlt): ?array
+    {
+        try {
+            $saved = $updateAlt->execute($imageId, $alt, $this->postId);
+        } catch (BaseAppException $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            $this->dispatch('ui-toast', type: 'error', title: $e->getUserMessage());
+
+            return null;
+        } catch (Throwable $e) {
+            $this->reportAdminError($e, 'Admin update blog image descriptions');
+
+            return null;
+        }
+
+        $this->dispatch('ui-toast', type: 'success', title: __('Descriptions de l\'image enregistrées.'));
+
+        $descriptions = [];
+
+        foreach (array_keys(self::LOCALES) as $locale) {
+            $descriptions[$locale] = (string) ($saved[$locale] ?? '');
+        }
+
+        return $descriptions;
+    }
+
+    /** Ouvre la liste des articles a proposer comme articles lies. */
+    public function openRelatedPicker(): void
+    {
+        $this->pickingRelated = true;
+    }
+
+    public function closeRelatedPicker(): void
+    {
+        $this->pickingRelated = false;
+    }
+
+    /** Ajoute un article lie a la suite des autres (pris en compte a l'enregistrement). */
+    public function addRelated(int|string $postId): void
+    {
+        $postId = (int) $postId;
+        $this->pickingRelated = false;
+
+        if ($postId <= 0 || $postId === $this->postId || in_array($postId, $this->relatedIds, true)) {
+            return;
+        }
+
+        if (count($this->relatedIds) >= SaveBlogPostAction::MAX_RELATED_POSTS) {
+            return;
+        }
+
+        $this->relatedIds[] = $postId;
+    }
+
+    public function removeRelated(int|string $postId): void
+    {
+        $postId = (int) $postId;
+
+        $this->relatedIds = array_values(array_filter($this->relatedIds, static fn (int $id): bool => $id !== $postId));
+    }
+
+    /** Appele par wire:sort : identifiant de l'article lie deplace et sa nouvelle place (a partir de 0). */
+    public function reorderRelated(int|string $postId, int|string $position): void
+    {
+        $postId = (int) $postId;
+
+        if (! in_array($postId, $this->relatedIds, true)) {
+            return;
+        }
+
+        $others = array_values(array_filter($this->relatedIds, static fn (int $id): bool => $id !== $postId));
+        array_splice($others, max(0, min((int) $position, count($others))), 0, [$postId]);
+
+        $this->relatedIds = $others;
+    }
+
     public function addSource(): void
     {
         if (count($this->sources) < self::MAX_SOURCES) {
@@ -376,12 +542,22 @@ class PostForm extends Component
     {
         $view = null;
         $categoryOptions = [];
+        $related = [];
+        $relatedCandidates = [];
 
         try {
             $categoryOptions = $form->categoryOptions();
 
-            if ($this->postId !== null) {
-                $view = $this->opening?->view ?? $form->current($this->postId);
+            if ($this->pickingRelated) {
+                $relatedCandidates = $form->relatedCandidates(array_values(array_filter([...$this->relatedIds, $this->postId])));
+            }
+
+            if ($this->postId === null) {
+                // Article pas encore cree : seuls les articles lies deja choisis demandent une lecture.
+                $related = $form->related($this->relatedIds);
+            } else {
+                $view = $this->opening?->view ?? $form->current($this->postId, $this->relatedIds);
+                $related = $view->related ?? [];
 
                 if ($view === null) {
                     $this->addError('post-load-failed', __('Cet article n\'existe plus. Il a peut-être été supprimé depuis un autre onglet.'));
@@ -400,6 +576,13 @@ class PostForm extends Component
             'categoryOptions' => $categoryOptions,
             // Remis au navigateur a l'ouverture seulement : ensuite, c'est lui qui detient le contenu.
             'initialContents' => $this->firstRender ? ($this->opening?->contents ?? array_fill_keys(array_keys(self::LOCALES), null)) : null,
+            // Images de l'article (apercu et descriptions), remises une seule fois elles aussi : ensuite le
+            // navigateur tient la liste a jour au fil des envois.
+            'initialImages' => $this->firstRender ? ($this->opening?->view->images ?? []) : null,
+            'related' => $related,
+            'relatedCandidates' => $relatedCandidates,
+            'relatedLimit' => SaveBlogPostAction::MAX_RELATED_POSTS,
+            'relatedCandidateLimit' => BlogPostFormService::RELATED_CANDIDATES,
             'previewUrlTemplate' => route('admin.blog.posts.preview', ['post' => '__ID__', 'locale' => '__LOCALE__']),
             'addressPrefixes' => $slugs->pathPrefixes('blog.show'),
         ])->title(($this->postId === null ? __('Nouvel article') : __('Modifier l\'article')));
@@ -444,6 +627,32 @@ class PostForm extends Component
                 array_values($this->sources),
             ),
         );
+    }
+
+    /** Texte dont tirer le nom des fichiers d'une image : le premier titre saisi. */
+    private function nameHint(): ?string
+    {
+        foreach (array_keys(self::LOCALES) as $locale) {
+            $title = trim((string) ($this->texts[$locale]['title'] ?? ''));
+
+            if ($title !== '') {
+                return $title;
+            }
+        }
+
+        return null;
+    }
+
+    /** Supprime le fichier temporaire d'un envoi et vide la propriete : un echec ici ne gene pas l'ecran. */
+    private function discardUpload(TemporaryUploadedFile $file): void
+    {
+        try {
+            $file->delete();
+        } catch (Throwable $e) {
+            Log::warning('Temporary blog image upload could not be deleted.', ['exception' => $e]);
+        }
+
+        $this->reset('imageUpload');
     }
 
     /** Message precis d'un refus metier, affiche en haut du formulaire tant qu'il n'est pas corrige. */

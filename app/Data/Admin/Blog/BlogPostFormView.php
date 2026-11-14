@@ -19,7 +19,7 @@ final readonly class BlogPostFormView
      * @param  list<string>  $warnings  ce qui est conseille sans etre obligatoire
      * @param  array<string, string>  $publicUrls  page publique par langue, pour un article publie
      * @param  list<array{id: int, title: ?string, status: BlogPostStatus}>  $related  articles lies, dans leur ordre
-     * @param  array<int, array{url: ?string, alt: array<string, string>}>  $images  apercu et descriptions des images de l'article, par identifiant
+     * @param  array<int, array{id: int, url: ?string, alt: array<string, string>}>  $images  apercu et descriptions des images de l'article, par identifiant
      */
     public function __construct(
         public BlogPostStatus $status,

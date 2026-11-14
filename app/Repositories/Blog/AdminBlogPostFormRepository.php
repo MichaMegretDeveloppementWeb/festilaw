@@ -68,6 +68,37 @@ final readonly class AdminBlogPostFormRepository
     }
 
     /**
+     * Articles designes par leurs identifiants, dans l'ordre demande, avec leur titre et leur statut :
+     * les articles lies tels que le formulaire les tient, enregistres ou non. Un identifiant qui
+     * n'existe plus est absent du resultat. 1 requete (aucune pour une liste vide).
+     *
+     * @param  list<int>  $postIds
+     * @return list<object{id: int, title: ?string, status: string}>
+     */
+    public function listByIds(array $postIds): array
+    {
+        if ($postIds === []) {
+            return [];
+        }
+
+        $rows = [];
+
+        foreach ($this->titled(BlogPost::query()->toBase()->whereIn('blog_posts.id', $postIds)) as $row) {
+            $rows[$row->id] = $row;
+        }
+
+        $ordered = [];
+
+        foreach ($postIds as $postId) {
+            if (isset($rows[$postId])) {
+                $ordered[] = $rows[$postId];
+            }
+        }
+
+        return $ordered;
+    }
+
+    /**
      * Articles proposes a l'ajout comme articles lies : tous statuts, les plus recents d'abord, hors
      * l'article lui-meme et ceux deja choisis. 1 requete.
      *

@@ -21,9 +21,10 @@ use App\Services\Web\Localization\LocalizedUrlGenerator;
  *
  * Plan de requetes (verifie par un test de budget) :
  *   - ouverture d'un article : 4 (article, textes avec contenu, images, articles lies) ;
- *   - rendu suivant : 4 (article, textes sans contenu, images, articles lies) ;
+ *   - rendu suivant : 4 (article, textes sans contenu, images, articles lies), 3 sans article lie ;
  *   - categories du selecteur : 1, a chaque rendu ;
- *   - creation : seulement les categories.
+ *   - creation : seulement les categories (plus 1 des qu'un article lie est choisi) ;
+ *   - articles a proposer comme articles lies : 1, seulement pendant que la liste est ouverte.
  */
 final readonly class BlogPostFormService
 {
@@ -32,6 +33,12 @@ final readonly class BlogPostFormService
 
     /** Format du champ de date du formulaire (heure UTC). */
     public const DATETIME_FORMAT = 'Y-m-d\TH:i';
+
+    /** Nombre d'articles proposes a l'ajout comme articles lies (les plus recents). */
+    public const RELATED_CANDIDATES = 200;
+
+    /** Largeur visee pour l'apercu d'une image dans le formulaire. */
+    private const PREVIEW_WIDTH = 768;
 
     /**
      * @param  list<string>  $locales  langues du site
@@ -89,12 +96,64 @@ final readonly class BlogPostFormService
         );
     }
 
-    /** Affichage d'un article enregistre, relu a chaque rendu. Null s'il n'existe plus. */
-    public function current(int $postId): ?BlogPostFormView
+    /**
+     * Affichage d'un article enregistre, relu a chaque rendu. Null s'il n'existe plus.
+     *
+     * @param  list<int>  $relatedIds  articles lies tels que le formulaire les tient (enregistres ou non)
+     */
+    public function current(int $postId, array $relatedIds): ?BlogPostFormView
     {
         $post = $this->posts->findForStatus($postId);
 
-        return $post === null ? null : $this->view($post);
+        return $post === null ? null : $this->view($post, $relatedIds);
+    }
+
+    /**
+     * Articles lies choisis pour un article pas encore enregistre, dans leur ordre.
+     *
+     * @param  list<int>  $relatedIds
+     * @return list<array{id: int, title: ?string, status: BlogPostStatus}>
+     */
+    public function related(array $relatedIds): array
+    {
+        return $this->relatedRows($this->posts->listByIds($relatedIds));
+    }
+
+    /**
+     * Articles a proposer comme articles lies : tous statuts, les plus recents d'abord, hors ceux
+     * deja choisis et l'article lui-meme. Le libelle dit le statut de ce qui n'est pas publie.
+     *
+     * @param  list<int>  $excludedIds
+     * @return array<int, string> identifiant => libelle
+     */
+    public function relatedCandidates(array $excludedIds): array
+    {
+        $options = [];
+
+        foreach ($this->posts->listRelatedCandidates($excludedIds, '', self::RELATED_CANDIDATES) as $row) {
+            $status = BlogPostStatus::from($row->status);
+            $title = $row->title ?? __('Sans titre');
+
+            $options[$row->id] = $status === BlogPostStatus::Published ? $title : $title.' · '.$status->label();
+        }
+
+        return $options;
+    }
+
+    /**
+     * Ce que le formulaire garde d'une image : son apercu et ses descriptions dans chaque langue.
+     *
+     * @return array{id: int, url: ?string, alt: array<string, string>}
+     */
+    public function imageSummary(BlogImage $image): array
+    {
+        $alt = [];
+
+        foreach ($this->locales as $locale) {
+            $alt[$locale] = $image->altFor($locale);
+        }
+
+        return ['id' => $image->id, 'url' => $this->previews->url($image, self::PREVIEW_WIDTH), 'alt' => $alt];
     }
 
     /**
@@ -107,7 +166,10 @@ final readonly class BlogPostFormService
         return $this->categories->listForSelector(self::ADMIN_LOCALE);
     }
 
-    private function view(BlogPost $post): BlogPostFormView
+    /**
+     * @param  list<int>|null  $relatedIds  null : les articles lies enregistres (ouverture du formulaire)
+     */
+    private function view(BlogPost $post, ?array $relatedIds = null): BlogPostFormView
     {
         $readiness = $this->readiness->calculate($post);
         $label = static fn (BlogReadinessIssue $issue): string => $issue->label();
@@ -128,13 +190,7 @@ final readonly class BlogPostFormService
 
         /** @var BlogImage $image */
         foreach ($post->images as $image) {
-            $alt = [];
-
-            foreach ($this->locales as $locale) {
-                $alt[$locale] = $image->altFor($locale);
-            }
-
-            $images[$image->id] = ['url' => $this->previews->url($image, 768), 'alt' => $alt];
+            $images[$image->id] = $this->imageSummary($image);
         }
 
         return new BlogPostFormView(
@@ -145,11 +201,20 @@ final readonly class BlogPostFormService
             blockers: array_values(array_unique(array_map($label, $readiness->blockers))),
             warnings: array_values(array_unique(array_map($label, $readiness->warnings))),
             publicUrls: $publicUrls,
-            related: array_map(
-                static fn (object $row): array => ['id' => $row->id, 'title' => $row->title, 'status' => BlogPostStatus::from($row->status)],
-                $this->posts->listRelated($post->id),
-            ),
+            related: $this->relatedRows($relatedIds === null ? $this->posts->listRelated($post->id) : $this->posts->listByIds($relatedIds)),
             images: $images,
+        );
+    }
+
+    /**
+     * @param  list<object{id: int, title: ?string, status: string}>  $rows
+     * @return list<array{id: int, title: ?string, status: BlogPostStatus}>
+     */
+    private function relatedRows(array $rows): array
+    {
+        return array_map(
+            static fn (object $row): array => ['id' => $row->id, 'title' => $row->title, 'status' => BlogPostStatus::from($row->status)],
+            $rows,
         );
     }
 }
