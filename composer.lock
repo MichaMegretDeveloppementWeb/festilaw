@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "bcf2a4a3c1b3ac46dc177677c3742954",
+    "content-hash": "f5c5854fa50ddb42943db016db53ffbb",
     "packages": [
         {
             "name": "barryvdh/laravel-dompdf",
@@ -745,12 +745,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:MichaMegretDeveloppementWeb/falcon-ui-kit.git",
-                "reference": "20c391bb30c8793ec29e61ec305908bb752609c5"
+                "reference": "ae4ace9f95045efeb8992f8cead5b26e0c6c11ad"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/MichaMegretDeveloppementWeb/falcon-ui-kit/zipball/20c391bb30c8793ec29e61ec305908bb752609c5",
-                "reference": "20c391bb30c8793ec29e61ec305908bb752609c5",
+                "url": "https://api.github.com/repos/MichaMegretDeveloppementWeb/falcon-ui-kit/zipball/ae4ace9f95045efeb8992f8cead5b26e0c6c11ad",
+                "reference": "ae4ace9f95045efeb8992f8cead5b26e0c6c11ad",
                 "shasum": ""
             },
             "require": {
@@ -832,7 +832,7 @@
                 "source": "https://github.com/MichaMegretDeveloppementWeb/falcon-ui-kit/tree/main",
                 "issues": "https://github.com/MichaMegretDeveloppementWeb/falcon-ui-kit/issues"
             },
-            "time": "2026-11-12T18:09:22+00:00"
+            "time": "2026-11-13T23:29:49+00:00"
         },
         {
             "name": "fruitcake/php-cors",
@@ -2504,16 +2504,16 @@
         },
         {
             "name": "livewire/livewire",
-            "version": "v4.2.0",
+            "version": "v4.4.8",
             "source": {
                 "type": "git",
                 "url": "https://github.com/livewire/livewire.git",
-                "reference": "b2faf1b5805d469d5e22b35b0e5ffe3cbc466d39"
+                "reference": "8d7f8fc6138274a2f3384c9db354ca012215a259"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/livewire/livewire/zipball/b2faf1b5805d469d5e22b35b0e5ffe3cbc466d39",
-                "reference": "b2faf1b5805d469d5e22b35b0e5ffe3cbc466d39",
+                "url": "https://api.github.com/repos/livewire/livewire/zipball/8d7f8fc6138274a2f3384c9db354ca012215a259",
+                "reference": "8d7f8fc6138274a2f3384c9db354ca012215a259",
                 "shasum": ""
             },
             "require": {
@@ -2568,7 +2568,7 @@
             "description": "A front-end framework for Laravel.",
             "support": {
                 "issues": "https://github.com/livewire/livewire/issues",
-                "source": "https://github.com/livewire/livewire/tree/v4.2.0"
+                "source": "https://github.com/livewire/livewire/tree/v4.4.8"
             },
             "funding": [
                 {
@@ -2576,7 +2576,8 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-02-26T04:18:25+00:00"
+            "time": "2026-10-21T12:53:46+00:00",
+            "published-time": "2026-10-21T14:02:22+00:00"
         },
         {
             "name": "masterminds/html5",

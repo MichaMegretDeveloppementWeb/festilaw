@@ -196,6 +196,9 @@ it('switches the file to Creator at the renewal, with a new Creator mandate to s
 
 it('applies the switch at once when the renewal is already due at approval', function () {
     $this->travelTo(now()->setDate(2027, 1, 5));
+    // L'horloge du test est en avance sur la date reelle du fichier depose : le menage des envois de Livewire
+    // (fichiers de plus de 24 heures) effacerait le justificatif tout juste envoye, avec la fiche qui dit son type.
+    config()->set('livewire.temporary_file_upload.cleanup', false);
     $dossier = activePro(2026); // paye 2026, 2027 du
     requestDowngrade($dossier);
     actingAs(User::factory()->create());
