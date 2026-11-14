@@ -63,7 +63,7 @@ it('shows the blog group in both menus and marks the current screen', function (
 it('describes the menu once, with a single active item per screen', function (string $route, bool $viewingContact, string $active) {
     $items = collect(app(AdminNavigation::class)->groups($route, $viewingContact))->flatMap->items;
 
-    expect($items->pluck('label')->all())->toBe(['Dossiers', 'Prises de contact', 'Quiz', 'Tarifs', 'Articles', 'Catégories'])
+    expect($items->pluck('label')->all())->toBe(['Dossiers', 'Prises de contact', 'Quiz', 'Tarifs', 'Articles', 'Catégories', 'Génération IA'])
         ->and($items->where('active', true)->pluck('label')->all())->toBe([$active]);
 })->with([
     'dossiers' => ['admin.submissions.index', false, 'Dossiers'],
@@ -72,6 +72,8 @@ it('describes the menu once, with a single active item per screen', function (st
     'pricing' => ['admin.settings', false, 'Tarifs'],
     'post form' => ['admin.blog.posts.edit', false, 'Articles'],
     'category form' => ['admin.blog.categories.create', false, 'Catégories'],
+    'generation settings' => ['admin.blog.generation.settings', false, 'Génération IA'],
+    'generation detail' => ['admin.blog.generation.show', false, 'Génération IA'],
 ]);
 
 it('never shows a doubly escaped apostrophe on a blog screen', function () {
@@ -79,7 +81,7 @@ it('never shows a doubly escaped apostrophe on a blog screen', function () {
     actingAs(User::factory()->create());
 
     // Une propriete de composant recue par {{ }} puis affichee par {{ }} serait echappee deux fois.
-    foreach (['/admin/blog/posts', '/admin/blog/posts/create', "/admin/blog/posts/{$post->id}/edit", '/admin/blog/categories', '/admin/blog/categories/create'] as $path) {
+    foreach (['/admin/blog/posts', '/admin/blog/posts/create', "/admin/blog/posts/{$post->id}/edit", '/admin/blog/categories', '/admin/blog/categories/create', '/admin/blog/generation', '/admin/blog/generation/settings'] as $path) {
         expect(get($path)->assertOk()->getContent())->not->toContain('&amp;#039;');
     }
 });

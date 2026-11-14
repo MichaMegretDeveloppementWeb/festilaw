@@ -9,8 +9,11 @@ use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Mail\BlogGenerationFailuresAlert;
 use App\Mail\BlogSpendLimitReached;
 use App\Models\BlogGeneration;
+use App\Repositories\Blog\FailedBlogGenerationStepRepository;
 use App\Repositories\SettingRepository;
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Routing\UrlGenerator;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
@@ -19,6 +22,7 @@ use Throwable;
  * Alertes de la generation par IA : une serie d'echecs (au prestataire technique), et la suspension pour une
  * raison d'argent (au destinataire des notifications, une fois par mois et par cause). Envoi au mieux : un
  * e-mail qui ne part pas est journalise, jamais leve, pour ne pas faire echouer la generation elle-meme.
+ * Aucun de ces e-mails ne porte la cause technique d'un echec : elle n'est ecrite qu'au journal du serveur.
  */
 final readonly class BlogGenerationAlertService
 {
@@ -28,6 +32,9 @@ final readonly class BlogGenerationAlertService
         private SettingRepository $settings,
         private BlogGenerationBudget $budget,
         private BlogAiCostFormatter $costs,
+        private BlogGenerationLabels $labels,
+        private FailedBlogGenerationStepRepository $failedSteps,
+        private UrlGenerator $url,
         private int $failuresThreshold,
         private ?string $techEmail,
         private string $fallbackEmail,
@@ -44,7 +51,7 @@ final readonly class BlogGenerationAlertService
             ->whereNotIn('status', BlogGenerationStatus::activeValues())
             ->latest('id')
             ->limit($this->failuresThreshold + 1)
-            ->get(['id', 'status', 'last_error']);
+            ->get(['id', 'status', 'outcome_reason', 'topic_title', 'topic_hint']);
 
         $streak = $statuses->takeWhile(static fn (BlogGeneration $generation): bool => $generation->status === BlogGenerationStatus::Failed);
 
@@ -54,9 +61,26 @@ final readonly class BlogGenerationAlertService
 
         $this->send(
             $this->techEmail ?: $this->fallbackEmail,
-            new BlogGenerationFailuresAlert($this->failuresThreshold, $streak->first()?->last_error),
+            new BlogGenerationFailuresAlert($this->failuresThreshold, $this->failureRows($streak), $this->url->route('admin.blog.generation.index')),
             'Blog generation failures alert failed to send.',
         );
+    }
+
+    /**
+     * Une ligne par generation de la serie : son sujet, l'etape ou elle a echoue, sa page au back-office.
+     *
+     * @param  Collection<int, BlogGeneration>  $streak
+     * @return list<array{subject: string, outcome: string, url: string}>
+     */
+    private function failureRows(Collection $streak): array
+    {
+        $failedSteps = $this->failedSteps->stepByGeneration($streak->map(static fn (BlogGeneration $generation): int => $generation->id)->values()->all());
+
+        return $streak->map(fn (BlogGeneration $generation): array => [
+            'subject' => $this->labels->subject($generation->topic_title, $generation->topic_hint),
+            'outcome' => $this->labels->outcome($generation->outcome_reason, $failedSteps[$generation->id] ?? null) ?? $generation->status->label(),
+            'url' => $this->url->route('admin.blog.generation.show', ['generation' => $generation->id]),
+        ])->values()->all();
     }
 
     /** Suspension pour une raison d'argent : plafond du back-office atteint, ou credit epuise chez le fournisseur. */

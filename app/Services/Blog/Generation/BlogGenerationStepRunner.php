@@ -9,6 +9,7 @@ use App\Data\Blog\Generation\GenerationStepContext;
 use App\Data\Blog\Generation\GenerationStepOutcome;
 use App\Exceptions\Blog\BlogAiProviderException;
 use Closure;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Sleep;
 use RuntimeException;
 use Throwable;
@@ -18,6 +19,9 @@ use Throwable;
  * (BlogGenerationStepRecorder), y compris ce qu'il a consomme quand il echoue. Le compteur d'essais vit en
  * base : un essai coupe par la mort du worker compte, et une etape qui a deja consomme tous ses essais
  * n'est pas relancee.
+ *
+ * La cause d'un echec ne s'affiche nulle part : un essai qui echoue et sera retente est ecrit au journal du
+ * serveur (avertissement) ; l'echec final l'est par l'appelant (erreur).
  */
 final readonly class BlogGenerationStepRunner
 {
@@ -58,6 +62,7 @@ final readonly class BlogGenerationStepRunner
                     return GenerationStepOutcome::failed($e, $e->creditExhausted);
                 }
 
+                $this->logRetry($generationId, $step, $row->attempt, $e);
                 Sleep::for($this->retryWaitSeconds)->seconds();
 
                 continue;
@@ -68,6 +73,7 @@ final readonly class BlogGenerationStepRunner
                     return GenerationStepOutcome::failed($e);
                 }
 
+                $this->logRetry($generationId, $step, $row->attempt, $e);
                 Sleep::for($this->retryWaitSeconds)->seconds();
 
                 continue;
@@ -83,6 +89,16 @@ final readonly class BlogGenerationStepRunner
 
             return GenerationStepOutcome::completed($result);
         }
+    }
+
+    private function logRetry(int $generationId, GenerationStep $step, int $attempt, Throwable $e): void
+    {
+        Log::warning('Blog generation step attempt failed, it will be retried.', [
+            'generation_id' => $generationId,
+            'step' => $step->key(),
+            'attempt' => $attempt,
+            'exception' => $e,
+        ]);
     }
 
     private function elapsedMs(int $startedAt): int

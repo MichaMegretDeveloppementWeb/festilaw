@@ -48,7 +48,10 @@ it('warns the technical contact when three generations fail in a row, once for t
     Mail::assertSent(BlogGenerationFailuresAlert::class, 1);
     Mail::assertSent(BlogGenerationFailuresAlert::class, fn (BlogGenerationFailuresAlert $mail): bool => $mail->hasTo('tech@example.com')
         && $mail->failures === 3
-        && $mail->lastError === 'Provider is down.');
+        && count($mail->rows) === 3
+        && $mail->rows[0]['outcome'] === 'Échec à l\'étape « Choix du sujet »'
+        && $mail->rows[0]['url'] === route('admin.blog.generation.show', ['generation' => BlogGeneration::query()->max('id')])
+        && $mail->generationsUrl === route('admin.blog.generation.index'));
 
     // La serie continue : pas de nouvelle alerte.
     processGenerationThat(fails: true);
@@ -93,11 +96,19 @@ it('tells about a spend limit once a month for each cause', function () {
 });
 
 it('renders both alert messages', function () {
-    $failures = (new BlogGenerationFailuresAlert(3, 'Provider is down.'))->render();
+    $failures = (new BlogGenerationFailuresAlert(
+        3,
+        [['subject' => 'Labels on Etsy', 'outcome' => 'Échec à l\'étape « Recherche »', 'url' => 'https://example.test/admin/blog/generation/4']],
+        'https://example.test/admin/blog/generation',
+    ))->render();
     $cap = (new BlogSpendLimitReached(false, '10,00 $', '10,00 $'))->render();
     $credit = (new BlogSpendLimitReached(true, '4,20 $', '10,00 $'))->render();
 
-    expect($failures)->toContain('3 dernières générations')->toContain('Provider is down.')
+    expect($failures)->toContain('3 dernières générations')
+        ->toContain('Labels on Etsy')
+        ->toContain('étape « Recherche »')
+        ->toContain('href="https://example.test/admin/blog/generation/4"')
+        ->toContain('storage/logs/laravel.log')
         ->and($cap)->toContain('Plafond de dépense atteint')->toContain('10,00 $')
         ->and($credit)->toContain('Crédit d\'IA épuisé')->toContain('4,20 $');
 });

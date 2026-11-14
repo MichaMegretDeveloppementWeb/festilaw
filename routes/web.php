@@ -28,6 +28,9 @@ use App\Http\Controllers\Web\Webhook\SignatureWebhookController;
 use App\Livewire\Admin\AdminProfile;
 use App\Livewire\Admin\Blog\CategoryForm as BlogCategoryForm;
 use App\Livewire\Admin\Blog\CategoryList as BlogCategoryList;
+use App\Livewire\Admin\Blog\GenerationDashboard as BlogGenerationDashboard;
+use App\Livewire\Admin\Blog\GenerationDetail as BlogGenerationDetail;
+use App\Livewire\Admin\Blog\GenerationSettings as BlogGenerationSettings;
 use App\Livewire\Admin\Blog\PostForm as BlogPostForm;
 use App\Livewire\Admin\Blog\PostList as BlogPostList;
 use App\Livewire\Admin\LoginForm;
@@ -152,6 +155,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/categories', BlogCategoryList::class)->name('categories.index');
             Route::get('/categories/create', BlogCategoryForm::class)->name('categories.create');
             Route::get('/categories/{category}/edit', BlogCategoryForm::class)->whereNumber('category')->name('categories.edit');
+
+            // Generation d'articles par IA : tableau de bord (lancement, suivi, journal), reglages, detail.
+            Route::get('/generation', BlogGenerationDashboard::class)->name('generation.index');
+            Route::get('/generation/settings', BlogGenerationSettings::class)->name('generation.settings');
+            Route::get('/generation/{generation}', BlogGenerationDetail::class)->whereNumber('generation')->name('generation.show');
         });
         Route::get('/submissions/{submission:id}', SubmissionDetail::class)->name('submissions.show');
         Route::get('/submissions/{submission:id}/documents/{document:id}', AdminDocumentDownloadController::class)

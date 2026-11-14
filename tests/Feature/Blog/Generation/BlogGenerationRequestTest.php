@@ -164,8 +164,26 @@ it('stops a waiting generation at once', function () {
         ->and($generation->refresh()->status)->toBe(BlogGenerationStatus::Cancelled)
         ->and($generation->outcome_reason)->toBe(BlogGenerationOutcomeReason::CancelledByUser)
         ->and($generation->finished_at)->not->toBeNull()
-        ->and(app(ProcessNextBlogGenerationAction::class)->execute('worker-a'))->toBeFalse();
+        ->and(app(ProcessNextBlogGenerationAction::class)->execute('worker-a'))->toBeFalse()
+        ->and($generation->batch_notified_at)->not->toBeNull();
+    Mail::assertNothingSent();
+});
+
+it('still sends the message of a batch whose last waiting generation is stopped, when another one ran', function () {
+    $draft = BlogPost::factory()->create();
+    $ran = BlogGeneration::factory()->scheduled()->completed()->create(['blog_post_id' => $draft->id]);
+    $waiting = BlogGeneration::factory()->scheduled()->inBatch($ran->batch_uuid)->create();
+
+    app(CancelBlogGenerationAction::class)->execute($waiting->id);
+
     Mail::assertSent(BlogGenerationBatchFinished::class, 1);
+    Mail::assertSent(BlogGenerationBatchFinished::class, fn (BlogGenerationBatchFinished $mail): bool => count($mail->rows) === 2
+        && $mail->rows[0]['succeeded'] === true
+        && $mail->rows[0]['draftUrl'] === route('admin.blog.posts.edit', ['post' => $draft->id])
+        && $mail->rows[1]['outcome'] === 'Arrêtée au back-office'
+        && $mail->rows[1]['url'] === route('admin.blog.generation.show', ['generation' => $waiting->id])
+        && $mail->rows[1]['draftUrl'] === null
+        && $mail->summary() === 'Sur 2 générations : 1 réussie, aucune en échec, 1 sans article.');
 });
 
 it('asks a running generation to stop, without stopping it itself', function () {
@@ -195,9 +213,18 @@ it('sends one message when a requested generation is over, to the recipient of t
     Mail::assertSent(BlogGenerationBatchFinished::class, 1);
     Mail::assertSent(BlogGenerationBatchFinished::class, fn (BlogGenerationBatchFinished $mail): bool => $mail->hasTo('owner@example.com')
         && ! $mail->scheduled
-        && $mail->rows === [['subject' => 'Labels on Etsy', 'outcome' => 'Terminée', 'succeeded' => true, 'cost' => '0,03 $']]
+        && $mail->rows === [[
+            'subject' => 'Labels on Etsy',
+            'outcome' => 'Terminée',
+            'succeeded' => true,
+            'failed' => false,
+            'cost' => '0,03 $',
+            'url' => route('admin.blog.generation.show', ['generation' => $generation->id]),
+            'draftUrl' => null,
+        ]]
         && $mail->totalCost === '0,03 $'
-        && $mail->url === route('admin.blog.posts.index'));
+        && $mail->postsUrl === route('admin.blog.posts.index')
+        && $mail->generationsUrl === route('admin.blog.generation.index'));
 });
 
 it('waits for the whole batch before sending its single message', function () {
@@ -224,21 +251,44 @@ it('waits for the whole batch before sending its single message', function () {
     Mail::assertSent(BlogGenerationBatchFinished::class, fn (BlogGenerationBatchFinished $mail): bool => $mail->scheduled
         && count($mail->rows) === 2
         && $mail->rows[0]['succeeded'] === false
-        && $mail->rows[0]['outcome'] === 'Une étape a échoué après plusieurs essais'
+        && $mail->rows[0]['failed'] === true
+        && $mail->rows[0]['outcome'] === 'Échec à l\'étape « Rédaction »'
+        && $mail->rows[0]['url'] === route('admin.blog.generation.show', ['generation' => $first->id])
+        && $mail->summary() === 'Sur 2 générations : 1 réussie, 1 en échec.'
         && $mail->rows[0]['subject'] === 'Sujet choisi par l\'IA'
         && $mail->rows[1]['succeeded'] === true);
 });
 
-it('renders the message of a finished batch', function () {
-    $html = (new BlogGenerationBatchFinished(
-        rows: [['subject' => 'Labels on Etsy', 'outcome' => 'Terminée', 'succeeded' => true, 'cost' => '0,26 $']],
+it('renders the message of a finished batch: how many succeeded, where the others failed, where to go', function () {
+    $succeeded = ['subject' => 'Labels on Etsy', 'outcome' => 'Terminée', 'succeeded' => true, 'failed' => false, 'cost' => '0,26 $', 'url' => 'https://example.test/admin/blog/generation/1', 'draftUrl' => 'https://example.test/admin/blog/posts/7/edit'];
+    $failed = ['subject' => 'CE marking for toys', 'outcome' => 'Échec à l\'étape « Recherche »', 'succeeded' => false, 'failed' => true, 'cost' => '0,01 $', 'url' => 'https://example.test/admin/blog/generation/2', 'draftUrl' => null];
+    $abandoned = ['subject' => 'GPSR basics', 'outcome' => 'Aucun sujet assez pertinent', 'succeeded' => false, 'failed' => false, 'cost' => '0,00 $', 'url' => 'https://example.test/admin/blog/generation/3', 'draftUrl' => null];
+    $message = fn (array $rows): string => (new BlogGenerationBatchFinished(
+        rows: $rows,
         scheduled: true,
-        totalCost: '0,26 $',
-        url: 'https://example.test/admin/blog/posts',
+        totalCost: '0,27 $',
+        postsUrl: 'https://example.test/admin/blog/posts',
+        generationsUrl: 'https://example.test/admin/blog/generation',
     ))->render();
 
-    expect($html)->toContain('Labels on Etsy')
-        ->toContain('0,26 $')
+    expect($message([$succeeded, $failed, $abandoned]))
         ->toContain('La génération automatique vient de se terminer')
-        ->toContain('https://example.test/admin/blog/posts');
+        ->toContain('Sur 3 générations : 1 réussie, 1 en échec, 1 sans article.')
+        ->toContain('Labels on Etsy')
+        ->toContain('étape « Recherche »')
+        ->toContain('0,27 $')
+        ->toContain('href="https://example.test/admin/blog/generation/2"')
+        ->toContain('href="https://example.test/admin/blog/posts/7/edit"')
+        ->toContain('href="https://example.test/admin/blog/posts"')
+        ->toContain('href="https://example.test/admin/blog/generation"')
+        ->toContain('contactez l\'assistance technique');
+
+    // Rien n'a reussi : le bouton mene aux generations, pas aux articles. Une seule generation : pas de decompte.
+    expect($message([$failed]))
+        ->toContain('Ouvrir les générations')
+        ->not->toContain('Ouvrir les articles')
+        ->not->toContain('Sur 1 génération');
+
+    // Tout a reussi : aucune invitation a relancer.
+    expect($message([$succeeded]))->toContain('Ouvrir les articles')->not->toContain('assistance technique');
 });

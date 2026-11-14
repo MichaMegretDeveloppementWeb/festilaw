@@ -8,6 +8,7 @@ use App\Actions\Blog\Generation\ProcessNextBlogGenerationAction;
 use App\Actions\Blog\Generation\RunBlogGenerationAction;
 use App\Contracts\Blog\Generation\GenerationPipeline;
 use App\Exceptions\Blog\BlogGenerationException;
+use App\Services\Admin\Blog\Generation\BlogGenerationOverviewService;
 use App\Services\Blog\Generation\BlogAiCostEstimator;
 use App\Services\Blog\Generation\BlogAiSettingsService;
 use App\Services\Blog\Generation\BlogGenerationAlertService;
@@ -31,6 +32,9 @@ final class BlogGenerationServiceProvider extends ServiceProvider
         $this->app->when(BlogAiSettingsService::class)->needs('$defaults')->giveConfig('blog.ai.defaults');
         $this->app->when(BlogAiSettingsService::class)->needs('$fallbackEmail')->giveConfig('festilaw.notification_email');
         $this->app->when(BlogAiSettingsService::class)->needs('$locales')->giveConfig('festilaw.supported_locales');
+        $this->app->when(BlogAiSettingsService::class)->needs('$models')->giveConfig('blog.ai.models');
+        // La cle n'est lue que pour dire a l'ecran si elle est presente ; elle n'est jamais affichee.
+        $this->app->when(BlogGenerationOverviewService::class)->needs('$apiKey')->giveConfig('ai.providers.openrouter.key');
 
         $this->app->when(BlogGenerationStepRunner::class)->needs('$maxAttempts')->giveConfig('blog.ai.step.max_attempts');
         $this->app->when(BlogGenerationStepRunner::class)->needs('$retryWaitSeconds')->giveConfig('blog.ai.step.retry_wait_seconds');

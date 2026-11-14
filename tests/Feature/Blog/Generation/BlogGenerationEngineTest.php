@@ -22,6 +22,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Foundation\MaintenanceMode;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Sleep;
 use Tests\Support\FakeGenerationPipeline;
@@ -116,7 +117,8 @@ it('stops without an error when a step finds nothing worth writing', function ()
         ->and($pipeline->calls('writing'))->toBe(0);
 });
 
-it('retries a failing step and goes on once it succeeds', function () {
+it('retries a failing step and goes on once it succeeds, leaving the failed attempt in the server log', function () {
+    Log::spy();
     $pipeline = FakeGenerationPipeline::bind()->on('writing', function (GenerationStepContext $context): GenerationStepResult {
         if ($context->attempt === 1) {
             throw new RuntimeException('Temporary provider error.');
@@ -137,6 +139,11 @@ it('retries a failing step and goes on once it succeeds', function () {
         ->and($pipeline->calls('writing'))->toBe(2)
         ->and($pipeline->calls('assembly'))->toBe(1);
     Sleep::assertSleptTimes(1);
+    Log::shouldHaveReceived('warning')->once()->withArgs(fn (string $message, array $context): bool => str_contains($message, 'will be retried')
+        && $context['generation_id'] === $generation->id
+        && $context['step'] === 'writing'
+        && $context['attempt'] === 1
+        && $context['exception']->getMessage() === 'Temporary provider error.');
 });
 
 it('fails the generation after three attempts of a step, without running the next ones', function () {
@@ -302,6 +309,7 @@ it('stops before the next step when someone asked to stop it', function () {
         ->and($generation->outcome_reason)->toBe(BlogGenerationOutcomeReason::CancelledByUser)
         ->and($generation->steps->firstWhere('step', 'topic')->status)->toBe(BlogGenerationStepStatus::Completed)
         ->and($pipeline->calls('writing'))->toBe(0);
+    Mail::assertNothingSent();
 });
 
 it('gives the generation back, unfinished, while the site is in maintenance', function () {

@@ -36,6 +36,7 @@ final readonly class AdminNavigation
             new AdminNavGroup(__('Blog'), [
                 new AdminNavItem(__('Articles'), $this->url->route('admin.blog.posts.index'), 'newspaper', $is('admin.blog.posts.*')),
                 new AdminNavItem(__('Catégories'), $this->url->route('admin.blog.categories.index'), 'tag', $is('admin.blog.categories.*')),
+                new AdminNavItem(__('Génération IA'), $this->url->route('admin.blog.generation.index'), 'sparkles', $is('admin.blog.generation.*')),
             ]),
         ];
     }
