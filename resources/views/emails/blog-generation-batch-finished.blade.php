@@ -2,9 +2,9 @@
     <x-mail.heading>Génération d'articles terminée</x-mail.heading>
 
     @if ($scheduled)
-        <x-mail.text>La génération automatique vient de se terminer. Voici ce qu'elle a produit :</x-mail.text>
+        <x-mail.text>La génération automatique vient de se terminer.</x-mail.text>
     @else
-        <x-mail.text>La génération lancée depuis le back-office vient de se terminer :</x-mail.text>
+        <x-mail.text>La génération lancée depuis le back-office vient de se terminer.</x-mail.text>
     @endif
 
     @if (count($rows) > 1)
@@ -26,10 +26,10 @@
         </x-mail.panel>
     @endforeach
 
-    <x-mail.text>Coût total : <strong>{{ $totalCost }}</strong>.</x-mail.text>
+    <x-mail.text>Ce lancement a coûté <strong>{{ $totalCost }}</strong> au total.</x-mail.text>
 
     @if ($failed > 0)
-        <x-mail.text>Une génération en échec se relance depuis sa page : elle reprend à l'étape qui a échoué, sans refaire ni repayer les étapes terminées. Si l'échec se répète, contactez l'assistance technique.</x-mail.text>
+        <x-mail.text>Une génération en échec se relance depuis sa page. Elle reprend alors à l'étape qui a échoué, sans refaire ni repayer les étapes terminées. Si l'échec se répète, contactez l'assistance technique.</x-mail.text>
     @endif
 
     @if ($succeeded > 0)
@@ -39,5 +39,5 @@
         <x-mail.button :url="$generationsUrl">Ouvrir les générations</x-mail.button>
     @endif
 
-    <x-mail.text :muted="true" size="13.5px">Un article généré reste un brouillon : rien n'est publié sans votre validation.</x-mail.text>
+    <x-mail.text :muted="true" size="13.5px">Un article généré reste un brouillon, et rien n'est publié sans votre validation.</x-mail.text>
 </x-mail.layout>

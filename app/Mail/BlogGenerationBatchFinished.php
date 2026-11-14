@@ -59,7 +59,10 @@ final class BlogGenerationBatchFinished extends Mailable
         return count(array_filter($this->rows, static fn (array $row): bool => $row['failed']));
     }
 
-    /** « Sur 3 générations : 2 réussies, 1 en échec. » Les générations abandonnées ou arrêtées sont « sans article ». */
+    /**
+     * « Sur 3 générations, 2 ont réussi et 1 a échoué. » Une génération abandonnée ou arrêtée « n'a pas donné
+     * d'article ». Quand tout a réussi : « Les 3 générations ont réussi. »
+     */
     public function summary(): string
     {
         $total = count($this->rows);
@@ -67,18 +70,25 @@ final class BlogGenerationBatchFinished extends Mailable
         $failed = $this->failedCount();
         $others = $total - $succeeded - $failed;
 
-        $parts = [
-            trans_choice('{0} aucune réussie|{1} :count réussie|[2,*] :count réussies', $succeeded, ['count' => $succeeded]),
-            trans_choice('{0} aucune en échec|[1,*] :count en échec', $failed, ['count' => $failed]),
-        ];
-
-        if ($others > 0) {
-            $parts[] = __(':count sans article', ['count' => $others]);
+        if ($succeeded === $total) {
+            return trans_choice('{1} La génération a réussi.|[2,*] Les :count générations ont réussi.', $total, ['count' => $total]);
         }
 
-        return trans_choice('{1} Sur :count génération : :parts.|[2,*] Sur :count générations : :parts.', $total, [
+        $parts = [trans_choice('{0} aucune n\'a réussi|{1} :count a réussi|[2,*] :count ont réussi', $succeeded, ['count' => $succeeded])];
+
+        if ($failed > 0) {
+            $parts[] = trans_choice('{1} :count a échoué|[2,*] :count ont échoué', $failed, ['count' => $failed]);
+        }
+
+        if ($others > 0) {
+            $parts[] = trans_choice('{1} :count n\'a pas donné d\'article|[2,*] :count n\'ont pas donné d\'article', $others, ['count' => $others]);
+        }
+
+        $last = array_pop($parts);
+
+        return trans_choice('{1} Sur :count génération, :parts.|[2,*] Sur :count générations, :parts.', $total, [
             'count' => $total,
-            'parts' => implode(', ', $parts),
+            'parts' => $parts === [] ? $last : implode(', ', $parts).' '.__('et').' '.$last,
         ]);
     }
 }

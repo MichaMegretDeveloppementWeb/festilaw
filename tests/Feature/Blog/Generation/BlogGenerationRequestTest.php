@@ -183,7 +183,7 @@ it('still sends the message of a batch whose last waiting generation is stopped,
         && $mail->rows[1]['outcome'] === 'Arrêtée au back-office'
         && $mail->rows[1]['url'] === route('admin.blog.generation.show', ['generation' => $waiting->id])
         && $mail->rows[1]['draftUrl'] === null
-        && $mail->summary() === 'Sur 2 générations : 1 réussie, aucune en échec, 1 sans article.');
+        && $mail->summary() === 'Sur 2 générations, 1 a réussi et 1 n\'a pas donné d\'article.');
 });
 
 it('asks a running generation to stop, without stopping it itself', function () {
@@ -254,7 +254,7 @@ it('waits for the whole batch before sending its single message', function () {
         && $mail->rows[0]['failed'] === true
         && $mail->rows[0]['outcome'] === 'Échec à l\'étape « Rédaction »'
         && $mail->rows[0]['url'] === route('admin.blog.generation.show', ['generation' => $first->id])
-        && $mail->summary() === 'Sur 2 générations : 1 réussie, 1 en échec.'
+        && $mail->summary() === 'Sur 2 générations, 1 a réussi et 1 a échoué.'
         && $mail->rows[0]['subject'] === 'Sujet choisi par l\'IA'
         && $mail->rows[1]['succeeded'] === true);
 });
@@ -273,7 +273,7 @@ it('renders the message of a finished batch: how many succeeded, where the other
 
     expect($message([$succeeded, $failed, $abandoned]))
         ->toContain('La génération automatique vient de se terminer')
-        ->toContain('Sur 3 générations : 1 réussie, 1 en échec, 1 sans article.')
+        ->toContain('Sur 3 générations, 1 a réussi, 1 a échoué et 1 n')
         ->toContain('Labels on Etsy')
         ->toContain('étape « Recherche »')
         ->toContain('0,27 $')

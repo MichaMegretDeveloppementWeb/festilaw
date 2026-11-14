@@ -198,7 +198,7 @@ it('says a running generation will stop after its current step', function () {
 
     Livewire::test(GenerationDashboard::class)
         ->call('cancel', $running->id)
-        ->assertDispatched('ui-toast', type: 'success', title: 'Arrêt demandé : la génération s\'arrêtera après l\'étape en cours.')
+        ->assertDispatched('ui-toast', type: 'success', title: 'La génération s\'arrêtera après l\'étape en cours.')
         ->call('retry', $running->id)
         ->assertDispatched('ui-toast', type: 'error', title: 'Seule une génération en échec peut être relancée.');
 
@@ -312,7 +312,7 @@ it('details a generation step by step, in 2 queries', function () {
         ->assertSee('Labels on Etsy')
         ->assertSee('Short.')
         ->assertSee('Échec à l\'étape « Recherche »')
-        ->assertSee('Relancez la génération : elle reprend à l\'étape qui a échoué')
+        ->assertSee('Vous pouvez relancer la génération. Elle reprendra à l\'étape qui a échoué')
         ->assertSee('contactez l\'assistance technique')
         ->assertDontSee('Provider is down.')
         ->assertDontSee('Détail technique')

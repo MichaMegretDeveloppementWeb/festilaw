@@ -12,7 +12,7 @@
     @error('generation-load-failed')
         <x-ui::card :padding="false" class="mt-4">
             <x-ui::load-failure :title="__('Le chargement de cette génération a échoué.')"
-                :description="__('Réessayez ; si le problème persiste, contactez-nous.')" retry="$refresh" />
+                :description="__('Réessayez. Si le problème persiste, contactez l\'assistance technique.')" retry="$refresh" />
         </x-ui::card>
     @else
         @if ($generation === null)
@@ -75,7 +75,7 @@
             </x-admin.panel>
 
             <x-ui::modal name="stop-generation" variant="confirm" :title="__('Arrêter cette génération ?')">
-                <p>{{ __('Une génération en attente est arrêtée tout de suite. Une génération déjà commencée finit l\'étape en cours, puis s\'arrête : ce qui a été dépensé jusque-là reste dépensé.') }}</p>
+                <p>{{ __('Une génération en attente est arrêtée tout de suite. Une génération déjà commencée finit l\'étape en cours, puis s\'arrête. Ce qui a déjà été dépensé reste dépensé.') }}</p>
 
                 <x-slot:actions>
                     <x-ui::button variant="ghost" x-on:click="$dispatch('ui-close-modal', 'stop-generation')">{{ __('Continuer la génération') }}</x-ui::button>

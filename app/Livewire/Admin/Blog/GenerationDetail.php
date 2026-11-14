@@ -69,7 +69,7 @@ class GenerationDetail extends Component
 
         $this->dispatch('ui-toast', type: 'success', title: $stoppedNow
             ? __('Génération arrêtée.')
-            : __('Arrêt demandé : la génération s\'arrêtera après l\'étape en cours.'));
+            : __('La génération s\'arrêtera après l\'étape en cours.'));
     }
 
     public function render(BlogGenerationDetailService $details): View
@@ -81,7 +81,7 @@ class GenerationDetail extends Component
             $this->resetErrorBag('generation-load-failed');
         } catch (Throwable $e) {
             Log::error('Unexpected error while loading an admin blog generation.', ['generation_id' => $this->generationId, 'exception' => $e]);
-            $this->addError('generation-load-failed', __('Le chargement de cette génération a échoué. Réessayez ; si le problème persiste, contactez-nous.'));
+            $this->addError('generation-load-failed', __('Le chargement de cette génération a échoué. Réessayez. Si le problème persiste, contactez l\'assistance technique.'));
         }
 
         return view('livewire.admin.blog.generation-detail', ['generation' => $generation])

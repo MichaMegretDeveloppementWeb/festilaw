@@ -121,7 +121,7 @@ class GenerationDashboard extends Component
         $this->dispatch('blog-generation-changed');
         $this->dispatch('ui-toast', type: 'success', title: $stoppedNow
             ? __('Génération arrêtée.')
-            : __('Arrêt demandé : la génération s\'arrêtera après l\'étape en cours.'));
+            : __('La génération s\'arrêtera après l\'étape en cours.'));
     }
 
     /** La carte de suivi signale qu'une generation a change d'etat : le journal se relit. */
@@ -139,7 +139,7 @@ class GenerationDashboard extends Component
             $this->resetErrorBag('generation-load-failed');
         } catch (Throwable $e) {
             Log::error('Unexpected error while loading the admin blog generation dashboard.', ['exception' => $e]);
-            $this->addError('generation-load-failed', __('Le chargement de la génération par IA a échoué. Réessayez ; si le problème persiste, contactez-nous.'));
+            $this->addError('generation-load-failed', __('Le chargement de la génération par IA a échoué. Réessayez. Si le problème persiste, contactez l\'assistance technique.'));
         }
 
         return view('livewire.admin.blog.generation-dashboard', [

@@ -49,7 +49,7 @@ final class BlogGenerationException extends BaseAppException
     {
         return new self(
             technicalMessage: 'The simulated generation pipeline is refused in production (blog.ai.pipeline).',
-            userMessage: __('La génération n\'est pas disponible : sa configuration est celle des essais.'),
+            userMessage: __('La génération n\'est pas disponible, car sa configuration est celle des essais.'),
         );
     }
 
@@ -57,7 +57,7 @@ final class BlogGenerationException extends BaseAppException
     {
         return new self(
             technicalMessage: "Unknown blog generation pipeline [{$name}] (blog.ai.pipeline).",
-            userMessage: __('La génération n\'est pas disponible : sa configuration est invalide.'),
+            userMessage: __('La génération n\'est pas disponible, car sa configuration est invalide.'),
         );
     }
 }

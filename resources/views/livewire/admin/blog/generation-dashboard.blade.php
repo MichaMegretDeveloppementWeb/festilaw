@@ -9,15 +9,15 @@
     @error('generation-load-failed')
         <x-ui::card :padding="false">
             <x-ui::load-failure :title="__('Le chargement de la génération par IA a échoué.')"
-                :description="__('Réessayez ; si le problème persiste, contactez-nous.')" retry="$refresh" />
+                :description="__('Réessayez. Si le problème persiste, contactez l\'assistance technique.')" retry="$refresh" />
         </x-ui::card>
     @else
         @if ($overview->unavailableReason)
             <x-ui::alert type="error" class="mb-6" :title="__('La génération n\'est pas disponible')">{{ $overview->unavailableReason }}</x-ui::alert>
         @elseif ($overview->simulated)
-            <x-ui::alert type="info" class="mb-6" :title="__('Étapes factices')">{{ __('Aucun modèle n\'est appelé et aucun article n\'est créé : les étapes sont simulées, avec un coût fictif. Ce mode sert aux essais et n\'existe pas en production.') }}</x-ui::alert>
+            <x-ui::alert type="info" class="mb-6" :title="__('Étapes factices')">{{ __('Aucun modèle n\'est appelé et aucun article n\'est créé. Les étapes sont simulées, avec un coût fictif. Ce mode sert aux essais et n\'existe pas en production.') }}</x-ui::alert>
         @elseif (! $overview->apiKeyPresent)
-            <x-ui::alert type="warning" class="mb-6" :title="__('Clé du fournisseur d\'IA absente')">{{ __('Sans cette clé, aucune génération ne peut aboutir. Elle se renseigne dans la configuration du site, pas ici.') }}</x-ui::alert>
+            <x-ui::alert type="warning" class="mb-6" :title="__('Clé du fournisseur d\'IA absente')">{{ __('Sans cette clé, aucune génération ne peut aboutir. Elle se renseigne dans la configuration du site.') }}</x-ui::alert>
         @endif
 
         @unless ($overview->workerListening)
@@ -41,7 +41,7 @@
         <livewire:admin.blog.generation-progress />
 
         <x-admin.panel class="mb-6" :title="__('Lancer une génération')"
-            :description="__('Laissez les deux champs vides pour laisser l\'IA choisir le sujet.')">
+            :description="__('Laissez les deux champs vides si vous voulez que l\'IA choisisse le sujet.')">
             <form wire:submit="launch" class="space-y-4 p-5">
                 <x-ui::form-group :label="__('Sujet (facultatif)')" for="generation-topic" :error="$errors->first('topicHint')">
                     <x-ui::input id="generation-topic" wire:model="topicHint" maxlength="300" :error="$errors->has('topicHint')"
@@ -49,16 +49,16 @@
                 </x-ui::form-group>
 
                 <x-ui::form-group :label="__('Consignes (facultatif)')" for="generation-instructions" :error="$errors->first('instructions')"
-                    :hint="__('Un angle, un lecteur visé, un point à traiter ou à laisser de côté.')">
+                    :hint="__('Vous pouvez préciser l\'angle, le lecteur visé ou un point à traiter.')">
                     <x-ui::textarea id="generation-instructions" wire:model="instructions" rows="3" maxlength="2000" :error="$errors->has('instructions')" />
                 </x-ui::form-group>
 
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <p class="text-[12px] leading-relaxed text-muted">
                         @if ($overview->capReached)
-                            {{ __('Le plafond de dépense du mois est atteint : relevez-le dans les réglages pour lancer une génération.') }}
+                            {{ __('Le plafond de dépense du mois est atteint. Relevez-le dans les réglages pour lancer une génération.') }}
                         @else
-                            {{ __('La génération démarre en quelques secondes et dure plusieurs minutes. Vous pouvez quitter cette page : un e-mail part quand elle est terminée.') }}
+                            {{ __('La génération démarre en quelques secondes et dure plusieurs minutes. Vous pouvez quitter cette page, un e-mail vous préviendra quand elle sera terminée.') }}
                         @endif
                     </p>
                     <x-ui::button type="submit" :loading="true" target="launch" class="shrink-0" :disabled="$overview->capReached || $overview->unavailableReason !== null">
@@ -68,7 +68,7 @@
             </form>
         </x-admin.panel>
 
-        <x-admin.panel :title="__('Journal')" :description="__('Une ligne par génération, les plus récentes d\'abord.')">
+        <x-admin.panel :title="__('Journal')" :description="__('Chaque génération y a sa ligne, de la plus récente à la plus ancienne.')">
             @if ($generations->total() === 0)
                 <x-ui::empty-state icon="sparkles" :title="__('Aucune génération pour le moment.')"
                     :description="__('La première apparaîtra ici dès son lancement.')" />
@@ -141,7 +141,7 @@
     @enderror
 
     <x-ui::modal name="stop-generation" variant="confirm" :title="__('Arrêter cette génération ?')">
-        <p>{{ __('Une génération en attente est arrêtée tout de suite. Une génération déjà commencée finit l\'étape en cours, puis s\'arrête : ce qui a été dépensé jusque-là reste dépensé.') }}</p>
+        <p>{{ __('Une génération en attente est arrêtée tout de suite. Une génération déjà commencée finit l\'étape en cours, puis s\'arrête. Ce qui a déjà été dépensé reste dépensé.') }}</p>
 
         <x-slot:actions>
             <x-ui::button variant="ghost" x-on:click="$dispatch('ui-close-modal', 'stop-generation')">{{ __('Continuer la génération') }}</x-ui::button>

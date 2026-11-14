@@ -5,7 +5,7 @@
     </a>
 
     <x-ui::page-header :title="__('Réglages de la génération IA')"
-        :description="__('Ce que l\'IA écrit, à quel rythme et pour quel budget. Un article généré reste un brouillon tant que vous ne l\'avez pas publié.')"
+        :description="__('Ces réglages s\'appliquent à toutes les générations, manuelles et automatiques. Un article généré reste un brouillon tant que vous ne l\'avez pas publié.')"
         class="mb-6 mt-2" />
 
     <form wire:submit="save" class="space-y-6">
@@ -13,7 +13,7 @@
             :description="__('Une fois par période, un lot d\'articles est généré sans intervention. Vous recevez un e-mail quand il est prêt à relire.')">
             <div class="space-y-5 p-5">
                 <x-ui::checkbox id="ai-enabled" wire:model="enabled" :label="__('Activer la génération automatique')"
-                    :description="__('Désactivée, rien ne se génère tout seul : seuls vos lancements manuels comptent.')" />
+                    :description="__('Tant qu\'elle est désactivée, seuls vos lancements manuels produisent des articles.')" />
 
                 <div class="grid grid-cols-1 gap-5 sm:grid-cols-3">
                     <x-ui::form-group :label="__('Un lot tous les')" for="ai-period-count" :error="$errors->first('periodCount')">
@@ -40,13 +40,13 @@
         <x-admin.panel :title="__('Budget')">
             <div class="p-5">
                 <x-ui::form-group :label="__('Plafond de dépense du mois ($)')" for="ai-spend-cap" :error="$errors->first('monthlySpendCap')"
-                    :hint="__('En dollars, la monnaie de facturation du fournisseur d\'IA. Une fois ce montant dépensé dans le mois, plus rien ne se lance jusqu\'au mois suivant. Une génération commencée va au bout.')">
+                    :hint="__('Le montant est en dollars, la monnaie dans laquelle le fournisseur d\'IA facture. Une fois ce montant dépensé dans le mois, plus rien ne se lance jusqu\'au mois suivant. Une génération déjà commencée va au bout.')">
                     <x-ui::input type="number" step="0.01" min="0" id="ai-spend-cap" wire:model="monthlySpendCap" class="sm:max-w-40" :error="$errors->has('monthlySpendCap')" />
                 </x-ui::form-group>
             </div>
         </x-admin.panel>
 
-        <x-admin.panel :title="__('Sujets')" :description="__('Ce que l\'IA doit privilégier, et ce qu\'elle doit laisser de côté. Un sujet par ligne.')">
+        <x-admin.panel :title="__('Sujets')" :description="__('Indiquez les sujets que l\'IA doit privilégier et ceux qu\'elle doit laisser de côté, à raison d\'un sujet par ligne.')">
             <div class="space-y-5 p-5">
                 <x-ui::form-group :label="__('Sujets prioritaires et mots-clés')" for="ai-priority-topics" :error="$errors->first('priorityTopics')">
                     <x-ui::textarea id="ai-priority-topics" wire:model="priorityTopics" rows="4" :error="$errors->has('priorityTopics')" />
@@ -59,7 +59,7 @@
         </x-admin.panel>
 
         <x-admin.panel :title="__('Modèle par étape')"
-            :description="__('L\'identifiant du modèle utilisé à chaque étape, tel que le fournisseur l\'écrit. La liste propose les modèles connus ; tout autre identifiant est accepté.')">
+            :description="__('Chaque étape utilise le modèle dont vous saisissez l\'identifiant, tel que le fournisseur l\'écrit. La liste propose les modèles connus, et tout autre identifiant est accepté.')">
             <div class="grid grid-cols-1 gap-5 p-5 sm:grid-cols-2">
                 @foreach ($modelLabels as $step => $label)
                     <x-ui::form-group :label="$label" :for="'ai-model-'.$step" :error="$errors->first('models.'.$step)" wire:key="ai-model-{{ $step }}">
@@ -84,7 +84,7 @@
                 </x-ui::form-group>
 
                 <x-ui::form-group :label="__('Images par article, au plus')" for="ai-max-images" :error="$errors->first('maxImages')"
-                    :hint="__('L\'image principale comprise.')">
+                    :hint="__('Ce nombre comprend l\'image principale.')">
                     <x-ui::select id="ai-max-images" wire:model="maxImages" :error="$errors->has('maxImages')"
                         :options="collect($maxImagesChoices)->mapWithKeys(fn ($count) => [(string) $count => (string) $count])->all()" />
                 </x-ui::form-group>
@@ -94,14 +94,14 @@
         <x-admin.panel :title="__('E-mails')">
             <div class="p-5">
                 <x-ui::form-group :label="__('Adresse qui reçoit les e-mails de la génération')" for="ai-notification-email" :error="$errors->first('notificationEmail')"
-                    :hint="__('Un e-mail quand un lancement est terminé, et un autre si la génération est suspendue faute de budget.')">
+                    :hint="__('Cette adresse reçoit un e-mail à la fin de chaque lancement, et un autre si la génération est suspendue faute de budget.')">
                     <x-ui::input type="email" id="ai-notification-email" wire:model="notificationEmail" :error="$errors->has('notificationEmail')" />
                 </x-ui::form-group>
             </div>
         </x-admin.panel>
 
         <x-admin.panel :title="__('Mention de transparence')"
-            :description="__('Une phrase affichée en bas des articles générés, dans chaque langue. Laissez vide pour ne rien afficher.')">
+            :description="__('Cette phrase s\'affiche en bas des articles générés, dans chaque langue. Laissez le champ vide pour ne rien afficher.')">
             <div class="space-y-5 p-5">
                 @foreach ($transparencyNotice as $locale => $notice)
                     <x-ui::form-group :label="__('En :language', ['language' => $localeNames[$locale] ?? $locale])" :for="'ai-notice-'.$locale"
@@ -114,7 +114,7 @@
         </x-admin.panel>
 
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <p class="text-[12px] leading-relaxed text-muted">{{ __('La clé du fournisseur d\'IA ne se règle pas ici : elle vit dans la configuration du site et n\'est jamais affichée.') }}</p>
+            <p class="text-[12px] leading-relaxed text-muted">{{ __('La clé du fournisseur d\'IA se règle dans la configuration du site. Elle n\'est jamais affichée ici.') }}</p>
             <x-ui::button type="submit" :loading="true" target="save" class="shrink-0">{{ __('Enregistrer les réglages') }}</x-ui::button>
         </div>
     </form>
