@@ -82,23 +82,50 @@ it('filters by status, category and origin', function () {
         ->set('category', '')->set('origin', 'unknown')->assertSee('Label fr')->assertSee('Pending fr');
 });
 
-it('clears the three filters at once from the filter panel, and keeps the search', function () {
+it('clears the two filters of the panel at once, and keeps the search and the status chosen in the strip', function () {
     $news = BlogContent::category('news');
     BlogContent::published('label', BlogContent::category('rules', position: 1));
     BlogContent::draft('pending', $news);
 
     Livewire::test(PostList::class)
-        // Sans filtre actif, le panneau ne propose rien a reinitialiser.
+        // Sans filtre actif, le panneau ne propose rien a reinitialiser ; le statut n'est pas un filtre du panneau.
         ->assertDontSeeHtml('data-clear-filters')
-        ->set('search', 'fr')
-        ->set('status', 'draft')->set('category', (string) $news->id)->set('origin', 'manual')
+        ->set('status', 'draft')
+        ->assertDontSeeHtml('data-clear-filters')
+        ->set('search', 'fr')->set('category', (string) $news->id)->set('origin', 'manual')
         ->assertSeeHtml('data-clear-filters')
-        ->assertDontSee('Label fr')
         ->call('clearFilters')
-        ->assertSet('status', '')->assertSet('category', '')->assertSet('origin', '')
-        ->assertSet('search', 'fr')
-        ->assertSee('Label fr')->assertSee('Pending fr')
+        ->assertSet('category', '')->assertSet('origin', '')
+        ->assertSet('status', 'draft')->assertSet('search', 'fr')
+        ->assertSee('Pending fr')->assertDontSee('Label fr')
         ->assertDontSeeHtml('data-clear-filters');
+});
+
+it('counts the articles of each status in the strip, which filters the list by status', function () {
+    $rules = BlogContent::category('rules');
+    $news = BlogContent::category('news', position: 1);
+    BlogContent::published('label', $rules);
+    BlogContent::published('guide', $news);
+    BlogContent::scheduled('soon');
+    BlogContent::draft('pending', $news);
+
+    $list = Livewire::test(PostList::class)
+        ->assertViewHas('statusCounts', ['draft' => 1, 'scheduled' => 1, 'published' => 2])
+        ->assertViewHas('totalCount', 4)
+        // Plus de liste deroulante du statut : la bande de chiffres la remplace.
+        ->assertDontSee('Tous les statuts')
+        ->assertSeeHtml('data-status-filter')
+        ->assertSeeHtml('aria-pressed="true" data-status="all"');
+
+    // Un clic sur une cellule filtre la liste, et la cellule choisie est marquee.
+    $list->set('status', 'published')
+        ->assertSee('Label fr')->assertSee('Guide fr')->assertDontSee('Pending fr')
+        ->assertSeeHtml('aria-pressed="true" data-status="published"')
+        // Les nombres ne dependent pas du statut choisi, mais suivent les autres filtres.
+        ->assertViewHas('statusCounts', ['draft' => 1, 'scheduled' => 1, 'published' => 2])
+        ->set('category', (string) $news->id)
+        ->assertViewHas('statusCounts', ['draft' => 1, 'scheduled' => 0, 'published' => 1])
+        ->assertViewHas('totalCount', 2);
 });
 
 it('shows fifteen articles per page, newest first, with the count of articles under the list', function () {
@@ -191,7 +218,8 @@ it('ignores a sort it does not know in the address, and counts the filters in us
         ->assertSee('Label fr')
         ->assertViewHas('sorted', BlogPostListSort::Recent)
         ->assertViewHas('sortDirection', 'desc')
-        ->assertViewHas('activeFilters', 2);
+        // Le statut se lit dans la bande de chiffres : seule l'origine compte pour le panneau des filtres.
+        ->assertViewHas('activeFilters', 1);
 });
 
 it('opens an article from its whole row, with the other actions in one menu and no edit button', function () {
@@ -220,7 +248,7 @@ it('deletes an article, and keeps the addresses of a published one answering tha
         ->and(BlogPostRetiredSlug::query()->where('slug', 'pending-fr')->exists())->toBeFalse();
 });
 
-it('loads the list in 5 queries whatever the number of articles', function () {
+it('loads the list in 6 queries whatever the number of articles', function () {
     BlogContent::seedPublished(60, BlogContent::category('rules'), BlogContent::category('news', position: 1));
 
     DB::flushQueryLog();
@@ -228,7 +256,7 @@ it('loads the list in 5 queries whatever the number of articles', function () {
 
     Livewire::test(PostList::class)->assertOk();
 
-    expect(count(DB::getQueryLog()))->toBe(5);
+    expect(count(DB::getQueryLog()))->toBe(6);
 
     DB::disableQueryLog();
 });

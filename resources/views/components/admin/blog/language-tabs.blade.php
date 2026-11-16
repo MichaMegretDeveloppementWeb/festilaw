@@ -6,7 +6,7 @@
      L'anneau dit l'etat de REDACTION de la langue, jamais celui de la publication : c'est ecrit dans la
      legende, dans l'info-bulle et pour les lecteurs d'ecran.
      Les onglets se touchent et s'espacent par leur marge interieure : aucune zone morte entre deux. --}}
-<div class="flex items-center justify-between gap-4 border-b border-subtle pl-2 pr-5">
+<div class="flex items-center justify-between gap-4 border-b border-default pl-2 pr-5">
     <div class="-mb-px flex overflow-x-auto" role="tablist" aria-label="{{ __('Langue') }}">
         @foreach ($locales as $locale => $language)
             <button type="button" role="tab" x-on:click="tab = '{{ $locale }}'" x-bind:aria-selected="(tab === '{{ $locale }}').toString()"

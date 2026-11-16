@@ -1,35 +1,35 @@
-{{-- Liste des categories. `pending` : la categorie visee par la fenetre de suppression. --}}
-<div class="mx-auto max-w-4xl" x-data="{ pending: { id: null, name: '' } }">
-    <x-ui::page-header :title="__('Catégories')" :description="__('Les rubriques du blog. Leur ordre est celui du menu des catégories sur le site.')" class="mb-6">
+{{-- Liste des categories, sur page blanche et sur toute la largeur. `pending` : la categorie visee par la
+     fenetre de suppression. Les lignes a filets debordent de la colonne de la meme marge que les autres listes,
+     pour que le texte reste aligne sur le titre de la page. --}}
+<div x-data="{ pending: { id: null, name: '' } }">
+    <x-ui::page-header :title="__('Catégories')" :description="__('Les rubriques du blog. Leur ordre est celui du menu des catégories sur le site.')" class="mb-8">
         <x-ui::button :href="route('admin.blog.categories.create')"><x-ui::icon name="plus" /> {{ __('Nouvelle catégorie') }}</x-ui::button>
     </x-ui::page-header>
 
     @error('categories-load-failed')
-        <x-ui::card :padding="false">
-            <x-ui::load-failure :title="__('Le chargement des catégories a échoué.')"
-                :description="__('Réessayez ; si le problème persiste, contactez-nous.')" retry="$refresh" />
-        </x-ui::card>
+        <x-ui::load-failure :title="__('Le chargement des catégories a échoué.')"
+            :description="__('Réessayez. Si le problème persiste, contactez l\'assistance technique.')" retry="$refresh" />
     @else
-        <x-ui::card :padding="false" class="overflow-hidden">
+        <div class="-mx-4 border-y border-default sm:-mx-5">
             @if ($categories === [])
                 <x-ui::empty-state icon="tag" :title="__('Aucune catégorie pour le moment.')"
                     :description="__('Un article a besoin d\'une catégorie pour être publié.')">
                     <x-ui::button :href="route('admin.blog.categories.create')"><x-ui::icon name="plus" /> {{ __('Nouvelle catégorie') }}</x-ui::button>
                 </x-ui::empty-state>
             @else
-                <ul wire:sort="reorder" class="divide-y divide-subtle">
+                <ul wire:sort="reorder" class="divide-y divide-[var(--ui-border)]">
                     @foreach ($categories as $category)
                         @php($name = $category->names['fr'] ?? ($category->names['en'] ?? __('Sans nom')))
                         @php($editUrl = route('admin.blog.categories.edit', ['category' => $category->id]))
                         {{-- Toute la ligne ouvre la categorie ; son nom reste un vrai lien pour le clavier. --}}
                         <li wire:key="category-{{ $category->id }}" wire:sort:item="{{ $category->id }}"
                             x-on:click="if (! $event.target.closest('a, button, [data-handle]')) window.location.href = '{{ $editUrl }}'"
-                            class="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-elevated sm:px-5">
+                            class="flex items-center gap-3 px-4 py-4 transition-colors hover:bg-elevated sm:px-5">
                             <span wire:sort:handle data-handle class="-ml-1 flex shrink-0 cursor-grab items-center rounded-lg p-1.5 text-muted transition hover:text-secondary" title="{{ __('Glisser pour changer l\'ordre') }}">
                                 <x-ui::icon name="bars-2" />
                             </span>
                             <div class="min-w-0 flex-1">
-                                <a href="{{ $editUrl }}" class="block truncate text-[13px] font-medium text-primary">{{ $name }}</a>
+                                <a href="{{ $editUrl }}" class="block truncate text-[14px] font-medium text-primary">{{ $name }}</a>
                                 <p class="truncate text-[12px] text-muted">
                                     EN · {{ $category->names['en'] ?? '-' }}
                                     <span class="mx-1">/</span>
@@ -49,7 +49,7 @@
                     @endforeach
                 </ul>
             @endif
-        </x-ui::card>
+        </div>
 
         <x-ui::modal name="delete-category" variant="confirm" :title="__('Supprimer cette catégorie ?')">
             <p class="font-medium text-primary" x-text="pending.name"></p>

@@ -160,6 +160,6 @@ class CategoryForm extends Component
         return view('livewire.admin.blog.category-form', [
             'locales' => self::LOCALES,
             'addressPrefixes' => $slugs->pathPrefixes('blog.category'),
-        ])->title(($this->categoryId === null ? __('Nouvelle catégorie') : __('Modifier la catégorie')));
+        ])->title(($this->categoryId === null ? __('Nouvelle catégorie') : __('Modifier la catégorie')))->layoutData(['surface' => 'plain']);
     }
 }

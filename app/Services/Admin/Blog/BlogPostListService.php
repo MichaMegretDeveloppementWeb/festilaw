@@ -18,12 +18,13 @@ use Carbon\CarbonImmutable;
 /**
  * Liste des articles du back-office.
  *
- * Plan de requetes (verifie par un test de budget) : 5.
+ * Plan de requetes (verifie par un test de budget) : 6.
  *   1-2. nombre d'articles et page de la liste
  *   3. langues redigees des articles de la page
  *   4. images principales des articles de la page (vignettes)
  *   5. categories du filtre
- * Page vide : 3 (nombre, page, categories).
+ *   6. nombre d'articles par statut (bande de chiffres)
+ * Page vide : 4 (nombre, page, categories, decompte).
  */
 final readonly class BlogPostListService
 {
@@ -67,6 +68,13 @@ final readonly class BlogPostListService
             );
         }));
 
-        return new BlogPostListResult($page, $this->categories->listForSelector(self::LOCALE));
+        $counts = $this->posts->countByStatus($filters);
+        $statusCounts = [];
+
+        foreach (BlogPostStatus::cases() as $status) {
+            $statusCounts[$status->value] = $counts[$status->value] ?? 0;
+        }
+
+        return new BlogPostListResult($page, $this->categories->listForSelector(self::LOCALE), $statusCounts);
     }
 }

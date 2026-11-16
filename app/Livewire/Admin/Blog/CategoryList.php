@@ -75,6 +75,6 @@ class CategoryList extends Component
 
         return view('livewire.admin.blog.category-list', [
             'categories' => $rows ?? [],
-        ])->title(__('Catégories'));
+        ])->title(__('Catégories'))->layoutData(['surface' => 'plain']);
     }
 }

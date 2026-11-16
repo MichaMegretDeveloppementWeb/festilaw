@@ -46,13 +46,7 @@ final readonly class AdminBlogPostListRepository
                     ->where('category.locale', '=', 'fr');
             })
             ->when($filters->status !== '', fn (Builder $query) => $query->where('blog_posts.status', $filters->status))
-            ->when($filters->origin !== '', fn (Builder $query) => $query->where('blog_posts.origin', $filters->origin))
-            ->when($filters->categoryId !== null, fn (Builder $query) => $query->where('blog_posts.blog_category_id', $filters->categoryId))
-            ->when(trim($filters->search) !== '', fn (Builder $query) => $query->whereExists(
-                fn (Builder $exists) => $exists->from('blog_post_translations as searched')
-                    ->whereColumn('searched.blog_post_id', 'blog_posts.id')
-                    ->where('searched.title', 'like', '%'.addcslashes(trim($filters->search), '%_\\').'%'),
-            ))
+            ->tap(fn (Builder $query) => $this->applyFilters($query, $filters))
             ->when($order !== null, fn (Builder $query) => $query->orderByRaw("{$order} {$direction}"))
             ->orderBy('blog_posts.id', $order === null ? $direction : 'desc')
             ->paginate($perPage, [
@@ -67,6 +61,23 @@ final readonly class AdminBlogPostListRepository
                 'fr.slug as slug_fr',
                 'category.name as category_name',
             ]);
+    }
+
+    /**
+     * Nombre d'articles par statut, avec la recherche, la categorie et l'origine choisies, mais quel que soit le
+     * statut choisi : c'est ce qui s'affiche dans la bande de chiffres qui sert de filtre par statut. 1 requete.
+     *
+     * @return array<string, int> valeur de BlogPostStatus => nombre (un statut sans article n'y figure pas)
+     */
+    public function countByStatus(BlogPostListFilters $filters): array
+    {
+        return BlogPost::query()->toBase()
+            ->tap(fn (Builder $query) => $this->applyFilters($query, $filters))
+            ->groupBy('blog_posts.status')
+            ->selectRaw('blog_posts.status as status, count(*) as total')
+            ->get()
+            ->mapWithKeys(static fn (object $row): array => [(string) $row->status => (int) $row->total])
+            ->all();
     }
 
     /**
@@ -95,6 +106,19 @@ final readonly class AdminBlogPostListRepository
         }
 
         return $written;
+    }
+
+    /** Recherche, origine et categorie : les filtres communs a la page et au decompte par statut. */
+    private function applyFilters(Builder $query, BlogPostListFilters $filters): void
+    {
+        $query
+            ->when($filters->origin !== '', fn (Builder $query) => $query->where('blog_posts.origin', $filters->origin))
+            ->when($filters->categoryId !== null, fn (Builder $query) => $query->where('blog_posts.blog_category_id', $filters->categoryId))
+            ->when(trim($filters->search) !== '', fn (Builder $query) => $query->whereExists(
+                fn (Builder $exists) => $exists->from('blog_post_translations as searched')
+                    ->whereColumn('searched.blog_post_id', 'blog_posts.id')
+                    ->where('searched.title', 'like', '%'.addcslashes(trim($filters->search), '%_\\').'%'),
+            ));
     }
 
     private function translation(string $locale): callable

@@ -66,10 +66,12 @@ class PostList extends Component
         }
     }
 
-    /** Retire les trois filtres d'un coup (la recherche, elle, a sa propre croix). */
+    /**
+     * Retire les filtres du panneau (categorie et origine) d'un coup. Le statut se choisit dans la bande de
+     * chiffres, et la recherche a sa propre croix.
+     */
     public function clearFilters(): void
     {
-        $this->status = '';
         $this->category = '';
         $this->origin = '';
 
@@ -147,13 +149,17 @@ class PostList extends Component
         return view('livewire.admin.blog.post-list', [
             'posts' => $result?->posts,
             'categoryOptions' => $result?->categoryOptions ?? [],
+            'statusCounts' => $result?->statusCounts ?? [],
+            'totalCount' => $result?->totalCount() ?? 0,
             'statuses' => BlogPostStatus::cases(),
             'origins' => BlogPostOrigin::cases(),
             'sorted' => $sort,
             'sortDirection' => $this->direction === 'asc' ? 'asc' : 'desc',
             'perPageShown' => $perPage,
             'perPageChoices' => self::PER_PAGE_CHOICES,
-            'activeFilters' => count(array_filter([$this->status, $this->category, $this->origin], static fn (string $value): bool => $value !== '')),
-        ])->title(__('Articles'));
+            // Filtres du panneau seulement (le statut se lit dans la bande de chiffres).
+            'activeFilters' => count(array_filter([$this->category, $this->origin], static fn (string $value): bool => $value !== '')),
+            'filtering' => $this->search !== '' || BlogPostStatus::tryFrom($this->status) !== null || $this->category !== '' || $this->origin !== '',
+        ])->title(__('Articles'))->layoutData(['surface' => 'plain']);
     }
 }

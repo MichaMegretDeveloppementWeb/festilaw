@@ -4,7 +4,7 @@
      $prefix : debut du chemin public ; $titleFallback, $descriptionFallback : ce que Google affiche quand
      le champ reste vide (« le titre de l'article », « l'extrait »).
      Demande `googleTitle(langue)` et `googleDescription(langue)` dans la portee Alpine du formulaire. --}}
-<div class="border-t border-subtle pt-5">
+<div {{ $attributes->class(['border-t border-default pt-5']) }}>
     <h3 class="text-[14px] font-semibold text-primary">{{ __('Résultat dans Google') }}</h3>
     <p class="mt-1 max-w-prose text-[12px] leading-relaxed text-muted">
         {{ __('Titre et description affichés dans les résultats de Google. Si ces champs sont vides, :title et :description sont utilisés.', ['title' => $titleFallback, 'description' => $descriptionFallback]) }}
