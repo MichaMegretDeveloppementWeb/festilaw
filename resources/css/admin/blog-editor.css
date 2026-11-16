@@ -73,7 +73,8 @@
         color: #60a5fa;
     }
 
-    /* Image du texte : l'apercu, sa description dans la langue de l'onglet, et ses deux gestes. */
+    /* Image du texte : l'apercu, sa description dans la langue de l'onglet, et ses gestes (largeur, recadrer,
+       description, retirer). */
     .blog-editor-image {
         margin: 1em 0;
         overflow: hidden;
@@ -94,8 +95,10 @@
         object-fit: contain;
     }
 
+    /* Sous une image etroite, les gestes passent sous la description, puis a la ligne entre eux. */
     .blog-editor-image figcaption {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
         justify-content: space-between;
         gap: 0.75rem;
@@ -116,8 +119,10 @@
 
     .blog-editor-image-actions {
         display: flex;
-        flex-shrink: 0;
+        flex-wrap: wrap;
+        align-items: center;
         gap: 0.25rem;
+        max-width: 100%;
     }
 
     .blog-editor-image-actions button {
@@ -130,5 +135,32 @@
     .blog-editor-image-actions button:hover {
         background: var(--ui-bg-surface);
         color: var(--ui-text-primary);
+    }
+
+    /* Largeur de l'image dans l'article : memes largeurs que la page publique (resources/css/web/blog/prose.css
+       et config/blog.php, content.image_widths). Une image reduite est centree. */
+    .blog-editor-image[data-width='medium'] {
+        max-width: 35rem;
+        margin-inline: auto;
+    }
+
+    .blog-editor-image[data-width='small'] {
+        max-width: 22.5rem;
+        margin-inline: auto;
+    }
+
+    /* Les trois largeurs : un groupe de boutons, celui de la largeur en place est marque. */
+    .blog-editor-image-widths {
+        display: inline-flex;
+        gap: 1px;
+        padding: 1px;
+        margin-right: 0.25rem;
+        border-radius: 0.5rem;
+        background: var(--ui-bg-surface);
+    }
+
+    .blog-editor-image-widths button[aria-pressed='true'] {
+        background: var(--ui-text-primary);
+        color: var(--ui-bg-surface);
     }
 }

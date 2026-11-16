@@ -217,7 +217,15 @@ final class BlogContentNormalizer
 
         $this->imageIds[$imageId] = true;
 
-        return ['type' => Schema::IMAGE, 'attrs' => ['imageId' => $imageId]];
+        $attrs = ['imageId' => $imageId];
+        $width = $node['attrs']['width'] ?? null;
+
+        // Pleine largeur : aucun attribut. Une largeur inconnue est retiree, l'image reprend toute la colonne.
+        if (is_string($width) && in_array($width, Schema::IMAGE_WIDTHS, true)) {
+            $attrs['width'] = $width;
+        }
+
+        return ['type' => Schema::IMAGE, 'attrs' => $attrs];
     }
 
     /**

@@ -13,6 +13,7 @@ function blogRenderer(): BlogContentRenderer
         new BlogSlugGenerator,
         new BlogLinkPolicy('festilaw.com'),
         '(min-width: 800px) 760px, 100vw',
+        ['medium' => 560, 'small' => 360],
     );
 }
 
@@ -113,6 +114,26 @@ it('renders a quotation', function () {
     ]);
 
     expect($html)->toBe('<blockquote><p>Safety first.</p></blockquote>');
+});
+
+it('marks a reduced image and tells the browser how wide it is shown, so that a lighter file is loaded', function (string $width, string $sizes) {
+    $html = renderBlogBlocks([['type' => 'blogImage', 'attrs' => ['imageId' => 7, 'width' => $width]]], 'en', [blogImageForRender(7)]);
+
+    expect($html)->toStartWith("<figure class=\"blog-figure blog-figure--{$width}\"><img")
+        ->toContain(" sizes=\"{$sizes}\"")
+        // Les memes variantes restent proposees : c'est le navigateur qui choisit.
+        ->toContain('-480.webp 480w')
+        ->toContain('-1600.webp 1600w');
+})->with([
+    'medium' => ['medium', '(min-width: 560px) 560px, 100vw'],
+    'small' => ['small', '(min-width: 360px) 360px, 100vw'],
+]);
+
+it('renders an image whose width is not a known reduced width at full width', function () {
+    $html = renderBlogBlocks([['type' => 'blogImage', 'attrs' => ['imageId' => 7, 'width' => 'huge']]], 'en', [blogImageForRender(7)]);
+
+    expect($html)->toStartWith('<figure class="blog-figure"><img')
+        ->toContain(' sizes="(min-width: 800px) 760px, 100vw"');
 });
 
 it('renders a responsive figure with the description of the page language', function () {

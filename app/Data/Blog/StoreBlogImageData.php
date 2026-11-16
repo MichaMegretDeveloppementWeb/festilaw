@@ -16,6 +16,8 @@ final readonly class StoreBlogImageData
     /**
      * @param  array<string, string>  $alt  description par langue
      * @param  string|null  $nameHint  texte dont tirer le nom du fichier (titre de l'article, description)
+     * @param  BlogImageCrop|null  $crop  rectangle a garder, en pixels de l'image redressee (null : toute l'image)
+     * @param  bool  $keepSource  garder la source non decoupee, pour pouvoir recadrer l'image plus tard
      */
     public function __construct(
         public string $path,
@@ -26,5 +28,7 @@ final readonly class StoreBlogImageData
         public ?string $creditAuthor = null,
         public ?string $creditUrl = null,
         public ?string $creditLicense = null,
+        public ?BlogImageCrop $crop = null,
+        public bool $keepSource = false,
     ) {}
 }

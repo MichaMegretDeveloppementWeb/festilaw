@@ -15,6 +15,12 @@
         'editor' => __('Contenu de l\'article'),
         'describe' => __('Description'),
         'remove' => __('Retirer'),
+        'recrop' => __('Recadrer'),
+        'width' => __('Largeur de l\'image dans l\'article'),
+        'widths' => ['full' => __('Pleine'), 'medium' => __('Moyenne'), 'small' => __('Petite')],
+        // Memes phrases que les refus du serveur (BlogImageException) : le script les dit avant tout envoi.
+        'wrongType' => __('Ce format d\'image n\'est pas pris en charge. Envoyez un fichier JPEG, PNG ou WebP.'),
+        'unreadable' => __('Ce fichier n\'est pas une image lisible. Envoyez un fichier JPEG, PNG ou WebP.'),
         'missing' => __('Sans description dans cette langue'),
         'linkInvalid' => __('Cette adresse n\'est pas reconnue. Écrivez une adresse complète (https://…), une adresse du site (/fr/tarifs) ou mailto:…'),
         'uploadFailed' => __('L\'envoi de l\'image a échoué. Vérifiez votre connexion et réessayez.'),
@@ -31,7 +37,7 @@
     x-on:change="touched($event)"
     x-on:blog-post-saved.window="dirty = false"
     x-on:keydown.escape.window="settingsOpen = false"
-    x-on:ui-modal-closed.window="if ($event.detail === 'post-related') $wire.closeRelatedPicker()"
+    x-on:ui-modal-closed.window="modalClosed($event.detail)"
     class="flex min-h-[calc(100svh-6.5rem)] flex-col sm:min-h-[calc(100svh-7.5rem)]"
 >
     {{-- Contenu des trois langues, remis une seule fois (texte echappe, lu par le script) : Livewire ne

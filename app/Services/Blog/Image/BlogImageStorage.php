@@ -6,6 +6,7 @@ namespace App\Services\Blog\Image;
 
 use App\Data\Blog\ProcessedBlogImage;
 use App\Exceptions\Blog\BlogImageException;
+use App\Models\BlogImage;
 use Illuminate\Contracts\Filesystem\Factory as FilesystemFactory;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Log;
@@ -39,11 +40,35 @@ final readonly class BlogImageStorage
             if ($image->share !== null) {
                 $this->disk()->put($this->paths->share($uuid, $basename), $image->share);
             }
+
+            if ($image->source !== null) {
+                $this->disk()->put($this->paths->source($uuid, $basename), $image->source);
+            }
         } catch (Throwable $e) {
             $this->deleteQuietly($uuid);
 
             throw BlogImageException::storageFailed($uuid, $e);
         }
+    }
+
+    /**
+     * Contenu de la source gardee d'une image, pour la recadrer de nouveau.
+     *
+     * @throws BlogImageException
+     */
+    public function readSource(BlogImage $image): string
+    {
+        try {
+            $contents = $this->disk()->get($this->paths->sourceOf($image));
+        } catch (Throwable $e) {
+            throw BlogImageException::storageFailed($image->uuid, $e);
+        }
+
+        if (! is_string($contents) || $contents === '') {
+            throw BlogImageException::notRecroppable($image->id);
+        }
+
+        return $contents;
     }
 
     /**

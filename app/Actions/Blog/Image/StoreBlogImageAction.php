@@ -41,7 +41,7 @@ final readonly class StoreBlogImageAction
     {
         $this->inspector->inspect($data->path, $data->usage);
 
-        $processed = $this->processor->process($data->path, $data->usage);
+        $processed = $this->processor->process($data->path, $data->usage, $data->crop, $data->keepSource);
 
         $alt = $this->cleaner->alt($data->alt);
         $uuid = (string) Str::uuid();
@@ -53,9 +53,10 @@ final readonly class StoreBlogImageAction
             return BlogImage::query()->create([
                 'uuid' => $uuid,
                 'basename' => $basename,
-                'variants' => ['widths' => $processed->widths(), 'share' => $processed->share !== null],
+                'variants' => ['widths' => $processed->widths(), 'share' => $processed->share !== null, 'source' => $processed->source !== null],
                 'width' => $processed->width,
                 'height' => $processed->height,
+                'crop' => $processed->crop?->toArray(),
                 'alt' => $alt,
                 'credit_source' => $data->creditSource,
                 'credit_author' => $this->cleaner->credit($data->creditAuthor),

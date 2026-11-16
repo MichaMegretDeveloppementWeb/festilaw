@@ -37,6 +37,12 @@ final class BlogContentSchema
 
     public const MARK_LINK = 'link';
 
+    /**
+     * Largeurs reduites qu'une image du texte peut porter (attribut `width`). Sans attribut, l'image prend
+     * toute la colonne : c'est le cas par defaut, et celui de tout article anterieur a cet attribut.
+     */
+    public const IMAGE_WIDTHS = ['medium', 'small'];
+
     /** Niveaux d'intertitre autorises (le titre de la page est le seul h1). */
     public const HEADING_LEVELS = [2, 3];
 

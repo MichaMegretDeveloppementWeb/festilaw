@@ -31,4 +31,8 @@
 }
 
 .prose .blog-figure { margin: 2em 0; }
+/* Image reduite, centree dans la colonne. Memes largeurs dans config/blog.php (content.image_widths), qui
+   annonce au navigateur la taille a charger, et dans l'editeur du back-office. */
+.prose .blog-figure--medium { max-width: 35rem; margin-inline: auto; }
+.prose .blog-figure--small { max-width: 22.5rem; margin-inline: auto; }
 .prose .blog-figure img { display: block; width: 100%; height: auto; border-radius: var(--radius); background: var(--color-line); }

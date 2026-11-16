@@ -141,9 +141,10 @@ final readonly class BlogPostFormService
     }
 
     /**
-     * Ce que le formulaire garde d'une image : son apercu et ses descriptions dans chaque langue.
+     * Ce que le formulaire garde d'une image : son apercu, ses descriptions dans chaque langue, et pour une
+     * image recadrable l'adresse de sa source et son cadrage en place (en pixels de cette source).
      *
-     * @return array{id: int, url: ?string, alt: array<string, string>}
+     * @return array{id: int, url: ?string, alt: array<string, string>, source: ?string, crop: ?array<string, int>}
      */
     public function imageSummary(BlogImage $image): array
     {
@@ -153,7 +154,13 @@ final readonly class BlogPostFormService
             $alt[$locale] = $image->altFor($locale);
         }
 
-        return ['id' => $image->id, 'url' => $this->previews->url($image, self::PREVIEW_WIDTH), 'alt' => $alt];
+        return [
+            'id' => $image->id,
+            'url' => $this->previews->url($image, self::PREVIEW_WIDTH),
+            'alt' => $alt,
+            'source' => $this->previews->sourceUrl($image),
+            'crop' => $image->hasSource() ? $image->crop : null,
+        ];
     }
 
     /**

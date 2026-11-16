@@ -66,6 +66,14 @@ return [
         'max_nodes' => 3_000,
         'max_depth' => 12,
         'image_sizes' => '(min-width: 1048px) 920px, (min-width: 400px) 90vw, calc(100vw - 40px)',
+
+        /*
+         | Largeurs reduites d'une image du texte, en pixels (largeur maximale a l'ecran). Une image sans
+         | largeur prend toute la colonne. Memes valeurs dans resources/css/web/blog/prose.css et dans
+         | resources/css/admin/blog-editor.css : les changer aux trois endroits, puis relancer
+         | `php artisan festilaw:blog-rerender`.
+         */
+        'image_widths' => ['medium' => 560, 'small' => 360],
     ],
 
     /*
@@ -85,6 +93,13 @@ return [
             'width' => 1200,
             'height' => 630,
             'jpeg_quality' => 85,
+        ],
+        // Source non decoupee d'une image du texte, gardee pour un recadrage ulterieur : largeur maximale.
+        'source_width' => 2_400,
+        // Plus petite partie d'image qu'un recadrage peut garder, en pixels.
+        'min_crop' => [
+            'width' => 200,
+            'height' => 120,
         ],
         'max_upload_kilobytes' => 10_240,
         'max_pixels' => 25_000_000,

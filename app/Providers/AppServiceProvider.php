@@ -73,6 +73,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->when(BlogContentNormalizer::class)->needs('$maxDepth')->giveConfig('blog.content.max_depth');
         $this->app->when(BlogMarkdownConverter::class)->needs('$maxBytes')->giveConfig('blog.content.max_bytes');
         $this->app->when(BlogContentRenderer::class)->needs('$imageSizes')->giveConfig('blog.content.image_sizes');
+        $this->app->when(BlogContentRenderer::class)->needs('$reducedWidths')->giveConfig('blog.content.image_widths');
         $this->app->when(BlogImagePaths::class)->needs('$directory')->giveConfig('blog.images.directory');
 
         $this->app->when(BlogImageStorage::class)->needs('$disk')->giveConfig('blog.images.disk');
@@ -86,6 +87,9 @@ class AppServiceProvider extends ServiceProvider
         $this->app->when(BlogImageProcessor::class)->needs('$shareWidth')->giveConfig('blog.images.share.width');
         $this->app->when(BlogImageProcessor::class)->needs('$shareHeight')->giveConfig('blog.images.share.height');
         $this->app->when(BlogImageProcessor::class)->needs('$shareQuality')->giveConfig('blog.images.share.jpeg_quality');
+        $this->app->when(BlogImageProcessor::class)->needs('$sourceWidth')->giveConfig('blog.images.source_width');
+        $this->app->when(BlogImageProcessor::class)->needs('$minCropWidth')->giveConfig('blog.images.min_crop.width');
+        $this->app->when(BlogImageProcessor::class)->needs('$minCropHeight')->giveConfig('blog.images.min_crop.height');
 
         $this->app->when([
             BlogPostReadinessCalculator::class,

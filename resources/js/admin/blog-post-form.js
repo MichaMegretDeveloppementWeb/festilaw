@@ -2,6 +2,7 @@
 //  - le contenu des trois langues (remis une fois par le serveur, renvoye a chaque enregistrement),
 //    redige dans un editeur par langue (./blog-editor.js), cree a la premiere ouverture de son onglet ;
 //  - les images connues du formulaire (apercu et descriptions), tenues a jour au fil des envois ;
+//  - la fenetre « Image dans le texte » : choix du fichier, recadrage, largeur, description ;
 //  - l'onglet de langue actif et l'etat de chaque langue ;
 //  - l'alerte de modifications non enregistrees ;
 //  - la feuille des reglages sur telephone (sur ordinateur, le meme bloc est une colonne) ;
@@ -9,7 +10,8 @@
 //  - l'apercu, ouvert dans un onglet des le clic pour ne pas etre bloque par le navigateur.
 // Le composant Livewire (App\Livewire\Admin\Blog\PostForm) garde l'etat des champs et fait les ecritures.
 
-import { IMAGE_DESCRIBE_EVENT, createBlogEditor, documentHasContent, repaintImages } from './blog-editor';
+import { IMAGE_DESCRIBE_EVENT, IMAGE_RECROP_EVENT, createBlogEditor, documentHasContent, repaintImages, replaceImageAt } from './blog-editor';
+import { createImageCropper } from './blog-image-cropper';
 import { registerAlpine, slugField } from './slug-field';
 
 const LOCALES = ['en', 'fr', 'es'];
@@ -22,6 +24,19 @@ const LINK = /^(https?:\/\/\S+|mailto:\S+@\S+|\/(?!\/)\S*)$/i;
 
 // Les editeurs restent hors de l'etat reactif : un editeur observe par Alpine cesse de fonctionner.
 const editors = new Map();
+
+// L'outil de recadrage de la fenetre d'image, hors de l'etat reactif lui aussi, et l'adresse locale du
+// fichier choisi (a liberer quand la fenetre se ferme).
+let cropper = null;
+let localImageUrl = null;
+
+const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+// Fenetre d'image remise a zero. `mode` : 'new' (une image a ajouter) ou 'recrop' (un nouveau cadrage).
+const emptyImageForm = () => ({
+    mode: 'new', locale: null, imageId: null, position: null, file: null, preview: '', ready: false,
+    ratio: 'free', zoom: 0, width: 'full', alt: '', busy: false, error: '',
+});
 
 // Envoie un fichier dans une propriete du composant. L'envoi de Livewire travaille par fonctions de
 // rappel et ne rend rien : on en fait une promesse, qui rend true (fichier recu), false (envoi annule)
@@ -44,6 +59,7 @@ const blogPostForm = (config) => ({
     pendingImage: null,
     altForm: { id: null, en: '', fr: '', es: '', saving: false },
     linkForm: { locale: null, href: '', error: '' },
+    imageForm: emptyImageForm(),
     // Source en cours de saisie dans sa fenetre. `index` nul : une nouvelle source.
     sourceForm: { index: null, label: '', url: '', errors: {}, saving: false },
     // Ce qui est tape dans la recherche de la fenetre des articles a lier.
@@ -62,6 +78,7 @@ const blogPostForm = (config) => ({
         this.$nextTick(() => this.mountEditor(this.tab));
         this.$watch('tab', (locale) => this.$nextTick(() => this.mountEditor(locale)));
         this.$root.addEventListener(IMAGE_DESCRIBE_EVENT, (event) => this.describeImage(event.detail.imageId));
+        this.$root.addEventListener(IMAGE_RECROP_EVENT, (event) => this.openImageRecrop(event.detail));
 
         window.matchMedia(WIDE).addEventListener('change', (event) => {
             this.wide = event.matches;
@@ -79,6 +96,19 @@ const blogPostForm = (config) => ({
     destroy() {
         editors.forEach((editor) => editor.destroy());
         editors.clear();
+        this.releaseCropper();
+    },
+
+    // Une fenetre du kit vient de se fermer, par son bouton, sa croix, la touche Echap ou un clic a cote.
+    modalClosed(name) {
+        if (name === 'post-related') {
+            this.$wire.closeRelatedPicker();
+        }
+
+        if (name === 'post-image') {
+            this.releaseCropper();
+            this.imageForm = emptyImageForm();
+        }
     },
 
     readJson(selector) {
@@ -235,7 +265,8 @@ const blogPostForm = (config) => ({
 
     // --- Images ------------------------------------------------------------------------------
 
-    // Ouvre le choix d'un fichier pour l'image principale, de partage, ou une image du texte.
+    // Ouvre le choix d'un fichier pour l'image principale ou l'image de partage. Une image du texte passe
+    // par sa fenetre (openImageDialog), qui la recadre avant l'envoi.
     pickImage(usage, locale = null) {
         if (this.uploading) {
             return;
@@ -281,10 +312,6 @@ const blogPostForm = (config) => ({
 
             this.images[image.id] = image;
             this.dirty = true;
-
-            if (target.usage === 'content') {
-                editors.get(target.locale)?.chain().focus().insertBlogImage(image.id).run();
-            }
         } catch {
             window.falconShowToast?.('error', config.labels.uploadFailed);
         } finally {
@@ -330,6 +357,188 @@ const blogPostForm = (config) => ({
             this.$dispatch('ui-close-modal', 'image-alt');
         } finally {
             this.altForm.saving = false;
+        }
+    },
+
+    // --- Image dans le texte : fenetre d'ajout et de recadrage -------------------------------
+
+    // Ouvre la fenetre pour ajouter une image dans le texte de cette langue.
+    openImageDialog(locale) {
+        this.releaseCropper();
+        this.imageForm = { ...emptyImageForm(), locale };
+        this.$dispatch('ui-open-modal', 'post-image');
+    },
+
+    // Ouvre la fenetre sur une image deja placee, pour lui donner un autre cadrage a partir de sa source.
+    openImageRecrop({ imageId, locale, position }) {
+        const image = this.images[imageId];
+
+        if (! image?.source) {
+            return;
+        }
+
+        this.releaseCropper();
+        this.imageForm = { ...emptyImageForm(), mode: 'recrop', locale, imageId, position };
+        this.$dispatch('ui-open-modal', 'post-image');
+        this.showInCropper(image.source, image.crop);
+    },
+
+    chooseImageFile(event) {
+        const file = event.target.files?.[0];
+
+        event.target.value = '';
+        this.acceptImageFile(file);
+    },
+
+    dropImageFile(event) {
+        this.acceptImageFile(event.dataTransfer?.files?.[0]);
+    },
+
+    // Le fichier est refuse ici, avec la phrase du serveur, avant tout envoi : format, puis poids.
+    acceptImageFile(file) {
+        if (! file) {
+            return;
+        }
+
+        if (! IMAGE_TYPES.includes(file.type)) {
+            this.imageForm.error = config.labels.wrongType;
+
+            return;
+        }
+
+        if (file.size > config.maxUploadBytes) {
+            this.imageForm.error = config.labels.tooHeavy;
+
+            return;
+        }
+
+        this.releaseCropper();
+        localImageUrl = URL.createObjectURL(file);
+        this.imageForm = { ...this.imageForm, file, error: '', ratio: 'free', zoom: 0 };
+        this.showInCropper(localImageUrl);
+    },
+
+    // Affiche une image dans l'outil de recadrage, des qu'elle est chargee. `crop` : cadrage a reprendre.
+    showInCropper(url, crop = null) {
+        this.imageForm.preview = url;
+        this.imageForm.ready = false;
+
+        this.$nextTick(() => {
+            const picture = document.getElementById('post-image-canvas');
+
+            if (! picture) {
+                return;
+            }
+
+            const start = async () => {
+                // L'outil prend la taille de sa zone au moment ou il est cree. Une image deja en cache peut
+                // arriver avant que la fenetre soit affichee : on attend que la zone ait une largeur.
+                for (let frame = 0; frame < 180 && picture.parentElement.offsetWidth === 0; frame++) {
+                    await new Promise((resolve) => { requestAnimationFrame(resolve); });
+                }
+
+                // La fenetre a pu etre fermee, ou une autre image choisie, pendant le chargement.
+                if (this.imageForm.preview !== url) {
+                    return;
+                }
+
+                const created = await createImageCropper(picture, { crop, onZoom: (position) => { this.imageForm.zoom = position; } });
+
+                if (this.imageForm.preview !== url) {
+                    created.destroy();
+
+                    return;
+                }
+
+                cropper = created;
+                this.imageForm.ready = true;
+            };
+
+            picture.onload = start;
+            picture.onerror = () => { this.imageForm.error = config.labels.unreadable; };
+            picture.src = url;
+        });
+    },
+
+    setImageRatio() {
+        cropper?.ratio(this.imageForm.ratio);
+    },
+
+    zoomImage() {
+        cropper?.zoom(Number(this.imageForm.zoom));
+    },
+
+    // « Changer d'image » : retour au choix du fichier.
+    resetImageFile() {
+        this.releaseCropper();
+        this.imageForm = { ...emptyImageForm(), locale: this.imageForm.locale, width: this.imageForm.width, alt: this.imageForm.alt };
+    },
+
+    releaseCropper() {
+        cropper?.destroy();
+        cropper = null;
+
+        if (localImageUrl !== null) {
+            URL.revokeObjectURL(localImageUrl);
+            localImageUrl = null;
+        }
+
+        const picture = document.getElementById('post-image-canvas');
+
+        if (picture) {
+            picture.onload = null;
+            picture.onerror = null;
+            picture.removeAttribute('src');
+        }
+    },
+
+    // Envoie l'image avec son cadrage (le serveur decoupe), ou demande un nouveau cadrage d'une image placee.
+    async submitImage() {
+        const form = this.imageForm;
+
+        if (! cropper || ! form.ready || form.busy) {
+            return;
+        }
+
+        const crop = cropper.crop();
+        const editor = editors.get(form.locale);
+
+        this.imageForm.busy = true;
+        this.imageForm.error = '';
+
+        try {
+            if (form.mode === 'recrop') {
+                const image = await this.$wire.recropImage(form.imageId, crop);
+
+                if (! image) {
+                    return;
+                }
+
+                this.images[image.id] = image;
+                replaceImageAt(editor, form.position, image.id);
+            } else {
+                const uploaded = await sendFile(this.$wire, 'imageUpload', form.file);
+
+                if (! uploaded) {
+                    return;
+                }
+
+                const image = await this.$wire.storeImage('content', crop, { [form.locale]: form.alt });
+
+                if (! image) {
+                    return;
+                }
+
+                this.images[image.id] = image;
+                editor?.chain().focus().insertBlogImage(image.id, form.width).run();
+            }
+
+            this.dirty = true;
+            this.$dispatch('ui-close-modal', 'post-image');
+        } catch {
+            this.imageForm.error = config.labels.uploadFailed;
+        } finally {
+            this.imageForm.busy = false;
         }
     },
 

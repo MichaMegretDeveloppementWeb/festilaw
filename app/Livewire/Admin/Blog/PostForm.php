@@ -6,6 +6,7 @@ namespace App\Livewire\Admin\Blog;
 
 use App\Actions\Admin\Blog\SaveAndPublishBlogPostAction;
 use App\Actions\Admin\Blog\SaveAndScheduleBlogPostAction;
+use App\Actions\Blog\Image\RecropBlogImageAction;
 use App\Actions\Blog\Image\StoreBlogImageAction;
 use App\Actions\Blog\Image\UpdateBlogImageAltAction;
 use App\Actions\Blog\Post\DeleteBlogPostAction;
@@ -13,6 +14,7 @@ use App\Actions\Blog\Post\SaveBlogPostAction;
 use App\Actions\Blog\Post\UnpublishBlogPostAction;
 use App\Data\Admin\Blog\BlogPostFormOpening;
 use App\Data\Admin\Blog\BlogPostStatusChangeResult;
+use App\Data\Blog\BlogImageCrop;
 use App\Data\Blog\BlogPostTranslationData;
 use App\Data\Blog\BlogSourceData;
 use App\Data\Blog\SaveBlogPostData;
@@ -366,10 +368,15 @@ class PostForm extends Component
      * Enregistre l'image qui vient d'etre envoyee. Elle nait sans article : c'est l'enregistrement de
      * l'article qui la rattache. Rend ce que le navigateur garde de l'image, ou null si elle est refusee.
      *
+     * Une image du texte arrive de la fenetre d'ajout avec son cadrage et sa description : elle est decoupee
+     * par le serveur, et sa source non decoupee est gardee pour un recadrage ulterieur.
+     *
      * @param  string  $usage  valeur de BlogImageUsage (featured, share, content)
-     * @return array{id: int, url: ?string, alt: array<string, string>}|null
+     * @param  array<string, mixed>|null  $crop  rectangle a garder (x, y, width, height), en pixels de l'image
+     * @param  array<string, mixed>  $alt  description par langue, pour les langues deja redigees
+     * @return array{id: int, url: ?string, alt: array<string, string>, source: ?string, crop: ?array<string, int>}|null
      */
-    public function storeImage(string $usage, StoreBlogImageAction $storeImage, BlogPostFormService $form): ?array
+    public function storeImage(string $usage, StoreBlogImageAction $storeImage, BlogPostFormService $form, ?array $crop = null, array $alt = []): ?array
     {
         $imageUsage = BlogImageUsage::tryFrom($usage);
         $file = $this->imageUpload;
@@ -385,7 +392,11 @@ class PostForm extends Component
             $image = $storeImage->execute(new StoreBlogImageData(
                 path: $file->getRealPath(),
                 usage: $imageUsage,
+                alt: array_map(static fn (mixed $text): string => is_string($text) ? $text : '', $alt),
                 nameHint: $this->nameHint(),
+                // Seule une image du texte se recadre : l'image principale et l'image de partage gardent leur format.
+                crop: $imageUsage === BlogImageUsage::Content ? BlogImageCrop::fromArray($crop) : null,
+                keepSource: $imageUsage === BlogImageUsage::Content,
             ));
         } catch (BaseAppException $e) {
             Log::error($e->getMessage(), ['exception' => $e]);
@@ -406,6 +417,40 @@ class PostForm extends Component
             BlogImageUsage::Share => $this->shareImageId = $image->id,
             BlogImageUsage::Content => null,
         };
+
+        return $form->imageSummary($image);
+    }
+
+    /**
+     * Recadre de nouveau une image du texte. Rend la NOUVELLE image (l'ancienne reste intacte tant que
+     * l'article n'est pas enregistre), que le navigateur met a la place de l'ancienne dans le texte, ou
+     * null si le recadrage est refuse.
+     *
+     * @param  array<string, mixed>  $crop  rectangle a garder (x, y, width, height), en pixels de la source gardee
+     * @return array{id: int, url: ?string, alt: array<string, string>, source: ?string, crop: ?array<string, int>}|null
+     */
+    public function recropImage(int $imageId, array $crop, RecropBlogImageAction $recrop, BlogPostFormService $form): ?array
+    {
+        $rectangle = BlogImageCrop::fromArray($crop);
+
+        if ($rectangle === null) {
+            $this->dispatch('ui-toast', type: 'error', title: __('Le cadrage n\'a pas été reçu. Réessayez.'));
+
+            return null;
+        }
+
+        try {
+            $image = $recrop->execute($imageId, $rectangle, $this->postId);
+        } catch (BaseAppException $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            $this->dispatch('ui-toast', type: 'error', title: $e->getUserMessage(), life: self::IMAGE_REFUSAL_LIFE);
+
+            return null;
+        } catch (Throwable $e) {
+            $this->reportAdminError($e, 'Admin recrop blog image');
+
+            return null;
+        }
 
         return $form->imageSummary($image);
     }

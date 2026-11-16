@@ -1,5 +1,5 @@
 {{-- Editeur du contenu d'une langue. $locale, $language (nom de la langue en francais).
-     La barre d'outils parle a l'editeur par le formulaire (format, isActive, openLink, pickImage) ;
+     La barre d'outils parle a l'editeur par le formulaire (format, isActive, openLink, openImageDialog) ;
      la zone de saisie est creee par le script a la premiere ouverture de l'onglet, et Livewire n'y
      touche jamais (wire:ignore). --}}
 @php
@@ -32,16 +32,13 @@
             <x-admin.blog.editor-button :label="__('Lien')" icon="link"
                 action="openLink('{{ $locale }}')" active="isActive('{{ $locale }}', 'link')" />
             <x-admin.blog.editor-button :label="__('Image dans le texte')" icon="photo"
-                action="pickImage('content', '{{ $locale }}')" disabled="uploading !== null" />
+                action="openImageDialog('{{ $locale }}')" />
             {!! $separator !!}
             <x-admin.blog.editor-button :label="__('Annuler la dernière modification')" icon="arrow-uturn-left"
                 action="format('{{ $locale }}', 'undo')" disabled="! can('{{ $locale }}', 'undo')" />
             <x-admin.blog.editor-button :label="__('Rétablir')" icon="arrow-uturn-right"
                 action="format('{{ $locale }}', 'redo')" disabled="! can('{{ $locale }}', 'redo')" />
 
-            <span x-show="uploading === 'content'" x-cloak class="ml-auto flex items-center gap-2 pr-1.5 text-[12px] text-muted" role="status">
-                <x-ui::spinner size="xs" /> {{ __('Envoi de l\'image…') }}
-            </span>
         </div>
 
         <div wire:ignore data-blog-editor="{{ $locale }}"></div>

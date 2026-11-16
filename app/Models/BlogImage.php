@@ -27,6 +27,7 @@ class BlogImage extends Model
         'variants',
         'width',
         'height',
+        'crop',
         'alt',
         'credit_source',
         'credit_author',
@@ -45,6 +46,7 @@ class BlogImage extends Model
             'variants' => 'array',
             'width' => 'integer',
             'height' => 'integer',
+            'crop' => 'array',
             'alt' => 'array',
             'credit_source' => BlogImageCreditSource::class,
         ];
@@ -72,6 +74,12 @@ class BlogImage extends Model
     public function hasShareVariant(): bool
     {
         return (bool) ($this->variants['share'] ?? false);
+    }
+
+    /** La source non decoupee a ete gardee : l'image peut etre recadree de nouveau. */
+    public function hasSource(): bool
+    {
+        return (bool) ($this->variants['source'] ?? false);
     }
 
     /** Description de l'image dans la langue demandee (chaine vide si elle n'est pas renseignee). */

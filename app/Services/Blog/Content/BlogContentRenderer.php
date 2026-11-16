@@ -29,6 +29,8 @@ final class BlogContentRenderer
         private readonly BlogSlugGenerator $slugs,
         private readonly BlogLinkPolicy $links,
         private readonly string $imageSizes = '100vw',
+        /** @var array<string, int> largeur maximale a l'ecran, en pixels, de chaque largeur reduite */
+        private readonly array $reducedWidths = [],
     ) {}
 
     /**
@@ -67,7 +69,7 @@ final class BlogContentRenderer
             Schema::BULLET_LIST => '<ul>'.$this->items($block['content'], $locale, $images).'</ul>',
             Schema::ORDERED_LIST => '<ol>'.$this->items($block['content'], $locale, $images).'</ol>',
             Schema::BLOCKQUOTE => '<blockquote>'.implode('', array_map(fn (array $child): string => $this->block($child, $locale, $images), $block['content'])).'</blockquote>',
-            Schema::IMAGE => $this->figure($images[$block['attrs']['imageId']] ?? null, $locale),
+            Schema::IMAGE => $this->figure($images[$block['attrs']['imageId']] ?? null, $locale, $block['attrs']['width'] ?? null),
             default => '',
         };
     }
@@ -166,8 +168,12 @@ final class BlogContentRenderer
         return "<a {$attributes}>{$html}</a>";
     }
 
-    /** Image adaptative. Une image citee mais introuvable n'est pas rendue. */
-    private function figure(?BlogImage $image, string $locale): string
+    /**
+     * Image adaptative. Une image citee mais introuvable n'est pas rendue. Une image reduite porte une
+     * classe de plus, et annonce au navigateur sa largeur a l'ecran pour qu'il charge une variante plus
+     * legere.
+     */
+    private function figure(?BlogImage $image, string $locale, ?string $width = null): string
     {
         if ($image === null) {
             return '';
@@ -180,6 +186,7 @@ final class BlogContentRenderer
         }
 
         $default = in_array(self::DEFAULT_WIDTH, $widths, true) ? self::DEFAULT_WIDTH : max($widths);
+        $reduced = $width === null ? null : ($this->reducedWidths[$width] ?? null);
 
         $srcset = implode(', ', array_map(
             fn (int $width): string => $this->paths->url($this->paths->variantOf($image, $width))." {$width}w",
@@ -189,7 +196,7 @@ final class BlogContentRenderer
         $attributes = [
             'src' => $this->paths->url($this->paths->variantOf($image, $default)),
             'srcset' => $srcset,
-            'sizes' => $this->imageSizes,
+            'sizes' => $reduced === null ? $this->imageSizes : "(min-width: {$reduced}px) {$reduced}px, 100vw",
             'width' => (string) $image->width,
             'height' => (string) $image->height,
             'alt' => $image->altFor($locale),
@@ -203,7 +210,9 @@ final class BlogContentRenderer
             $html .= " {$name}=\"{$this->escape($value)}\"";
         }
 
-        return "<figure class=\"blog-figure\"><img{$html}></figure>";
+        $class = $reduced === null ? 'blog-figure' : "blog-figure blog-figure--{$width}";
+
+        return "<figure class=\"{$class}\"><img{$html}></figure>";
     }
 
     private function escape(string $value): string

@@ -170,6 +170,106 @@ describe('sending an image', function () {
     });
 });
 
+describe('framing an image of the text', function () {
+    it('cuts the image of the text to the chosen rectangle, describes it, and hands its source to the browser', function () {
+        Livewire::test(PostForm::class)
+            ->set('imageUpload', uploadedImage(2000, 1000))
+            ->call('storeImage', 'content', ['x' => 500, 'y' => 100, 'width' => 1000, 'height' => 800], ['fr' => 'Une étiquette CE', 'de' => 'ignoriert'])
+            ->assertSet('imageUpload', null)
+            ->assertReturned(fn (array $summary): bool => $summary['url'] !== null
+                && str_ends_with((string) $summary['source'], '-source.webp')
+                && $summary['crop'] === ['x' => 500, 'y' => 100, 'width' => 1000, 'height' => 800]
+                && $summary['alt']['fr'] === 'Une étiquette CE');
+
+        $image = BlogImage::query()->sole();
+
+        expect([$image->width, $image->height])->toBe([1000, 800])
+            ->and($image->alt)->toBe(['fr' => 'Une étiquette CE'])
+            ->and($image->hasSource())->toBeTrue();
+    });
+
+    it('never cuts the main image, whatever the browser sends', function () {
+        Livewire::test(PostForm::class)
+            ->set('imageUpload', uploadedImage(1600, 900))
+            ->call('storeImage', 'featured', ['x' => 0, 'y' => 0, 'width' => 1300, 'height' => 700])
+            ->assertReturned(fn (array $summary): bool => $summary['source'] === null && $summary['crop'] === null);
+
+        $image = BlogImage::query()->sole();
+
+        expect([$image->width, $image->height])->toBe([1600, 900])->and($image->hasSource())->toBeFalse();
+    });
+
+    it('refuses a kept area that is too small, says why, and keeps nothing', function () {
+        Log::spy();
+
+        Livewire::test(PostForm::class)
+            ->set('imageUpload', uploadedImage(2000, 1000))
+            ->call('storeImage', 'content', ['x' => 0, 'y' => 0, 'width' => 100, 'height' => 100])
+            ->assertReturned(null)
+            ->assertSet('imageUpload', null)
+            ->assertDispatched('ui-toast', fn (string $event, array $params): bool => $params['type'] === 'error'
+                && str_contains($params['title'], '200 × 120'));
+
+        expect(BlogImage::query()->count())->toBe(0);
+    });
+
+    it('frames a placed image again by handing a new image to the browser, the first one staying as it is', function () {
+        $form = Livewire::test(PostForm::class)
+            ->set('imageUpload', uploadedImage(2000, 1000))
+            ->call('storeImage', 'content', null, ['en' => 'A CE label']);
+
+        $first = BlogImage::query()->sole();
+
+        $form->call('recropImage', $first->id, ['x' => 1000, 'y' => 200, 'width' => 800, 'height' => 600])
+            ->assertReturned(fn (array $summary): bool => $summary['id'] !== $first->id
+                && $summary['crop'] === ['x' => 1000, 'y' => 200, 'width' => 800, 'height' => 600]
+                && $summary['alt']['en'] === 'A CE label'
+                && $summary['source'] !== null);
+
+        expect(BlogImage::query()->count())->toBe(2)
+            // La premiere image garde sa taille (sa plus grande variante fait 1600 px) et son cadrage entier.
+            ->and([$first->fresh()->width, $first->fresh()->height])->toBe([1600, 800])
+            ->and($first->fresh()->crop)->toBe(['x' => 0, 'y' => 0, 'width' => 2000, 'height' => 1000]);
+    });
+
+    it('refuses to frame again without a rectangle, an image of another article, or an image without a kept source', function () {
+        Log::spy();
+        $post = BlogContent::draft('pending');
+        $foreign = BlogImage::factory()->create(['blog_post_id' => BlogContent::draft('other')->id, 'variants' => ['widths' => [480], 'share' => false, 'source' => true]]);
+        $withoutSource = BlogImage::factory()->create(['blog_post_id' => $post->id]);
+        $rectangle = ['x' => 0, 'y' => 0, 'width' => 800, 'height' => 600];
+        $count = BlogImage::query()->count();
+
+        Livewire::test(PostForm::class, ['post' => $post->id])
+            ->call('recropImage', $withoutSource->id, ['x' => 0, 'y' => 0])
+            ->assertReturned(null)
+            ->assertDispatched('ui-toast', type: 'error')
+            ->call('recropImage', $foreign->id, $rectangle)
+            ->assertReturned(null)
+            ->call('recropImage', $withoutSource->id, $rectangle)
+            ->assertReturned(null)
+            ->call('recropImage', 999_999, $rectangle)
+            ->assertReturned(null);
+
+        expect(BlogImage::query()->count())->toBe($count);
+    });
+
+    it('hands the source and the framing of the images of the text when the form opens, in the same three queries', function () {
+        $post = BlogContent::draft('pending');
+        $image = BlogImage::factory()->create([
+            'blog_post_id' => $post->id,
+            'variants' => ['widths' => [480, 768], 'share' => false, 'source' => true],
+            'crop' => ['x' => 10, 'y' => 20, 'width' => 800, 'height' => 600],
+        ]);
+
+        Livewire::test(PostForm::class, ['post' => $post->id])
+            ->assertViewHas('initialImages', fn (array $images): bool => str_ends_with((string) $images[$image->id]['source'], '-source.webp')
+                && $images[$image->id]['crop'] === ['x' => 10, 'y' => 20, 'width' => 800, 'height' => 600]
+                && $images[$post->featured_image_id]['source'] === null
+                && $images[$post->featured_image_id]['crop'] === null);
+    });
+});
+
 describe('describing an image', function () {
     it('saves the three descriptions at once and keeps the credit of the image', function () {
         $post = BlogContent::draft('pending');

@@ -1,0 +1,13 @@
+/* Retouches de l'outil de recadrage (cropperjs 1.7.0), chargees avec lui par resources/js/admin/blog-image-cropper.js.
+   Feuille ordinaire, hors de Tailwind : elle ne vit que sur la page du formulaire d'article. */
+
+/* Pour mesurer la photo, la bibliotheque en pose un instant une copie invisible, a sa taille reelle, directement
+   dans <body> (en position absolue, opacite 0, z-index -1). Sur un telephone, cette copie de plusieurs milliers
+   de pixels elargit la page : le navigateur dezoome, la fenetre s'etire, et l'outil se cree plus large que
+   l'ecran (constate le 16/11/2026 dans Chrome en mode telephone). En position fixe, la copie garde sa taille,
+   donc sa mesure, sans jamais elargir la page. Le parcours admin-check-retours-c.mjs verifie ce point : a
+   relire si la bibliotheque change de version. */
+body > img[style*='z-index: -1'] {
+    position: fixed !important;
+    pointer-events: none !important;
+}

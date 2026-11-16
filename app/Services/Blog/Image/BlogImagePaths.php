@@ -9,7 +9,7 @@ use App\Models\BlogImage;
 /**
  * Chemins et adresses des fichiers d'une image du blog. Seul endroit qui connait la convention de
  * nommage : un dossier par image ({dossier}/{uuid}/), une variante WebP par largeur, un JPEG de
- * partage eventuel. Calcul pur : aucun acces au disque (c'est le role de BlogImageStorage).
+ * partage eventuel, et la source non decoupee d'une image recadrable. Calcul pur : aucun acces au disque (c'est le role de BlogImageStorage).
  */
 final readonly class BlogImagePaths
 {
@@ -34,6 +34,17 @@ final readonly class BlogImagePaths
     public function share(string $uuid, string $basename): string
     {
         return "{$this->directory}/{$uuid}/{$basename}-share.jpg";
+    }
+
+    /** La source non decoupee, gardee pour qu'une image du texte puisse etre recadree de nouveau. */
+    public function source(string $uuid, string $basename): string
+    {
+        return "{$this->directory}/{$uuid}/{$basename}-source.webp";
+    }
+
+    public function sourceOf(BlogImage $image): string
+    {
+        return $this->source($image->uuid, $image->basename);
     }
 
     public function variantOf(BlogImage $image, int $width): string

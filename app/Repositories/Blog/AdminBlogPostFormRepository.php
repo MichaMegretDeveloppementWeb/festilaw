@@ -20,7 +20,7 @@ final readonly class AdminBlogPostFormRepository
         'scheduled_for', 'published_at', 'sources',
     ];
 
-    private const IMAGE_COLUMNS = 'images:id,blog_post_id,uuid,basename,variants,width,height,alt';
+    private const IMAGE_COLUMNS = 'images:id,blog_post_id,uuid,basename,variants,width,height,crop,alt';
 
     /**
      * Ouverture du formulaire : l'article, ses textes AVEC leur contenu, ses images. 3 requetes.

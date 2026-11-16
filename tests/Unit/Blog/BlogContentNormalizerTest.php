@@ -66,6 +66,19 @@ it('keeps the allowed elements untouched', function () {
     expect(blogNormalizer()->normalize($document)->document)->toBe($document);
 });
 
+it('keeps the width of an image of the text only when it is a known reduced width', function (mixed $width, array $expected) {
+    $content = blogNormalizer()->normalize(blogDoc(['type' => 'blogImage', 'attrs' => ['imageId' => 12, 'width' => $width, 'onclick' => 'x']]));
+
+    expect($content->document['content'][0]['attrs'])->toBe($expected);
+})->with([
+    'medium' => ['medium', ['imageId' => 12, 'width' => 'medium']],
+    'small' => ['small', ['imageId' => 12, 'width' => 'small']],
+    'full is the absence of width' => ['full', ['imageId' => 12]],
+    'unknown' => ['huge', ['imageId' => 12]],
+    'a number' => [360, ['imageId' => 12]],
+    'nothing' => [null, ['imageId' => 12]],
+]);
+
 it('removes unknown elements, marks and attributes', function () {
     $content = blogNormalizer()->normalize(blogDoc(
         ['type' => 'codeBlock', 'content' => [blogText('rm -rf')]],

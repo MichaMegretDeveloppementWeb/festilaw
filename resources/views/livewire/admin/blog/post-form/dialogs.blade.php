@@ -93,6 +93,74 @@
     </x-slot:footer>
 </x-ui::modal>
 
+{{-- Image dans le texte. On choisit un fichier (ou on le depose), il s'affiche dans l'outil de recadrage sans
+     attendre l'envoi, puis on choisit sa largeur dans l'article et sa description. A la validation, le fichier
+     part avec son cadrage et c'est le serveur qui decoupe. La meme fenetre rouvre une image deja placee pour
+     lui donner un autre cadrage (imageForm.mode === 'recrop').
+     L'outil de recadrage ecrit dans son cadre : Livewire n'y touche pas (wire:ignore). --}}
+<x-ui::modal name="post-image" width="48rem" :title="__('Image dans le texte')">
+    <div data-no-dirty class="space-y-4">
+        <div x-show="! imageForm.preview">
+            <label for="post-image-file" x-on:dragover.prevent x-on:drop.prevent="dropImageFile($event)"
+                class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-default px-6 py-12 text-center text-muted transition-colors hover:border-gray-300 hover:text-secondary dark:hover:border-gray-600">
+                <x-ui::icon name="photo" class="h-8 w-8" stroke-width="1" />
+                <span class="text-[13px] font-medium text-secondary">{{ __('Déposez une image ici, ou cliquez pour la choisir') }}</span>
+                <span class="text-[12px]">{{ __('JPEG, PNG ou WebP, :megabytes Mo au plus.', ['megabytes' => (int) floor(config('blog.images.max_upload_kilobytes') / 1024)]) }}</span>
+            </label>
+            <input id="post-image-file" type="file" class="sr-only" accept="image/jpeg,image/png,image/webp" x-on:change="chooseImageFile($event)">
+        </div>
+
+        <div x-show="imageForm.preview" x-cloak class="space-y-4">
+            <div data-image-crop-area class="relative h-64 overflow-hidden rounded-lg bg-elevated sm:h-[22rem]" wire:ignore>
+                {{-- Hors du flux : une grande photo posee dans le flux donnerait sa largeur a la fenetre, qui
+                     deborderait d'un ecran de telephone au moment ou l'outil mesure sa zone. --}}
+                <img id="post-image-canvas" alt="" class="absolute inset-0 block h-full w-full object-contain">
+            </div>
+            <p x-show="! imageForm.ready && ! imageForm.error" class="flex items-center gap-2 text-[12px] text-muted" role="status">
+                <x-ui::spinner size="xs" /> {{ __('Chargement de l\'image…') }}
+            </p>
+
+            <div class="flex flex-wrap items-end gap-x-6 gap-y-4">
+                <div>
+                    <p class="mb-1.5 text-[13px] font-medium text-gray-700 dark:text-gray-300">{{ __('Format') }}</p>
+                    <x-ui::segmented :legend="__('Format du cadrage')" x-model="imageForm.ratio" x-on:change="setImageRatio()"
+                        :options="['free' => __('Libre'), 'landscape' => '16:9', 'standard' => '4:3', 'square' => __('Carré')]" />
+                </div>
+
+                <div class="min-w-44 flex-1">
+                    <label for="post-image-zoom" class="mb-1.5 block text-[13px] font-medium text-gray-700 dark:text-gray-300">{{ __('Zoom') }}</label>
+                    <input id="post-image-zoom" type="range" min="0" max="100" step="1" x-model.number="imageForm.zoom" x-on:input="zoomImage()"
+                        class="block h-8 w-full accent-gray-900 dark:accent-white">
+                </div>
+            </div>
+            <p class="text-[12px] leading-relaxed text-muted">{{ __('Étirez le cadre par ses poignées pour choisir la partie gardée. Faites glisser l\'image pour la déplacer sous le cadre.') }}</p>
+
+            <div x-show="imageForm.mode === 'new'" class="space-y-4 border-t border-subtle pt-4">
+                <div>
+                    <p class="mb-1.5 text-[13px] font-medium text-gray-700 dark:text-gray-300">{{ __('Largeur dans l\'article') }}</p>
+                    <x-ui::segmented :legend="__('Largeur de l\'image dans l\'article')" x-model="imageForm.width"
+                        :options="['full' => __('Pleine'), 'medium' => __('Moyenne'), 'small' => __('Petite')]" />
+                </div>
+
+                <x-ui::form-group :label="__('Description de l\'image')" for="post-image-alt"
+                    :hint="__('Une phrase qui dit ce que montre l\'image, pour les personnes qui ne la voient pas et pour Google.')">
+                    <x-ui::input id="post-image-alt" type="text" x-model="imageForm.alt" maxlength="300" autocomplete="off" />
+                </x-ui::form-group>
+            </div>
+        </div>
+
+        <p x-show="imageForm.error" x-cloak x-text="imageForm.error" class="text-[12px] text-red-700 dark:text-red-400" role="alert"></p>
+    </div>
+
+    <x-slot:footer>
+        <x-ui::button variant="ghost" class="mr-auto" x-show="imageForm.preview && imageForm.mode === 'new'" x-on:click="resetImageFile()">{{ __('Changer d\'image') }}</x-ui::button>
+        <x-ui::button variant="ghost" x-on:click="$dispatch('ui-close-modal', 'post-image')">{{ __('Annuler') }}</x-ui::button>
+        <x-ui::button x-on:click="submitImage()" x-bind:disabled="! imageForm.ready || imageForm.busy" data-submit-image>
+            <span x-text="imageForm.busy ? @js(__('Envoi en cours…')) : (imageForm.mode === 'new' ? @js(__('Insérer l\'image')) : @js(__('Appliquer le cadrage')))">{{ __('Insérer l\'image') }}</span>
+        </x-ui::button>
+    </x-slot:footer>
+</x-ui::modal>
+
 {{-- Descriptions d'une image, enregistrees tout de suite (sans attendre l'enregistrement de l'article). --}}
 <x-ui::modal name="image-alt" :title="__('Descriptions de l\'image')">
     <div data-no-dirty class="space-y-4">

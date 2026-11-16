@@ -72,6 +72,22 @@ final class BlogImageException extends BaseAppException
         );
     }
 
+    public static function cropTooSmall(int $minWidth, int $minHeight): self
+    {
+        return new self(
+            technicalMessage: "Blog image refused: the kept area is smaller than {$minWidth}x{$minHeight} px or lies outside the image.",
+            userMessage: "La partie gardée est trop petite. Gardez au moins {$minWidth} × {$minHeight} pixels de l'image.",
+        );
+    }
+
+    public static function notRecroppable(int $imageId): self
+    {
+        return new self(
+            technicalMessage: "Blog image [{$imageId}] has no kept source: it cannot be cropped again.",
+            userMessage: 'Cette image ne peut pas être recadrée. Retirez-la, puis ajoutez-la de nouveau.',
+        );
+    }
+
     public static function processingFailed(Throwable $previous): self
     {
         return new self(

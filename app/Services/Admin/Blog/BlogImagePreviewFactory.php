@@ -31,4 +31,10 @@ final readonly class BlogImagePreviewFactory
 
         return $this->paths->url($this->paths->variantOf($image, $suitable === [] ? max($widths) : min($suitable)));
     }
+
+    /** Adresse de la source non decoupee d'une image recadrable, ou null si elle n'a pas ete gardee. */
+    public function sourceUrl(BlogImage $image): ?string
+    {
+        return $image->hasSource() ? $this->paths->url($this->paths->sourceOf($image)) : null;
+    }
 }
