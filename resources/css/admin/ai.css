@@ -1,0 +1,30 @@
+/* Couleurs de l'IA : un degrade bleu, violet, rose, reserve a ce qui vient de l'IA (nombres de tokens, icone
+   etincelle du lancement et du menu). Decision de Micha du 16/11/2026 : des couleurs qui evoquent l'IA plutot
+   qu'un bleu et un vert ordinaires. Plus clair en mode sombre, pour garder le contraste. */
+@layer components {
+    :root {
+        --ai-from: #0ea5e9;
+        --ai-via: #8b5cf6;
+        --ai-to: #d946ef;
+    }
+
+    .dark {
+        --ai-from: #38bdf8;
+        --ai-via: #a78bfa;
+        --ai-to: #e879f9;
+    }
+
+    /* Texte en degrade (un nombre, un mot). */
+    .ai-text {
+        background-image: linear-gradient(90deg, var(--ai-from), var(--ai-via), var(--ai-to));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    /* Icone au trait en degrade : le degrade est dessine une fois dans la mise en page (#ai-gradient). */
+    .ai-icon,
+    [data-nav-icon='sparkles'] svg {
+        stroke: url(#ai-gradient);
+    }
+}

@@ -52,6 +52,6 @@ class GenerationHistory extends Component
             $this->addError('history-load-failed', __('Le chargement de l\'historique a échoué. Réessayez. Si le problème persiste, contactez l\'assistance technique.'));
         }
 
-        return view('livewire.admin.blog.generation-history', ['generations' => $generations])->title(__('Historique des générations'));
+        return view('livewire.admin.blog.generation-history', ['generations' => $generations])->title(__('Historique des générations'))->layoutData(['surface' => 'plain']);
     }
 }

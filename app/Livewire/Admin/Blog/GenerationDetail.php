@@ -59,6 +59,6 @@ class GenerationDetail extends Component
         }
 
         return view('livewire.admin.blog.generation-detail', ['generation' => $generation])
-            ->title(__('Génération n° :id', ['id' => $this->generationId]));
+            ->title(__('Génération n° :id', ['id' => $this->generationId]))->layoutData(['surface' => 'plain']);
     }
 }

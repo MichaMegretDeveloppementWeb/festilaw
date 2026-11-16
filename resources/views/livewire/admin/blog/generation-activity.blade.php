@@ -1,4 +1,4 @@
-{{-- Tuile « En cours » de la vue d'ensemble. Elle se relit seule : toutes les 2 secondes tant qu'une
+{{-- Cellule « En cours » de la page d'arrivee. Elle se relit seule : toutes les 2 secondes tant qu'une
      generation tourne, toutes les 15 secondes sinon (une generation planifiee peut demarrer). Deux balises
      distinctes, pour que le rythme change vraiment quand l'etat change.
      Sa structure est la meme dans tous les etats (valeur, une ligne, barre, lien) : sa taille ne bouge pas. --}}
@@ -20,17 +20,20 @@
         default => __('Étape suivante en préparation'),
     };
 @endphp
-<div class="h-full" data-generation-activity="{{ $generation === null ? 'idle' : $generation->status->value }}">
-    @if ($generation?->isActive())
-        <div wire:poll.2s wire:key="generation-activity-active" class="hidden"></div>
-    @else
-        <div wire:poll.15s wire:key="generation-activity-idle" class="hidden"></div>
-    @endif
+{{-- La cellule est la racine du composant : elle prend place dans la bande de chiffres de la page d'arrivee. --}}
+<x-admin.stats.item icon="bolt" :label="__('En cours')" data-stat="activity" data-generation-activity="{{ $generation === null ? 'idle' : $generation->status->value }}">
+    {{ $value }}
+    <x-slot:extra>
+        @if ($generation?->isActive())
+            <div wire:poll.2s wire:key="generation-activity-active" class="hidden"></div>
+        @else
+            <div wire:poll.15s wire:key="generation-activity-idle" class="hidden"></div>
+        @endif
 
-    <x-ui::stat-card class="h-full" icon="bolt" :label="__('En cours')" data-stat="activity" :value="$value" :description="$line">
-        <x-ui::progress class="mt-3" :value="$generation?->percent() ?? 0" :show-value="false" />
+        <span class="block truncate">{{ $line }}</span>
+        <x-ui::progress class="mt-2.5" :value="$generation?->percent() ?? 0" :show-value="false" />
         <a href="{{ $generation === null ? '#' : route('admin.blog.generation.show', ['generation' => $generation->id]) }}"
             @if ($generation === null) tabindex="-1" aria-hidden="true" @endif data-follow-generation
-            @class(['mt-3 inline-flex items-center gap-1 text-[12px] font-medium text-secondary underline underline-offset-2 hover:text-primary', 'invisible' => $generation === null])>{{ __('Suivre la génération') }}</a>
-    </x-ui::stat-card>
-</div>
+            @class(['mt-2.5 inline-flex items-center gap-1 font-medium text-secondary transition-colors hover:text-primary', 'invisible' => $generation === null])>{{ __('Suivre la génération') }} <x-ui::icon name="arrow-right" class="h-3.5 w-3.5" /></a>
+    </x-slot:extra>
+</x-admin.stats.item>

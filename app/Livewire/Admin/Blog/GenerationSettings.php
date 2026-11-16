@@ -213,6 +213,6 @@ class GenerationSettings extends Component
             'imageModes' => collect(BlogAiImageMode::cases())->mapWithKeys(fn (BlogAiImageMode $mode): array => [$mode->value => $mode->label()])->all(),
             'imageCounts' => collect(range(1, BlogAiSettings::MAX_IMAGES))->mapWithKeys(fn (int $count): array => [(string) $count => $presenter->imageCountLabel($count)])->all(),
             'localeNames' => self::LOCALE_NAMES,
-        ])->title(__('Réglages de la génération IA'));
+        ])->title(__('Réglages de la génération IA'))->layoutData(['surface' => 'plain']);
     }
 }

@@ -6,7 +6,7 @@
 @php
     $stepStatus = \App\Enums\Blog\Generation\BlogGenerationStepStatus::class;
 @endphp
-<ol class="px-5 py-3" data-generation-steps>
+<ol class="pt-5" data-generation-steps>
     @foreach ($steps as $step)
         <li class="relative flex items-start gap-4 pb-6 pt-2 last:pb-3" wire:key="step-{{ $step->key }}" data-step="{{ $step->key }}" data-step-status="{{ $step->status->value }}">
             {{-- Le trait qui relie cette etape a la suivante. --}}

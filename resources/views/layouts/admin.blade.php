@@ -4,11 +4,15 @@
      dans la configuration du kit ; `php artisan ui-kit:check` verifie l'ensemble.
      `lang="fr"` : le back-office est redige en francais, quelle que soit la langue du site public.
      Le titre vient du composant de l'ecran (->title('Dossiers')) : barre du haut et onglet du navigateur.
-     $adminNav et $schedulerStatus : fournis par le View::composer de AppServiceProvider. --}}
+     $adminNav et $schedulerStatus : fournis par le View::composer de AppServiceProvider.
+     $surface : 'plain' pose le fond blanc sur le contenu (ecrans du blog et de la generation IA, decision du
+     16/11/2026, « page blanche a la Stripe ») ; les autres ecrans gardent le fond gris du kit. Un ecran le choisit
+     par ->layoutData(['surface' => 'plain']). --}}
 @php($pageTitle = $title ?? __('Back-office'))
+@php($plainSurface = ($surface ?? 'page') === 'plain')
 <!DOCTYPE html>
 {{-- Une seule classe `class`, le theme du kit dedans, a cote de bg-page (meme element : sinon bande claire). --}}
-<html lang="fr" class="h-full bg-page {{ falcon_theme_class() }}">
+<html lang="fr" @class(['h-full', 'bg-page' => ! $plainSurface, 'bg-surface' => $plainSurface, falcon_theme_class()])>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -30,6 +34,17 @@
 </head>
 @auth
     <body class="min-h-full text-primary antialiased">
+        {{-- Le degrade des icones de l'IA (resources/css/admin/ai.css, classe .ai-icon), dessine une seule fois. --}}
+        <svg width="0" height="0" class="absolute" aria-hidden="true" focusable="false">
+            <defs>
+                <linearGradient id="ai-gradient" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" style="stop-color: var(--ai-from)" />
+                    <stop offset="50%" style="stop-color: var(--ai-via)" />
+                    <stop offset="100%" style="stop-color: var(--ai-to)" />
+                </linearGradient>
+            </defs>
+        </svg>
+
         <x-ui::sidebar.frame>
             <x-slot:bar>
                 <x-ui::sidebar brand="Festilaw">
@@ -41,7 +56,7 @@
                     @foreach ($adminNav as $group)
                         <x-ui::sidebar.group :label="$group->title">
                             @foreach ($group->items as $item)
-                                <x-ui::sidebar.link :href="$item->url" :icon="$item->icon" :active="$item->active">{{ $item->label }}</x-ui::sidebar.link>
+                                <x-ui::sidebar.link :href="$item->url" :icon="$item->icon" :active="$item->active" data-nav-icon="{{ $item->icon }}">{{ $item->label }}</x-ui::sidebar.link>
                             @endforeach
                         </x-ui::sidebar.group>
                     @endforeach
@@ -93,8 +108,10 @@
                 </div>
             </header>
 
-            <main class="flex-1">
-                <div class="mx-auto max-w-[90em] px-4 py-6 sm:px-6 sm:py-8">
+            <main @class(['group/surface flex-1', 'bg-surface' => $plainSurface]) data-surface="{{ $plainSurface ? 'plain' : 'page' }}">
+                {{-- Page blanche : plus de marge sur les cotes, pour que les filets qui debordent de la colonne
+                     (sections, bandes de chiffres, listes) gardent de l'air jusqu'au bord. --}}
+                <div @class(['mx-auto max-w-[90em] px-4 py-6 sm:py-8', 'sm:px-6' => ! $plainSurface, 'sm:px-10 lg:px-12' => $plainSurface])>
                     @if ($schedulerStatus['stalled'] ?? false)
                         <x-ui::alert type="error" class="mb-6" :title="__('Les tâches automatiques ne tournent plus depuis le :date (UTC)', ['date' => $schedulerStatus['lastRunAt']->format('d/m/Y à H:i')])">
                             {{ __('Rappels de renouvellement, vérification des paiements et des signatures, récupération des mandats signés et purges RGPD ne s\'exécutent plus. À vérifier côté hébergement (tâche cron).') }}

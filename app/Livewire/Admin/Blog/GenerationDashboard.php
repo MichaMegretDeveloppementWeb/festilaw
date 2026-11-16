@@ -52,6 +52,6 @@ class GenerationDashboard extends Component
             $this->addError('generation-load-failed', __('Le chargement de la génération par IA a échoué. Réessayez. Si le problème persiste, contactez l\'assistance technique.'));
         }
 
-        return view('livewire.admin.blog.generation-dashboard', ['overview' => $overview])->title(__('Génération IA'));
+        return view('livewire.admin.blog.generation-dashboard', ['overview' => $overview])->title(__('Génération IA'))->layoutData(['surface' => 'plain']);
     }
 }

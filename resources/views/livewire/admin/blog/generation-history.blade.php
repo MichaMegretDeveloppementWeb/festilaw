@@ -5,14 +5,14 @@
     @include('livewire.admin.blog.generation.header', ['page' => 'history'])
 
     @error('history-load-failed')
-        <x-ui::card :padding="false">
-            <x-ui::load-failure :title="__('Le chargement de l\'historique a échoué.')"
-                :description="__('Réessayez. Si le problème persiste, contactez l\'assistance technique.')" retry="$refresh" />
-        </x-ui::card>
+        <x-ui::load-failure :title="__('Le chargement de l\'historique a échoué.')"
+            :description="__('Réessayez. Si le problème persiste, contactez l\'assistance technique.')" retry="$refresh" />
     @else
-        <x-ui::card :padding="false" class="relative">
+        {{-- Le tableau sur la page blanche, sans carte. Il deborde de la colonne de la marge de ses premieres et
+             dernieres cellules, pour que le texte reste aligne sur le titre de la page. --}}
+        <div class="relative -mx-4 border-t border-default sm:-mx-5">
             {{-- Voile pendant un changement de page, une relance ou un arret. --}}
-            <div wire:loading.delay.long wire:target="gotoPage, nextPage, previousPage, retry, cancel" class="absolute inset-0 z-10 rounded-xl bg-surface/70">
+            <div wire:loading.delay.long wire:target="gotoPage, nextPage, previousPage, retry, cancel" class="absolute inset-0 z-10 bg-surface/70">
                 <div class="flex h-full items-center justify-center"><x-ui::spinner size="lg" /></div>
             </div>
 
@@ -69,7 +69,7 @@
 
                 <x-ui::pagination :paginator="$generations" mode="livewire" />
             @endif
-        </x-ui::card>
+        </div>
 
         <x-ui::modal name="stop-generation" variant="confirm" :title="__('Arrêter cette génération ?')">
             <p>{{ __('Une génération en attente est arrêtée tout de suite. Une génération déjà commencée finit l\'étape en cours, puis s\'arrête. Ce qui a déjà été dépensé reste dépensé.') }}</p>
