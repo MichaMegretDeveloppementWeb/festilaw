@@ -101,7 +101,7 @@ it('clears the two filters of the panel at once, and keeps the search and the st
         ->assertDontSeeHtml('data-clear-filters');
 });
 
-it('counts the articles of each status in the strip, which filters the list by status', function () {
+it('counts the articles of each status in a one-line segmented filter, which filters the list by status', function () {
     $rules = BlogContent::category('rules');
     $news = BlogContent::category('news', position: 1);
     BlogContent::published('label', $rules);
@@ -112,20 +112,24 @@ it('counts the articles of each status in the strip, which filters the list by s
     $list = Livewire::test(PostList::class)
         ->assertViewHas('statusCounts', ['draft' => 1, 'scheduled' => 1, 'published' => 2])
         ->assertViewHas('totalCount', 4)
-        // Plus de liste deroulante du statut : la bande de chiffres la remplace.
+        // Le filtre par statut tient sur une ligne (selecteur segmente du kit), avec le nombre de chaque statut,
+        // et plus aucune bande de chiffres ne repousse la liste.
         ->assertDontSee('Tous les statuts')
         ->assertSeeHtml('data-status-filter')
-        ->assertSeeHtml('aria-pressed="true" data-status="all"');
+        ->assertSeeHtml('ui-segmented')
+        ->assertSeeHtml('wire:model.live="status"')
+        ->assertSee('Tous (4)')->assertSee('Publiés (2)')->assertSee('Programmés (1)')->assertSee('Brouillons (1)')
+        ->assertDontSeeHtml('aria-pressed');
 
-    // Un clic sur une cellule filtre la liste, et la cellule choisie est marquee.
+    // Choisir un statut filtre la liste.
     $list->set('status', 'published')
         ->assertSee('Label fr')->assertSee('Guide fr')->assertDontSee('Pending fr')
-        ->assertSeeHtml('aria-pressed="true" data-status="published"')
         // Les nombres ne dependent pas du statut choisi, mais suivent les autres filtres.
         ->assertViewHas('statusCounts', ['draft' => 1, 'scheduled' => 1, 'published' => 2])
         ->set('category', (string) $news->id)
         ->assertViewHas('statusCounts', ['draft' => 1, 'scheduled' => 0, 'published' => 1])
-        ->assertViewHas('totalCount', 2);
+        ->assertViewHas('totalCount', 2)
+        ->assertSee('Tous (2)')->assertSee('Programmés (0)');
 });
 
 it('shows fifteen articles per page, newest first, with the count of articles under the list', function () {

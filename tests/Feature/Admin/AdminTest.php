@@ -773,15 +773,26 @@ it('asks to confirm the deletion of a dossier in a window, not in the browser bo
         ->assertDontSeeHtml('wire:confirm');
 });
 
-it('shows the client of a dossier in a band of figures, without label and value rows', function () {
+it('shows the client of a dossier as a contact card, with a clickable line per way to reach them', function () {
     actingAs(User::factory()->create());
-    $submission = Submission::factory()->starter()->create(['company_name' => 'Atelier Durand', 'email' => 'contact@atelier-durand.test']);
+    $submission = Submission::factory()->starter()->create([
+        'company_name' => 'Atelier Durand',
+        'email' => 'contact@atelier-durand.test',
+        'phone' => '+33 6 12 34 56 78',
+        'website_url' => 'atelier-durand.test',
+        'company_registration_number' => null,
+    ]);
 
     Livewire::test(SubmissionDetail::class, ['submission' => $submission])
-        // Page blanche (16/11/2026) : le client se lit dans une bande de cellules, plus en lignes libelle / valeur.
+        // Retour de Micha du 16/11 au soir : une fiche de contact, ni lignes libelle / valeur, ni seconde grille.
         ->assertSeeHtml('data-dossier-client')
+        ->assertSeeHtml('data-contact-lines')
         ->assertDontSeeHtml('ui-description-list')
         ->assertDontSee('Zone sensible')
         ->assertSee('Atelier Durand')
-        ->assertSeeHtml('href="mailto:contact@atelier-durand.test"');
+        ->assertSeeHtml('href="mailto:contact@atelier-durand.test"')
+        ->assertSeeHtml('href="tel:+33612345678"')
+        // Une adresse saisie sans protocole s'ouvre en https.
+        ->assertSeeHtml('href="https://atelier-durand.test"')
+        ->assertSee("N° d'immatriculation non renseigné");
 });

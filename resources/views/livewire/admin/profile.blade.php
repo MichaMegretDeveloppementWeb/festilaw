@@ -1,9 +1,9 @@
-{{-- Mon compte, sur page blanche et sur toute la largeur : l'adresse email et le mot de passe en deux sections cote
-     a cote sur un grand ecran, chacune avec son bouton. --}}
+{{-- Mon compte, sur page blanche : l'adresse email puis le mot de passe, en sections l'une sous l'autre, chacune
+     avec son bouton. Une seule colonne (retour de Micha du 16/11 au soir : pas deux colonnes pour ces reglages). --}}
 <div>
     <x-ui::page-header :title="__('Mon compte')" :description="__('Gérez votre adresse email et votre mot de passe.')" class="mb-8" />
 
-    <div class="grid items-start gap-x-16 gap-y-12 lg:grid-cols-2">
+    <div class="space-y-12">
         <x-admin.section :title="__('Adresse email')">
             <form wire:submit="updateEmail" class="max-w-md space-y-4 pt-6">
                 <x-ui::form-group :label="__('Email')" for="profile-email" :error="$errors->first('email')">

@@ -106,9 +106,9 @@ it('filters the quiz answers by outcome and ignores an outcome it does not know'
         ->assertViewHas('results', fn ($results): bool => $results->total() === 1)
         // Les compteurs portent sur toutes les reponses, pas sur le filtre.
         ->assertViewHas('counts', ['concerned' => 2, 'excluded' => 0, 'not_concerned' => 1])
-        // La bande des compteurs sert de filtre : la cellule choisie est marquee, plus celle de « Tous ».
-        ->assertSeeHtml('aria-pressed="true" data-outcome="not_concerned"')
-        ->assertSeeHtml('aria-pressed="false" data-outcome="all"')
+        // Le filtre tient sur une ligne (selecteur segmente du kit), avec le nombre de reponses de chaque resultat.
+        ->assertSeeHtml('wire:model.live="outcome"')
+        ->assertSee('Tous (3)')->assertSee('Non concerné (1)')->assertSee('Catégorie exclue (0)')
         ->set('outcome', QuizOutcome::Excluded->value)
         ->assertSee('Aucune réponse ne correspond.')
         // Une valeur inconnue dans l'adresse : le filtre est ignore.

@@ -14,6 +14,13 @@
         --ui-field: min(calc((var(--ui-touch) * 4 - 2rem) / 3), 2.75rem);
     }
 
+    /* Un en-tete de colonne ne passe jamais a la ligne (decision de Micha du 16/11/2026) : sur un ecran etroit,
+       le tableau deborde et son conteneur du kit defile en largeur, au lieu de serrer les colonnes. Les
+       cellules du kit sont deja sur une ligne par defaut. */
+    .ui-table-header-cell {
+        white-space: nowrap;
+    }
+
     /* Titre de page : 22 px au lieu de 18. */
     .ui-page-header h1 {
         font-size: 1.375rem;

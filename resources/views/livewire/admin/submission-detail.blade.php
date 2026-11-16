@@ -123,26 +123,60 @@
     <div @class(['grid items-start gap-y-12', 'lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem]' => $hasSidebar])>
         {{-- Ce qu'on consulte --}}
         <div @class(['min-w-0 space-y-12', 'lg:pr-8' => $hasSidebar])>
+            {{-- Le client en fiche de contact : qui (entreprise, personne), puis une ligne par moyen de le joindre,
+                 cliquable, puis les donnees secondaires sur une ligne grise. Pas de seconde grille sous celle des
+                 chiffres du dossier (retour de Micha du 16/11 au soir). --}}
+            @php
+                $localeNames = ['en' => __('Anglais'), 'fr' => __('Français'), 'es' => __('Espagnol')];
+                $localeName = mb_strtolower($localeNames[(string) $submission->locale] ?? strtoupper((string) $submission->locale));
+                $personName = $isContact ? ($submission->first_name ?: null) : (trim(($submission->first_name ?? '').' '.($submission->last_name ?? '')) ?: null);
+                $website = $submission->website_url ?: null;
+                $websiteHref = $website !== null && ! preg_match('#^https?://#i', $website) ? 'https://'.$website : $website;
+                $phoneHref = $submission->phone ? preg_replace('/[^\d+]/', '', $submission->phone) : null;
+                $contactMeta = $isContact
+                    ? [__('Message en :language', ['language' => $localeName]), __('Reçu le :date', ['date' => $submission->created_at->format('d/m/Y à H:i')])]
+                    : [
+                        __('Dossier en :language', ['language' => $localeName]),
+                        __('Créé le :date', ['date' => $submission->created_at->format('d/m/Y à H:i')]),
+                        $submission->company_registration_number
+                            ? __('N° d\'immatriculation :number', ['number' => $submission->company_registration_number])
+                            : __('N° d\'immatriculation non renseigné'),
+                    ];
+            @endphp
             <x-admin.section :title="$isContact ? __('Coordonnées') : __('Client')" data-dossier-client>
-                @if ($isContact)
-                    <x-admin.stats :columns="4" class="border-t-0">
-                        <x-admin.stats.item icon="user-circle" :label="__('Nom')" size="sm">{{ $submission->first_name ?: '-' }}</x-admin.stats.item>
-                        <x-admin.stats.item icon="envelope" :label="__('Email')" size="sm"><a href="mailto:{{ $submission->email }}" class="break-all hover:underline">{{ $submission->email }}</a></x-admin.stats.item>
-                        <x-admin.stats.item icon="globe-alt" :label="__('Site web')" size="sm"><span class="break-all">{{ $submission->website_url ?: '-' }}</span></x-admin.stats.item>
-                        <x-admin.stats.item icon="language" :label="__('Langue')" size="sm">{{ strtoupper((string) $submission->locale) }}</x-admin.stats.item>
-                    </x-admin.stats>
-                @else
-                    <x-admin.stats :columns="4" class="border-t-0">
-                        <x-admin.stats.item icon="building-office" :label="__('Entreprise')" size="sm">{{ $submission->company_name ?: '-' }}</x-admin.stats.item>
-                        <x-admin.stats.item icon="user-circle" :label="__('Contact')" size="sm">{{ trim(($submission->first_name ?? '').' '.($submission->last_name ?? '')) ?: '-' }}</x-admin.stats.item>
-                        <x-admin.stats.item icon="envelope" :label="__('Email')" size="sm"><a href="mailto:{{ $submission->email }}" class="break-all hover:underline">{{ $submission->email }}</a></x-admin.stats.item>
-                        <x-admin.stats.item icon="phone" :label="__('Téléphone')" size="sm">{{ $submission->phone ?: '-' }}</x-admin.stats.item>
-                        <x-admin.stats.item icon="globe-alt" :label="__('Site web')" size="sm"><span class="break-all">{{ $submission->website_url ?: '-' }}</span></x-admin.stats.item>
-                        <x-admin.stats.item icon="identification" :label="__('N° immatriculation')" size="sm">{{ $submission->company_registration_number ?: '-' }}</x-admin.stats.item>
-                        <x-admin.stats.item icon="language" :label="__('Langue du dossier')" size="sm">{{ strtoupper((string) $submission->locale) }}</x-admin.stats.item>
-                        <x-admin.stats.item icon="clock" :label="__('Créé le')" size="sm">{{ $submission->created_at->format('d/m/Y à H:i') }}</x-admin.stats.item>
-                    </x-admin.stats>
-                @endif
+                <div class="pt-5">
+                    @unless ($isContact)
+                        <p class="text-[15px] font-semibold text-primary">{{ $submission->company_name ?: __('Entreprise non renseignée') }}</p>
+                    @endunless
+                    <p @class(['text-[14px]', 'mt-0.5 text-secondary' => ! $isContact, 'font-semibold text-primary' => $isContact])>{{ $personName ?? __('Nom non renseigné') }}</p>
+
+                    <ul class="mt-4 space-y-2.5 text-[14px]" data-contact-lines>
+                        <li class="flex min-w-0 items-center gap-2.5">
+                            <x-ui::icon name="envelope" class="h-4 w-4 shrink-0 text-muted" />
+                            <a href="mailto:{{ $submission->email }}" class="min-w-0 break-all text-primary hover:underline">{{ $submission->email }}</a>
+                        </li>
+                        @unless ($isContact)
+                            <li class="flex min-w-0 items-center gap-2.5">
+                                <x-ui::icon name="phone" class="h-4 w-4 shrink-0 text-muted" />
+                                @if ($phoneHref)
+                                    <a href="tel:{{ $phoneHref }}" class="text-primary hover:underline">{{ $submission->phone }}</a>
+                                @else
+                                    <span class="text-muted">{{ __('Téléphone non renseigné') }}</span>
+                                @endif
+                            </li>
+                        @endunless
+                        <li class="flex min-w-0 items-center gap-2.5">
+                            <x-ui::icon name="globe-alt" class="h-4 w-4 shrink-0 text-muted" />
+                            @if ($website)
+                                <a href="{{ $websiteHref }}" target="_blank" rel="noopener" class="min-w-0 break-all text-primary hover:underline">{{ $website }}</a>
+                            @else
+                                <span class="text-muted">{{ __('Site web non renseigné') }}</span>
+                            @endif
+                        </li>
+                    </ul>
+
+                    <p class="mt-4 text-[12px] text-muted" data-contact-meta>{{ implode(' · ', $contactMeta) }}</p>
+                </div>
             </x-admin.section>
 
             @if ($submission->message)

@@ -37,13 +37,13 @@
                             <x-ui::table.row wire:key="generation-{{ $generation->id }}" data-generation="{{ $generation->id }}" data-generation-status="{{ $generation->status->value }}"
                                 x-on:click="if (! $event.target.closest('a, button')) window.location.href = '{{ $detailUrl }}'">
                                 <x-ui::table.cell :first="true" :nowrap="false" variant="primary">
-                                    <a href="{{ $detailUrl }}" class="block max-w-xl font-medium text-primary">{{ $generation->subject ?? __('Sujet choisi par l\'IA') }}</a>
+                                    <a href="{{ $detailUrl }}" class="block min-w-[14rem] max-w-xl font-medium text-primary">{{ $generation->subject ?? __('Sujet choisi par l\'IA') }}</a>
                                     <span class="mt-0.5 block text-[11px] font-normal text-muted">{{ $generation->trigger->label() }} · {{ $generation->createdAt->format('d/m/Y H:i') }} (UTC)</span>
                                 </x-ui::table.cell>
                                 <x-ui::table.cell :nowrap="false">
                                     <x-admin.blog.generation-status :status="$generation->status" />
                                     @if ($generation->outcome)
-                                        <span class="mt-1 block max-w-xs text-[12px] text-muted">{{ $generation->outcome }}</span>
+                                        <span class="mt-1 block min-w-[12rem] max-w-xs text-[12px] text-muted">{{ $generation->outcome }}</span>
                                     @endif
                                 </x-ui::table.cell>
                                 <x-ui::table.cell hidden="sm" align="right">{{ $generation->cost }}</x-ui::table.cell>

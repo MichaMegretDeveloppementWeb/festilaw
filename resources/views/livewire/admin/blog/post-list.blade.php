@@ -1,15 +1,14 @@
 {{-- Liste des articles, sur page blanche. `pending` : l'article vise par la fenetre de suppression (donne par le
-     menu de la ligne). En tete, la bande des nombres d'articles par statut, qui sert aussi de filtre par statut
-     (un clic choisit le statut, la cellule choisie est soulignee). Puis la recherche et les deux autres filtres,
-     puis le tableau sans carte. --}}
+     menu de la ligne). En tete, le filtre par statut, une seule ligne avec le nombre d'articles de chaque
+     statut (selecteur segmente du kit) : la liste reste en haut de l'ecran, filtree ou non. Puis la recherche
+     et les deux autres filtres, puis le tableau sans carte. --}}
 @php
-    $statusCells = [
-        '' => __('Tous'),
-        \App\Enums\Blog\BlogPostStatus::Published->value => __('Publiés'),
-        \App\Enums\Blog\BlogPostStatus::Scheduled->value => __('Programmés'),
-        \App\Enums\Blog\BlogPostStatus::Draft->value => __('Brouillons'),
+    $statusOptions = [
+        '' => __('Tous (:count)', ['count' => $totalCount]),
+        \App\Enums\Blog\BlogPostStatus::Published->value => __('Publiés (:count)', ['count' => $statusCounts['published'] ?? 0]),
+        \App\Enums\Blog\BlogPostStatus::Scheduled->value => __('Programmés (:count)', ['count' => $statusCounts['scheduled'] ?? 0]),
+        \App\Enums\Blog\BlogPostStatus::Draft->value => __('Brouillons (:count)', ['count' => $statusCounts['draft'] ?? 0]),
     ];
-    $chosenStatus = \App\Enums\Blog\BlogPostStatus::tryFrom($status)?->value ?? '';
 @endphp
 <div x-data="{ filtersOpen: false, pending: { id: null, title: '', published: false } }">
     <x-ui::page-header :title="__('Articles')" :description="__('Les articles du blog, dans les trois langues.')" class="mb-8">
@@ -17,27 +16,16 @@
     </x-ui::page-header>
 
     @unless ($errors->has('posts-load-failed'))
-        <x-admin.stats tag="div" :columns="4" role="group" aria-label="{{ __('Filtrer par statut') }}" data-status-filter>
-            @foreach ($statusCells as $value => $label)
-                @php($selected = $chosenStatus === $value)
-                <button type="button" wire:click="$set('status', '{{ $value }}')" aria-pressed="{{ $selected ? 'true' : 'false' }}" data-status="{{ $value === '' ? 'all' : $value }}"
-                    @class([
-                        'group relative flex min-w-0 flex-col bg-surface px-4 py-5 text-left transition-colors sm:px-5',
-                        'hover:bg-elevated' => ! $selected,
-                    ])>
-                    <span @class(['text-[12px] font-medium', 'text-primary' => $selected, 'text-muted group-hover:text-secondary' => ! $selected])>{{ $label }}</span>
-                    <span class="mt-2 text-[26px] font-semibold leading-none tracking-tight tabular-nums text-primary">{{ $value === '' ? $totalCount : ($statusCounts[$value] ?? 0) }}</span>
-                    {{-- La cellule choisie est soulignee d'un trait fonce, pose sur le filet du bas. --}}
-                    <span @class(['absolute inset-x-0 -bottom-px h-0.5', 'bg-gray-900 dark:bg-white' => $selected, 'bg-transparent' => ! $selected])></span>
-                </button>
-            @endforeach
-        </x-admin.stats>
+        {{-- Sur telephone, le selecteur defile en largeur plutot que de couper ses libelles. --}}
+        <div class="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0" data-status-filter>
+            <x-ui::segmented :legend="__('Filtrer par statut')" wire:model.live="status" :options="$statusOptions" class="w-max max-w-none" />
+        </div>
     @endunless
 
     {{-- Recherche et filtres. Sur un ecran large, tout tient sur une ligne. En dessous, le bouton « Filtres »
          ouvre un panneau flottant, qui passe au-dessus de la liste sans la deplacer. Un seul jeu de champs
          dans les deux cas : le meme bloc est une ligne ou un panneau selon la largeur. --}}
-    <div class="mb-4 mt-8 flex items-center gap-3">
+    <div class="mb-4 mt-4 flex items-center gap-3">
         <x-ui::search-input id="f-search" wire:model.live.debounce.400ms="search" wrapper-class="min-w-0 flex-1"
             :placeholder="__('Rechercher un titre')" aria-label="{{ __('Rechercher un article par son titre, dans les trois langues') }}"
             title="{{ __('La recherche porte sur le titre, dans les trois langues.') }}" />
@@ -107,7 +95,7 @@
                                 x-on:click="if (! $event.target.closest('a, button')) window.location.href = '{{ $editUrl }}'">
                                 <x-ui::table.cell :first="true" :nowrap="false" variant="primary">
                                     {{-- La vignette laisse sa place au titre sur telephone. --}}
-                                    <a href="{{ $editUrl }}" class="flex items-center gap-3 sm:min-w-[14rem]">
+                                    <a href="{{ $editUrl }}" class="flex min-w-[14rem] items-center gap-3">
                                         @if ($post->thumbnailUrl)
                                             <img src="{{ $post->thumbnailUrl }}" alt="" width="64" height="40" loading="lazy" class="hidden h-10 w-16 shrink-0 rounded-lg object-cover sm:block">
                                         @else
