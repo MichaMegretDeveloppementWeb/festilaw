@@ -541,7 +541,7 @@ class SubmissionDetail extends Component
             'isScale' => $this->submission->type === SubmissionType::Scale,
             'scaleAuditPaid' => $this->scaleAuditPaid(),
             'appointmentStatuses' => AppointmentStatus::cases(),
-        ])->title(($isContact ? __('Prise de contact') : __('Dossier')).' '.$this->submission->reference);
+        ])->title(($isContact ? __('Prise de contact') : __('Dossier')).' '.$this->submission->reference)->layoutData(['surface' => 'plain']);
     }
 
     /** Retour d'action ephemere cote client : un toast qui s'efface tout seul (cf. layout admin). */

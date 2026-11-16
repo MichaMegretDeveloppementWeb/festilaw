@@ -95,8 +95,9 @@ it('lists the previous mandates in the back-office and lets the admin download t
     actingAs(User::factory()->create());
 
     Livewire::test(SubmissionDetail::class, ['submission' => $dossier])
-        ->assertSee('Pack du mandat')
-        ->assertSee('Mandats précédents')
+        // La section dit le mandat en cours ; le mandat remplace est une ligne de plus, avec son lien.
+        ->assertSee('Mandat Pro Pack')
+        ->assertSee('Mandat précédent, signé le')
         ->assertSee('Mandat Creator Pack');
 
     get(route('admin.submissions.contract-mandate', ['submission' => $dossier->id, 'contract' => $previous->id]))

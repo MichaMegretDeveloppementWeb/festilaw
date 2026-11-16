@@ -773,12 +773,15 @@ it('asks to confirm the deletion of a dossier in a window, not in the browser bo
         ->assertDontSeeHtml('wire:confirm');
 });
 
-it('shows the client of a dossier in the description list of the kit', function () {
+it('shows the client of a dossier in a band of figures, without label and value rows', function () {
     actingAs(User::factory()->create());
     $submission = Submission::factory()->starter()->create(['company_name' => 'Atelier Durand', 'email' => 'contact@atelier-durand.test']);
 
     Livewire::test(SubmissionDetail::class, ['submission' => $submission])
-        ->assertSeeHtml('ui-description-list')
+        // Page blanche (16/11/2026) : le client se lit dans une bande de cellules, plus en lignes libelle / valeur.
+        ->assertSeeHtml('data-dossier-client')
+        ->assertDontSeeHtml('ui-description-list')
+        ->assertDontSee('Zone sensible')
         ->assertSee('Atelier Durand')
         ->assertSeeHtml('href="mailto:contact@atelier-durand.test"');
 });

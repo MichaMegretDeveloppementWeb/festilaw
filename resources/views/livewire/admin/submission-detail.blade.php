@@ -1,27 +1,77 @@
+{{-- Fiche d'un dossier ou d'une prise de contact, sur page blanche (decision de Micha du 16/11/2026).
+     En-tete : la reference (ou le nom du contact), l'etat par un point de couleur et son libelle, les actions et un
+     menu ⋯ qui porte la suppression. Puis la bande des chiffres du dossier, et deux colonnes : a gauche ce qu'on
+     consulte (client, mandat et contrat, pieces, paiements, notes), a droite les formulaires de gestion (statut,
+     Personne Responsable, changement de pack, rendez-vous), separes par un filet vertical, sans carte.
+     Une prise de contact n'a pas de colonne de droite. Les boutons de la page n'ouvrent que les fenetres de
+     confirmation ; ce sont les boutons des fenetres qui lancent les actions. --}}
+@php
+    $stateTone = $isContact ? 'text-amber-700 dark:text-amber-400' : match ($dossierState->severity()) {
+        'ok' => 'text-emerald-700 dark:text-emerald-400',
+        'warn' => 'text-amber-700 dark:text-amber-400',
+        'bad' => 'text-red-700 dark:text-red-400',
+        'neutral' => 'text-blue-700 dark:text-blue-400',
+        default => 'text-secondary',
+    };
+    $hasSidebar = ! $isContact || $submission->appointment;
+    $lastPayment = $isContact ? null : $submission->payments->sortByDesc('id')->first();
+@endphp
 <div x-data @email-sent.window="$dispatch('ui-close-modal', 'send-email')">
-    <x-ui::breadcrumb class="mb-4">
-        <x-ui::breadcrumb.item :href="$isContact ? route('admin.contacts.index') : route('admin.submissions.index')">{{ $isContact ? __('Prises de contact') : __('Dossiers') }}</x-ui::breadcrumb.item>
-        <x-ui::breadcrumb.item>{{ $isContact ? __('Prise de contact') : $submission->reference }}</x-ui::breadcrumb.item>
-    </x-ui::breadcrumb>
+    <a href="{{ $isContact ? route('admin.contacts.index') : route('admin.submissions.index') }}" class="inline-flex items-center gap-1.5 text-[13px] text-muted transition-colors hover:text-primary">
+        <x-ui::icon name="arrow-left" class="h-3.5 w-3.5" /> {{ $isContact ? __('Prises de contact') : __('Dossiers') }}
+    </a>
 
-    @if ($isContact)
-        <div class="mb-6">
-            <x-ui::badge color="amber" dot>{{ __('Prise de contact') }}</x-ui::badge>
-            <h1 class="mt-2 text-2xl font-semibold tracking-tight text-primary">{{ $submission->first_name ?: __('Contact sans nom') }}</h1>
-            <p class="mt-1 text-[13px] text-secondary">{{ __('Reçue le') }} {{ $submission->created_at->format('d/m/Y à H:i') }} · {{ __('via le formulaire de contact') }} · {{ __('Réf.') }} {{ $submission->reference }}</p>
-            {{-- Politique de confidentialite : suppression 12 mois apres le dernier echange (ApplyPrivacyRetention). --}}
-            <p class="mt-1 text-[12px] text-muted">{{ __('Suppression automatique le :date, sans nouvel échange d\'ici là. Une note ou un e-mail envoyé d\'ici repousse ce délai ; les réponses envoyées depuis votre boîte mail ne comptent pas.', ['date' => $contactDeletionDate->format('d/m/Y')]) }}</p>
-        </div>
-    @else
-        <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
-            <div>
-                <h1 class="text-2xl font-semibold tracking-tight text-primary">{{ $submission->reference }}</h1>
-                <p class="mt-1 text-[13px] text-secondary">{{ $submission->type->label() }} · {{ __('Créé le') }} {{ $submission->created_at->format('d/m/Y à H:i') }}</p>
+    {{-- En-tete --}}
+    <div class="mb-8 mt-2 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+                <h1 class="text-[22px] font-semibold leading-7 tracking-tight text-primary">{{ $isContact ? ($submission->first_name ?: __('Contact sans nom')) : $submission->reference }}</h1>
+                <span class="inline-flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.08em] {{ $stateTone }}" data-dossier-state>
+                    <span class="h-2 w-2 rounded-full bg-current" aria-hidden="true"></span>
+                    {{ $isContact ? __('Prise de contact') : $dossierState->label() }}
+                </span>
             </div>
-            <x-admin.dossier-state-badge :state="$dossierState" />
+            @if ($isContact)
+                <p class="mt-1 text-[13px] text-secondary">{{ __('Reçue le :date via le formulaire de contact, réf. :reference', ['date' => $submission->created_at->format('d/m/Y à H:i'), 'reference' => $submission->reference]) }}</p>
+                {{-- Politique de confidentialite : suppression 12 mois apres le dernier echange (ApplyPrivacyRetention). --}}
+                <p class="mt-1 text-[12px] text-muted">{{ __('Suppression automatique le :date, sans nouvel échange d\'ici là. Une note ou un e-mail envoyé d\'ici repousse ce délai ; les réponses envoyées depuis votre boîte mail ne comptent pas.', ['date' => $contactDeletionDate->format('d/m/Y')]) }}</p>
+            @else
+                <p class="mt-1 text-[13px] text-secondary">{{ $submission->type->label() }}, {{ __('créé le :date', ['date' => $submission->created_at->format('d/m/Y à H:i')]) }}</p>
+                @if ($isCancelled && $submission->resume_token)
+                    {{-- Fin de la relation : le lien magique du client est ferme (ChangeSubmissionStatusAction). --}}
+                    <p class="mt-1 text-[12px] text-muted">{{ __('Accès client fermé (dossier annulé). Rouvrir le dossier rétablit le lien.') }}</p>
+                @endif
+            @endif
         </div>
 
-        {{-- Changement de pack avant paiement : l'ancien dossier (annule) et son remplacant se pointent l'un l'autre. --}}
+        <div class="flex shrink-0 flex-wrap items-center gap-2">
+            <x-ui::button variant="secondary" x-on:click="$dispatch('ui-open-modal', 'send-email')" data-send-email>
+                <x-ui::icon name="envelope" />
+                {{ $isContact ? __('Répondre par email') : __('Envoyer un email') }}
+            </x-ui::button>
+            @if ($isOnlineJourney && $submission->resume_token && ! $isCancelled)
+                <x-ui::button variant="secondary" wire:click="resendLink" :loading="true" target="resendLink">
+                    <x-ui::icon name="arrow-path" />
+                    {{ $isPaid ? __('Renvoyer le lien du dossier') : __('Renvoyer le lien de reprise') }}
+                </x-ui::button>
+            @endif
+
+            {{-- La suppression est dans le menu : elle n'ouvre que la fenetre de confirmation. --}}
+            <x-ui::dropdown align="right" width="w-64">
+                <x-slot:trigger>
+                    <x-ui::button variant="secondary" aria-haspopup="menu" :aria-label="__('Autres actions')" data-dossier-menu>
+                        <x-ui::icon name="ellipsis-horizontal" class="h-[18px] w-[18px]" />
+                    </x-ui::button>
+                </x-slot:trigger>
+                <x-ui::dropdown-item icon="trash" :danger="true" data-delete-dossier x-on:click="$dispatch('ui-open-modal', 'delete-dossier')">
+                    {{ $isContact ? __('Supprimer la prise de contact') : __('Supprimer le dossier') }}
+                </x-ui::dropdown-item>
+            </x-ui::dropdown>
+        </div>
+    </div>
+
+    {{-- Changement de pack avant paiement : l'ancien dossier (annule) et son remplacant se pointent l'un l'autre. --}}
+    @unless ($isContact)
         @if ($submission->replacedBy)
             <x-ui::alert type="warning" class="mb-6">
                 {{ __('Remplacé par') }}
@@ -42,66 +92,83 @@
                 · {{ __(':pack, changé par le client avant paiement (informations et pièces reprises).', ['pack' => $submission->replaces->type->label()]) }}
             </x-ui::alert>
         @endif
-    @endif
 
-    <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div class="space-y-6 lg:col-span-2">
-            <x-admin.panel :title="$isContact ? __('Coordonnées') : __('Client')">
-                @php
-                            $rows = $isContact
-                                ? [
-                                    [__('Nom'), $submission->first_name ?: '-', false],
-                                    [__('Email'), $submission->email, true],
-                                    [__('Site web'), $submission->website_url ?: '-', false],
-                                    [__('Langue'), strtoupper((string) $submission->locale), false],
-                                ]
-                                : [
-                                    [__('Entreprise'), $submission->company_name ?: '-', false],
-                                    [__('Contact'), trim(($submission->first_name ?? '').' '.($submission->last_name ?? '')) ?: '-', false],
-                                    [__('Email'), $submission->email, true],
-                                    [__('Téléphone'), $submission->phone ?: '-', false],
-                                    [__('Site web'), $submission->website_url ?: '-', false],
-                                    [__('N° immatriculation'), $submission->company_registration_number ?: '-', false],
-                                    [__('Langue du dossier'), strtoupper((string) $submission->locale), false],
-                                ];
-                @endphp
-                <x-ui::description-list variant="inline">
-                    @foreach ($rows as [$label, $value, $isEmail])
-                        <x-ui::description-list.item variant="inline" :label="$label">
-                            @if ($isEmail)
-                                <a href="mailto:{{ $value }}" class="break-all hover:underline">{{ $value }}</a>
-                            @else
-                                {{ $value }}
-                            @endif
-                        </x-ui::description-list.item>
-                    @endforeach
-                </x-ui::description-list>
-            </x-admin.panel>
+        {{-- Les chiffres du dossier : tout vient des donnees deja chargees, aucune requete de plus. --}}
+        <x-admin.stats :columns="4" class="mb-12" data-dossier-facts>
+            <x-admin.stats.item icon="rectangle-stack" :label="__('Pack')" size="sm">{{ $submission->type->label() }}</x-admin.stats.item>
+            <x-admin.stats.item icon="pencil-square" :label="__('Signature')" size="sm">{{ $submission->contract?->signature_status->label() ?? __('Pas encore de mandat') }}</x-admin.stats.item>
+            <x-admin.stats.item icon="credit-card" :label="__('Paiement')" size="sm">
+                @if ($lastPayment)
+                    {{ number_format($lastPayment->amount_cents / 100, 2, ',', ' ') }} {{ $lastPayment->currency }}
+                    <x-slot:extra>{{ $lastPayment->status->label() }}</x-slot:extra>
+                @else
+                    {{ __('Aucun paiement') }}
+                @endif
+            </x-admin.stats.item>
+            <x-admin.stats.item icon="calendar-days" :label="__('Renouvellement')" size="sm">
+                @if ($renewal)
+                    <span @class(['inline-flex items-center gap-2', 'text-emerald-700 dark:text-emerald-400' => $renewal['severity'] === 'ok', 'text-amber-700 dark:text-amber-400' => $renewal['severity'] === 'warn', 'text-red-700 dark:text-red-400' => $renewal['severity'] === 'bad'])>
+                        <span class="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true"></span>{{ $renewal['label'] }}
+                    </span>
+                    <x-slot:extra>
+                        {{ __('Payé jusqu\'à l\'année :year', ['year' => $renewal['paidThroughYear'] ?? '-']) }}@if ($renewal['nextRenewalDate']), {{ __('prochain le :date', ['date' => $renewal['nextRenewalDate']->format('d/m/Y')]) }}@endif
+                    </x-slot:extra>
+                @else
+                    –
+                @endif
+            </x-admin.stats.item>
+        </x-admin.stats>
+    @endunless
+
+    <div @class(['grid items-start gap-y-12', 'lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem]' => $hasSidebar])>
+        {{-- Ce qu'on consulte --}}
+        <div @class(['min-w-0 space-y-12', 'lg:pr-8' => $hasSidebar])>
+            <x-admin.section :title="$isContact ? __('Coordonnées') : __('Client')" data-dossier-client>
+                @if ($isContact)
+                    <x-admin.stats :columns="4" class="border-t-0">
+                        <x-admin.stats.item icon="user-circle" :label="__('Nom')" size="sm">{{ $submission->first_name ?: '-' }}</x-admin.stats.item>
+                        <x-admin.stats.item icon="envelope" :label="__('Email')" size="sm"><a href="mailto:{{ $submission->email }}" class="break-all hover:underline">{{ $submission->email }}</a></x-admin.stats.item>
+                        <x-admin.stats.item icon="globe-alt" :label="__('Site web')" size="sm"><span class="break-all">{{ $submission->website_url ?: '-' }}</span></x-admin.stats.item>
+                        <x-admin.stats.item icon="language" :label="__('Langue')" size="sm">{{ strtoupper((string) $submission->locale) }}</x-admin.stats.item>
+                    </x-admin.stats>
+                @else
+                    <x-admin.stats :columns="4" class="border-t-0">
+                        <x-admin.stats.item icon="building-office" :label="__('Entreprise')" size="sm">{{ $submission->company_name ?: '-' }}</x-admin.stats.item>
+                        <x-admin.stats.item icon="user-circle" :label="__('Contact')" size="sm">{{ trim(($submission->first_name ?? '').' '.($submission->last_name ?? '')) ?: '-' }}</x-admin.stats.item>
+                        <x-admin.stats.item icon="envelope" :label="__('Email')" size="sm"><a href="mailto:{{ $submission->email }}" class="break-all hover:underline">{{ $submission->email }}</a></x-admin.stats.item>
+                        <x-admin.stats.item icon="phone" :label="__('Téléphone')" size="sm">{{ $submission->phone ?: '-' }}</x-admin.stats.item>
+                        <x-admin.stats.item icon="globe-alt" :label="__('Site web')" size="sm"><span class="break-all">{{ $submission->website_url ?: '-' }}</span></x-admin.stats.item>
+                        <x-admin.stats.item icon="identification" :label="__('N° immatriculation')" size="sm">{{ $submission->company_registration_number ?: '-' }}</x-admin.stats.item>
+                        <x-admin.stats.item icon="language" :label="__('Langue du dossier')" size="sm">{{ strtoupper((string) $submission->locale) }}</x-admin.stats.item>
+                        <x-admin.stats.item icon="clock" :label="__('Créé le')" size="sm">{{ $submission->created_at->format('d/m/Y à H:i') }}</x-admin.stats.item>
+                    </x-admin.stats>
+                @endif
+            </x-admin.section>
 
             @if ($submission->message)
-                <x-admin.panel :title="__('Message')">
-                    <div class="p-5">
-                        <p class="whitespace-pre-wrap text-[13px] leading-relaxed text-secondary">{{ $submission->message }}</p>
-                    </div>
-                </x-admin.panel>
+                <x-admin.section :title="__('Message')">
+                    <p class="max-w-3xl whitespace-pre-wrap pt-5 text-[14px] leading-relaxed text-secondary">{{ $submission->message }}</p>
+                </x-admin.section>
             @endif
 
             @if ($submission->contract)
-                <x-admin.panel :title="__('Mandat / signature')">
-                    <x-ui::description-list variant="inline">
-                        <x-ui::description-list.item variant="inline" :label="__('Pack du mandat')">{{ $submission->contract->packType()->label() }}</x-ui::description-list.item>
-                        <x-ui::description-list.item variant="inline" :label="__('Statut de signature')">{{ $submission->contract->signature_status->label() }}</x-ui::description-list.item>
-                        <x-ui::description-list.item variant="inline" :label="__('Prestataire')">{{ $submission->contract->signature_provider ?: '-' }}</x-ui::description-list.item>
-                    </x-ui::description-list>
-                    <div class="px-5 pb-2">
+                @php
+                    $hasCountersigned = (bool) $submission->contract->countersigned_file_path;
+                    $previousMandates = $submission->contracts->where('role', \App\Enums\Contract\ContractRole::Superseded)->whereNotNull('signed_file_path');
+                    $mandateSummary = __('Mandat :pack', ['pack' => $submission->contract->packType()->label()]).', '.mb_strtolower($submission->contract->signature_status->label())
+                        .($submission->contract->signature_provider ? ', '.__('via :provider', ['provider' => $submission->contract->signature_provider]) : '').'.';
+                @endphp
+                <x-admin.section :title="__('Mandat et contrat')" :description="$mandateSummary" data-dossier-mandate>
+                    <ul class="-mx-4 divide-y divide-[var(--ui-border)] border-b border-default sm:-mx-5">
                         @if ($submission->contract->signed_file_path)
-                            <x-admin.document-item class="mt-3"
-                                :title="__('Mandat signé')"
-                                :subtitle="$submission->contract->signed_at ? __('Signé le').' '.$submission->contract->signed_at->format('d/m/Y') : __('Document PDF')"
-                                :download-url="route('admin.submissions.mandate', ['submission' => $submission->id])" />
+                            <li>
+                                <x-admin.document-item :title="__('Mandat signé')"
+                                    :subtitle="$submission->contract->signed_at ? __('Signé le').' '.$submission->contract->signed_at->format('d/m/Y') : __('Document PDF')"
+                                    :download-url="route('admin.submissions.mandate', ['submission' => $submission->id])" />
+                            </li>
                         @elseif ($submission->contract->signature_status === \App\Enums\Contract\SignatureStatus::Signed)
                             {{-- Mandat signe mais PDF local absent (echec transitoire du prestataire) : recuperation manuelle immediate. --}}
-                            <div class="mt-3 flex flex-col gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-amber-900/40 dark:bg-amber-950/30">
+                            <li class="flex flex-col gap-3 bg-amber-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5 dark:bg-amber-950/30">
                                 <div class="flex items-start gap-2.5">
                                     <x-ui::icon name="exclamation-triangle" class="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
                                     <div>
@@ -113,227 +180,178 @@
                                     <x-ui::icon name="arrow-down-tray" class="h-3.5 w-3.5" />
                                     {{ __('Récupérer le PDF signé') }}
                                 </x-ui::button>
-                            </div>
+                            </li>
                         @endif
 
                         {{-- Contrat contresigne par Festilaw (contre-signature manuelle, hors SignWell) --}}
-                        @php
-                            $hasCountersigned = (bool) $submission->contract->countersigned_file_path;
-                        @endphp
-                        <div class="mt-4 border-t border-subtle pt-4">
-                            <p class="text-[11px] font-semibold uppercase tracking-wide text-muted">{{ __('Contrat contresigné') }}</p>
-
-                            @if ($hasCountersigned)
-                                <x-admin.document-item class="mt-2"
-                                    :title="__('Contrat contresigné')"
+                        @if ($hasCountersigned)
+                            <li>
+                                <x-admin.document-item :title="__('Contrat contresigné')"
                                     :subtitle="__('Déposé le').' '.$submission->contract->countersigned_at?->format('d/m/Y à H:i')"
                                     :download-url="route('admin.submissions.countersigned', ['submission' => $submission->id])" />
-                            @else
-                                <p class="mt-1 text-[12px] text-muted">{{ __('Aucun contrat contresigné déposé pour le moment.') }}</p>
-                            @endif
-
-                            <form wire:submit="uploadCountersigned" class="mt-4 space-y-3">
-                                <p class="text-[12px] font-medium text-secondary">
-                                    {{ $hasCountersigned ? __('Remplacer le document par un nouveau PDF') : __('Déposer le contrat contresigné') }}
-                                </p>
-                                <x-ui::upload model="countersigned" name="countersigned" accept="application/pdf" max-size="10 Mo"
-                                    :hint="$hasCountersigned ? __('Le document actuel sera remplacé · PDF') : 'PDF'" />
-                                <div wire:loading wire:target="countersigned" class="text-[12px] text-muted">{{ __('Chargement du fichier...') }}</div>
-                                @error('countersigned') <p class="text-[12px] text-red-500">{{ $message }}</p> @enderror
-                                <x-ui::checkbox id="notify-countersign" wire:model="notifyClientOnCountersign" :label="__('Notifier le client par email (PDF joint)')" />
-                                <x-ui::button type="submit" :loading="true" target="uploadCountersigned,countersigned">
-                                    {{ $hasCountersigned ? __('Remplacer le contrat contresigné') : __('Ajouter le contrat contresigné') }}
-                                </x-ui::button>
-                            </form>
-                        </div>
+                            </li>
+                        @else
+                            <li class="px-4 py-3.5 text-[13px] text-muted sm:px-5">{{ __('Aucun contrat contresigné déposé pour le moment.') }}</li>
+                        @endif
 
                         {{-- Mandats remplaces par un changement de pack apres paiement (SC12) : conserves comme trace. --}}
-                        @php
-                            $previousMandates = $submission->contracts->where('role', \App\Enums\Contract\ContractRole::Superseded)->whereNotNull('signed_file_path');
-                        @endphp
-                        @if ($previousMandates->isNotEmpty())
-                            <div class="mt-4 border-t border-subtle pt-4 pb-2">
-                                <p class="text-[11px] font-semibold uppercase tracking-wide text-muted">{{ __('Mandats précédents') }}</p>
-                                @foreach ($previousMandates as $previous)
-                                    <x-admin.document-item class="mt-2"
-                                        :title="__('Mandat :pack', ['pack' => $previous->packType()->label()])"
-                                        :subtitle="__('Signé le').' '.$previous->signed_at?->format('d/m/Y').($previous->superseded_at ? ' · '.__('remplacé le').' '.$previous->superseded_at->format('d/m/Y') : '')"
-                                        :download-url="route('admin.submissions.contract-mandate', ['submission' => $submission->id, 'contract' => $previous->id])" />
-                                @endforeach
-                            </div>
-                        @endif
-                    </div>
-                </x-admin.panel>
+                        @foreach ($previousMandates as $previous)
+                            <li>
+                                <x-admin.document-item :title="__('Mandat :pack', ['pack' => $previous->packType()->label()])"
+                                    :subtitle="__('Mandat précédent, signé le').' '.$previous->signed_at?->format('d/m/Y').($previous->superseded_at ? ', '.__('remplacé le').' '.$previous->superseded_at->format('d/m/Y') : '')"
+                                    :download-url="route('admin.submissions.contract-mandate', ['submission' => $submission->id, 'contract' => $previous->id])" />
+                            </li>
+                        @endforeach
+                    </ul>
+
+                    <form wire:submit="uploadCountersigned" class="max-w-2xl space-y-3 pt-6">
+                        <p class="text-[13px] font-medium text-primary">
+                            {{ $hasCountersigned ? __('Remplacer le document par un nouveau PDF') : __('Déposer le contrat contresigné') }}
+                        </p>
+                        <x-ui::upload model="countersigned" name="countersigned" accept="application/pdf" max-size="10 Mo"
+                            :hint="$hasCountersigned ? __('Le document actuel sera remplacé · PDF') : 'PDF'" />
+                        <div wire:loading wire:target="countersigned" class="text-[12px] text-muted">{{ __('Chargement du fichier...') }}</div>
+                        @error('countersigned') <p class="text-[12px] text-red-500">{{ $message }}</p> @enderror
+                        <x-ui::checkbox id="notify-countersign" wire:model="notifyClientOnCountersign" :label="__('Notifier le client par email (PDF joint)')" />
+                        <x-ui::button type="submit" :loading="true" target="uploadCountersigned,countersigned">
+                            {{ $hasCountersigned ? __('Remplacer le contrat contresigné') : __('Ajouter le contrat contresigné') }}
+                        </x-ui::button>
+                    </form>
+                </x-admin.section>
             @endif
 
             @unless ($isContact)
-                <x-admin.panel :title="__('Pièces')">
-                    <x-slot:actions>
-                        <x-ui::badge color="gray">{{ $submission->uploadedDocuments->count() }}</x-ui::badge>
-                    </x-slot:actions>
-                    <div class="p-5">
-                        @if ($submission->uploadedDocuments->isEmpty())
-                            <p class="text-[13px] text-secondary">{{ __('Aucune pièce téléversée.') }}</p>
-                        @else
-                            <div class="space-y-2">
-                                @foreach ($submission->uploadedDocuments as $doc)
-                                    <x-admin.document-item wire:key="doc-{{ $doc->id }}"
-                                        :title="$doc->type->label()"
-                                        :subtitle="$doc->original_filename"
+                <x-admin.section :title="__('Pièces')" data-dossier-documents>
+                    <x-slot:actions>{{ trans_choice('{0} Aucune pièce|{1} 1 pièce|[2,*] :count pièces', $submission->uploadedDocuments->count(), ['count' => $submission->uploadedDocuments->count()]) }}</x-slot:actions>
+
+                    @if ($submission->uploadedDocuments->isEmpty())
+                        <p class="pt-5 text-[13px] text-secondary">{{ __('Aucune pièce téléversée.') }}</p>
+                    @else
+                        <ul class="-mx-4 divide-y divide-[var(--ui-border)] border-b border-default sm:-mx-5">
+                            @foreach ($submission->uploadedDocuments as $doc)
+                                <li wire:key="doc-{{ $doc->id }}">
+                                    <x-admin.document-item :title="$doc->type->label()" :subtitle="$doc->original_filename"
                                         :download-url="route('admin.submissions.document', ['submission' => $submission->id, 'document' => $doc->id])" />
-                                @endforeach
-                            </div>
-                        @endif
-                    </div>
-                </x-admin.panel>
-            @endunless
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+                </x-admin.section>
 
-            @if ($renewal)
-                <x-admin.panel :title="__('Renouvellement')">
-                    <x-ui::description-list variant="inline">
-                        <x-ui::description-list.item variant="inline" :label="__('État')">
-                            <x-ui::badge :color="['ok' => 'emerald', 'warn' => 'amber', 'bad' => 'red'][$renewal['severity']] ?? 'gray'" :dot="true">{{ $renewal['label'] }}</x-ui::badge>
-                        </x-ui::description-list.item>
-                        <x-ui::description-list.item variant="inline" :label="__('Payé jusqu\'à l\'année')">{{ $renewal['paidThroughYear'] ?? '-' }}</x-ui::description-list.item>
-                        <x-ui::description-list.item variant="inline" :label="__('Prochain renouvellement')">{{ $renewal['nextRenewalDate']?->format('d/m/Y') ?? '-' }}</x-ui::description-list.item>
-                    </x-ui::description-list>
-                </x-admin.panel>
-            @endif
-
-            {{-- Paiements : jamais pour une prise de contact ; pour un dossier, affichee meme sans paiement
-                 (pour que l'etat soit clair). --}}
-            @unless ($isContact)
-            <x-admin.panel :title="__('Paiements')">
-                <div class="space-y-3 p-5">
-                    @forelse ($submission->payments as $payment)
-                        @php
-                            $settled = in_array($payment->status, [\App\Enums\Payment\PaymentStatus::Succeeded, \App\Enums\Payment\PaymentStatus::Refunded], true);
-                            $payColor = match ($payment->status) {
-                                \App\Enums\Payment\PaymentStatus::Succeeded => 'emerald',
-                                \App\Enums\Payment\PaymentStatus::Failed => 'red',
-                                \App\Enums\Payment\PaymentStatus::Pending, \App\Enums\Payment\PaymentStatus::Processing => 'amber',
-                                default => 'gray',
-                            };
-                        @endphp
-                        <div wire:key="pay-{{ $payment->id }}" class="rounded-lg border border-default p-4">
-                            <div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-                                <div>
-                                    <p class="font-semibold text-primary">{{ number_format($payment->amount_cents / 100, 2, ',', ' ') }} {{ $payment->currency }}</p>
-                                    <p class="mt-0.5 text-[12px] text-muted">{{ $payment->type->label() }}{{ $payment->service_year ? ' · '.$payment->service_year : '' }}</p>
-                                </div>
-                                <x-ui::badge :color="$payColor" dot>{{ $payment->status->label() }}</x-ui::badge>
-                            </div>
-                            <dl class="mt-3 grid grid-cols-1 gap-x-4 gap-y-1.5 text-[12px] sm:grid-cols-2">
-                                <div class="flex justify-between gap-3 sm:block">
-                                    <dt class="text-muted">{{ __('Référence') }}</dt>
-                                    <dd class="break-all text-right font-mono text-secondary sm:mt-0.5 sm:text-left">{{ $payment->provider }} · {{ $payment->provider_reference ?: '—' }}</dd>
-                                </div>
-                                <div class="flex justify-between gap-3 sm:block">
-                                    <dt class="text-muted">{{ __('Payé le') }}</dt>
-                                    <dd class="text-right text-secondary sm:mt-0.5 sm:text-left">{{ $payment->paid_at?->format('d/m/Y à H:i') ?: '—' }}</dd>
-                                </div>
-                            </dl>
-                            @unless ($settled)
-                                <div class="mt-3 border-t border-subtle pt-3">
-                                    <x-ui::button variant="secondary" size="compact" wire:click="recheckPayment({{ $payment->id }})" :loading="true" target="recheckPayment({{ $payment->id }})">
-                                        <x-ui::icon name="arrow-path" class="h-3.5 w-3.5" />
-                                        {{ __('Vérifier sur :provider', ['provider' => $payment->providerLabel()]) }}
-                                    </x-ui::button>
-                                </div>
-                            @endunless
-                        </div>
-                    @empty
-                        <p class="text-[13px] text-secondary">{{ __('Aucun paiement enregistré pour ce dossier.') }}</p>
-                    @endforelse
-                </div>
-            </x-admin.panel>
+                {{-- Paiements : affiches meme sans paiement, pour que l'etat soit clair. --}}
+                <x-admin.section :title="__('Paiements')" data-dossier-payments>
+                    @if ($submission->payments->isEmpty())
+                        <p class="pt-5 text-[13px] text-secondary">{{ __('Aucun paiement enregistré pour ce dossier.') }}</p>
+                    @else
+                        <ul class="-mx-4 divide-y divide-[var(--ui-border)] border-b border-default sm:-mx-5">
+                            @foreach ($submission->payments as $payment)
+                                @php
+                                    $settled = in_array($payment->status, [\App\Enums\Payment\PaymentStatus::Succeeded, \App\Enums\Payment\PaymentStatus::Refunded], true);
+                                    $payColor = match ($payment->status) {
+                                        \App\Enums\Payment\PaymentStatus::Succeeded => 'emerald',
+                                        \App\Enums\Payment\PaymentStatus::Failed => 'red',
+                                        \App\Enums\Payment\PaymentStatus::Pending, \App\Enums\Payment\PaymentStatus::Processing => 'amber',
+                                        default => 'gray',
+                                    };
+                                @endphp
+                                <li wire:key="pay-{{ $payment->id }}" class="grid gap-x-6 gap-y-2 px-4 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:px-5">
+                                    <div class="min-w-0">
+                                        <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                            <span class="text-[15px] font-semibold tabular-nums text-primary">{{ number_format($payment->amount_cents / 100, 2, ',', ' ') }} {{ $payment->currency }}</span>
+                                            <x-ui::badge :color="$payColor" dot>{{ $payment->status->label() }}</x-ui::badge>
+                                        </div>
+                                        <p class="mt-1 text-[12px] text-muted">
+                                            {{ $payment->type->label() }}{{ $payment->service_year ? ', '.$payment->service_year : '' }},
+                                            {{ __('payé le') }} {{ $payment->paid_at?->format('d/m/Y à H:i') ?: '—' }}
+                                        </p>
+                                        <p class="mt-0.5 break-all font-mono text-[11px] text-muted">{{ $payment->provider }} · {{ $payment->provider_reference ?: '—' }}</p>
+                                    </div>
+                                    @unless ($settled)
+                                        <div class="sm:self-center">
+                                            <x-ui::button variant="secondary" size="compact" wire:click="recheckPayment({{ $payment->id }})" :loading="true" target="recheckPayment({{ $payment->id }})">
+                                                <x-ui::icon name="arrow-path" class="h-3.5 w-3.5" />
+                                                {{ __('Vérifier sur :provider', ['provider' => $payment->providerLabel()]) }}
+                                            </x-ui::button>
+                                        </div>
+                                    @endunless
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+                </x-admin.section>
             @endunless
 
             @if ($isScale)
-                <x-admin.panel :title="__('Audit Scale')">
-                    <div class="px-5 py-4">
+                <x-admin.section :title="__('Audit Scale')">
+                    <div class="pt-5">
                         @if ($scaleAuditPaid)
                             <x-ui::badge color="emerald" ring>{{ __('Audit 75 € payé · à déduire du devis final') }}</x-ui::badge>
                         @elseif ($submission->appointment)
                             {{-- La consultation se reserve avant le paiement : un creneau peut etre pris sans audit regle. --}}
                             <x-ui::badge color="amber" ring>{{ __('Réservé · audit non payé') }}</x-ui::badge>
-                            <p class="mt-2 text-[12px] text-secondary">{{ __('Le client a réservé un créneau mais n\'a pas encore réglé l\'audit. S\'il ne le règle pas, annulez le créneau dans Google Agenda.') }}</p>
+                            <p class="mt-2 text-[13px] text-secondary">{{ __('Le client a réservé un créneau mais n\'a pas encore réglé l\'audit. S\'il ne le règle pas, annulez le créneau dans Google Agenda.') }}</p>
                         @else
                             <x-ui::badge color="gray" ring>{{ __('Audit non payé') }}</x-ui::badge>
                         @endif
                     </div>
-                </x-admin.panel>
+                </x-admin.section>
             @endif
 
-            @if ($submission->appointment)
-                <x-admin.panel :title="__('Rendez-vous')">
-                    <div class="p-5">
-                        <form wire:submit="updateAppointment" class="space-y-4">
-                            <x-ui::form-group :label="__('Créneau confirmé')" for="appt-scheduled" :error="$errors->first('apptScheduledAt')">
-                                <x-ui::input type="datetime-local" id="appt-scheduled" wire:model="apptScheduledAt" :error="$errors->has('apptScheduledAt')" />
-                            </x-ui::form-group>
-                            <x-ui::form-group :label="__('Statut')" for="appt-status" :error="$errors->first('apptStatus')">
-                                <x-ui::select id="appt-status" wire:model="apptStatus" :options="collect($appointmentStatuses)->mapWithKeys(fn ($s) => [$s->value => $s->label()])->all()" :error="$errors->has('apptStatus')" />
-                            </x-ui::form-group>
-                            <x-ui::button type="submit" :loading="true" target="updateAppointment" class="w-full">{{ __('Enregistrer le rendez-vous') }}</x-ui::button>
-                        </form>
-                    </div>
-                </x-admin.panel>
-            @endif
-
-            <x-admin.panel :title="__('Notes internes')">
-                <div class="p-5">
-                    <form wire:submit="addNote" class="mb-5">
-                        <x-ui::form-group :error="$errors->first('noteBody')">
-                            <x-ui::textarea wire:model="noteBody" rows="3" :placeholder="__('Ajouter une note de suivi...')" :error="$errors->has('noteBody')" />
-                        </x-ui::form-group>
-                        <x-ui::button type="submit" :loading="true" target="addNote" size="compact" class="mt-2.5">{{ __('Ajouter la note') }}</x-ui::button>
-                    </form>
-                    @forelse ($submission->notes as $note)
-                        <div class="border-t border-subtle py-3 first:border-t-0 first:pt-0" wire:key="note-{{ $note->id }}">
-                            <div class="mb-1 text-[12px] text-muted">{{ $note->author?->name ?: __('Équipe') }} · {{ $note->created_at->format('d/m/Y à H:i') }}</div>
-                            <div class="whitespace-pre-wrap text-[13px] leading-relaxed text-secondary">{{ $note->body }}</div>
-                        </div>
-                    @empty
-                        <p class="text-[13px] text-secondary">{{ __('Aucune note pour le moment.') }}</p>
-                    @endforelse
-                </div>
-            </x-admin.panel>
+            <x-admin.section :title="__('Notes internes')" data-dossier-notes>
+                <form wire:submit="addNote" class="max-w-3xl pt-5">
+                    <x-ui::form-group :error="$errors->first('noteBody')">
+                        <x-ui::textarea wire:model="noteBody" rows="3" :placeholder="__('Ajouter une note de suivi...')" :error="$errors->has('noteBody')" />
+                    </x-ui::form-group>
+                    <x-ui::button type="submit" :loading="true" target="addNote" size="compact" class="mt-2.5">{{ __('Ajouter la note') }}</x-ui::button>
+                </form>
+                @if ($submission->notes->isEmpty())
+                    <p class="pt-5 text-[13px] text-secondary">{{ __('Aucune note pour le moment.') }}</p>
+                @else
+                    <ul class="-mx-4 mt-6 divide-y divide-[var(--ui-border)] border-y border-default sm:-mx-5">
+                        @foreach ($submission->notes as $note)
+                            <li class="px-4 py-4 sm:px-5" wire:key="note-{{ $note->id }}">
+                                <p class="text-[12px] text-muted">{{ $note->author?->name ?: __('Équipe') }}, {{ $note->created_at->format('d/m/Y à H:i') }}</p>
+                                <p class="mt-1 max-w-3xl whitespace-pre-wrap text-[14px] leading-relaxed text-secondary">{{ $note->body }}</p>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+            </x-admin.section>
         </div>
 
-        <aside class="space-y-6 lg:sticky lg:top-8 lg:self-start">
-            @unless ($isContact)
-                <x-admin.panel :title="__('Statut du dossier')">
-                    <div class="p-5">
-                        <form wire:submit="updateStatus">
+        {{-- Ce qu'on fait : les formulaires de gestion, separes par des filets, colles en haut au defilement. --}}
+        @if ($hasSidebar)
+            <aside class="min-w-0 lg:sticky lg:top-6 lg:self-start lg:border-l lg:border-default lg:pl-8 [&>*+*]:mt-6 [&>*+*]:border-t [&>*+*]:border-default [&>*+*]:pt-6" data-dossier-manage>
+                @unless ($isContact)
+                    <section>
+                        <h2 class="text-[15px] font-semibold leading-snug text-primary">{{ __('Statut du dossier') }}</h2>
+                        <form wire:submit="updateStatus" class="mt-3">
                             <x-ui::form-group :label="__('Changer le statut')" for="new-status" class="mb-3" :error="$errors->first('newStatus')">
                                 <x-ui::select id="new-status" wire:model="newStatus" :options="collect($statuses)->mapWithKeys(fn ($s) => [$s->value => $s->label()])->all()" :error="$errors->has('newStatus')" />
                             </x-ui::form-group>
                             <x-ui::button type="submit" :loading="true" target="updateStatus" class="w-full">{{ __('Enregistrer le statut') }}</x-ui::button>
                         </form>
-                    </div>
-                </x-admin.panel>
-            @endunless
+                    </section>
+                @endunless
 
-            @if ($isOnlineJourney)
-                <x-admin.panel :title="__('Personne Responsable UE')">
-                    <div class="p-5">
-                        <form wire:submit="issueResponsiblePerson">
+                @if ($isOnlineJourney)
+                    <section>
+                        <h2 class="text-[15px] font-semibold leading-snug text-primary">{{ __('Personne Responsable UE') }}</h2>
+                        <form wire:submit="issueResponsiblePerson" class="mt-3">
                             <x-ui::form-group :label="__('Adresse délivrée')" for="rp-address" class="mb-3" :error="$errors->first('rpAddress')">
                                 <x-ui::textarea id="rp-address" wire:model="rpAddress" rows="3" :placeholder="__('Adresse officielle de représentation dans l\'UE...')" :error="$errors->has('rpAddress')" />
                             </x-ui::form-group>
                             <x-ui::button type="submit" :loading="true" target="issueResponsiblePerson" class="w-full">{{ __('Émettre et terminer') }}</x-ui::button>
                         </form>
-                    </div>
-                </x-admin.panel>
-            @endif
-
+                    </section>
+                @endif
             {{-- Changements de pack apres paiement (SC12) : historique, et le "dernier mot" de Festilaw. --}}
             @if ($submission->packChanges->isNotEmpty())
-                <x-admin.panel :title="__('Changement de pack')">
+                <section data-dossier-pack-changes>
+                    <h2 class="text-[15px] font-semibold leading-snug text-primary">{{ __('Changement de pack') }}</h2>
                     {{-- Les changements qui attendent une confirmation : leurs fenetres sont rendues en bas de page. --}}
                     @php $downgradeRequests = $revertibleUpgrades = []; @endphp
-                    <div class="divide-y divide-subtle px-5">
+                    <div class="-mt-1 divide-y divide-[var(--ui-border)]">
                         @foreach ($submission->packChanges as $change)
                             @php
                                 $changeColor = match ($change->status) {
@@ -386,36 +404,25 @@
                             </div>
                         @endforeach
                     </div>
-                </x-admin.panel>
+                </section>
             @endif
 
-            <x-admin.panel :title="__('Actions')">
-                <div class="space-y-2.5 p-5">
-                    <x-ui::button variant="secondary" x-on:click="$dispatch('ui-open-modal', 'send-email')" class="w-full">
-                        <x-ui::icon name="envelope" class="h-4 w-4" />
-                        {{ $isContact ? __('Répondre par email') : __('Envoyer un email') }}
-                    </x-ui::button>
-                    @if ($isOnlineJourney && $submission->resume_token && ! $isCancelled)
-                        <x-ui::button variant="secondary" wire:click="resendLink" :loading="true" target="resendLink" class="w-full">
-                            <x-ui::icon name="arrow-path" class="h-4 w-4" />
-                            {{ $isPaid ? __('Renvoyer le lien du dossier') : __('Renvoyer le lien de reprise') }}
-                        </x-ui::button>
-                    @endif
-                    @if ($isCancelled && $submission->resume_token)
-                        {{-- Fin de la relation : le lien magique du client est ferme (ChangeSubmissionStatusAction). --}}
-                        <p class="text-[12px] text-muted">{{ __('Accès client fermé (dossier annulé). Rouvrir le dossier rétablit le lien.') }}</p>
-                    @endif
-                </div>
-            </x-admin.panel>
-
-            <x-admin.panel :title="__('Zone sensible')" variant="danger">
-                <div class="p-5">
-                    <x-ui::button variant="danger" x-on:click="$dispatch('ui-open-modal', 'delete-dossier')" :loading="true" target="deleteDossier"
-                        class="w-full">{{ $isContact ? __('Supprimer la prise de contact') : __('Supprimer le dossier') }}</x-ui::button>
-                    <p class="mt-2 text-[12px] text-red-600/80 dark:text-red-400/80">{{ $isContact ? __('La prise de contact sera définitivement effacée (RGPD).') : __('Le dossier et tous ses fichiers seront définitivement effacés (RGPD).') }}</p>
-                </div>
-            </x-admin.panel>
-        </aside>
+            @if ($submission->appointment)
+                <section>
+                    <h2 class="text-[15px] font-semibold leading-snug text-primary">{{ __('Rendez-vous') }}</h2>
+                    <form wire:submit="updateAppointment" class="mt-3 space-y-4">
+                        <x-ui::form-group :label="__('Créneau confirmé')" for="appt-scheduled" :error="$errors->first('apptScheduledAt')">
+                            <x-ui::input type="datetime-local" id="appt-scheduled" wire:model="apptScheduledAt" :error="$errors->has('apptScheduledAt')" />
+                        </x-ui::form-group>
+                        <x-ui::form-group :label="__('Statut')" for="appt-status" :error="$errors->first('apptStatus')">
+                            <x-ui::select id="appt-status" wire:model="apptStatus" :options="collect($appointmentStatuses)->mapWithKeys(fn ($s) => [$s->value => $s->label()])->all()" :error="$errors->has('apptStatus')" />
+                        </x-ui::form-group>
+                        <x-ui::button type="submit" :loading="true" target="updateAppointment" class="w-full">{{ __('Enregistrer le rendez-vous') }}</x-ui::button>
+                    </form>
+                </section>
+            @endif
+            </aside>
+        @endif
     </div>
 
     {{-- Confirmations des actions sensibles. Le bouton de la fenetre lance l'action ; celui de la page
