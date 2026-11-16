@@ -1,10 +1,9 @@
-{{-- Generation d'articles par IA. `pending` : la generation visee par la fenetre d'arret (donnee par le bouton
-     « Arreter » du journal ou de la carte de suivi, qui previent par l'evenement generation-stop-asked). --}}
-<div x-data="{ pending: null }"
-    x-on:generation-stop-asked="pending = $event.detail.id; $dispatch('ui-open-modal', 'stop-generation')">
-    <x-ui::page-header :title="__('Génération IA')" :description="__('Des brouillons d\'articles proposés par l\'IA. Rien n\'est publié sans votre validation.')" class="mb-6">
-        <x-ui::button variant="secondary" :href="route('admin.blog.generation.settings')"><x-ui::icon name="cog-6-tooth" /> {{ __('Réglages') }}</x-ui::button>
-    </x-ui::page-header>
+{{-- Vue d'ensemble de la generation par IA : quatre tuiles (depense, automatique, brouillons a relire, en
+     cours), les dernieres generations, puis l'etat du service. Le lancement est une fenetre de l'en-tete,
+     l'historique et les reglages ont leur page. Rien n'apparait ni ne pousse la page : la tuile « En cours »
+     garde sa taille, qu'une generation tourne ou non. --}}
+<div>
+    @include('livewire.admin.blog.generation.header', ['active' => 'overview'])
 
     @error('generation-load-failed')
         <x-ui::card :padding="false">
@@ -12,140 +11,94 @@
                 :description="__('Réessayez. Si le problème persiste, contactez l\'assistance technique.')" retry="$refresh" />
         </x-ui::card>
     @else
+        {{-- Une alerte seulement quand quelque chose empeche de generer, avec ce que la personne peut faire. --}}
         @if ($overview->unavailableReason)
-            <x-ui::alert type="error" class="mb-6" :title="__('La génération n\'est pas disponible')">{{ $overview->unavailableReason }}</x-ui::alert>
-        @elseif ($overview->simulated)
-            <x-ui::alert type="info" class="mb-6" :title="__('Étapes factices')">{{ __('Aucun modèle n\'est appelé et aucun article n\'est créé. Les étapes sont simulées, avec un coût fictif. Ce mode sert aux essais et n\'existe pas en production.') }}</x-ui::alert>
-        @elseif (! $overview->apiKeyPresent)
-            <x-ui::alert type="warning" class="mb-6" :title="__('Clé du fournisseur d\'IA absente')">{{ __('Sans cette clé, aucune génération ne peut aboutir. Elle se renseigne dans la configuration du site.') }}</x-ui::alert>
+            <x-ui::alert type="error" class="mb-6" :title="__('La génération n\'est pas disponible')">{{ $overview->unavailableReason }} {{ __('Contactez l\'assistance technique.') }}</x-ui::alert>
+        @elseif (! $overview->simulated && ! $overview->apiKeyPresent)
+            <x-ui::alert type="warning" class="mb-6" :title="__('La génération n\'est pas disponible pour le moment')">{{ __('Contactez l\'assistance technique.') }}</x-ui::alert>
         @endif
 
         @unless ($overview->workerListening)
-            <x-ui::alert type="warning" class="mb-6" :title="__('Aucun traitement n\'est à l\'écoute')">{{ __('Une génération demandée maintenant attendra que les tâches automatiques du site repartent.') }}</x-ui::alert>
+            <x-ui::alert type="warning" class="mb-6" :title="__('Aucun traitement n\'est à l\'écoute')">{{ __('Une génération demandée maintenant attendra que les tâches automatiques du site repartent. Si cela dure, contactez l\'assistance technique.') }}</x-ui::alert>
         @endunless
 
-        <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <x-ui::stat-card icon="currency-dollar" :label="__('Dépense du mois')" :value="$overview->spent" data-stat="spend"
+        @if ($overview->capReached)
+            <x-ui::alert type="warning" class="mb-6" :title="__('Le plafond de dépense du mois est atteint')">{{ __('Aucune génération ne se lance jusqu\'au mois prochain. Le plafond se relève dans les réglages.') }}</x-ui::alert>
+        @endif
+
+        <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <x-ui::stat-card class="h-full" icon="currency-dollar" :label="__('Dépense du mois')" :value="$overview->spent" data-stat="spend"
                 :description="__('sur :cap de plafond', ['cap' => $overview->cap])">
                 <x-ui::progress class="mt-3" :value="$overview->spentPercent" :color="$overview->capReached ? 'red' : 'indigo'" :show-value="false" />
             </x-ui::stat-card>
 
-            <x-ui::stat-card icon="clock" :label="__('Génération automatique')" data-stat="automatic"
+            <x-ui::stat-card class="h-full" icon="clock" :label="__('Génération automatique')" data-stat="automatic"
                 :value="$overview->settings->enabled ? __('Activée') : __('Désactivée')" :description="$overview->automaticRhythm" />
 
-            <x-ui::stat-card icon="signal" :label="__('Traitement')" data-stat="worker"
-                :value="$overview->workerListening ? __('À l\'écoute') : __('À l\'arrêt')"
-                :description="$overview->apiKeyPresent ? __('Clé du fournisseur d\'IA présente') : __('Clé du fournisseur d\'IA absente')" />
+            <x-ui::stat-card class="h-full" icon="document-text" :label="__('Brouillons à relire')" data-stat="drafts" :value="(string) $overview->pendingDrafts"
+                :description="trans_choice('{0} Aucun brouillon généré n\'attend de relecture|{1} brouillon généré attend votre relecture|[2,*] brouillons générés attendent votre relecture', $overview->pendingDrafts)">
+                @if ($overview->pendingDrafts > 0)
+                    <a href="{{ route('admin.blog.posts.index', ['origin' => 'ai', 'status' => 'draft']) }}"
+                        class="mt-3 inline-flex items-center gap-1 text-[12px] font-medium text-secondary underline underline-offset-2 hover:text-primary">{{ __('Voir les brouillons') }}</a>
+                @endif
+            </x-ui::stat-card>
+
+            <livewire:admin.blog.generation-activity />
         </div>
 
-        <livewire:admin.blog.generation-progress />
+        <x-admin.panel class="mb-6" :title="__('Dernières générations')">
+            <x-slot:actions>
+                <a href="{{ route('admin.blog.generation.history') }}" class="inline-flex shrink-0 items-center gap-1 text-[13px] font-medium text-secondary transition-colors hover:text-primary">
+                    {{ __('Tout l\'historique') }} <x-ui::icon name="arrow-right" class="h-3.5 w-3.5" />
+                </a>
+            </x-slot:actions>
 
-        <x-admin.panel class="mb-6" :title="__('Lancer une génération')"
-            :description="__('Laissez les deux champs vides si vous voulez que l\'IA choisisse le sujet.')">
-            <form wire:submit="launch" class="space-y-4 p-5">
-                <x-ui::form-group :label="__('Sujet (facultatif)')" for="generation-topic" :error="$errors->first('topicHint')">
-                    <x-ui::input id="generation-topic" wire:model="topicHint" maxlength="300" :error="$errors->has('topicHint')"
-                        :placeholder="__('Par exemple : l\'étiquetage des jouets vendus sur Etsy')" />
-                </x-ui::form-group>
-
-                <x-ui::form-group :label="__('Consignes (facultatif)')" for="generation-instructions" :error="$errors->first('instructions')"
-                    :hint="__('Vous pouvez préciser l\'angle, le lecteur visé ou un point à traiter.')">
-                    <x-ui::textarea id="generation-instructions" wire:model="instructions" rows="3" maxlength="2000" :error="$errors->has('instructions')" />
-                </x-ui::form-group>
-
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <p class="text-[12px] leading-relaxed text-muted">
-                        @if ($overview->capReached)
-                            {{ __('Le plafond de dépense du mois est atteint. Relevez-le dans les réglages pour lancer une génération.') }}
-                        @else
-                            {{ __('La génération démarre en quelques secondes et dure plusieurs minutes. Vous pouvez quitter cette page, un e-mail vous préviendra quand elle sera terminée.') }}
-                        @endif
-                    </p>
-                    <x-ui::button type="submit" :loading="true" target="launch" class="shrink-0" :disabled="$overview->capReached || $overview->unavailableReason !== null">
-                        <x-ui::icon name="sparkles" /> {{ __('Générer un article') }}
-                    </x-ui::button>
-                </div>
-            </form>
-        </x-admin.panel>
-
-        <x-admin.panel :title="__('Journal')" :description="__('Chaque génération y a sa ligne, de la plus récente à la plus ancienne.')">
-            @if ($generations->total() === 0)
+            @if ($overview->latest === [])
                 <x-ui::empty-state icon="sparkles" :title="__('Aucune génération pour le moment.')"
                     :description="__('La première apparaîtra ici dès son lancement.')" />
             @else
-                <x-ui::table>
-                    <x-ui::table.head>
-                        <x-ui::table.header-cell :first="true">{{ __('Date (UTC)') }}</x-ui::table.header-cell>
-                        <x-ui::table.header-cell>{{ __('Résultat') }}</x-ui::table.header-cell>
-                        <x-ui::table.header-cell>{{ __('Sujet ou raison') }}</x-ui::table.header-cell>
-                        <x-ui::table.header-cell hidden="lg">{{ __('Modèles') }}</x-ui::table.header-cell>
-                        <x-ui::table.header-cell hidden="lg" align="right">{{ __('Jetons') }}</x-ui::table.header-cell>
-                        <x-ui::table.header-cell hidden="sm" align="right">{{ __('Coût') }}</x-ui::table.header-cell>
-                        <x-ui::table.header-cell hidden="md" align="right">{{ __('Durée') }}</x-ui::table.header-cell>
-                        <x-ui::table.header-cell :last="true"><span class="sr-only">{{ __('Actions') }}</span></x-ui::table.header-cell>
-                    </x-ui::table.head>
-                    <x-ui::table.body>
-                        @foreach ($generations as $generation)
-                            @php($detailUrl = route('admin.blog.generation.show', ['generation' => $generation->id]))
-                            {{-- Toute la ligne ouvre le detail ; la date reste un vrai lien pour le clavier. --}}
-                            <x-ui::table.row wire:key="generation-{{ $generation->id }}" data-generation="{{ $generation->id }}" data-generation-status="{{ $generation->status->value }}"
-                                x-on:click="if (! $event.target.closest('a, button')) window.location.href = '{{ $detailUrl }}'">
-                                <x-ui::table.cell :first="true" variant="primary">
-                                    <a href="{{ $detailUrl }}" class="font-medium text-primary">{{ $generation->createdAt->format('d/m/Y H:i') }}</a>
-                                    <span class="block text-[11px] font-normal text-muted">{{ $generation->trigger->label() }}</span>
-                                </x-ui::table.cell>
-                                <x-ui::table.cell><x-admin.blog.generation-status :status="$generation->status" /></x-ui::table.cell>
-                                <x-ui::table.cell :nowrap="false">
-                                    <span class="block max-w-xs">
-                                        {{ $generation->subject ?? __('Sujet choisi par l\'IA') }}
-                                        @if ($generation->outcome)
-                                            <span class="block text-[12px] text-muted">{{ $generation->outcome }}</span>
-                                        @endif
-                                    </span>
-                                </x-ui::table.cell>
-                                <x-ui::table.cell hidden="lg" :nowrap="false" variant="muted">
-                                    @forelse ($generation->models as $model)
-                                        <span class="block">{{ $model }}</span>
-                                    @empty
-                                        -
-                                    @endforelse
-                                </x-ui::table.cell>
-                                <x-ui::table.cell hidden="lg" align="right" variant="muted">
-                                    @if ($generation->inputTokens + $generation->outputTokens > 0)
-                                        {{ number_format($generation->inputTokens, 0, ',', ' ') }} / {{ number_format($generation->outputTokens, 0, ',', ' ') }}
-                                    @else
-                                        -
+                <ul class="divide-y divide-subtle" data-latest-generations>
+                    @foreach ($overview->latest as $generation)
+                        @php
+                            $detailUrl = route('admin.blog.generation.show', ['generation' => $generation->id]);
+                        @endphp
+                        <li wire:key="latest-{{ $generation->id }}" class="flex items-center gap-3 px-5 py-3" data-generation="{{ $generation->id }}" data-generation-status="{{ $generation->status->value }}">
+                            <div class="min-w-0 flex-1">
+                                <a href="{{ $detailUrl }}" class="block truncate text-[13px] font-medium text-primary hover:underline">{{ $generation->subject ?? __('Sujet choisi par l\'IA') }}</a>
+                                <p class="mt-0.5 truncate text-[12px] text-muted">
+                                    @if ($generation->outcome)
+                                        <span class="text-secondary">{{ $generation->outcome }}</span> ·
                                     @endif
-                                </x-ui::table.cell>
-                                <x-ui::table.cell hidden="sm" align="right">{{ $generation->cost }}</x-ui::table.cell>
-                                <x-ui::table.cell hidden="md" align="right" variant="muted">{{ $generation->duration ?? '-' }}</x-ui::table.cell>
-                                <x-ui::table.cell :last="true" align="right">
-                                    @if ($generation->isRetryable())
-                                        <x-ui::button variant="secondary" size="compact" wire:click="retry({{ $generation->id }})" :loading="true" target="retry({{ $generation->id }})">
-                                            <x-ui::icon name="arrow-path" /> {{ __('Relancer') }}
-                                        </x-ui::button>
-                                    @elseif ($generation->isCancellable())
-                                        <x-ui::button variant="secondary" size="compact" x-on:click="$dispatch('generation-stop-asked', { id: {{ $generation->id }} })">
-                                            <x-ui::icon name="stop" /> {{ __('Arrêter') }}
-                                        </x-ui::button>
-                                    @endif
-                                </x-ui::table.cell>
-                            </x-ui::table.row>
-                        @endforeach
-                    </x-ui::table.body>
-                </x-ui::table>
-
-                <x-ui::pagination :paginator="$generations" mode="livewire" />
+                                    {{ $generation->trigger->label() }} · {{ $generation->createdAt->format('d/m/Y H:i') }} (UTC)
+                                </p>
+                            </div>
+                            <span class="hidden shrink-0 text-[12px] tabular-nums text-muted sm:block">{{ $generation->cost }}</span>
+                            <x-admin.blog.generation-status :status="$generation->status" class="shrink-0" />
+                            @if ($generation->isRetryable())
+                                <x-ui::button variant="secondary" size="compact" class="shrink-0" wire:click="retry({{ $generation->id }})" :loading="true" target="retry({{ $generation->id }})">
+                                    <x-ui::icon name="arrow-path" /> {{ __('Relancer') }}
+                                </x-ui::button>
+                            @elseif ($generation->postId)
+                                <x-ui::button variant="secondary" size="compact" class="shrink-0" :href="route('admin.blog.posts.edit', ['post' => $generation->postId])">{{ __('Ouvrir le brouillon') }}</x-ui::button>
+                            @endif
+                        </li>
+                    @endforeach
+                </ul>
             @endif
         </x-admin.panel>
+
+        {{-- Pour qui veille sur le site : le traitement de fond tourne-t-il, la cle du fournisseur est-elle en place.
+             La cle elle-meme n'est jamais affichee. --}}
+        <p class="flex flex-wrap items-center gap-x-5 gap-y-1 text-[12px] text-muted" data-service-state>
+            <span class="font-medium text-secondary">{{ __('État du service') }}</span>
+            <span class="inline-flex items-center gap-1.5" data-service="worker">
+                <span @class(['h-1.5 w-1.5 rounded-full', 'bg-emerald-500' => $overview->workerListening, 'bg-amber-500' => ! $overview->workerListening])></span>
+                {{ $overview->workerListening ? __('Traitement à l\'écoute') : __('Traitement à l\'arrêt') }}
+            </span>
+            <span class="inline-flex items-center gap-1.5" data-service="key">
+                <span @class(['h-1.5 w-1.5 rounded-full', 'bg-emerald-500' => $overview->apiKeyPresent, 'bg-amber-500' => ! $overview->apiKeyPresent])></span>
+                {{ $overview->apiKeyPresent ? __('Clé du fournisseur d\'IA en place') : __('Clé du fournisseur d\'IA absente') }}
+            </span>
+        </p>
     @enderror
-
-    <x-ui::modal name="stop-generation" variant="confirm" :title="__('Arrêter cette génération ?')">
-        <p>{{ __('Une génération en attente est arrêtée tout de suite. Une génération déjà commencée finit l\'étape en cours, puis s\'arrête. Ce qui a déjà été dépensé reste dépensé.') }}</p>
-
-        <x-slot:actions>
-            <x-ui::button variant="ghost" x-on:click="$dispatch('ui-close-modal', 'stop-generation')">{{ __('Continuer la génération') }}</x-ui::button>
-            <x-ui::button variant="danger" x-on:click="$wire.cancel(pending); $dispatch('ui-close-modal', 'stop-generation')">{{ __('Arrêter') }}</x-ui::button>
-        </x-slot:actions>
-    </x-ui::modal>
 </div>

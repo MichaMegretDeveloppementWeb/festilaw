@@ -6,7 +6,7 @@ namespace App\Livewire\Admin\Blog;
 
 use App\Actions\Blog\Generation\CancelBlogGenerationAction;
 use App\Actions\Blog\Generation\RetryBlogGenerationAction;
-use App\Exceptions\BaseAppException;
+use App\Livewire\Concerns\CommandsBlogGenerations;
 use App\Livewire\Concerns\HandlesAdminErrors;
 use App\Services\Admin\Blog\Generation\BlogGenerationDetailService;
 use Illuminate\Support\Facades\Log;
@@ -17,13 +17,15 @@ use Livewire\Component;
 use Throwable;
 
 /**
- * Back-office : detail d'une generation, etape par etape (statut, modele, jetons, cout, duree, essais,
- * erreur), avec la relance d'un echec et l'arret d'une generation en cours. L'ecran se rafraichit seul
- * tant que la generation n'est pas terminee. Aucune requete ici.
+ * Back-office : la page d'une generation. Ce qui s'est passe (qui l'a lancee, qui l'a arretee, a quelle etape
+ * elle a echoue), ce qu'elle a consomme, le compte rendu de l'IA, puis ses etapes une a une. On y arrive des
+ * le lancement : l'ecran se relit seul tant que la generation n'est pas terminee. Un echec s'y relance, une
+ * generation en cours s'y arrete. Aucune requete ici.
  */
 #[Layout('layouts.admin')]
 class GenerationDetail extends Component
 {
+    use CommandsBlogGenerations;
     use HandlesAdminErrors;
 
     #[Locked]
@@ -36,40 +38,12 @@ class GenerationDetail extends Component
 
     public function retry(RetryBlogGenerationAction $retry): void
     {
-        try {
-            $retry->execute($this->generationId);
-        } catch (BaseAppException $e) {
-            Log::error($e->getMessage(), ['exception' => $e]);
-            $this->dispatch('ui-toast', title: $e->getUserMessage(), type: 'error');
-
-            return;
-        } catch (Throwable $e) {
-            $this->reportAdminError($e, 'Admin retry blog generation');
-
-            return;
-        }
-
-        $this->dispatch('ui-toast', title: __('Génération relancée.'), type: 'success');
+        $this->relaunchGeneration($retry, $this->generationId);
     }
 
     public function cancel(CancelBlogGenerationAction $cancel): void
     {
-        try {
-            $stoppedNow = $cancel->execute($this->generationId);
-        } catch (BaseAppException $e) {
-            Log::error($e->getMessage(), ['exception' => $e]);
-            $this->dispatch('ui-toast', title: $e->getUserMessage(), type: 'error');
-
-            return;
-        } catch (Throwable $e) {
-            $this->reportAdminError($e, 'Admin cancel blog generation');
-
-            return;
-        }
-
-        $this->dispatch('ui-toast', type: 'success', title: $stoppedNow
-            ? __('Génération arrêtée.')
-            : __('La génération s\'arrêtera après l\'étape en cours.'));
+        $this->stopGeneration($cancel, $this->generationId);
     }
 
     public function render(BlogGenerationDetailService $details): View

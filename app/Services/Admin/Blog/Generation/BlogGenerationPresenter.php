@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Services\Admin\Blog\Generation;
 
+use App\Data\Blog\Generation\GenerationImageOptions;
+use App\Enums\Blog\Generation\BlogAiImageMode;
 use App\Enums\Blog\Generation\BlogAiPeriodUnit;
 use Carbon\CarbonImmutable;
 
 /**
  * Mise en mots de ce que seul le back-office affiche d'une generation : reglage de modele, rythme, duree,
- * sujet. Les mots partages avec les e-mails (etape, issue) sont dans BlogGenerationLabels. Calcul pur, aucune
+ * date, images, sujet. Les mots partages avec les e-mails (etape, issue) sont dans BlogGenerationLabels. Calcul pur, aucune
  * requete.
  */
 final readonly class BlogGenerationPresenter
@@ -63,6 +65,36 @@ final readonly class BlogGenerationPresenter
         }
 
         return __(':hours h :minutes min', ['hours' => intdiv($seconds, 3_600), 'minutes' => sprintf('%02d', intdiv($seconds % 3_600, 60))]);
+    }
+
+    /** « 14/11/2026 à 16:45 ». L'ecran dit a cote que l'heure est en UTC. */
+    public function dateTime(CarbonImmutable $date): string
+    {
+        return $date->format('d/m/Y à H:i');
+    }
+
+    /** D'ou viennent les images d'une generation et combien au plus : « Banque d'images, 2 au plus ». */
+    public function images(GenerationImageOptions $options): string
+    {
+        if ($options->mode === BlogAiImageMode::None) {
+            return __('Aucune image');
+        }
+
+        $source = $options->mode === BlogAiImageMode::Stock ? __('Banque d\'images') : __('Générées par IA');
+
+        return $options->maxImages === 1
+            ? __(':source, une seule', ['source' => $source])
+            : __(':source, :count au plus', ['source' => $source, 'count' => $options->maxImages]);
+    }
+
+    /** Libelle d'un nombre d'images au plus, pour les listes de choix. Ce nombre comprend l'image principale. */
+    public function imageCountLabel(int $count): string
+    {
+        return match ($count) {
+            1 => __('Une seule, l\'image principale'),
+            2 => __('Deux au plus'),
+            default => __(':count au plus', ['count' => $count]),
+        };
     }
 
     /** Duree entre deux instants ; jusqu'a maintenant si la fin n'est pas connue. */

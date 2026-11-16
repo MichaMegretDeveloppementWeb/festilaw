@@ -4,52 +4,57 @@ declare(strict_types=1);
 
 namespace App\Repositories\Blog;
 
-use App\Enums\Blog\Generation\BlogGenerationStepStatus;
 use App\Models\BlogGeneration;
-use App\Models\BlogGenerationStep;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 /**
- * Journal des generations du back-office : une page de generations, les plus recentes d'abord, et ce que
- * leurs etapes ont consomme (une requete groupee pour toute la page, jamais une par ligne).
+ * Generations lues par le back-office : une page de l'historique, les dernieres pour la vue d'ensemble, et
+ * une generation avec le nom des personnes qui l'ont lancee et arretee. Les plus recentes d'abord.
  */
 final readonly class AdminBlogGenerationJournalRepository
 {
+    private const LIST_COLUMNS = [
+        'id', 'trigger', 'status', 'outcome_reason', 'topic_title', 'topic_hint', 'blog_post_id', 'cost_microusd',
+        'started_at', 'finished_at', 'created_at',
+    ];
+
     /** @return LengthAwarePaginator<int, BlogGeneration> */
     public function paginate(int $perPage): LengthAwarePaginator
     {
-        return BlogGeneration::query()
-            ->select([
-                'id', 'trigger', 'status', 'outcome_reason', 'topic_title', 'topic_hint', 'cost_microusd',
-                'started_at', 'finished_at', 'created_at',
-            ])
-            ->latest('id')
-            ->paginate($perPage);
+        return $this->newest()->paginate($perPage);
+    }
+
+    /** @return Collection<int, BlogGeneration> */
+    public function latest(int $limit): Collection
+    {
+        return $this->newest()->limit($limit)->get();
     }
 
     /**
-     * Jetons et modeles des etapes, et etape en echec s'il y en a une, par generation.
-     *
-     * @param  list<int>  $generationIds
-     * @return Collection<int, object{blog_generation_id: int, input_tokens: int|string, output_tokens: int|string, models: string|null, failed_step: string|null}>
+     * Une generation pour son ecran, avec le nom de qui l'a lancee (`requester_name`) et de qui l'a arretee
+     * (`canceller_name`), en une seule requete. Ni ce qu'elle a produit, ni la cause technique d'un echec.
      */
-    public function stepTotalsOf(array $generationIds): Collection
+    public function findWithPeople(int $generationId): ?BlogGeneration
     {
-        if ($generationIds === []) {
-            return collect();
-        }
+        return BlogGeneration::query()
+            ->leftJoin('users as requesters', 'requesters.id', '=', 'blog_generations.requested_by')
+            ->leftJoin('users as cancellers', 'cancellers.id', '=', 'blog_generations.cancel_requested_by')
+            ->where('blog_generations.id', $generationId)
+            ->first([
+                'blog_generations.id', 'blog_generations.type', 'blog_generations.trigger', 'blog_generations.status',
+                'blog_generations.outcome_reason', 'blog_generations.topic_title', 'blog_generations.topic_hint',
+                'blog_generations.instructions', 'blog_generations.blog_post_id', 'blog_generations.payload',
+                'blog_generations.cost_microusd', 'blog_generations.started_at', 'blog_generations.finished_at',
+                'blog_generations.cancel_requested_at', 'blog_generations.created_at',
+                'requesters.name as requester_name', 'cancellers.name as canceller_name',
+            ]);
+    }
 
-        return BlogGenerationStep::query()
-            ->toBase()
-            ->whereIn('blog_generation_id', $generationIds)
-            ->groupBy('blog_generation_id')
-            ->selectRaw(
-                'blog_generation_id, SUM(input_tokens) AS input_tokens, SUM(output_tokens) AS output_tokens, '
-                .'GROUP_CONCAT(DISTINCT model) AS models, MAX(CASE WHEN status = ? THEN step END) AS failed_step',
-                [BlogGenerationStepStatus::Failed->value],
-            )
-            ->get()
-            ->keyBy('blog_generation_id');
+    /** @return Builder<BlogGeneration> */
+    private function newest(): Builder
+    {
+        return BlogGeneration::query()->select(self::LIST_COLUMNS)->latest('id');
     }
 }

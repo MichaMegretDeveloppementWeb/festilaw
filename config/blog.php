@@ -122,8 +122,8 @@ return [
             'articles_per_run' => 1,
             'pending_drafts_cap' => 3,
             'monthly_spend_cap_cents' => 1_000,
-            'priority_topics' => '',
-            'avoided_topics' => '',
+            'priority_topics' => [],
+            'avoided_topics' => [],
             'models' => [
                 'topic' => 'anthropic/claude-sonnet-5.5',
                 'research' => 'anthropic/claude-sonnet-5.5',
@@ -139,25 +139,40 @@ return [
         ],
 
         /*
-         | Modeles proposes au back-office (un champ libre accepte tout autre identifiant) et table de
-         | tarifs de repli. Prix en CENTS de dollar par million de jetons (entree, sortie), releves au
-         | catalogue d'OpenRouter le 13/11/2026. Ils ne servent qu'a ESTIMER un cout quand le fournisseur ne
-         | renvoie pas le cout reel ; l'etape est alors marquee « cout estime ». La qualite de ces modeles
-         | n'est pas presumee : le banc d'essai tranche.
+         | Modeles de texte proposes au back-office : la liste est FERMEE, l'ecran des reglages n'accepte
+         | aucun autre identifiant (la personne choisit, elle ne saisit pas). `name` et `provider` sont le
+         | nom commercial et l'editeur, tels que le catalogue d'OpenRouter les ecrit.
+         |
+         | `input` et `output` : prix en CENTS de dollar par million de jetons lus et ecrits, releves au
+         | catalogue d'OpenRouter le 16/11/2026 (DeepSeek arrondi au cent). Ils servent a deux choses : le
+         | prix indicatif affiche a cote du modele, et l'ESTIMATION d'un cout quand le fournisseur ne renvoie
+         | pas le cout reel (l'etape est alors marquee « cout estime »). La qualite de ces modeles n'est pas
+         | presumee : le banc d'essai tranche, et resserrera cette liste.
          */
         'models' => [
-            'anthropic/claude-opus-5.5' => ['input' => 400, 'output' => 2_000],
-            'anthropic/claude-sonnet-5.5' => ['input' => 200, 'output' => 1_000],
-            'anthropic/claude-haiku-5.5' => ['input' => 10, 'output' => 50],
-            'openai/gpt-6.1-sol' => ['input' => 200, 'output' => 1_000],
-            'openai/gpt-6.1-terra' => ['input' => 100, 'output' => 500],
-            'openai/gpt-6-luna' => ['input' => 10, 'output' => 50],
-            'google/gemini-4-carbon' => ['input' => 200, 'output' => 1_000],
-            'google/gemini-4-hydrogen' => ['input' => 150, 'output' => 750],
-            'google/gemini-3.1-flash-lite' => ['input' => 25, 'output' => 150],
-            'x-ai/grok-4.7' => ['input' => 200, 'output' => 600],
-            'mistralai/mistral-large-4-0' => ['input' => 70, 'output' => 210],
-            'deepseek/deepseek-v4.1-flash' => ['input' => 30, 'output' => 120],
+            'anthropic/claude-opus-5.5' => ['name' => 'Claude Opus 5.5', 'provider' => 'Anthropic', 'input' => 400, 'output' => 2_000],
+            'anthropic/claude-sonnet-5.5' => ['name' => 'Claude Sonnet 5.5', 'provider' => 'Anthropic', 'input' => 200, 'output' => 1_000],
+            'anthropic/claude-haiku-5.5' => ['name' => 'Claude Haiku 5.5', 'provider' => 'Anthropic', 'input' => 10, 'output' => 50],
+            'openai/gpt-6.1-sol' => ['name' => 'GPT-6.1 Sol', 'provider' => 'OpenAI', 'input' => 200, 'output' => 1_000],
+            'openai/gpt-6.1-terra' => ['name' => 'GPT-6.1 Terra', 'provider' => 'OpenAI', 'input' => 100, 'output' => 500],
+            'openai/gpt-6-luna' => ['name' => 'GPT-6 Luna', 'provider' => 'OpenAI', 'input' => 10, 'output' => 50],
+            'google/gemini-4-carbon' => ['name' => 'Gemini 4 Carbon', 'provider' => 'Google', 'input' => 200, 'output' => 1_000],
+            'google/gemini-4-hydrogen' => ['name' => 'Gemini 4 Hydrogen', 'provider' => 'Google', 'input' => 150, 'output' => 750],
+            'google/gemini-3.1-flash-lite' => ['name' => 'Gemini 3.1 Flash Lite', 'provider' => 'Google', 'input' => 25, 'output' => 150],
+            'x-ai/grok-4.7' => ['name' => 'Grok 4.7', 'provider' => 'SpaceXAI', 'input' => 200, 'output' => 600],
+            'mistralai/mistral-large-4-0' => ['name' => 'Mistral Large 4', 'provider' => 'Mistral', 'input' => 70, 'output' => 210],
+            'deepseek/deepseek-v4.1-flash' => ['name' => 'DeepSeek V4.1 Flash', 'provider' => 'DeepSeek', 'input' => 5, 'output' => 20],
+        ],
+
+        /*
+         | Modeles qui generent des images : les seuls proposes pour l'etape des images. Noms releves au
+         | catalogue d'OpenRouter le 16/11/2026. Aucun prix : celui d'une image n'a pas ete releve.
+         */
+        'image_models' => [
+            'google/gemini-3.1-flash-image' => ['name' => 'Nano Banana 2', 'provider' => 'Google'],
+            'google/gemini-nano-banana-2.1' => ['name' => 'Nano Banana 2.1', 'provider' => 'Google'],
+            'google/gemini-3-pro-image' => ['name' => 'Nano Banana Pro', 'provider' => 'Google'],
+            'openai/gpt-5.4-image-2' => ['name' => 'GPT-5.4 Image 2', 'provider' => 'OpenAI'],
         ],
 
         /*

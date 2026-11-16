@@ -10,6 +10,7 @@ use App\Contracts\Blog\Generation\GenerationPipeline;
 use App\Exceptions\Blog\BlogGenerationException;
 use App\Services\Admin\Blog\Generation\BlogGenerationOverviewService;
 use App\Services\Blog\Generation\BlogAiCostEstimator;
+use App\Services\Blog\Generation\BlogAiModelCatalog;
 use App\Services\Blog\Generation\BlogAiSettingsService;
 use App\Services\Blog\Generation\BlogGenerationAlertService;
 use App\Services\Blog\Generation\BlogGenerationStepRunner;
@@ -32,7 +33,8 @@ final class BlogGenerationServiceProvider extends ServiceProvider
         $this->app->when(BlogAiSettingsService::class)->needs('$defaults')->giveConfig('blog.ai.defaults');
         $this->app->when(BlogAiSettingsService::class)->needs('$fallbackEmail')->giveConfig('festilaw.notification_email');
         $this->app->when(BlogAiSettingsService::class)->needs('$locales')->giveConfig('festilaw.supported_locales');
-        $this->app->when(BlogAiSettingsService::class)->needs('$models')->giveConfig('blog.ai.models');
+        $this->app->when(BlogAiModelCatalog::class)->needs('$textModels')->giveConfig('blog.ai.models');
+        $this->app->when(BlogAiModelCatalog::class)->needs('$imageModels')->giveConfig('blog.ai.image_models');
         // La cle n'est lue que pour dire a l'ecran si elle est presente ; elle n'est jamais affichee.
         $this->app->when(BlogGenerationOverviewService::class)->needs('$apiKey')->giveConfig('ai.providers.openrouter.key');
 

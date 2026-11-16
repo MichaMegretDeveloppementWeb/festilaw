@@ -18,6 +18,7 @@ export default defineConfig({
                 'resources/js/web/blog-categories.js',
                 'resources/js/admin/blog-post-form.js',
                 'resources/js/admin/blog-category-form.js',
+                'resources/js/admin/tag-input.js',
                 // Manifeste CSS de l'espace public (base + coquille), charge sur toutes les pages web.
                 'resources/css/web.css',
                 // Back-office (auth) : la feuille de nos propres vues, a cote de celle du kit Falcon.

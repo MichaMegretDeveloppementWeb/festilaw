@@ -7,32 +7,38 @@ namespace App\Data\Admin\Blog\Generation;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogGenerationStepStatus;
 use App\Enums\Blog\Generation\BlogGenerationTrigger;
-use Carbon\CarbonImmutable;
 
 /**
- * Une generation et ses etapes : la carte de suivi en direct et l'ecran de detail affichent la meme chose.
- * Aucun message technique : `outcome` dit ce qui s'est passe (et a quelle etape), `advice` ce que la personne
- * peut faire.
+ * Une generation et ses etapes, pour son ecran et pour la tuile « En cours » de la vue d'ensemble.
+ * Aucun message technique : `outcome` dit ce qui s'est passe (l'etape en cause, ou qui a arrete la generation
+ * et quand), `advice` ce que la personne peut faire.
  */
 final readonly class BlogGenerationDetailView
 {
-    /** @param  list<BlogGenerationStepView>  $steps  dans l'ordre du pipeline */
+    /**
+     * @param  string  $launched  qui a lance la generation et quand, en une phrase
+     * @param  string|null  $images  d'ou viennent les images et combien au plus (nul pour une generation anterieure a ce choix)
+     * @param  list<array{label: string, text: string}>  $report  compte rendu de l'IA, point par point
+     * @param  list<BlogGenerationStepView>  $steps  dans l'ordre du pipeline
+     */
     public function __construct(
         public int $id,
         public BlogGenerationTrigger $trigger,
         public BlogGenerationStatus $status,
+        public string $launched,
         public ?string $outcome,
         public ?string $advice,
         public ?string $subject,
         public ?string $topicHint,
         public ?string $instructions,
-        public CarbonImmutable $createdAt,
-        public ?CarbonImmutable $startedAt,
-        public ?CarbonImmutable $finishedAt,
         public ?string $duration,
         public string $cost,
+        public int $inputTokens,
+        public int $outputTokens,
+        public ?string $images,
         public bool $cancelRequested,
         public ?int $postId,
+        public array $report,
         public array $steps,
     ) {}
 

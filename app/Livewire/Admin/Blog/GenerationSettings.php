@@ -10,6 +10,7 @@ use App\Enums\Blog\Generation\BlogAiImageMode;
 use App\Enums\Blog\Generation\BlogAiPeriodUnit;
 use App\Livewire\Concerns\HandlesAdminErrors;
 use App\Services\Admin\Blog\Generation\BlogGenerationPresenter;
+use App\Services\Blog\Generation\BlogAiModelCatalog;
 use App\Services\Blog\Generation\BlogAiSettingsService;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -18,9 +19,12 @@ use Livewire\Component;
 use Throwable;
 
 /**
- * Back-office : reglages de la generation par IA (automatique, plafonds, sujets, modele par etape, images,
- * destinataire, mention de transparence). Aucune cle d'API ici : elle vit dans le fichier d'environnement.
- * La lecture passe par BlogAiSettingsService, l'enregistrement par UpdateBlogAiSettingsAction.
+ * Back-office : reglages de la generation par IA (automatique et ses images par defaut, budget, sujets,
+ * modele par etape, destinataire, mention de transparence). Aucune cle d'API ici : elle vit dans le fichier
+ * d'environnement, et ne regarde pas la personne qui regle.
+ *
+ * Un modele se choisit dans une liste fermee (BlogAiModelCatalog), jamais par saisie. Les sujets sont des
+ * listes. La lecture passe par BlogAiSettingsService, l'enregistrement par UpdateBlogAiSettingsAction.
  */
 #[Layout('layouts.admin')]
 class GenerationSettings extends Component
@@ -43,13 +47,16 @@ class GenerationSettings extends Component
     /** Plafond de depense du mois, en dollars (saisie). */
     public string $monthlySpendCap = '';
 
-    public string $priorityTopics = '';
+    /** @var list<string> sujets et mots-cles a privilegier */
+    public array $priorityTopics = [];
 
-    public string $avoidedTopics = '';
+    /** @var list<string> sujets a laisser de cote */
+    public array $avoidedTopics = [];
 
     /** @var array<string, string> identifiant de modele par etape */
     public array $models = [];
 
+    /** Images par defaut : celles des generations automatiques, proposees dans la fenetre de lancement. */
     public string $imageMode = '';
 
     public string $maxImages = '';
@@ -88,14 +95,31 @@ class GenerationSettings extends Component
             'articlesPerRun' => ['required', 'integer', 'min:1', 'max:10'],
             'pendingDraftsCap' => ['required', 'integer', 'min:1', 'max:50'],
             'monthlySpendCap' => ['required', 'numeric', 'min:0', 'max:10000'],
-            'priorityTopics' => ['nullable', 'string', 'max:5000'],
-            'avoidedTopics' => ['nullable', 'string', 'max:5000'],
-            'models.*' => ['required', 'string', 'max:120', 'regex:/^[A-Za-z0-9._:\/-]+$/'],
+            'priorityTopics' => ['array', 'max:'.BlogAiSettings::MAX_TOPICS],
+            'priorityTopics.*' => ['string', 'max:'.BlogAiSettings::TOPIC_MAX_LENGTH],
+            'avoidedTopics' => ['array', 'max:'.BlogAiSettings::MAX_TOPICS],
+            'avoidedTopics.*' => ['string', 'max:'.BlogAiSettings::TOPIC_MAX_LENGTH],
             'imageMode' => ['required', Rule::enum(BlogAiImageMode::class)],
             'maxImages' => ['required', 'integer', 'min:1', 'max:'.BlogAiSettings::MAX_IMAGES],
             'notificationEmail' => ['required', 'email', 'max:180'],
             'transparencyNotice.*' => ['nullable', 'string', 'max:500'],
         ];
+    }
+
+    /**
+     * Chaque etape n'accepte qu'un modele de sa liste : du texte, ou des images pour l'etape des images.
+     *
+     * @return array<string, array<int, mixed>>
+     */
+    private function modelRules(BlogAiModelCatalog $catalog): array
+    {
+        $rules = [];
+
+        foreach (array_keys($this->models) as $step) {
+            $rules['models.'.$step] = ['required', 'string', Rule::in($catalog->idsFor((string) $step))];
+        }
+
+        return $rules;
     }
 
     /** @return array<string, string> */
@@ -120,17 +144,18 @@ class GenerationSettings extends Component
             'monthlySpendCap.numeric' => __('Le plafond de dépense est un montant.'),
             'monthlySpendCap.min' => __('Le plafond de dépense ne peut pas être négatif.'),
             'monthlySpendCap.max' => __('Le plafond de dépense ne peut pas dépasser 10 000 $.'),
-            'priorityTopics.max' => __('Les sujets prioritaires ne doivent pas dépasser 5 000 caractères.'),
-            'avoidedTopics.max' => __('Les sujets à éviter ne doivent pas dépasser 5 000 caractères.'),
-            'models.*.required' => __('Indiquez un modèle pour cette étape.'),
-            'models.*.max' => __('L\'identifiant d\'un modèle ne doit pas dépasser 120 caractères.'),
-            'models.*.regex' => __('L\'identifiant d\'un modèle s\'écrit comme « fournisseur/modele », sans espace.'),
+            'priorityTopics.max' => __('Une liste compte :max sujets au plus.', ['max' => BlogAiSettings::MAX_TOPICS]),
+            'priorityTopics.*.max' => __('Un sujet ne doit pas dépasser :max caractères.', ['max' => BlogAiSettings::TOPIC_MAX_LENGTH]),
+            'avoidedTopics.max' => __('Une liste compte :max sujets au plus.', ['max' => BlogAiSettings::MAX_TOPICS]),
+            'avoidedTopics.*.max' => __('Un sujet ne doit pas dépasser :max caractères.', ['max' => BlogAiSettings::TOPIC_MAX_LENGTH]),
+            'models.*.required' => __('Choisissez un modèle pour cette étape.'),
+            'models.*.in' => __('Choisissez un modèle dans la liste.'),
             'imageMode.required' => __('Choisissez d\'où viennent les images.'),
             'imageMode.enum' => __('Choisissez d\'où viennent les images.'),
-            'maxImages.required' => __('Indiquez le nombre d\'images par article.'),
-            'maxImages.integer' => __('Le nombre d\'images est un nombre entier.'),
-            'maxImages.min' => __('Un article a au moins 1 image.'),
-            'maxImages.max' => __('Un article a 3 images au plus.'),
+            'maxImages.required' => __('Choisissez le nombre d\'images.'),
+            'maxImages.integer' => __('Choisissez le nombre d\'images.'),
+            'maxImages.min' => __('Choisissez le nombre d\'images.'),
+            'maxImages.max' => __('Choisissez le nombre d\'images.'),
             'notificationEmail.required' => __('Indiquez l\'adresse qui reçoit les e-mails.'),
             'notificationEmail.email' => __('Cette adresse e-mail n\'est pas valide.'),
             'notificationEmail.max' => __('L\'adresse e-mail ne doit pas dépasser 180 caractères.'),
@@ -138,9 +163,9 @@ class GenerationSettings extends Component
         ];
     }
 
-    public function save(UpdateBlogAiSettingsAction $update): void
+    public function save(UpdateBlogAiSettingsAction $update, BlogAiModelCatalog $catalog): void
     {
-        $validated = $this->validate();
+        $validated = $this->validate([...$this->rules(), ...$this->modelRules($catalog)]);
 
         try {
             $update->execute(new BlogAiSettings(
@@ -150,9 +175,9 @@ class GenerationSettings extends Component
                 articlesPerRun: (int) $validated['articlesPerRun'],
                 pendingDraftsCap: (int) $validated['pendingDraftsCap'],
                 monthlySpendCapCents: (int) round(((float) $validated['monthlySpendCap']) * 100),
-                priorityTopics: trim((string) ($validated['priorityTopics'] ?? '')),
-                avoidedTopics: trim((string) ($validated['avoidedTopics'] ?? '')),
-                models: array_map(trim(...), $this->models),
+                priorityTopics: BlogAiSettings::topics($this->priorityTopics),
+                avoidedTopics: BlogAiSettings::topics($this->avoidedTopics),
+                models: $this->models,
                 imageMode: BlogAiImageMode::from((string) $validated['imageMode']),
                 maxImages: (int) $validated['maxImages'],
                 notificationEmail: trim((string) $validated['notificationEmail']),
@@ -164,17 +189,29 @@ class GenerationSettings extends Component
             return;
         }
 
+        // L'ecran reprend la liste telle qu'elle est enregistree (sans doublon ni vide).
+        $this->priorityTopics = BlogAiSettings::topics($this->priorityTopics);
+        $this->avoidedTopics = BlogAiSettings::topics($this->avoidedTopics);
+
         $this->dispatch('ui-toast', title: __('Réglages enregistrés.'), type: 'success');
     }
 
-    public function render(BlogAiSettingsService $settings, BlogGenerationPresenter $presenter): View
+    public function render(BlogGenerationPresenter $presenter, BlogAiModelCatalog $catalog): View
     {
+        $steps = collect($this->models)->keys();
+
         return view('livewire.admin.blog.generation-settings', [
-            'knownModels' => $settings->knownModels(),
-            'modelLabels' => collect($this->models)->keys()->mapWithKeys(fn (string $step): array => [$step => $presenter->modelSettingLabel($step)])->all(),
+            'modelLabels' => $steps->mapWithKeys(fn (string $step): array => [$step => $presenter->modelSettingLabel($step)])->all(),
+            // Un modele enregistre qui n'est plus dans la liste reste visible, pour dire qu'il faut en choisir un autre.
+            'modelOptions' => $steps->mapWithKeys(function (string $step) use ($catalog): array {
+                $options = $catalog->optionsFor($step);
+                $chosen = (string) ($this->models[$step] ?? '');
+
+                return [$step => $chosen === '' || isset($options[$chosen]) ? $options : [$chosen => __(':model (retiré de la liste)', ['model' => $chosen]), ...$options]];
+            })->all(),
             'periodUnits' => BlogAiPeriodUnit::cases(),
-            'imageModes' => BlogAiImageMode::cases(),
-            'maxImagesChoices' => range(1, BlogAiSettings::MAX_IMAGES),
+            'imageModes' => collect(BlogAiImageMode::cases())->mapWithKeys(fn (BlogAiImageMode $mode): array => [$mode->value => $mode->label()])->all(),
+            'imageCounts' => collect(range(1, BlogAiSettings::MAX_IMAGES))->mapWithKeys(fn (int $count): array => [(string) $count => $presenter->imageCountLabel($count)])->all(),
             'localeNames' => self::LOCALE_NAMES,
         ])->title(__('Réglages de la génération IA'));
     }

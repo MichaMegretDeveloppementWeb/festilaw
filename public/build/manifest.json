@@ -4,7 +4,7 @@
     "name": "slug-field"
   },
   "resources/css/admin.css": {
-    "file": "assets/admin-D5pXCq9O.css",
+    "file": "assets/admin-n8WUnoXK.css",
     "name": "admin",
     "names": [
       "admin.css"
@@ -151,6 +151,15 @@
     "file": "assets/blog-post-form-DHK8qOqt.js",
     "name": "blog-post-form",
     "src": "resources/js/admin/blog-post-form.js",
+    "isEntry": true,
+    "imports": [
+      "_slug-field-SLrGJlsK.js"
+    ]
+  },
+  "resources/js/admin/tag-input.js": {
+    "file": "assets/tag-input-2Mox1NT7.js",
+    "name": "tag-input",
+    "src": "resources/js/admin/tag-input.js",
     "isEntry": true,
     "imports": [
       "_slug-field-SLrGJlsK.js"

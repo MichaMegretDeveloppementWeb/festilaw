@@ -1,15 +1,20 @@
 <?php
 
+use App\Enums\Blog\BlogPostOrigin;
 use App\Enums\Blog\Generation\BlogAiImageMode;
 use App\Enums\Blog\Generation\BlogAiPeriodUnit;
 use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
+use App\Livewire\Admin\Blog\GenerationActivity;
 use App\Livewire\Admin\Blog\GenerationDashboard;
 use App\Livewire\Admin\Blog\GenerationDetail;
-use App\Livewire\Admin\Blog\GenerationProgress;
+use App\Livewire\Admin\Blog\GenerationHistory;
+use App\Livewire\Admin\Blog\GenerationLauncher;
 use App\Livewire\Admin\Blog\GenerationSettings;
 use App\Models\BlogGeneration;
 use App\Models\BlogGenerationStep;
+use App\Models\BlogPost;
+use App\Models\Setting;
 use App\Models\User;
 use App\Services\Blog\Generation\BlogAiSettingsService;
 use App\Services\Blog\Generation\BlogGenerationWorkerRegistry;
@@ -26,9 +31,9 @@ use function Pest\Laravel\actingAs;
 use function Pest\Laravel\get;
 
 /*
- | Ecrans de la generation par IA au back-office : tableau de bord (depense, lancement, journal), carte de
- | suivi en direct, detail d'une generation, reglages. Les etapes sont les etapes factices de la
- | configuration de test : aucun modele n'est appele.
+ | Ecrans de la generation par IA au back-office : vue d'ensemble (depense, automatique, brouillons a relire,
+ | tuile « En cours », dernieres generations), fenetre de lancement, historique, page d'une generation,
+ | reglages. Les etapes sont les etapes factices de la configuration de test : aucun modele n'est appele.
  */
 
 uses(RefreshDatabase::class);
@@ -43,123 +48,283 @@ it('sends a visitor who is not signed in to the login page', function (string $p
 
     get(str_replace('{generation}', (string) $generation->id, $path))->assertRedirect(route('admin.login'));
 })->with([
-    'dashboard' => ['/admin/blog/generation'],
+    'overview' => ['/admin/blog/generation'],
+    'history' => ['/admin/blog/generation/history'],
     'settings' => ['/admin/blog/generation/settings'],
-    'detail' => ['/admin/blog/generation/{generation}'],
+    'generation' => ['/admin/blog/generation/{generation}'],
 ]);
 
-it('serves every generation screen to a signed-in admin, under its own menu entry', function () {
+it('serves every generation page to a signed-in admin, under one menu entry and three tabs', function () {
     $generation = BlogGeneration::factory()->completed()->create(['topic_hint' => 'Labels on Etsy']);
     actingAs(User::factory()->create());
 
-    get('/admin/blog/generation')->assertOk()
-        ->assertSee('<title>Génération IA · '.config('app.name').'</title>', false)
-        ->assertSee('href="'.route('admin.blog.generation.index').'"', false)
-        ->assertSee('Labels on Etsy');
-    get('/admin/blog/generation/settings')->assertOk()->assertSee('Réglages de la génération IA');
-    get("/admin/blog/generation/{$generation->id}")->assertOk()->assertSee("Génération n° {$generation->id}");
+    foreach (['/admin/blog/generation', '/admin/blog/generation/history', '/admin/blog/generation/settings'] as $path) {
+        get($path)->assertOk()
+            ->assertSee('Génération IA')
+            // Les trois pages se tiennent par leurs onglets, et portent le bouton de lancement.
+            ->assertSee('href="'.route('admin.blog.generation.index').'"', false)
+            ->assertSee('href="'.route('admin.blog.generation.history').'"', false)
+            ->assertSee('href="'.route('admin.blog.generation.settings').'"', false)
+            ->assertSee('Générer un article');
+    }
+
+    get('/admin/blog/generation')->assertSee('<title>Génération IA · '.config('app.name').'</title>', false)->assertSee('Labels on Etsy');
+    get('/admin/blog/generation/history')->assertSee('Labels on Etsy');
+    get("/admin/blog/generation/{$generation->id}")->assertOk()->assertSee("Génération n° {$generation->id}.")->assertSee('Labels on Etsy');
     get('/admin/blog/generation/not-a-number')->assertNotFound();
 });
 
-// --- Tableau de bord ------------------------------------------------------------------------------
+// --- Vue d'ensemble -------------------------------------------------------------------------------
 
-it('shows the spend of the month against its cap, and whether the generation can run', function () {
+it('shows the spend of the month against its cap, the automatic rhythm and the drafts waiting for a review', function () {
     BlogAi::saveSettings(['monthly_spend_cap_cents' => 400, 'enabled' => true, 'articles_per_run' => 2]);
     BlogGeneration::factory()->completed(costMicrousd: 1_000_000)->create();
     BlogGeneration::factory()->completed(costMicrousd: 9_000_000)->create(['created_at' => now()->subMonthNoOverflow()]);
+    BlogPost::factory()->count(2)->create(['origin' => BlogPostOrigin::Ai]);
+    BlogPost::factory()->create();
 
     Livewire::test(GenerationDashboard::class)
         ->assertSee('1,00 $')
         ->assertSee('sur 4,00 $ de plafond')
         ->assertSee('Activée')
         ->assertSee('2 articles chaque semaine')
-        ->assertSee('Étapes factices')
-        ->assertSee('Aucun traitement n\'est à l\'écoute')
-        ->assertSee('À l\'arrêt');
+        ->assertSee('brouillons générés attendent votre relecture')
+        ->assertSeeHtml(e(route('admin.blog.posts.index', ['origin' => 'ai', 'status' => 'draft'])))
+        // Ni formulaire de lancement ni journal pagine sur cette page : chacun a sa place.
+        ->assertDontSee('Lancer une génération')
+        ->assertDontSeeHtml('ui-pagination');
 });
 
-it('says a worker is listening once one has registered lately', function () {
+it('says when a worker is listening, and warns when none is', function () {
+    Livewire::test(GenerationDashboard::class)
+        ->assertSee('Aucun traitement n\'est à l\'écoute')
+        ->assertSee('Traitement à l\'arrêt');
+
     app(BlogGenerationWorkerRegistry::class)->register('worker-a');
 
     Livewire::test(GenerationDashboard::class)
-        ->assertSee('À l\'écoute')
+        ->assertSee('Traitement à l\'écoute')
         ->assertDontSee('Aucun traitement n\'est à l\'écoute');
 
     $this->travel(5)->minutes();
 
-    Livewire::test(GenerationDashboard::class)->assertSee('À l\'arrêt');
+    Livewire::test(GenerationDashboard::class)->assertSee('Traitement à l\'arrêt');
 });
 
-it('tells whether the provider key is there, without ever showing it', function () {
+it('tells whether the provider key is there in the service state, without ever showing it', function () {
     config(['ai.providers.openrouter.key' => 'sk-or-secret-value-123']);
     actingAs(User::factory()->create());
 
     Livewire::test(GenerationDashboard::class)
-        ->assertSee('Clé du fournisseur d\'IA présente')
+        ->assertSee('État du service')
+        ->assertSee('Clé du fournisseur d\'IA en place')
         ->assertDontSee('sk-or-secret-value-123');
 
-    expect(get('/admin/blog/generation')->getContent())->not->toContain('sk-or-secret-value-123')
-        ->and(get('/admin/blog/generation/settings')->getContent())->not->toContain('sk-or-secret-value-123');
+    foreach (['/admin/blog/generation', '/admin/blog/generation/history', '/admin/blog/generation/settings'] as $path) {
+        expect(get($path)->getContent())->not->toContain('sk-or-secret-value-123');
+    }
 
     config(['ai.providers.openrouter.key' => null]);
 
     Livewire::test(GenerationDashboard::class)->assertSee('Clé du fournisseur d\'IA absente');
 });
 
-it('lists the generations in the journal, newest first, with their outcome', function () {
+it('says in plain words that the generation is unavailable when the key is missing outside of the trial mode', function () {
+    config(['ai.providers.openrouter.key' => null, 'blog.ai.pipeline' => 'editorial']);
+
+    Livewire::test(GenerationDashboard::class)
+        ->assertSee('La génération n\'est pas disponible')
+        ->assertSee('Contactez l\'assistance technique.');
+});
+
+it('lists the five latest generations, newest first, with their outcome and no technical message', function () {
+    BlogGeneration::factory()->count(3)->completed()->create();
     $old = BlogGeneration::factory()->completed(costMicrousd: 262_500)->create(['topic_title' => 'CE marking for toys']);
-    BlogGenerationStep::factory()->for($old, 'generation')->named('topic', 1)->completed()->create(['model' => 'anthropic/claude-sonnet-5.5']);
-    BlogGenerationStep::factory()->for($old, 'generation')->named('writing', 2)->completed()->create(['model' => 'openai/gpt-6.1-terra']);
     BlogGeneration::factory()->scheduled()->abandoned(BlogGenerationOutcomeReason::SpendCapReached)->create();
     $failed = BlogGeneration::factory()->failed()->create(['topic_hint' => 'Labels on Etsy']);
     BlogGenerationStep::factory()->for($failed, 'generation')->named('writing', 3)->failed()->create();
 
-    Livewire::test(GenerationDashboard::class)
+    $dashboard = Livewire::test(GenerationDashboard::class)
         ->assertSeeInOrder(['Labels on Etsy', 'Échec à l\'étape « Rédaction »', 'Plafond de dépense du mois atteint', 'CE marking for toys'])
         ->assertDontSee('Simulated provider failure.')
         ->assertSee('Automatique')
         ->assertSee('En échec')
         ->assertSee('0,26 $')
-        ->assertSee('anthropic/claude-sonnet-5.5')
-        ->assertSee('openai/gpt-6.1-terra')
-        ->assertSee('2 400 / 800')
+        ->assertSee('Tout l\'historique')
         ->assertSeeHtml('wire:click="retry('.$failed->id.')"')
         ->assertDontSeeHtml('wire:click="retry('.$old->id.')"');
+
+    // Six generations existent : la plus ancienne n'est que dans l'historique.
+    expect(substr_count($dashboard->html(), 'data-generation="'))->toBe(5);
 });
 
 it('says so when there is no generation yet', function () {
     Livewire::test(GenerationDashboard::class)->assertSee('Aucune génération pour le moment.');
 });
 
-it('queues a generation with the topic and the instructions that were typed', function () {
-    $user = User::factory()->create();
-    actingAs($user);
+it('restarts a failed generation from the overview', function () {
+    $failed = BlogGeneration::factory()->failed()->create();
+    $running = BlogGeneration::factory()->running()->create();
+    Log::spy();
 
     Livewire::test(GenerationDashboard::class)
+        ->call('retry', $failed->id)
+        ->assertDispatched('ui-toast', type: 'success', title: 'Génération relancée.')
+        ->assertDispatched('blog-generation-changed')
+        ->call('retry', $running->id)
+        ->assertDispatched('ui-toast', type: 'error', title: 'Seule une génération en échec peut être relancée.');
+
+    expect($failed->refresh()->status)->toBe(BlogGenerationStatus::Queued);
+});
+
+it('shows a load failure instead of the overview when the data cannot be read', function () {
+    Log::spy();
+
+    // Panne simulee : la table des generations disparait (la transaction du test la restaure).
+    Schema::rename('blog_generations', 'blog_generations_unavailable');
+
+    Livewire::test(GenerationDashboard::class)
+        ->assertSee('Le chargement de la génération par IA a échoué.')
+        ->assertDontSee('Dernières générations');
+
+    Log::shouldHaveReceived('error')->withArgs(fn (string $message): bool => str_contains($message, 'admin blog generation overview'));
+
+    Schema::rename('blog_generations_unavailable', 'blog_generations');
+});
+
+it('loads the overview in 6 queries, plus 1 for the activity tile, whatever the number of generations', function () {
+    BlogGeneration::factory()->count(40)->completed()->create()->each(function (BlogGeneration $generation): void {
+        BlogGenerationStep::factory()->for($generation, 'generation')->named('topic', 1)->completed()->create();
+        BlogGenerationStep::factory()->for($generation, 'generation')->named('writing', 2)->completed()->create();
+    });
+
+    DB::enableQueryLog();
+    Livewire::test(GenerationDashboard::class);
+
+    // Reglages, depense du mois, worker, brouillons a relire, dernieres generations, etape en echec de celles-ci ;
+    // plus la tuile « En cours » (une requete : aucune generation active). Le bouton de lancement n'en fait aucune.
+    expect(count(DB::getQueryLog()))->toBe(7);
+});
+
+// --- Tuile « En cours » ---------------------------------------------------------------------------
+
+it('keeps the activity tile in place, and checks rarely, while no generation is active', function () {
+    BlogGeneration::factory()->completed()->create();
+
+    DB::enableQueryLog();
+    $tile = Livewire::test(GenerationActivity::class);
+
+    expect(count(DB::getQueryLog()))->toBe(1);
+    $tile->assertSeeHtml('data-generation-activity="idle"')
+        ->assertSeeHtml('wire:poll.15s')
+        ->assertDontSeeHtml('wire:poll.2s')
+        ->assertSee('En cours')
+        ->assertSee('Aucune génération en attente ni en cours')
+        // Le lien « Suivre » garde sa place, masque : la tuile ne change pas de taille.
+        ->assertSeeHtml('invisible');
+});
+
+it('says at once that a requested generation is starting', function () {
+    $generation = BlogGeneration::factory()->create(['topic_hint' => 'Labels on Etsy']);
+
+    Livewire::test(GenerationActivity::class)
+        ->assertSee('En attente')
+        ->assertSee('Démarrage dans quelques secondes')
+        ->assertSeeHtml('wire:poll.2s')
+        ->assertSeeHtml('data-generation-activity="queued"')
+        ->assertSeeHtml(route('admin.blog.generation.show', ['generation' => $generation->id]))
+        ->assertDontSeeHtml('invisible');
+});
+
+it('follows the running generation in the tile, in 2 queries', function () {
+    $generation = BlogGeneration::factory()->running()->create(['cost_microusd' => 12_500]);
+    BlogGenerationStep::factory()->for($generation, 'generation')->named('topic', 1)->completed(12_500)->create();
+    BlogGenerationStep::factory()->for($generation, 'generation')->named('research', 2)->running()->create();
+
+    DB::enableQueryLog();
+    $tile = Livewire::test(GenerationActivity::class);
+
+    expect(count(DB::getQueryLog()))->toBe(2);
+    $tile->assertSee('Étape 2 sur 8')
+        ->assertSee('Recherche')
+        ->assertSee('Suivre la génération')
+        ->assertSeeHtml('data-generation-activity="running"');
+});
+
+it('tells the page when the generation it shows changes state', function () {
+    $generation = BlogGeneration::factory()->running()->create();
+
+    $tile = Livewire::test(GenerationActivity::class)->assertNotDispatched('blog-generation-progressed');
+
+    $tile->call('refreshActivity')->assertNotDispatched('blog-generation-progressed');
+
+    $generation->update(['status' => BlogGenerationStatus::Completed, 'locked_until' => null, 'finished_at' => now()]);
+
+    $tile->call('refreshActivity')
+        ->assertDispatched('blog-generation-progressed')
+        ->assertSeeHtml('data-generation-activity="idle"');
+});
+
+// --- Fenetre de lancement -------------------------------------------------------------------------
+
+it('renders the launch button without any query, and reads the default images only when the window opens', function () {
+    BlogAi::saveSettings(['image_mode' => 'generated', 'max_images' => 3]);
+
+    DB::enableQueryLog();
+    $launcher = Livewire::test(GenerationLauncher::class);
+
+    expect(count(DB::getQueryLog()))->toBe(0);
+    $launcher->assertSee('Générer un article')->assertSee('Mode d\'essai')->assertSet('imageMode', '');
+
+    $launcher->call('prepare')
+        ->assertSet('imageMode', 'generated')
+        ->assertSet('maxImages', '3')
+        // Une seconde ouverture garde ce que la personne a deja choisi.
+        ->set('imageMode', 'none')
+        ->call('prepare')
+        ->assertSet('imageMode', 'none');
+
+    expect(count(DB::getQueryLog()))->toBe(1);
+});
+
+it('queues a generation with its topic, its instructions and its own images, then opens its page', function () {
+    $user = User::factory()->create();
+    actingAs($user);
+    BlogAi::saveSettings(['image_mode' => 'stock', 'max_images' => 1]);
+
+    $launcher = Livewire::test(GenerationLauncher::class)
+        ->call('prepare')
         ->set('topicHint', 'Labels on Etsy')
         ->set('instructions', 'Short, for beginners.')
+        ->set('imageMode', 'generated')
+        ->set('maxImages', '2')
         ->call('launch')
-        ->assertHasNoErrors()
-        ->assertSet('topicHint', '')
-        ->assertSet('instructions', '')
-        ->assertDispatched('blog-generation-changed')
-        ->assertDispatched('ui-toast', type: 'success');
+        ->assertHasNoErrors();
 
     $generation = BlogGeneration::query()->sole();
+
+    $launcher->assertRedirect(route('admin.blog.generation.show', ['generation' => $generation->id]));
 
     expect($generation->status)->toBe(BlogGenerationStatus::Queued)
         ->and($generation->topic_hint)->toBe('Labels on Etsy')
         ->and($generation->instructions)->toBe('Short, for beginners.')
-        ->and($generation->requested_by)->toBe($user->id);
+        ->and($generation->requested_by)->toBe($user->id)
+        // Les images sont celles de cette generation, pas celles des reglages.
+        ->and($generation->payload)->toBe(['images' => ['mode' => 'generated', 'max' => 2]])
+        ->and(session('toast-success'))->toBe('Génération lancée.');
 });
 
-it('refuses a topic or instructions that are too long, in plain words', function () {
-    Livewire::test(GenerationDashboard::class)
+it('refuses a topic, instructions or images that make no sense, in plain words', function () {
+    Livewire::test(GenerationLauncher::class)
+        ->call('prepare')
         ->set('topicHint', str_repeat('a', 301))
         ->set('instructions', str_repeat('a', 2_001))
+        ->set('imageMode', 'hologram')
+        ->set('maxImages', '4')
         ->call('launch')
-        ->assertHasErrors(['topicHint', 'instructions'])
-        ->assertSee('Le sujet ne doit pas dépasser 300 caractères.');
+        ->assertHasErrors(['topicHint', 'instructions', 'imageMode', 'maxImages'])
+        ->assertSee('Le sujet ne doit pas dépasser 300 caractères.')
+        ->assertNoRedirect();
 
     expect(BlogGeneration::count())->toBe(0);
 });
@@ -169,162 +334,182 @@ it('refuses to launch once the monthly spend cap is reached, and says why', func
     BlogGeneration::factory()->completed(costMicrousd: 1_000_000)->create();
     Log::spy();
 
-    Livewire::test(GenerationDashboard::class)
-        ->assertSee('Le plafond de dépense du mois est atteint')
+    Livewire::test(GenerationDashboard::class)->assertSee('Le plafond de dépense du mois est atteint');
+
+    Livewire::test(GenerationLauncher::class)
+        ->call('prepare')
         ->call('launch')
         ->assertDispatched('ui-toast', type: 'error', title: 'Le plafond de dépense du mois est atteint. Relevez-le dans les réglages pour lancer une génération.')
-        ->assertNotDispatched('blog-generation-changed');
+        ->assertNoRedirect();
 
     expect(BlogGeneration::count())->toBe(1);
 });
 
-it('restarts a failed generation and stops a waiting one from the journal', function () {
+// --- Historique -----------------------------------------------------------------------------------
+
+it('lists every generation in the history, newest first, twenty per page, in 3 queries', function () {
+    BlogGeneration::factory()->count(22)->completed()->create();
+    $failed = BlogGeneration::factory()->failed()->create(['topic_hint' => 'Labels on Etsy']);
+    BlogGenerationStep::factory()->for($failed, 'generation')->named('research', 2)->failed()->create();
+    $waiting = BlogGeneration::factory()->scheduled()->create();
+
+    DB::enableQueryLog();
+    $history = Livewire::test(GenerationHistory::class);
+
+    // Nombre, page, etape en echec des generations de la page.
+    expect(count(DB::getQueryLog()))->toBe(3)
+        ->and(substr_count($history->html(), 'data-generation="'))->toBe(20);
+
+    $history->assertSeeInOrder(['Sujet choisi par l\'IA', 'Labels on Etsy', 'Échec à l\'étape « Recherche »'])
+        ->assertSee('Automatique')
+        ->assertSeeHtml('wire:click="retry('.$failed->id.')"')
+        ->assertSeeHtml('pending = '.$waiting->id)
+        // Modeles et tokens se lisent sur la page de la generation, plus dans la liste.
+        ->assertDontSee('Modèles')
+        ->assertDontSee('Jetons')
+        ->assertDontSee('Simulated provider failure.');
+});
+
+it('restarts a failed generation and stops a waiting one from the history, and keeps who stopped it', function () {
+    $user = User::factory()->create();
+    actingAs($user);
     $failed = BlogGeneration::factory()->failed()->create();
     $waiting = BlogGeneration::factory()->create();
+    $running = BlogGeneration::factory()->running()->create();
 
-    Livewire::test(GenerationDashboard::class)
+    Livewire::test(GenerationHistory::class)
         ->call('retry', $failed->id)
         ->assertDispatched('ui-toast', type: 'success', title: 'Génération relancée.')
         ->call('cancel', $waiting->id)
-        ->assertDispatched('ui-toast', type: 'success', title: 'Génération arrêtée.');
+        ->assertDispatched('ui-toast', type: 'success', title: 'Génération arrêtée.')
+        ->call('cancel', $running->id)
+        ->assertDispatched('ui-toast', type: 'success', title: 'La génération s\'arrêtera après l\'étape en cours.');
 
     expect($failed->refresh()->status)->toBe(BlogGenerationStatus::Queued)
-        ->and($waiting->refresh()->status)->toBe(BlogGenerationStatus::Cancelled);
+        ->and($waiting->refresh()->status)->toBe(BlogGenerationStatus::Cancelled)
+        ->and($waiting->cancel_requested_by)->toBe($user->id)
+        ->and($waiting->cancel_requested_at)->not->toBeNull()
+        ->and($running->refresh()->status)->toBe(BlogGenerationStatus::Running)
+        ->and($running->cancel_requested_by)->toBe($user->id);
 });
 
-it('says a running generation will stop after its current step', function () {
-    $running = BlogGeneration::factory()->running()->create();
-    Log::spy();
+it('says so when the history is empty, in a single query', function () {
+    DB::enableQueryLog();
+    $history = Livewire::test(GenerationHistory::class);
 
-    Livewire::test(GenerationDashboard::class)
-        ->call('cancel', $running->id)
-        ->assertDispatched('ui-toast', type: 'success', title: 'La génération s\'arrêtera après l\'étape en cours.')
-        ->call('retry', $running->id)
-        ->assertDispatched('ui-toast', type: 'error', title: 'Seule une génération en échec peut être relancée.');
-
-    expect($running->refresh()->status)->toBe(BlogGenerationStatus::Running)
-        ->and($running->cancel_requested_at)->not->toBeNull();
+    expect(count(DB::getQueryLog()))->toBe(1);
+    $history->assertSee('Aucune génération pour le moment.');
 });
 
-it('shows a load failure instead of the dashboard when the data cannot be read', function () {
+it('shows a load failure instead of the history when the data cannot be read', function () {
     Log::spy();
-
-    // Panne simulee : la table des generations disparait (la transaction du test la restaure).
     Schema::rename('blog_generations', 'blog_generations_unavailable');
 
-    Livewire::test(GenerationDashboard::class)
-        ->assertSee('Le chargement de la génération par IA a échoué.')
-        ->assertDontSee('Lancer une génération');
+    Livewire::test(GenerationHistory::class)->assertSee('Le chargement de l\'historique a échoué.');
 
-    Log::shouldHaveReceived('error')->withArgs(fn (string $message): bool => str_contains($message, 'admin blog generation dashboard'));
+    Log::shouldHaveReceived('error')->withArgs(fn (string $message): bool => str_contains($message, 'admin blog generation history'));
 
     Schema::rename('blog_generations_unavailable', 'blog_generations');
 });
 
-it('loads the dashboard in 6 queries, plus 1 for the progress card, whatever the number of generations', function () {
-    BlogGeneration::factory()->count(40)->completed()->create()->each(function (BlogGeneration $generation): void {
-        BlogGenerationStep::factory()->for($generation, 'generation')->named('topic', 1)->completed()->create();
-        BlogGenerationStep::factory()->for($generation, 'generation')->named('writing', 2)->completed()->create();
-    });
+// --- Page d'une generation ------------------------------------------------------------------------
 
-    DB::enableQueryLog();
-    Livewire::test(GenerationDashboard::class);
-
-    // Reglages, depense du mois, worker, nombre de generations, page du journal, cumul des etapes ; plus la
-    // carte de suivi (une requete : aucune generation active).
-    expect(count(DB::getQueryLog()))->toBe(7);
-});
-
-// --- Carte de suivi en direct ---------------------------------------------------------------------
-
-it('shows nothing, and checks rarely, while no generation is active', function () {
-    BlogGeneration::factory()->completed()->create();
-
-    DB::enableQueryLog();
-    $progress = Livewire::test(GenerationProgress::class);
-
-    expect(count(DB::getQueryLog()))->toBe(1);
-    $progress->assertSeeHtml('data-generation-progress="idle"')
-        ->assertSeeHtml('wire:poll.15s')
-        ->assertDontSeeHtml('wire:poll.2s')
-        ->assertDontSee('Génération en cours');
-});
-
-it('says at once that a requested generation is starting', function () {
-    BlogGeneration::factory()->create(['topic_hint' => 'Labels on Etsy']);
-
-    Livewire::test(GenerationProgress::class)
-        ->assertSee('Génération demandée, démarrage…')
-        ->assertSee('Labels on Etsy')
-        ->assertSeeHtml('wire:poll.2s')
-        ->assertSeeHtml('data-generation-progress="queued"');
-});
-
-it('follows the running generation step by step, in 2 queries', function () {
-    $generation = BlogGeneration::factory()->running()->create(['cost_microusd' => 12_500]);
-    BlogGenerationStep::factory()->for($generation, 'generation')->named('topic', 1)->completed(12_500)->create();
-    BlogGenerationStep::factory()->for($generation, 'generation')->named('research', 2)->running()->create();
-
-    DB::enableQueryLog();
-    $progress = Livewire::test(GenerationProgress::class);
-
-    expect(count(DB::getQueryLog()))->toBe(2);
-    $progress->assertSee('Génération en cours')
-        ->assertSee('Étape 2 sur 8')
-        ->assertSee('Recherche')
-        ->assertSee('0,01 $')
-        ->assertSeeInOrder(['Choix du sujet', 'Recherche', 'Rédaction', 'Assemblage du brouillon'])
-        ->assertSeeHtml('data-step="research" data-step-status="running"')
-        ->assertSeeHtml('data-step="writing" data-step-status="pending"');
-});
-
-it('tells the page when the generation it shows changes state', function () {
-    $generation = BlogGeneration::factory()->running()->create();
-
-    $progress = Livewire::test(GenerationProgress::class)->assertNotDispatched('blog-generation-progressed');
-
-    $progress->call('refreshProgress')->assertNotDispatched('blog-generation-progressed');
-
-    $generation->update(['status' => BlogGenerationStatus::Completed, 'locked_until' => null, 'finished_at' => now()]);
-
-    $progress->call('refreshProgress')
-        ->assertDispatched('blog-generation-progressed')
-        ->assertSeeHtml('data-generation-progress="idle"');
-});
-
-// --- Detail d'une generation ----------------------------------------------------------------------
-
-it('details a generation step by step, in 2 queries', function () {
+it('shows a generation step by step, with its model, tokens and cost under each step, in 2 queries', function () {
+    $user = User::factory()->create(['name' => 'Alex Martin']);
     $generation = BlogGeneration::factory()->failed()->create([
         'topic_hint' => 'Labels on Etsy',
         'instructions' => 'Short.',
+        'requested_by' => $user->id,
+        'payload' => ['images' => ['mode' => 'stock', 'max' => 2]],
         'cost_microusd' => 42_500,
         'last_error' => 'Provider is down.',
     ]);
-    BlogGenerationStep::factory()->for($generation, 'generation')->named('topic', 1)->completed(30_000)->create(['model' => 'anthropic/claude-sonnet-5.5', 'web_searches' => 2]);
-    BlogGenerationStep::factory()->for($generation, 'generation')->named('research', 2)->failed(attempt: 3)->create(['error' => 'Provider is down.', 'cost_microusd' => 12_500, 'cost_is_estimated' => true, 'duration_ms' => 4_000]);
+    BlogGenerationStep::factory()->for($generation, 'generation')->named('topic', 1)->completed(30_000)->create([
+        'model' => 'anthropic/claude-sonnet-5.5', 'web_searches' => 2, 'summary' => 'Sellers keep asking about labels.',
+    ]);
+    BlogGenerationStep::factory()->for($generation, 'generation')->named('research', 2)->failed(attempt: 3)->create([
+        'error' => 'Provider is down.', 'input_tokens' => 800, 'output_tokens' => 100, 'cost_microusd' => 12_500, 'cost_is_estimated' => true, 'duration_ms' => 4_000,
+    ]);
 
     DB::enableQueryLog();
     $detail = Livewire::test(GenerationDetail::class, ['generation' => $generation->id]);
 
+    // La generation avec le nom de qui l'a lancee et de qui l'a arretee (jointures), puis ses etapes.
     expect(count(DB::getQueryLog()))->toBe(2);
-    $detail->assertSee('Génération n° '.$generation->id)
+
+    $detail->assertSee('Génération n° '.$generation->id.'.')
+        ->assertSee('Lancée par Alex Martin le '.$generation->created_at->format('d/m/Y à H:i').' (UTC)')
         ->assertSee('Labels on Etsy')
         ->assertSee('Short.')
         ->assertSee('Échec à l\'étape « Recherche »')
         ->assertSee('Vous pouvez relancer la génération. Elle reprendra à l\'étape qui a échoué')
         ->assertSee('contactez l\'assistance technique')
         ->assertDontSee('Provider is down.')
-        ->assertDontSee('Détail technique')
         ->assertSee('0,04 $')
-        ->assertSee('anthropic/claude-sonnet-5.5')
-        ->assertSee('1 200 jetons lus, 400 produits')
+        ->assertSee('Banque d\'images, 2 au plus')
+        // Le modele sous son nom commercial, les tokens par sens avec le mot « tokens », plus aucune phrase « jetons lus ».
+        ->assertSee('Claude Sonnet 5.5')
+        ->assertDontSee('anthropic/claude-sonnet-5.5')
+        ->assertSee('1 200 tokens envoyés au modèle, 400 tokens écrits par le modèle')
+        ->assertSee('2 000 tokens envoyés au modèle, 500 tokens écrits par le modèle')
+        ->assertDontSee('jetons')
         ->assertSee('2 recherches web')
         ->assertSee('essai 3')
-        ->assertSee('coût estimé')
+        ->assertSee('estimé')
         ->assertSee('1 étape terminée sur 8')
         ->assertSee('Relancer')
+        // Le compte rendu de l'IA, et celui de l'etape.
+        ->assertSee('Compte rendu de l\'IA')
+        ->assertSee('Pourquoi ce sujet')
+        ->assertSee('Sellers keep asking about labels.')
+        ->assertDontSee('Déclenchement')
+        ->assertDontSeeHtml('ui-description-list')
         ->assertDontSeeHtml('wire:poll');
+});
+
+it('says who stopped a generation, when, and after which step', function () {
+    $user = User::factory()->create(['name' => 'Alex Martin']);
+    actingAs($user);
+    $generation = BlogGeneration::factory()->running()->create(['requested_by' => $user->id]);
+    BlogGenerationStep::factory()->for($generation, 'generation')->named('topic', 1)->completed()->create();
+    BlogGenerationStep::factory()->for($generation, 'generation')->named('research', 2)->completed()->create();
+
+    $detail = Livewire::test(GenerationDetail::class, ['generation' => $generation->id])
+        ->assertSeeHtml('wire:poll.2s')
+        ->assertSee('Étape 3 sur 8')
+        ->assertSee('Arrêter')
+        ->call('cancel')
+        ->assertDispatched('ui-toast', type: 'success')
+        ->assertSee('Arrêt demandé');
+
+    $generation->refresh();
+
+    expect($generation->cancel_requested_at)->not->toBeNull()
+        ->and($generation->cancel_requested_by)->toBe($user->id);
+
+    // Le worker honore la demande entre deux etapes : la generation est alors arretee.
+    $generation->update(['status' => BlogGenerationStatus::Cancelled, 'outcome_reason' => BlogGenerationOutcomeReason::CancelledByUser, 'finished_at' => now(), 'locked_until' => null]);
+
+    $detail->call('$refresh')
+        ->assertSee('Arrêtée par Alex Martin le '.$generation->cancel_requested_at->format('d/m/Y à H:i').' (UTC), après l\'étape « Recherche ».')
+        ->assertSee('Aucun article n\'a été créé.')
+        ->assertDontSee('Arrêtée au back-office')
+        ->assertDontSeeHtml('wire:poll');
+});
+
+it('says a generation was stopped before its first step, and stays sober when nobody is known', function () {
+    $waiting = BlogGeneration::factory()->cancelled()->create(['cancel_requested_at' => now()]);
+
+    Livewire::test(GenerationDetail::class, ['generation' => $waiting->id])
+        ->assertSee('Arrêtée le '.$waiting->cancel_requested_at->format('d/m/Y à H:i').' (UTC), avant sa première étape.')
+        ->assertSee('Lancée à la main le');
+
+    $scheduled = BlogGeneration::factory()->scheduled()->completed()->create();
+
+    Livewire::test(GenerationDetail::class, ['generation' => $scheduled->id])
+        ->assertSee('Lancée automatiquement le')
+        // Une generation anterieure au choix des images par generation ne pretend rien.
+        ->assertDontSee('Banque d\'images');
 });
 
 it('says a generation failed outside of any step, without a technical message', function () {
@@ -346,29 +531,17 @@ it('says where the credit ran out and what to do about it', function () {
         ->assertDontSee('Simulated provider failure.');
 });
 
-it('restarts a failed generation from its detail', function () {
+it('restarts a failed generation from its page', function () {
     $generation = BlogGeneration::factory()->failed()->create();
 
     Livewire::test(GenerationDetail::class, ['generation' => $generation->id])
         ->call('retry')
         ->assertDispatched('ui-toast', type: 'success', title: 'Génération relancée.')
         ->assertSee('En attente')
+        ->assertSee('Génération demandée, démarrage dans quelques secondes.')
         ->assertSeeHtml('wire:poll.2s');
 
     expect($generation->refresh()->status)->toBe(BlogGenerationStatus::Queued);
-});
-
-it('asks a running generation to stop from its detail, and refreshes while it runs', function () {
-    $generation = BlogGeneration::factory()->running()->create();
-
-    Livewire::test(GenerationDetail::class, ['generation' => $generation->id])
-        ->assertSeeHtml('wire:poll.2s')
-        ->assertSee('Arrêter')
-        ->call('cancel')
-        ->assertDispatched('ui-toast', type: 'success')
-        ->assertSee('Arrêt demandé');
-
-    expect($generation->refresh()->cancel_requested_at)->not->toBeNull();
 });
 
 it('says a generation cannot be found', function () {
@@ -379,7 +552,10 @@ it('says a generation cannot be found', function () {
 // --- Reglages --------------------------------------------------------------------------------------
 
 it('opens the settings on their current values, in a single query', function () {
-    BlogAi::saveSettings(['enabled' => true, 'period_count' => 2, 'period_unit' => 'month', 'monthly_spend_cap_cents' => 2_550, 'notification_email' => 'owner@example.com']);
+    BlogAi::saveSettings([
+        'enabled' => true, 'period_count' => 2, 'period_unit' => 'month', 'monthly_spend_cap_cents' => 2_550,
+        'priority_topics' => ['Etsy', 'Amazon'], 'notification_email' => 'owner@example.com',
+    ]);
 
     DB::enableQueryLog();
     $settings = Livewire::test(GenerationSettings::class);
@@ -389,10 +565,27 @@ it('opens the settings on their current values, in a single query', function () 
         ->assertSet('periodCount', '2')
         ->assertSet('periodUnit', 'month')
         ->assertSet('monthlySpendCap', '25.50')
+        ->assertSet('priorityTopics', ['Etsy', 'Amazon'])
         ->assertSet('notificationEmail', 'owner@example.com')
         ->assertSet('models.writing', config('blog.ai.defaults.models.writing'))
         ->assertSee('En français')
-        ->assertSeeHtml('<option value="anthropic/claude-sonnet-5.5"></option>');
+        // Un modele se choisit dans une liste, sous son nom commercial, avec son prix indicatif.
+        ->assertSee('Claude Sonnet 5.5 (Anthropic) · 2 $ / 10 $')
+        ->assertSee('Claude Haiku 5.5 (Anthropic) · 0,10 $ / 0,50 $')
+        ->assertSee('Nano Banana 2 (Google)')
+        ->assertDontSeeHtml('<datalist')
+        // Ce qui relève du developpeur ne s'affiche pas a la personne qui regle.
+        ->assertDontSee('se règle dans la configuration du site')
+        ->assertDontSee('à raison d\'un sujet par ligne');
+});
+
+it('offers only image models for the image step, and only text models for the others', function () {
+    $html = Livewire::test(GenerationSettings::class)->html();
+
+    $select = fn (string $step): string => (string) str($html)->after('id="ai-model-'.$step.'"')->before('</select>');
+
+    expect($select('image'))->toContain('google/gemini-3.1-flash-image')->toContain('openai/gpt-5.4-image-2')->not->toContain('anthropic/claude-sonnet-5.5')
+        ->and($select('writing'))->toContain('anthropic/claude-sonnet-5.5')->not->toContain('google/gemini-3.1-flash-image');
 });
 
 it('saves the settings', function () {
@@ -403,14 +596,18 @@ it('saves the settings', function () {
         ->set('articlesPerRun', '2')
         ->set('pendingDraftsCap', '5')
         ->set('monthlySpendCap', '12.5')
-        ->set('priorityTopics', "Etsy\nAmazon")
+        ->set('priorityTopics', ['Etsy', ' Amazon ', 'etsy', ''])
+        ->set('avoidedTopics', ['Crypto'])
         ->set('models.writing', 'openai/gpt-6.1-terra')
+        ->set('models.image', 'openai/gpt-5.4-image-2')
         ->set('imageMode', 'generated')
         ->set('maxImages', '3')
         ->set('notificationEmail', 'owner@example.com')
         ->set('transparencyNotice.fr', 'Article rédigé avec l\'aide d\'une IA.')
         ->call('save')
         ->assertHasNoErrors()
+        // La liste revient telle qu'elle est enregistree : sans vide ni doublon.
+        ->assertSet('priorityTopics', ['Etsy', 'Amazon'])
         ->assertDispatched('ui-toast', type: 'success', title: 'Réglages enregistrés.');
 
     $saved = app(BlogAiSettingsService::class)->current();
@@ -421,8 +618,10 @@ it('saves the settings', function () {
         ->and($saved->articlesPerRun)->toBe(2)
         ->and($saved->pendingDraftsCap)->toBe(5)
         ->and($saved->monthlySpendCapCents)->toBe(1_250)
-        ->and($saved->priorityTopics)->toBe("Etsy\nAmazon")
+        ->and($saved->priorityTopics)->toBe(['Etsy', 'Amazon'])
+        ->and($saved->avoidedTopics)->toBe(['Crypto'])
         ->and($saved->modelFor('writing'))->toBe('openai/gpt-6.1-terra')
+        ->and($saved->modelFor('image'))->toBe('openai/gpt-5.4-image-2')
         ->and($saved->modelFor('topic'))->toBe(config('blog.ai.defaults.models.topic'))
         ->and($saved->imageMode)->toBe(BlogAiImageMode::Generated)
         ->and($saved->maxImages)->toBe(3)
@@ -437,19 +636,32 @@ it('refuses settings that make no sense, each with its own message', function ()
         ->set('articlesPerRun', '11')
         ->set('pendingDraftsCap', '')
         ->set('monthlySpendCap', '-1')
-        ->set('models.writing', 'a model with spaces')
+        // La liste des modeles est fermee : ni identifiant libre, ni modele de texte pour l'etape des images.
+        ->set('models.writing', 'someone/unknown-model')
+        ->set('models.image', 'anthropic/claude-sonnet-5.5')
+        ->set('priorityTopics', [str_repeat('a', 121)])
         ->set('imageMode', 'hologram')
         ->set('maxImages', '4')
         ->set('notificationEmail', 'not-an-email')
         ->call('save')
-        ->assertHasErrors(['periodCount', 'periodUnit', 'articlesPerRun', 'pendingDraftsCap', 'monthlySpendCap', 'models.writing', 'imageMode', 'maxImages', 'notificationEmail'])
+        ->assertHasErrors(['periodCount', 'periodUnit', 'articlesPerRun', 'pendingDraftsCap', 'monthlySpendCap', 'models.writing', 'models.image', 'priorityTopics.0', 'imageMode', 'maxImages', 'notificationEmail'])
         ->assertSee('La période est d\'au moins 1.')
         ->assertSee('Un lot compte 10 articles au plus.')
         ->assertSee('Le plafond de dépense ne peut pas être négatif.')
-        ->assertSee('sans espace')
-        ->assertSee('Un article a 3 images au plus.')
+        ->assertSee('Choisissez un modèle dans la liste.')
+        ->assertSee('Un sujet ne doit pas dépasser 120 caractères.')
         ->assertSee('Cette adresse e-mail n\'est pas valide.')
         ->assertNotDispatched('ui-toast');
 
     expect(app(BlogAiSettingsService::class)->current()->enabled)->toBeFalse();
+});
+
+it('keeps a saved model that left the list visible, so that another one gets chosen', function () {
+    Setting::query()->updateOrCreate(['key' => BlogAiSettingsService::KEY], ['value' => json_encode(['models' => ['writing' => 'old/retired-model']])]);
+
+    Livewire::test(GenerationSettings::class)
+        ->assertSet('models.writing', 'old/retired-model')
+        ->assertSee('old/retired-model (retiré de la liste)')
+        ->call('save')
+        ->assertHasErrors(['models.writing' => 'in']);
 });

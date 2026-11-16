@@ -19,25 +19,13 @@ final readonly class BlogAiSettingsService
     /**
      * @param  array<string, mixed>  $defaults
      * @param  list<string>  $locales
-     * @param  array<string, mixed>  $models  modeles proposes au back-office (config/blog.php), par identifiant
      */
     public function __construct(
         private SettingRepository $settings,
         private array $defaults,
         private string $fallbackEmail,
         private array $locales,
-        private array $models,
     ) {}
-
-    /**
-     * Les identifiants de modele proposes a la saisie (tout autre identifiant reste accepte).
-     *
-     * @return list<string>
-     */
-    public function knownModels(): array
-    {
-        return array_map(strval(...), array_keys($this->models));
-    }
 
     public function current(): BlogAiSettings
     {

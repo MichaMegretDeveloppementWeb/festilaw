@@ -28,7 +28,7 @@ enum BlogGenerationOutcomeReason: string
             self::PendingDraftsCapReached => __('Trop de brouillons générés en attente de relecture'),
             self::CreditExhausted => __('Crédit épuisé chez le fournisseur d\'IA'),
             self::StepFailed => __('Une étape a échoué après plusieurs essais'),
-            self::CancelledByUser => __('Arrêtée au back-office'),
+            self::CancelledByUser => __('Arrêtée avant la fin'),
         };
     }
 }

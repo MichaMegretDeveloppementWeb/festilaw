@@ -32,5 +32,8 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- Generation par IA : les tests ne dependent ni de la cle ni du pipeline du fichier .env local. -->
+        <env name="OPENROUTER_API_KEY" value=""/>
+        <env name="BLOG_AI_PIPELINE" value="simulated"/>
     </php>
 </phpunit>

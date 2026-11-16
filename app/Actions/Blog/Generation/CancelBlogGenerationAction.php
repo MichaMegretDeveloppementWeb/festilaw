@@ -13,14 +13,15 @@ use Carbon\CarbonImmutable;
 /**
  * Arrete une generation. Encore en attente, elle est arretee tout de suite. Deja prise par un worker, elle
  * recoit une demande d'arret : le worker finit l'etape en cours (un appel deja parti est de toute facon
- * facture), puis s'arrete avant la suivante.
+ * facture), puis s'arrete avant la suivante. Dans les deux cas, la generation garde qui l'a arretee et
+ * quand : son ecran le dit.
  */
 final readonly class CancelBlogGenerationAction
 {
     public function __construct(private NotifyFinishedBlogGenerationBatchAction $notifyBatch) {}
 
     /** @return bool vrai si la generation est arretee des maintenant, faux si elle s'arretera apres l'etape en cours */
-    public function execute(int $generationId): bool
+    public function execute(int $generationId, ?int $cancelledBy = null): bool
     {
         $generation = BlogGeneration::query()->find($generationId, ['id', 'status', 'batch_uuid']);
 
@@ -43,6 +44,8 @@ final readonly class CancelBlogGenerationAction
                 'status' => BlogGenerationStatus::Cancelled->value,
                 'outcome_reason' => BlogGenerationOutcomeReason::CancelledByUser->value,
                 'finished_at' => $now,
+                'cancel_requested_at' => $now,
+                'cancel_requested_by' => $cancelledBy,
             ]) === 1;
 
         if ($stoppedNow) {
@@ -51,7 +54,7 @@ final readonly class CancelBlogGenerationAction
             return true;
         }
 
-        BlogGeneration::query()->whereKey($generationId)->update(['cancel_requested_at' => $now]);
+        BlogGeneration::query()->whereKey($generationId)->update(['cancel_requested_at' => $now, 'cancel_requested_by' => $cancelledBy]);
 
         return false;
     }

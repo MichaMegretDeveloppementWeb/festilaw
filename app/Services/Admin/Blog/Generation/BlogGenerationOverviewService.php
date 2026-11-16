@@ -16,15 +16,22 @@ use App\Services\Blog\Generation\Simulation\SimulatedGenerationPipeline;
 use Carbon\CarbonImmutable;
 
 /**
- * Le haut de l'ecran « Generation IA ».
+ * La vue d'ensemble de la generation par IA.
  *
- * Plan de requetes (verifie par un test de budget) : 3.
+ * Plan de requetes (verifie par un test de budget) : 6.
  *   1. reglages
  *   2. depense du mois
  *   3. inscription du dernier worker
+ *   4. brouillons generes qui attendent une relecture
+ *   5. dernieres generations
+ *   6. etape en echec de ces generations
+ * Sans aucune generation : 5 (la sixieme n'a rien a lire).
  */
 final readonly class BlogGenerationOverviewService
 {
+    /** Nombre de generations montrees sur la vue d'ensemble ; le reste est dans l'historique. */
+    public const LATEST = 5;
+
     /**
      * Le planificateur relance un worker chaque minute : passe ce delai sans nouvelle inscription, plus
      * aucun n'est a l'ecoute.
@@ -35,6 +42,7 @@ final readonly class BlogGenerationOverviewService
         private BlogAiSettingsService $settings,
         private BlogGenerationBudget $budget,
         private BlogGenerationWorkerRegistry $workers,
+        private BlogGenerationJournalService $journal,
         private BlogAiCostFormatter $costs,
         private GenerationPipeline $pipeline,
         private BlogGenerationPresenter $presenter,
@@ -55,6 +63,8 @@ final readonly class BlogGenerationOverviewService
             cap: $this->costs->dollars($cap),
             spentPercent: $cap > 0 ? min(100, (int) round(100 * $spent / $cap)) : 100,
             capReached: $spent >= $cap,
+            pendingDrafts: $this->budget->pendingDrafts(),
+            latest: $this->journal->latest(self::LATEST),
             apiKeyPresent: filled($this->apiKey),
             workerListening: $workerStartedAt !== null
                 && CarbonImmutable::now()->getTimestamp() - $workerStartedAt->getTimestamp() <= self::WORKER_SILENCE_SECONDS,

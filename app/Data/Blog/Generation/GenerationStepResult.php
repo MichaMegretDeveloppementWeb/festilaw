@@ -10,6 +10,9 @@ use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
  * Ce qu'une etape rend : ce qu'elle a produit, ce qu'elle a consomme, et si la generation continue. Une
  * etape peut arreter la generation sans que ce soit une erreur (aucun sujet pertinent, sujet deja traite) :
  * la generation est alors « abandonnee » avec cette raison, et rien n'est reessaye.
+ *
+ * `summary` : une ou deux phrases en francais pour la personne qui relit (pourquoi ce sujet, ce qui a ete
+ * consulte, comment l'article a ete traite). Affichees sur l'ecran de la generation, jamais techniques.
  */
 final readonly class GenerationStepResult
 {
@@ -18,18 +21,19 @@ final readonly class GenerationStepResult
         public array $output,
         public GenerationUsage $usage,
         public ?BlogGenerationOutcomeReason $stopReason,
+        public ?string $summary = null,
     ) {}
 
     /** @param  array<string, mixed>  $output */
-    public static function continue(array $output = [], ?GenerationUsage $usage = null): self
+    public static function continue(array $output = [], ?GenerationUsage $usage = null, ?string $summary = null): self
     {
-        return new self($output, $usage ?? GenerationUsage::none(), null);
+        return new self($output, $usage ?? GenerationUsage::none(), null, $summary);
     }
 
     /** @param  array<string, mixed>  $output */
-    public static function stop(BlogGenerationOutcomeReason $reason, array $output = [], ?GenerationUsage $usage = null): self
+    public static function stop(BlogGenerationOutcomeReason $reason, array $output = [], ?GenerationUsage $usage = null, ?string $summary = null): self
     {
-        return new self($output, $usage ?? GenerationUsage::none(), $reason);
+        return new self($output, $usage ?? GenerationUsage::none(), $reason, $summary);
     }
 
     public function stopsGeneration(): bool

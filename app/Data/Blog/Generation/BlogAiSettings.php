@@ -16,7 +16,14 @@ final readonly class BlogAiSettings
 {
     public const MAX_IMAGES = 3;
 
+    /** Nombre de sujets qu'une liste (a privilegier, a eviter) peut porter, et longueur d'un sujet. */
+    public const MAX_TOPICS = 40;
+
+    public const TOPIC_MAX_LENGTH = 120;
+
     /**
+     * @param  list<string>  $priorityTopics  sujets et mots-cles que l'IA doit privilegier
+     * @param  list<string>  $avoidedTopics  sujets qu'elle doit laisser de cote
      * @param  array<string, string>  $models  identifiant de modele par etape (sujet, recherche, redaction...)
      * @param  array<string, string>  $transparencyNotice  mention de transparence par langue (vide = aucune)
      */
@@ -27,8 +34,8 @@ final readonly class BlogAiSettings
         public int $articlesPerRun,
         public int $pendingDraftsCap,
         public int $monthlySpendCapCents,
-        public string $priorityTopics,
-        public string $avoidedTopics,
+        public array $priorityTopics,
+        public array $avoidedTopics,
         public array $models,
         public BlogAiImageMode $imageMode,
         public int $maxImages,
@@ -65,14 +72,36 @@ final readonly class BlogAiSettings
             articlesPerRun: max(1, (int) $value('articles_per_run')),
             pendingDraftsCap: max(1, (int) $value('pending_drafts_cap')),
             monthlySpendCapCents: max(0, (int) $value('monthly_spend_cap_cents')),
-            priorityTopics: trim((string) $value('priority_topics')),
-            avoidedTopics: trim((string) $value('avoided_topics')),
+            priorityTopics: self::topics($value('priority_topics')),
+            avoidedTopics: self::topics($value('avoided_topics')),
             models: $models,
             imageMode: BlogAiImageMode::tryFrom((string) $value('image_mode')) ?? BlogAiImageMode::Stock,
             maxImages: min(self::MAX_IMAGES, max(1, (int) $value('max_images'))),
             notificationEmail: $email !== '' ? $email : $fallbackEmail,
             transparencyNotice: $notice,
         );
+    }
+
+    /**
+     * Une liste de sujets propre : sans vide ni doublon, bornee en nombre et en longueur. Accepte aussi
+     * l'ancienne forme enregistree, un texte avec un sujet par ligne.
+     *
+     * @return list<string>
+     */
+    public static function topics(mixed $stored): array
+    {
+        $items = is_string($stored) ? (preg_split('/\R/u', $stored) ?: []) : (is_array($stored) ? $stored : []);
+        $topics = [];
+
+        foreach ($items as $item) {
+            $topic = is_string($item) ? mb_substr(trim(preg_replace('/\s+/u', ' ', $item) ?? ''), 0, self::TOPIC_MAX_LENGTH) : '';
+
+            if ($topic !== '' && ! in_array(mb_strtolower($topic), array_map(mb_strtolower(...), $topics), true)) {
+                $topics[] = $topic;
+            }
+        }
+
+        return array_slice($topics, 0, self::MAX_TOPICS);
     }
 
     /** Plafond de depense du mois, dans l'unite des couts enregistres (millioniemes de dollar). */

@@ -29,6 +29,20 @@ final readonly class SimulatedGenerationStep implements GenerationStep
         'images' => 'image',
     ];
 
+    /**
+     * Compte rendu factice de chaque etape, pour que l'ecran d'une generation se regarde tel qu'il sera
+     * avec de vraies etapes. Chaque phrase dit qu'elle est factice.
+     */
+    private const SUMMARY = [
+        'topic' => 'Compte rendu factice. J\'ai retenu ce sujet parce qu\'il revient souvent dans les questions des vendeurs et qu\'aucun article du blog ne le traite encore.',
+        'research' => 'Compte rendu factice. J\'ai consulté le texte du règlement sur EUR-Lex et les pages d\'aide de deux places de marché.',
+        'writing' => 'Compte rendu factice. L\'article part d\'un cas concret, puis explique la règle et ce que le vendeur doit préparer.',
+        'verification' => 'Compte rendu factice. Chaque affirmation a été rapprochée de sa source, et deux phrases sans source ont été retirées.',
+        'translation_fr' => 'Compte rendu factice. Traduction en français, avec les termes du règlement dans leur version officielle.',
+        'translation_es' => 'Compte rendu factice. Traduction en espagnol, avec les termes du règlement dans leur version officielle.',
+        'images' => 'Compte rendu factice. Une image principale a été choisie pour illustrer le sujet.',
+    ];
+
     public function __construct(
         private string $key,
         private int $seconds,
@@ -70,6 +84,7 @@ final readonly class SimulatedGenerationStep implements GenerationStep
                 costMicrousd: $this->costMicrousd,
                 costIsEstimated: true,
             ),
+            self::SUMMARY[$this->key] ?? null,
         );
     }
 }

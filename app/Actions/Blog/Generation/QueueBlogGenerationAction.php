@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Blog\Generation;
 
 use App\Contracts\Blog\Generation\GenerationPipeline;
+use App\Data\Blog\Generation\GenerationImageOptions;
 use App\Data\Blog\Generation\QueueBlogGenerationData;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogGenerationTrigger;
@@ -51,7 +52,11 @@ final readonly class QueueBlogGenerationAction
             'batch_uuid' => (string) Str::uuid(),
             'topic_hint' => $topicHint !== '' ? $topicHint : null,
             'instructions' => $instructions !== '' ? $instructions : null,
-            'payload' => $data->payload !== [] ? $data->payload : null,
+            // Les images sont celles de CETTE generation : le pipeline ne lira pas les reglages du moment.
+            'payload' => [
+                ...$data->payload,
+                GenerationImageOptions::PAYLOAD_KEY => ($data->images ?? GenerationImageOptions::fromSettings($settings))->toPayload(),
+            ],
         ])->id;
     }
 }

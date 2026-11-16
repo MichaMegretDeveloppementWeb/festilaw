@@ -379,3 +379,21 @@ it('keeps the generation until the end while its worker is young enough', functi
 
     expect($generation->refresh()->status)->toBe(BlogGenerationStatus::Completed);
 });
+
+it('keeps the short account a step gives of its work, cut to a couple of sentences', function () {
+    FakeGenerationPipeline::bind()
+        ->on('topic', fn (): GenerationStepResult => GenerationStepResult::continue(['step' => 'topic'], null, '  Sellers keep asking about labels.  '))
+        ->on('writing', fn (): GenerationStepResult => GenerationStepResult::continue(['step' => 'writing'], null, str_repeat('a', 900)));
+    $generation = BlogGeneration::factory()->create();
+
+    generationWorkerPass();
+
+    $steps = $generation->steps()->get()->keyBy('step');
+
+    expect($steps['topic']->summary)->toBe('Sellers keep asking about labels.')
+        // Une ou deux phrases, pas un rapport : 600 caracteres, puis des points de suspension.
+        ->and($steps['writing']->summary)->toBe(str_repeat('a', 600).'...')
+        // Une etape qui ne dit rien ne laisse rien.
+        ->and($steps['assembly']->summary)->toBeNull()
+        ->and($generation->refresh()->status)->toBe(BlogGenerationStatus::Completed);
+});

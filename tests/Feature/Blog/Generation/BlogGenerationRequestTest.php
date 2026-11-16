@@ -5,8 +5,10 @@ use App\Actions\Blog\Generation\ProcessNextBlogGenerationAction;
 use App\Actions\Blog\Generation\QueueBlogGenerationAction;
 use App\Actions\Blog\Generation\RetryBlogGenerationAction;
 use App\Contracts\Blog\Generation\GenerationPipeline;
+use App\Data\Blog\Generation\GenerationImageOptions;
 use App\Data\Blog\Generation\GenerationStepResult;
 use App\Data\Blog\Generation\QueueBlogGenerationData;
+use App\Enums\Blog\Generation\BlogAiImageMode;
 use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogGenerationStepStatus;
@@ -180,7 +182,7 @@ it('still sends the message of a batch whose last waiting generation is stopped,
     Mail::assertSent(BlogGenerationBatchFinished::class, fn (BlogGenerationBatchFinished $mail): bool => count($mail->rows) === 2
         && $mail->rows[0]['succeeded'] === true
         && $mail->rows[0]['draftUrl'] === route('admin.blog.posts.edit', ['post' => $draft->id])
-        && $mail->rows[1]['outcome'] === 'Arrêtée au back-office'
+        && $mail->rows[1]['outcome'] === 'Arrêtée avant la fin'
         && $mail->rows[1]['url'] === route('admin.blog.generation.show', ['generation' => $waiting->id])
         && $mail->rows[1]['draftUrl'] === null
         && $mail->summary() === 'Sur 2 générations, 1 a réussi et 1 n\'a pas donné d\'article.');
@@ -291,4 +293,39 @@ it('renders the message of a finished batch: how many succeeded, where the other
 
     // Tout a reussi : aucune invitation a relancer.
     expect($message([$succeeded]))->toContain('Ouvrir les articles')->not->toContain('assistance technique');
+});
+
+it('gives a requested generation its own images, or the default ones of the settings', function () {
+    BlogAi::saveSettings(['image_mode' => 'generated', 'max_images' => 3]);
+
+    $withDefaults = app(QueueBlogGenerationAction::class)->execute(new QueueBlogGenerationData);
+    $withItsOwn = app(QueueBlogGenerationAction::class)->execute(new QueueBlogGenerationData(
+        payload: ['post_id' => 7],
+        images: new GenerationImageOptions(BlogAiImageMode::None, 1),
+    ));
+
+    // Les reglages changent ensuite : les generations deja demandees gardent leurs images.
+    BlogAi::saveSettings(['image_mode' => 'stock', 'max_images' => 1]);
+
+    expect(BlogGeneration::query()->findOrFail($withDefaults)->payload)->toEqual(['images' => ['mode' => 'generated', 'max' => 3]])
+        ->and(BlogGeneration::query()->findOrFail($withItsOwn)->payload)->toEqual(['post_id' => 7, 'images' => ['mode' => 'none', 'max' => 1]]);
+});
+
+it('keeps who stopped a generation and when, whether it was waiting or already running', function () {
+    $user = User::factory()->create();
+    $waiting = BlogGeneration::factory()->create();
+    $running = BlogGeneration::factory()->running()->create();
+
+    expect(app(CancelBlogGenerationAction::class)->execute($waiting->id, $user->id))->toBeTrue()
+        ->and(app(CancelBlogGenerationAction::class)->execute($running->id, $user->id))->toBeFalse();
+
+    expect($waiting->refresh()->cancel_requested_by)->toBe($user->id)
+        ->and($waiting->cancel_requested_at)->not->toBeNull()
+        ->and($running->refresh()->cancel_requested_by)->toBe($user->id)
+        ->and($running->cancel_requested_at)->not->toBeNull();
+
+    // Le compte disparait : la generation reste, sans nom.
+    $user->delete();
+
+    expect($waiting->refresh()->cancel_requested_by)->toBeNull();
 });

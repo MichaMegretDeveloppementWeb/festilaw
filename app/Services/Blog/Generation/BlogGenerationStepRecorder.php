@@ -22,6 +22,9 @@ final readonly class BlogGenerationStepRecorder
     /** Longueur maximale du message d'erreur conserve sur la ligne (le detail complet est au journal). */
     private const ERROR_MAX_LENGTH = 1_000;
 
+    /** Longueur maximale du compte rendu d'une etape : une ou deux phrases, pas un rapport. */
+    private const SUMMARY_MAX_LENGTH = 600;
+
     /** Ouvre un essai : la ligne passe « en cours » et son compteur d'essais avance d'un. */
     public function begin(int $generationId, string $step, int $position): BlogGenerationStep
     {
@@ -47,6 +50,7 @@ final readonly class BlogGenerationStepRecorder
         $row->update([
             'status' => BlogGenerationStepStatus::Completed,
             'output' => $result->output,
+            'summary' => filled($result->summary) ? Str::limit(trim((string) $result->summary), self::SUMMARY_MAX_LENGTH) : null,
             'finished_at' => CarbonImmutable::now(),
             ...$this->consumption($row, $result->usage, $durationMs),
         ]);

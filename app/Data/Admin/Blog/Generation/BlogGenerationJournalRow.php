@@ -9,14 +9,12 @@ use App\Enums\Blog\Generation\BlogGenerationTrigger;
 use Carbon\CarbonImmutable;
 
 /**
- * Une ligne du journal des generations.
+ * Une generation dans une liste : l'historique, ou les dernieres de la vue d'ensemble. Ce qu'elle a consomme
+ * etape par etape (modeles, tokens) se lit sur son propre ecran.
  */
 final readonly class BlogGenerationJournalRow
 {
-    /**
-     * @param  string|null  $outcome  pourquoi il n'y a pas d'article, avec l'etape en cause (nul sinon)
-     * @param  list<string>  $models  modeles utilises par les etapes
-     */
+    /** @param  string|null  $outcome  pourquoi il n'y a pas d'article, avec l'etape en cause (nul sinon) */
     public function __construct(
         public int $id,
         public CarbonImmutable $createdAt,
@@ -24,9 +22,7 @@ final readonly class BlogGenerationJournalRow
         public BlogGenerationStatus $status,
         public ?string $outcome,
         public ?string $subject,
-        public array $models,
-        public int $inputTokens,
-        public int $outputTokens,
+        public ?int $postId,
         public string $cost,
         public ?string $duration,
     ) {}

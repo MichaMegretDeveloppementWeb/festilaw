@@ -48,6 +48,7 @@ class BlogGeneration extends Model
         'locked_until',
         'lock_owner',
         'cancel_requested_at',
+        'cancel_requested_by',
         'last_error',
     ];
 

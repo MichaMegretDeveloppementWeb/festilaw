@@ -35,6 +35,7 @@ class BlogGenerationStep extends Model
         'cost_is_estimated',
         'duration_ms',
         'error',
+        'summary',
         'output',
         'started_at',
         'finished_at',

@@ -6,6 +6,7 @@ namespace App\Actions\Blog\Generation;
 
 use App\Contracts\Blog\Generation\GenerationPipeline;
 use App\Data\Blog\Generation\BlogAiSettings;
+use App\Data\Blog\Generation\GenerationImageOptions;
 use App\Data\Blog\Generation\ScheduledGenerationPlan;
 use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
@@ -66,7 +67,7 @@ final readonly class PlanScheduledBlogGenerationsAction
         }
 
         if (! $dryRun) {
-            $this->launch($count);
+            $this->launch($count, $settings);
         }
 
         return ScheduledGenerationPlan::launched($count);
@@ -85,17 +86,20 @@ final readonly class PlanScheduledBlogGenerationsAction
             : $settings->periodUnit->addTo($lastLaunchedAt, $settings->periodCount)->startOfDay();
     }
 
-    private function launch(int $count): void
+    /** Chaque generation du lot porte les images par defaut des reglages, figees au lancement. */
+    private function launch(int $count, BlogAiSettings $settings): void
     {
         $batchUuid = (string) Str::uuid();
+        $payload = [GenerationImageOptions::PAYLOAD_KEY => GenerationImageOptions::fromSettings($settings)->toPayload()];
 
-        DB::transaction(static function () use ($count, $batchUuid): void {
+        DB::transaction(static function () use ($count, $batchUuid, $payload): void {
             for ($i = 0; $i < $count; $i++) {
                 BlogGeneration::query()->create([
                     'type' => BlogGenerationType::Article,
                     'trigger' => BlogGenerationTrigger::Scheduled,
                     'status' => BlogGenerationStatus::Queued,
                     'batch_uuid' => $batchUuid,
+                    'payload' => $payload,
                 ]);
             }
         });

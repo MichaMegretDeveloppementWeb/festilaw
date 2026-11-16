@@ -18,7 +18,7 @@ enum BlogAiImageMode: string
     {
         return match ($this) {
             self::Stock => __('Banque d\'images'),
-            self::Generated => __('Image générée par IA'),
+            self::Generated => __('Générées par IA'),
             self::None => __('Aucune image'),
         };
     }

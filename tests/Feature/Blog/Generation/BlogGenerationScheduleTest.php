@@ -2,7 +2,9 @@
 
 use App\Actions\Blog\Generation\PlanScheduledBlogGenerationsAction;
 use App\Contracts\Blog\Generation\GenerationPipeline;
+use App\Data\Blog\Generation\GenerationImageOptions;
 use App\Data\Blog\Generation\ScheduledGenerationPlan;
+use App\Enums\Blog\Generation\BlogAiImageMode;
 use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogGenerationTrigger;
@@ -198,4 +200,18 @@ it('fails loudly, without queueing, when the pipeline cannot be used', function 
     $this->artisan('festilaw:blog-generation-schedule')->assertFailed();
 
     expect(BlogGeneration::count())->toBe(0);
+});
+
+it('gives every generation of a batch the default images of the settings, fixed at launch', function () {
+    BlogAi::saveSettings(['enabled' => true, 'articles_per_run' => 2, 'image_mode' => 'none', 'max_images' => 2]);
+
+    planScheduledGenerations();
+
+    // Les reglages changent apres le lancement : le lot garde les images qu'il avait.
+    BlogAi::saveSettings(['enabled' => true, 'image_mode' => 'generated', 'max_images' => 3]);
+
+    $images = BlogGeneration::query()->get()->map(fn (BlogGeneration $generation): ?GenerationImageOptions => GenerationImageOptions::fromPayload($generation->payload));
+
+    expect($images)->toHaveCount(2)
+        ->and($images->every(fn (?GenerationImageOptions $options): bool => $options?->mode === BlogAiImageMode::None && $options->maxImages === 2))->toBeTrue();
 });

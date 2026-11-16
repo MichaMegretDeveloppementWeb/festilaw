@@ -79,7 +79,9 @@ it('saves the settings in a single row and reads them back', function () {
         ->and($settings->periodUnit)->toBe(BlogAiPeriodUnit::Month)
         ->and($settings->articlesPerRun)->toBe(3)
         ->and($settings->monthlySpendCapCents)->toBe(2_500)
-        ->and($settings->priorityTopics)->toBe("Etsy\nAmazon")
+        // L'ancienne forme (un texte, un sujet par ligne) se lit comme une liste.
+        ->and($settings->priorityTopics)->toBe(['Etsy', 'Amazon'])
+        ->and($settings->avoidedTopics)->toBe([])
         ->and($settings->modelFor('writing'))->toBe('openai/gpt-6.1-terra')
         ->and($settings->modelFor('topic'))->toBe(config('blog.ai.defaults.models.topic'))
         ->and($settings->imageMode)->toBe(BlogAiImageMode::None)
@@ -159,4 +161,17 @@ it('can make a simulated step fail, or find no topic, to try those paths by hand
         ->and($failing->steps->firstWhere('step', 'research')->attempt)->toBe(3)
         ->and($withoutTopic->refresh()->status)->toBe(BlogGenerationStatus::Abandoned)
         ->and($withoutTopic->outcome_reason)->toBe(BlogGenerationOutcomeReason::NoRelevantTopic);
+});
+
+it('reads topics saved under the former form, one topic per line, as a list', function () {
+    Setting::query()->updateOrCreate(
+        ['key' => BlogAiSettingsService::KEY],
+        ['value' => json_encode(['priority_topics' => "Etsy\nAmazon\n\nEtsy", 'avoided_topics' => ''])],
+    );
+
+    $settings = app(BlogAiSettingsService::class)->current();
+
+    expect($settings->priorityTopics)->toBe(['Etsy', 'Amazon'])
+        ->and($settings->avoidedTopics)->toBe([])
+        ->and($settings->toStored()['priority_topics'])->toBe(['Etsy', 'Amazon']);
 });
