@@ -5,6 +5,7 @@
 //  - l'onglet de langue actif et l'etat de chaque langue ;
 //  - l'alerte de modifications non enregistrees ;
 //  - la feuille des reglages sur telephone (sur ordinateur, le meme bloc est une colonne) ;
+//  - la saisie d'une source et la recherche d'un article a lier, chacune dans sa fenetre ;
 //  - l'apercu, ouvert dans un onglet des le clic pour ne pas etre bloque par le navigateur.
 // Le composant Livewire (App\Livewire\Admin\Blog\PostForm) garde l'etat des champs et fait les ecritures.
 
@@ -43,6 +44,10 @@ const blogPostForm = (config) => ({
     pendingImage: null,
     altForm: { id: null, en: '', fr: '', es: '', saving: false },
     linkForm: { locale: null, href: '', error: '' },
+    // Source en cours de saisie dans sa fenetre. `index` nul : une nouvelle source.
+    sourceForm: { index: null, label: '', url: '', errors: {}, saving: false },
+    // Ce qui est tape dans la recherche de la fenetre des articles a lier.
+    relatedQuery: '',
     // Change a chaque mouvement du curseur : la barre d'outils relit l'etat des boutons.
     pulse: 0,
     settingsOpen: false,
@@ -326,6 +331,53 @@ const blogPostForm = (config) => ({
         } finally {
             this.altForm.saving = false;
         }
+    },
+
+    // --- Sources et articles lies ------------------------------------------------------------
+
+    // Ouvre la fenetre d'une source : vide pour en ajouter une, remplie pour modifier celle du rang donne.
+    openSource(index = null, label = '', url = '') {
+        this.sourceForm = { index, label, url, errors: {}, saving: false };
+        this.$dispatch('ui-open-modal', 'post-source');
+    },
+
+    // Le serveur controle la source et rend ses refus par champ ; une liste vide veut dire qu'elle est
+    // entree dans la liste.
+    async saveSource() {
+        if (this.sourceForm.saving) {
+            return;
+        }
+
+        this.sourceForm.saving = true;
+
+        try {
+            const errors = await this.$wire.saveSource(this.sourceForm.index, this.sourceForm.label, this.sourceForm.url);
+
+            if (errors && Object.keys(errors).length > 0) {
+                this.sourceForm.errors = errors;
+
+                return;
+            }
+
+            this.dirty = true;
+            this.$dispatch('ui-close-modal', 'post-source');
+        } finally {
+            this.sourceForm.saving = false;
+        }
+    },
+
+    // Ouvre la fenetre des articles a lier tout de suite ; la liste arrive avec la reponse du serveur.
+    openRelated() {
+        this.relatedQuery = '';
+        this.$dispatch('ui-open-modal', 'post-related');
+        this.$wire.openRelatedPicker();
+    },
+
+    // Recherche dans les titres sans tenir compte de la casse ni des accents.
+    matchesQuery(label, query) {
+        const plain = (value) => value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+        return plain(label).includes(plain(query.trim()));
     },
 
     // --- Enregistrement ----------------------------------------------------------------------

@@ -66,6 +66,16 @@ class PostList extends Component
         }
     }
 
+    /** Retire les trois filtres d'un coup (la recherche, elle, a sa propre croix). */
+    public function clearFilters(): void
+    {
+        $this->status = '';
+        $this->category = '';
+        $this->origin = '';
+
+        $this->resetPage();
+    }
+
     /**
      * Clic sur un en-tete : ordre croissant, puis decroissant, puis retour au tri par defaut (les plus
      * recents d'abord).
@@ -131,7 +141,7 @@ class PostList extends Component
             $this->resetErrorBag('posts-load-failed');
         } catch (Throwable $e) {
             Log::error('Unexpected error while loading the admin blog post list.', ['exception' => $e]);
-            $this->addError('posts-load-failed', __('Le chargement des articles a échoué. Réessayez ; si le problème persiste, contactez-nous.'));
+            $this->addError('posts-load-failed', __('Le chargement des articles a échoué. Réessayez. Si le problème persiste, contactez l\'assistance technique.'));
         }
 
         return view('livewire.admin.blog.post-list', [

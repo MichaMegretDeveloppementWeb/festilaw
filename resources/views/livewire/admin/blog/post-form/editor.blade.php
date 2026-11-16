@@ -47,5 +47,5 @@
         <div wire:ignore data-blog-editor="{{ $locale }}"></div>
     </div>
 
-    <p class="mt-1.5 text-[12px] text-muted">{{ __('Entrée : nouveau paragraphe. Maj + Entrée : retour à la ligne dans le même paragraphe.') }}</p>
+    <p class="mt-1.5 text-[12px] text-muted">{{ __('La touche Entrée crée un paragraphe. Maj + Entrée passe à la ligne dans le même paragraphe.') }}</p>
 </div>

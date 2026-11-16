@@ -20,15 +20,23 @@
 
             @foreach ($locales as $locale => $language)
                 <div x-show="tab === '{{ $locale }}'" @if ($locale !== 'en') x-cloak @endif class="space-y-5 p-5" role="tabpanel">
-                    <x-ui::form-group :label="__('Nom')" for="name-{{ $locale }}" :error="$errors->first('texts.'.$locale.'.name')">
-                        <x-ui::input id="name-{{ $locale }}" wire:model="texts.{{ $locale }}.name" x-on:blur="suggestSlug('{{ $locale }}')" :error="$errors->has('texts.'.$locale.'.name')" />
-                    </x-ui::form-group>
+                    {{-- Le nom et la description servent a Google quand ses deux champs restent vides : memes
+                         longueurs conseillees. --}}
+                    <div class="relative">
+                        <x-admin.blog.char-count field="$wire.texts.{{ $locale }}.name" :recommended="60" />
+                        <x-ui::form-group :label="__('Nom')" for="name-{{ $locale }}" :error="$errors->first('texts.'.$locale.'.name')">
+                            <x-ui::input id="name-{{ $locale }}" wire:model="texts.{{ $locale }}.name" x-on:blur="suggestSlug('{{ $locale }}')" :error="$errors->has('texts.'.$locale.'.name')" />
+                        </x-ui::form-group>
+                    </div>
 
                     <x-admin.blog.address-field :locale="$locale" :prefix="$addressPrefixes[$locale]" source="nom" />
 
-                    <x-ui::form-group :label="__('Description')" for="description-{{ $locale }}" :hint="__('Affichée en haut de la page de la catégorie.')" :error="$errors->first('texts.'.$locale.'.description')">
-                        <x-ui::textarea id="description-{{ $locale }}" rows="3" wire:model="texts.{{ $locale }}.description" :error="$errors->has('texts.'.$locale.'.description')" />
-                    </x-ui::form-group>
+                    <div class="relative">
+                        <x-admin.blog.char-count field="$wire.texts.{{ $locale }}.description" :recommended="160" />
+                        <x-ui::form-group :label="__('Description')" for="description-{{ $locale }}" :hint="__('Affichée en haut de la page de la catégorie.')" :error="$errors->first('texts.'.$locale.'.description')">
+                            <x-ui::textarea id="description-{{ $locale }}" rows="3" wire:model="texts.{{ $locale }}.description" :error="$errors->has('texts.'.$locale.'.description')" />
+                        </x-ui::form-group>
+                    </div>
 
                     <x-admin.blog.google-fields :locale="$locale" :prefix="$addressPrefixes[$locale]"
                         :title-fallback="__('le nom de la catégorie')" :description-fallback="__('la description de la catégorie')" />

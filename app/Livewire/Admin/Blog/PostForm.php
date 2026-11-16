@@ -25,6 +25,7 @@ use App\Services\Admin\Blog\BlogPostFormService;
 use App\Services\Admin\Blog\BlogSlugSuggestionService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Locked;
@@ -464,11 +465,14 @@ class PostForm extends Component
         $this->pickingRelated = false;
     }
 
-    /** Ajoute un article lie a la suite des autres (pris en compte a l'enregistrement). */
+    /**
+     * Ajoute un article lie a la suite des autres (pris en compte a l'enregistrement). La fenetre de
+     * choix reste ouverte : on peut en ajouter plusieurs de suite, et c'est sa fermeture qui cesse de
+     * faire lire la liste.
+     */
     public function addRelated(int|string $postId): void
     {
         $postId = (int) $postId;
-        $this->pickingRelated = false;
 
         if ($postId <= 0 || $postId === $this->postId || in_array($postId, $this->relatedIds, true)) {
             return;
@@ -503,11 +507,42 @@ class PostForm extends Component
         $this->relatedIds = $others;
     }
 
-    public function addSource(): void
+    /**
+     * Ajoute une source, ou remplace celle du rang donne, apres controle : la fenetre de saisie vit dans
+     * le navigateur, qui affiche les refus rendus ici. Une source refusee n'entre jamais dans la liste.
+     *
+     * @return array<string, string> refus par champ (`label`, `url`, `form`), vide si la source est entree
+     */
+    public function saveSource(?int $index, string $label, string $url): array
     {
-        if (count($this->sources) < self::MAX_SOURCES) {
-            $this->sources[] = ['label' => '', 'url' => ''];
+        $source = ['label' => trim($label), 'url' => trim($url)];
+
+        $validator = Validator::make($source, [
+            'label' => ['required', 'string', 'max:200'],
+            'url' => ['required', 'string', 'max:2000', 'regex:#^https?://\S+$#i'],
+        ], [
+            'label.required' => __('L\'intitulé de la source est obligatoire.'),
+            'label.max' => __('L\'intitulé de la source ne peut pas dépasser 200 caractères.'),
+            'url.required' => __('Le lien de la source est obligatoire.'),
+            'url.max' => __('Le lien de la source est trop long.'),
+            'url.regex' => __('Le lien de la source doit commencer par http:// ou https://.'),
+        ]);
+
+        if ($validator->fails()) {
+            return array_map(static fn (array $messages): string => $messages[0], $validator->errors()->toArray());
         }
+
+        if ($index !== null && isset($this->sources[$index])) {
+            $this->sources[$index] = $source;
+        } elseif (count($this->sources) < self::MAX_SOURCES) {
+            $this->sources[] = $source;
+        } else {
+            return ['form' => __('Un article ne peut pas avoir plus de :max sources.', ['max' => self::MAX_SOURCES])];
+        }
+
+        $this->resetErrorBag();
+
+        return [];
     }
 
     public function removeSource(int $index): void
@@ -567,7 +602,7 @@ class PostForm extends Component
             }
         } catch (Throwable $e) {
             Log::error('Unexpected error while loading the admin blog post form.', ['post_id' => $this->postId, 'exception' => $e]);
-            $this->addError('post-load-failed', __('Le chargement de l\'article a échoué. Réessayez ; si le problème persiste, contactez-nous.'));
+            $this->addError('post-load-failed', __('Le chargement de l\'article a échoué. Réessayez. Si le problème persiste, contactez l\'assistance technique.'));
         }
 
         return view('livewire.admin.blog.post-form', [
@@ -582,6 +617,7 @@ class PostForm extends Component
             'related' => $related,
             'relatedCandidates' => $relatedCandidates,
             'relatedLimit' => SaveBlogPostAction::MAX_RELATED_POSTS,
+            'sourceLimit' => self::MAX_SOURCES,
             'relatedCandidateLimit' => BlogPostFormService::RELATED_CANDIDATES,
             'previewUrlTemplate' => route('admin.blog.posts.preview', ['post' => '__ID__', 'locale' => '__LOCALE__']),
             'addressPrefixes' => $slugs->pathPrefixes('blog.show'),

@@ -31,6 +31,7 @@
     x-on:change="touched($event)"
     x-on:blog-post-saved.window="dirty = false"
     x-on:keydown.escape.window="settingsOpen = false"
+    x-on:ui-modal-closed.window="if ($event.detail === 'post-related') $wire.closeRelatedPicker()"
     class="flex min-h-[calc(100svh-6.5rem)] flex-col sm:min-h-[calc(100svh-7.5rem)]"
 >
     {{-- Contenu des trois langues, remis une seule fois (texte echappe, lu par le script) : Livewire ne

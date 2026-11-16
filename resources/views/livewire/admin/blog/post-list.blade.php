@@ -4,37 +4,45 @@
         <x-ui::button :href="route('admin.blog.posts.create')"><x-ui::icon name="plus" /> {{ __('Nouvel article') }}</x-ui::button>
     </x-ui::page-header>
 
-    {{-- Recherche et filtres. Sur un ecran large, tout tient sur une ligne ; en dessous, les filtres se
-         rangent derriere un bouton. Un seul jeu de champs dans les deux cas. --}}
-    <div class="mb-4 flex flex-wrap items-center gap-3">
+    {{-- Recherche et filtres. Sur un ecran large, tout tient sur une ligne. En dessous, le bouton « Filtres »
+         ouvre un panneau flottant, qui passe au-dessus de la liste sans la deplacer. Un seul jeu de champs
+         dans les deux cas : le meme bloc est une ligne ou un panneau selon la largeur. --}}
+    <div class="mb-4 flex items-center gap-3">
         <x-ui::search-input id="f-search" wire:model.live.debounce.400ms="search" wrapper-class="min-w-0 flex-1"
             :placeholder="__('Rechercher un titre')" aria-label="{{ __('Rechercher un article par son titre, dans les trois langues') }}"
             title="{{ __('La recherche porte sur le titre, dans les trois langues.') }}" />
 
-        <x-ui::button variant="secondary" class="lg:hidden" x-on:click="filtersOpen = ! filtersOpen"
-            x-bind:aria-expanded="filtersOpen.toString()" aria-controls="post-filters">
-            <x-ui::icon name="adjustments-horizontal" />
-            <span>{{ __('Filtres') }}</span>
-            @if ($activeFilters > 0)
-                <span class="flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-gray-900 px-1 text-[10px] font-semibold text-white dark:bg-white dark:text-gray-900">{{ $activeFilters }}</span>
-            @endif
-        </x-ui::button>
+        <div class="relative shrink-0 lg:static" x-on:click.outside="filtersOpen = false" x-on:keydown.escape.window="filtersOpen = false">
+            <x-ui::button variant="secondary" class="lg:hidden" x-on:click="filtersOpen = ! filtersOpen"
+                x-bind:aria-expanded="filtersOpen.toString()" aria-controls="post-filters" aria-haspopup="dialog">
+                <x-ui::icon name="adjustments-horizontal" />
+                <span>{{ __('Filtres') }}</span>
+                @if ($activeFilters > 0)
+                    <span class="flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-gray-900 px-1 text-[10px] font-semibold text-white dark:bg-white dark:text-gray-900">{{ $activeFilters }}</span>
+                @endif
+            </x-ui::button>
 
-        <div id="post-filters" class="hidden w-full grid-cols-1 gap-3 sm:grid-cols-3 lg:flex lg:w-auto"
-            x-bind:class="{ 'hidden': ! filtersOpen, 'grid': filtersOpen }">
-            <x-ui::select wire:model.live="status" class="lg:w-44" aria-label="{{ __('Filtrer par statut') }}"
-                :options="collect($statuses)->mapWithKeys(fn ($s) => [$s->value => $s->label()])->prepend(__('Tous les statuts'), '')->all()" />
-            <x-ui::select wire:model.live="category" class="lg:w-52" aria-label="{{ __('Filtrer par catégorie') }}"
-                :options="collect($categoryOptions)->prepend(__('Toutes les catégories'), '')->all()" />
-            <x-ui::select wire:model.live="origin" class="lg:w-44" aria-label="{{ __('Filtrer par origine') }}"
-                :options="collect($origins)->mapWithKeys(fn ($o) => [$o->value => $o->label()])->prepend(__('Toutes les origines'), '')->all()" />
+            <div id="post-filters" x-bind:data-open="filtersOpen.toString()"
+                class="absolute right-0 top-full z-30 mt-2 hidden w-72 max-w-[calc(100vw-2rem)] flex-col gap-3 rounded-xl bg-surface p-4 shadow-[0_10px_40px_-8px_rgb(0_0_0/0.25)] data-[open=true]:flex lg:static lg:z-auto lg:mt-0 lg:flex lg:w-auto lg:max-w-none lg:flex-row lg:rounded-none lg:bg-transparent lg:p-0 lg:shadow-none dark:ring-1 dark:ring-white/10 lg:dark:ring-0">
+                <p class="text-[13px] font-semibold text-primary lg:hidden">{{ __('Filtres') }}</p>
+                <x-ui::select wire:model.live="status" class="lg:w-44" aria-label="{{ __('Filtrer par statut') }}"
+                    :options="collect($statuses)->mapWithKeys(fn ($s) => [$s->value => $s->label()])->prepend(__('Tous les statuts'), '')->all()" />
+                <x-ui::select wire:model.live="category" class="lg:w-52" aria-label="{{ __('Filtrer par catégorie') }}"
+                    :options="collect($categoryOptions)->prepend(__('Toutes les catégories'), '')->all()" />
+                <x-ui::select wire:model.live="origin" class="lg:w-44" aria-label="{{ __('Filtrer par origine') }}"
+                    :options="collect($origins)->mapWithKeys(fn ($o) => [$o->value => $o->label()])->prepend(__('Toutes les origines'), '')->all()" />
+                @if ($activeFilters > 0)
+                    <button type="button" wire:click="clearFilters" data-clear-filters
+                        class="self-start text-[12px] font-medium text-secondary underline underline-offset-2 hover:text-primary lg:hidden">{{ __('Réinitialiser les filtres') }}</button>
+                @endif
+            </div>
         </div>
     </div>
 
     @error('posts-load-failed')
         <x-ui::card :padding="false">
             <x-ui::load-failure :title="__('Le chargement des articles a échoué.')"
-                :description="__('Réessayez ; si le problème persiste, contactez-nous.')" retry="$refresh" />
+                :description="__('Réessayez. Si le problème persiste, contactez l\'assistance technique.')" retry="$refresh" />
         </x-ui::card>
     @else
         <x-ui::card :padding="false" class="relative">

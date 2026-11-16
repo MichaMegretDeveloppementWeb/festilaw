@@ -82,6 +82,25 @@ it('filters by status, category and origin', function () {
         ->set('category', '')->set('origin', 'unknown')->assertSee('Label fr')->assertSee('Pending fr');
 });
 
+it('clears the three filters at once from the filter panel, and keeps the search', function () {
+    $news = BlogContent::category('news');
+    BlogContent::published('label', BlogContent::category('rules', position: 1));
+    BlogContent::draft('pending', $news);
+
+    Livewire::test(PostList::class)
+        // Sans filtre actif, le panneau ne propose rien a reinitialiser.
+        ->assertDontSeeHtml('data-clear-filters')
+        ->set('search', 'fr')
+        ->set('status', 'draft')->set('category', (string) $news->id)->set('origin', 'manual')
+        ->assertSeeHtml('data-clear-filters')
+        ->assertDontSee('Label fr')
+        ->call('clearFilters')
+        ->assertSet('status', '')->assertSet('category', '')->assertSet('origin', '')
+        ->assertSet('search', 'fr')
+        ->assertSee('Label fr')->assertSee('Pending fr')
+        ->assertDontSeeHtml('data-clear-filters');
+});
+
 it('shows fifteen articles per page, newest first, with the count of articles under the list', function () {
     BlogContent::seedPublished(16);
 

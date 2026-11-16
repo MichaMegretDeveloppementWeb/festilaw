@@ -84,7 +84,7 @@ it('opens an article with its texts, hands its content to the browser once, in 5
     DB::flushQueryLog();
     DB::enableQueryLog();
 
-    $form->call('addSource')->assertViewHas('initialContents', null)->assertCount('sources', 2);
+    $form->call('saveSource', null, 'Autre source', 'https://example.org/autre')->assertViewHas('initialContents', null)->assertCount('sources', 2);
 
     expect(count(DB::getQueryLog()))->toBe(5)
         ->and(collect(DB::getQueryLog())->pluck('query')->filter(fn (string $sql): bool => str_contains($sql, 'content'))->all())->toBe([]);
@@ -302,24 +302,64 @@ it('deletes the article and goes back to the list', function () {
         ->and(session('toast-success'))->toBe('Article supprimé.');
 });
 
-it('adds, removes and reorders the sources, and validates them at save', function () {
+it('adds, edits, removes and reorders the sources, and never lets a refused source in', function () {
     $post = BlogContent::draft('pending');
 
     Livewire::test(PostForm::class, ['post' => $post->id])
-        ->call('addSource')->call('addSource')->call('addSource')
-        ->set('sources.0.label', 'A')->set('sources.0.url', 'https://a.example')
-        ->set('sources.1.label', 'B')->set('sources.1.url', 'https://b.example')
-        ->set('sources.2.label', '')->set('sources.2.url', 'ftp://c.example')
-        ->call('save', BlogContent::contentsOf($post))
-        ->assertHasErrors(['sources.2.label' => 'required', 'sources.2.url' => 'regex'])
-        ->assertSee('Le lien de la source doit commencer par http:// ou https://.')
+        // Une source acceptee entre dans la liste, sans ses espaces autour.
+        ->call('saveSource', null, ' A ', ' https://a.example ')
+        ->assertReturned([])
+        ->call('saveSource', null, 'B', 'https://b.example')
+        ->call('saveSource', null, 'C', 'https://c.example')
+        // Une source refusee n'y entre pas : la fenetre recoit le refus de chaque champ.
+        ->call('saveSource', null, '', 'ftp://d.example')
+        ->assertReturned([
+            'label' => 'L\'intitulé de la source est obligatoire.',
+            'url' => 'Le lien de la source doit commencer par http:// ou https://.',
+        ])
+        ->assertCount('sources', 3)
+        // Modifier la source d'un rang la remplace sur place, apres le meme controle.
+        ->call('saveSource', 2, 'C', 'c.example')
+        ->assertReturned(['url' => 'Le lien de la source doit commencer par http:// ou https://.'])
+        ->call('saveSource', 0, 'A2', 'https://a2.example')
+        ->assertReturned([])
         ->call('removeSource', 2)
         ->call('sortSources', 1, 0)
-        ->assertSet('sources', [['label' => 'B', 'url' => 'https://b.example'], ['label' => 'A', 'url' => 'https://a.example']])
+        ->assertSet('sources', [['label' => 'B', 'url' => 'https://b.example'], ['label' => 'A2', 'url' => 'https://a2.example']])
         ->call('save', BlogContent::contentsOf($post))
         ->assertHasNoErrors();
 
-    expect($post->fresh()->sources)->toBe([['label' => 'B', 'url' => 'https://b.example'], ['label' => 'A', 'url' => 'https://a.example']]);
+    expect($post->fresh()->sources)->toBe([['label' => 'B', 'url' => 'https://b.example'], ['label' => 'A2', 'url' => 'https://a2.example']]);
+});
+
+it('checks the sources again at save, and says which one is wrong', function () {
+    $post = BlogContent::draft('pending');
+
+    // Une liste qui ne vient pas de la fenetre (etat force) reste controlee a l'enregistrement.
+    Livewire::test(PostForm::class, ['post' => $post->id])
+        ->set('sources', [['label' => '', 'url' => 'ftp://c.example']])
+        ->call('save', BlogContent::contentsOf($post))
+        ->assertHasErrors(['sources.0.label' => 'required', 'sources.0.url' => 'regex'])
+        ->assertSee('L\'intitulé de la source est obligatoire.');
+
+    // Rien n'a ete ecrit : l'article garde l'absence de sources qu'il avait.
+    expect($post->fresh()->sources)->toBeNull();
+});
+
+it('stops at thirty sources', function () {
+    $post = BlogContent::draft('pending');
+    $sources = array_map(static fn (int $number): array => ['label' => "Source {$number}", 'url' => "https://example.org/{$number}"], range(1, 30));
+
+    Livewire::test(PostForm::class, ['post' => $post->id])
+        ->set('sources', $sources)
+        ->assertDontSeeHtml('data-add-source')
+        ->call('saveSource', null, 'De trop', 'https://example.org/31')
+        ->assertReturned(['form' => 'Un article ne peut pas avoir plus de 30 sources.'])
+        ->assertCount('sources', 30)
+        // Modifier une source existante reste possible quand la liste est pleine.
+        ->call('saveSource', 29, 'Dernière', 'https://example.org/derniere')
+        ->assertReturned([])
+        ->assertSet('sources.29.label', 'Dernière');
 });
 
 it('limits the length of every text field, naming the language', function () {
@@ -361,7 +401,7 @@ it('says so when the article was deleted from another tab', function () {
 
     $post->delete();
 
-    $form->call('addSource')
+    $form->call('saveSource', null, 'Source', 'https://example.org')
         ->assertHasErrors('post-load-failed')
         ->assertSee('Cet article n\'existe plus.');
 });
@@ -378,8 +418,8 @@ it('shows the public path in front of the address, and explains the two Google f
     Livewire::test(PostForm::class)
         ->assertViewHas('addressPrefixes', ['en' => '/blog/', 'fr' => '/fr/blog/', 'es' => '/es/blog/'])
         ->assertSee('Résultat dans Google')
-        ->assertSee('Facultatif : le titre de l\'article sinon.')
-        ->assertSee('Facultatif : l\'extrait sinon.')
+        ->assertSee('Si ces champs sont vides, le titre de l\'article et l\'extrait sont utilisés.')
+        ->assertDontSee('Sans rien remplir ici')
         ->assertSee('Créée à partir du titre. Vous pouvez la modifier.')
         ->assertDontSee('Proposée automatiquement');
 });

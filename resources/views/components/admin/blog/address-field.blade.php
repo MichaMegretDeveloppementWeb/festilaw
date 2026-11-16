@@ -13,12 +13,12 @@
         {{ $source === 'nom' ? __('Créée à partir du nom. Vous pouvez la modifier.') : __('Créée à partir du titre. Vous pouvez la modifier.') }}
     </p>
     <p class="mt-1.5 text-[12px] text-muted" x-show="$wire.slugEdited.{{ $locale }}" x-cloak>
-        {{ $source === 'nom' ? __('Elle ne suit plus le nom.') : __('Elle ne suit plus le titre.') }}
+        {{ $source === 'nom' ? __('Adresse personnalisée. Elle ne change plus quand le nom change.') : __('Adresse personnalisée. Elle ne change plus quand le titre change.') }}
         <button type="button" class="font-medium text-secondary underline underline-offset-2 hover:text-primary" x-on:click="resetSlug('{{ $locale }}')">
-            {{ $source === 'nom' ? __('Recréer à partir du nom') : __('Recréer à partir du titre') }}
+            {{ $source === 'nom' ? __('Reprendre l\'adresse du nom') : __('Reprendre l\'adresse du titre') }}
         </button>
         @if ($published)
-            <span class="mt-0.5 block">{{ __('Si vous la changez, l\'ancienne adresse redirige vers la nouvelle.') }}</span>
+            <span class="mt-0.5 block">{{ __('Après un changement d\'adresse, les anciens liens restent valables.') }}</span>
         @endif
     </p>
 </x-ui::form-group>

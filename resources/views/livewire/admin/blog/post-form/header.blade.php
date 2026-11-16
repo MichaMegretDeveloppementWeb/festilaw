@@ -1,5 +1,6 @@
 {{-- En-tete du formulaire d'article : retour a la liste, titre de l'article, statut (un menu : publier,
-     programmer, depublier), ce qui reste a completer, et le menu des autres actions.
+     programmer, depublier), ce qui reste a completer, puis la suppression (un bouton, ou le menu des
+     autres actions sur telephone).
      $status, $isPublished, $isScheduled, $blockerCount, $warningCount, $heading : poses par post-form. --}}
 <div class="mb-6">
     <a href="{{ route('admin.blog.posts.index') }}" class="inline-flex items-center gap-1.5 text-[13px] text-muted transition-colors hover:text-primary">
@@ -7,7 +8,7 @@
     </a>
 
     <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
-        <h1 class="min-w-0 max-w-full truncate text-lg font-semibold text-primary"
+        <h1 class="min-w-0 max-w-full truncate text-[1.375rem] font-semibold leading-7 tracking-[-0.01em] text-primary"
             x-text="text('fr', 'title') || text('en', 'title') || text('es', 'title') || @js($postId === null ? __('Nouvel article') : __('Article sans titre'))">{{ $heading }}</h1>
 
         {{-- Statut : la pastille ouvre les changements de statut possibles. --}}
@@ -64,8 +65,17 @@
             <span class="text-[12px] text-muted">{{ __('Pas encore enregistré') }}</span>
         @endif
 
-        {{-- Autres actions : voir l'article (apercu, ou pages en ligne une fois publie), supprimer. --}}
-        <x-ui::dropdown align="right" width="w-60" class="ml-auto">
+        {{-- A partir de 640 px, la barre du bas porte deja « Voir la page » ou « Aperçu » : il ne reste ici
+             que la suppression, en bouton. En dessous, la barre ne les a pas, et le menu les garde. --}}
+        @if ($postId !== null)
+            <x-ui::button variant="secondary" class="ml-auto hidden sm:inline-flex" data-delete-post
+                x-on:click="$dispatch('ui-open-modal', 'delete-post')">
+                <x-ui::icon name="trash" /> {{ __('Supprimer') }}
+            </x-ui::button>
+        @endif
+
+        {{-- Autres actions, sur telephone : voir l'article (apercu, ou pages en ligne une fois publie), supprimer. --}}
+        <x-ui::dropdown align="right" width="w-60" class="ml-auto sm:hidden">
             <x-slot:trigger>
                 <button type="button" aria-haspopup="menu" aria-label="{{ __('Autres actions') }}"
                     class="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-secondary transition-colors hover:bg-elevated hover:text-primary sm:min-h-0 sm:min-w-0 sm:p-1.5">

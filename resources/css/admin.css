@@ -14,6 +14,8 @@
 @import 'tailwindcss' source(none);
 /* Allure du texte dans l'editeur d'article (quelques regles, sans effet sur les autres ecrans). */
 @import './admin/blog-editor.css';
+/* Retouches de composants du kit (alertes sans bordure, titre de page plus grand). */
+@import './admin/kit.css';
 @source '../views/layouts/admin.blade.php';
 @source '../views/livewire/admin';
 @source '../views/components/admin';

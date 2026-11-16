@@ -9,8 +9,8 @@
     class="fixed inset-x-0 bottom-0 z-50 flex max-h-[85svh] translate-y-full flex-col rounded-t-2xl data-[open=true]:translate-y-0 bg-surface shadow-2xl transition-transform duration-200 ease-out lg:sticky lg:inset-x-auto lg:bottom-auto lg:top-6 lg:z-auto lg:max-h-[calc(100svh-7rem)] lg:translate-y-0 lg:rounded-xl lg:shadow-none lg:transition-none">
     <div class="flex shrink-0 items-center justify-between gap-3 border-b border-subtle px-5 py-3.5">
         <div>
-            <h2 id="post-settings-title" class="text-[13px] font-semibold text-primary">{{ __('Réglages de l\'article') }}</h2>
-            <p class="mt-0.5 text-[12px] text-muted">{{ __('Communs aux trois langues') }}</p>
+            <h2 id="post-settings-title" class="text-[15px] font-semibold leading-snug text-primary">{{ __('Réglages de l\'article') }}</h2>
+            <p class="mt-0.5 text-[13px] text-muted">{{ __('Communs aux trois langues') }}</p>
         </div>
         <button type="button" x-on:click="settingsOpen = false" aria-label="{{ __('Fermer les réglages') }}"
             class="-mr-2 flex h-11 w-11 items-center justify-center rounded-lg text-muted transition-colors hover:bg-elevated hover:text-secondary lg:hidden">
@@ -58,7 +58,7 @@
             'property' => 'shareImageId',
             'label' => __('Image de partage (facultatif)'),
             'compact' => true,
-            'help' => __('Affichée quand l’article est partagé sur un réseau social (mêmes dimensions minimales). Sans elle, c’est l’image principale qui sert.'),
+            'help' => __('Affichée quand l’article est partagé sur un réseau social. Mêmes dimensions minimales que l’image principale. Si non renseignée, l’image principale est utilisée.'),
         ])
 
         @include('livewire.admin.blog.post-form.related')

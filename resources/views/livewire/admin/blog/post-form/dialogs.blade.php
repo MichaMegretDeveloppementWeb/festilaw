@@ -1,5 +1,5 @@
-{{-- Fenetres du formulaire d'article : lien du texte, descriptions d'une image, programmer, depublier,
-     supprimer, ce qui reste a completer. --}}
+{{-- Fenetres du formulaire d'article : lien du texte, source, articles a lier, descriptions d'une image,
+     programmer, depublier, supprimer, ce qui reste a completer. --}}
 
 {{-- Lien du texte. data-no-dirty : c'est l'editeur qui dit qu'il y a quelque chose a enregistrer. --}}
 <x-ui::modal name="post-link" :title="__('Lien')">
@@ -16,6 +16,80 @@
         <x-ui::button variant="ghost" class="mr-auto" x-on:click="removeLink()">{{ __('Retirer le lien') }}</x-ui::button>
         <x-ui::button variant="ghost" x-on:click="$dispatch('ui-close-modal', 'post-link')">{{ __('Annuler') }}</x-ui::button>
         <x-ui::button x-on:click="applyLink()">{{ __('Appliquer') }}</x-ui::button>
+    </x-slot:footer>
+</x-ui::modal>
+
+{{-- Source de l'article, nouvelle ou modifiee. Les deux champs vivent dans le navigateur (sourceForm) ; le
+     serveur les controle a la validation, et la source n'entre dans la liste que s'il les accepte. --}}
+<x-ui::modal name="post-source" :title="__('Source de l\'article')">
+    <div data-no-dirty class="space-y-4">
+        <div>
+            <x-ui::form-group :label="__('Intitulé')" for="source-label">
+                <x-ui::input id="source-label" type="text" x-model="sourceForm.label" x-on:keydown.enter.prevent="saveSource()"
+                    maxlength="200" :placeholder="__('Par exemple : Règlement (UE) 2023/988')" autocomplete="off"
+                    x-bind:aria-invalid="sourceForm.errors.label ? 'true' : 'false'" />
+            </x-ui::form-group>
+            <p x-show="sourceForm.errors.label" x-cloak x-text="sourceForm.errors.label" class="mt-1.5 text-[12px] text-red-700 dark:text-red-400" role="alert"></p>
+        </div>
+
+        <div>
+            <x-ui::form-group :label="__('Lien')" for="source-url">
+                <x-ui::input id="source-url" type="text" inputmode="url" x-model="sourceForm.url" x-on:keydown.enter.prevent="saveSource()"
+                    placeholder="https://" autocomplete="off" autocapitalize="none" spellcheck="false"
+                    x-bind:aria-invalid="sourceForm.errors.url ? 'true' : 'false'" />
+            </x-ui::form-group>
+            <p x-show="sourceForm.errors.url" x-cloak x-text="sourceForm.errors.url" class="mt-1.5 text-[12px] text-red-700 dark:text-red-400" role="alert"></p>
+        </div>
+
+        <p x-show="sourceForm.errors.form" x-cloak x-text="sourceForm.errors.form" class="text-[12px] text-red-700 dark:text-red-400" role="alert"></p>
+    </div>
+
+    <x-slot:footer>
+        <x-ui::button variant="ghost" x-on:click="$dispatch('ui-close-modal', 'post-source')">{{ __('Annuler') }}</x-ui::button>
+        <x-ui::button x-on:click="saveSource()" x-bind:disabled="sourceForm.saving" data-save-source>
+            <span x-text="sourceForm.index === null ? @js(__('Ajouter la source')) : @js(__('Enregistrer la source'))">{{ __('Ajouter la source') }}</span>
+        </x-ui::button>
+    </x-slot:footer>
+</x-ui::modal>
+
+{{-- Articles a lier. La liste n'est lue par le serveur que pendant que la fenetre est ouverte
+     ($pickingRelated) ; la recherche filtre dans le navigateur. Un clic ajoute l'article, la fenetre reste
+     ouverte pour en ajouter d'autres. --}}
+<x-ui::modal name="post-related" :title="__('Ajouter un article lié')">
+    <div data-no-dirty>
+        @if (! $pickingRelated)
+            <div class="flex justify-center py-8"><x-ui::spinner size="lg" /></div>
+        @elseif (count($related) >= $relatedLimit)
+            <p class="text-[13px] text-secondary">{{ __('Un article garde :count articles liés au plus.', ['count' => $relatedLimit]) }}</p>
+        @elseif ($relatedCandidates === [])
+            <p class="text-[13px] text-secondary">{{ __('Aucun autre article à proposer.') }}</p>
+        @else
+            <x-ui::search-input id="related-search" x-model="relatedQuery" :placeholder="__('Rechercher un titre')"
+                aria-label="{{ __('Rechercher un article à lier') }}" />
+
+            <x-ui::scroll-area maxHeight="20rem" class="mt-3">
+                <ul data-related-candidates>
+                    @foreach ($relatedCandidates as $id => $label)
+                        <li wire:key="related-candidate-{{ $id }}" x-show="matchesQuery(@js($label), relatedQuery)">
+                            <button type="button" x-on:click="dirty = true; $wire.addRelated({{ $id }})"
+                                class="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-[13px] text-primary transition-colors hover:bg-elevated">
+                                <span class="min-w-0 truncate">{{ $label }}</span>
+                                <span class="flex shrink-0 items-center gap-1 text-[12px] font-medium text-secondary"><x-ui::icon name="plus" class="h-3.5 w-3.5" /> {{ __('Ajouter') }}</span>
+                            </button>
+                        </li>
+                    @endforeach
+                </ul>
+            </x-ui::scroll-area>
+
+            @if (count($relatedCandidates) >= $relatedCandidateLimit)
+                <p class="mt-2 text-[12px] text-muted">{{ __('Seuls les :count articles les plus récents sont proposés.', ['count' => $relatedCandidateLimit]) }}</p>
+            @endif
+        @endif
+    </div>
+
+    <x-slot:footer>
+        <span class="mr-auto text-[12px] tabular-nums text-muted">{{ trans_choice('{0} Aucun article lié|{1} :count article lié sur :limit|[2,*] :count articles liés sur :limit', count($related), ['count' => count($related), 'limit' => $relatedLimit]) }}</span>
+        <x-ui::button x-on:click="$dispatch('ui-close-modal', 'post-related')">{{ __('Terminé') }}</x-ui::button>
     </x-slot:footer>
 </x-ui::modal>
 

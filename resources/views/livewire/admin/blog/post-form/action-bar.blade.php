@@ -1,7 +1,7 @@
 {{-- Barre d'actions du formulaire d'article : elle reste en bas de l'ecran pendant qu'on fait defiler.
      UN seul « Enregistrer » pour tout l'article. « Publier » enregistre d'abord.
      Sur telephone : Réglages, Enregistrer, Publier (l'apercu est dans le menu « Autres actions »). --}}
-<div class="sticky bottom-0 z-30 -mx-4 -mb-6 mt-auto border-t border-default bg-surface px-4 py-3 sm:-mx-6 sm:-mb-8 sm:px-6">
+<x-admin.action-bar>
     <p x-show="dirty" x-cloak class="mb-2 flex items-center gap-1.5 text-[12px] font-medium text-amber-700 sm:hidden dark:text-amber-400">
         <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span> {{ __('Modifications non enregistrées') }}
     </p>
@@ -49,4 +49,4 @@
             </x-ui::button>
         @endunless
     </div>
-</div>
+</x-admin.action-bar>

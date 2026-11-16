@@ -196,8 +196,8 @@ it('shows the public path in front of the address, and explains the two Google f
         ->assertViewHas('addressPrefixes', ['en' => '/blog/category/', 'fr' => '/fr/blog/categorie/', 'es' => '/es/blog/categoria/'])
         ->assertSee('/fr/blog/categorie/')
         ->assertSee('Résultat dans Google')
-        ->assertSee('Facultatif : le nom de la catégorie sinon.')
-        ->assertSee('Facultatif : la description de la catégorie sinon.')
+        ->assertSee('Si ces champs sont vides, le nom de la catégorie et la description de la catégorie sont utilisés.')
+        ->assertDontSee('Sans rien remplir ici')
         ->assertSee('Créée à partir du nom. Vous pouvez la modifier.')
         ->assertDontSee('Laissez vide');
 });

@@ -165,7 +165,7 @@ describe('sending an image', function () {
             ->assertViewHas('initialImages', fn (array $images): bool => array_keys($images) === [$post->featured_image_id]
                 && $images[$post->featured_image_id]['url'] !== null
                 && array_keys($images[$post->featured_image_id]['alt']) === ['en', 'fr', 'es'])
-            ->call('addSource')
+            ->call('saveSource', null, 'Source', 'https://example.org')
             ->assertViewHas('initialImages', null);
     });
 });
@@ -273,7 +273,8 @@ describe('choosing the related articles', function () {
         Livewire::test(PostForm::class, ['post' => $post->id])
             ->call('openRelatedPicker')
             ->call('addRelated', (string) $first->id)
-            ->assertSet('pickingRelated', false)
+            // La fenetre de choix reste ouverte : on peut en ajouter plusieurs de suite.
+            ->assertSet('pickingRelated', true)
             ->call('addRelated', $second->id)
             ->call('addRelated', $third->id)
             // Un doublon, l'article lui-meme ou un identifiant sans valeur ne changent rien.
@@ -304,8 +305,9 @@ describe('choosing the related articles', function () {
             $form->call('addRelated', $id);
         }
 
+        // Le bouton d'ajout disparait (le titre de la fenetre, lui, reste dans la page).
         $form->assertCount('relatedIds', 6)
-            ->assertDontSee('Ajouter un article')
+            ->assertDontSeeHtml('data-add-related')
             ->assertSee('Un article garde 6 articles liés au plus.');
     });
 
@@ -341,7 +343,7 @@ describe('choosing the related articles', function () {
         DB::flushQueryLog();
         DB::enableQueryLog();
 
-        $form->call('addSource');
+        $form->call('saveSource', null, 'Source', 'https://example.org');
 
         // Article, textes, images, categories.
         expect(count(DB::getQueryLog()))->toBe(4);
