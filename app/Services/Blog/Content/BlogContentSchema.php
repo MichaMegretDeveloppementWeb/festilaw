@@ -43,6 +43,13 @@ final class BlogContentSchema
      */
     public const IMAGE_WIDTHS = ['medium', 'small'];
 
+    /**
+     * Positions qu'une image REDUITE peut prendre (attribut `align`) : a gauche ou a droite, le texte se place
+     * alors a cote d'elle sur un ecran assez large. Sans attribut, elle est centree, seule sur sa ligne. Une
+     * image en pleine largeur n'a pas de position.
+     */
+    public const IMAGE_ALIGNS = ['left', 'right'];
+
     /** Niveaux d'intertitre autorises (le titre de la page est le seul h1). */
     public const HEADING_LEVELS = [2, 3];
 

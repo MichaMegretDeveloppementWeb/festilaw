@@ -149,7 +149,56 @@
         margin-inline: auto;
     }
 
-    /* Les trois largeurs : un groupe de boutons, celui de la largeur en place est marque. */
+    /* Position d'une image reduite. A gauche ou a droite, le texte se place a cote d'elle des que la zone de
+       saisie est assez large : memes seuils que la page publique (resources/css/web/blog/prose.css), mesures
+       sur la colonne et non sur l'ecran. En dessous, l'image reste centree au-dessus du texte. */
+    .blog-editor-content {
+        container-type: inline-size;
+        display: flow-root;
+    }
+
+    @container (min-width: 44rem) {
+        .blog-editor-image[data-width='small'][data-align='left'] {
+            float: left;
+            width: 22.5rem;
+            margin: 1.3em 1.75em 1em 0;
+        }
+
+        .blog-editor-image[data-width='small'][data-align='right'] {
+            float: right;
+            width: 22.5rem;
+            margin: 1.3em 0 1em 1.75em;
+        }
+    }
+
+    @container (min-width: 54rem) {
+        .blog-editor-image[data-width='medium'][data-align='left'] {
+            float: left;
+            width: 35rem;
+            margin: 1.3em 1.75em 1em 0;
+        }
+
+        .blog-editor-image[data-width='medium'][data-align='right'] {
+            float: right;
+            width: 35rem;
+            margin: 1.3em 0 1em 1.75em;
+        }
+    }
+
+    /* Un intertitre, une autre image ou une citation repartent sous l'image. Une liste reste un bloc a cote. */
+    .blog-editor-content h2,
+    .blog-editor-content h3,
+    .blog-editor-content blockquote,
+    .blog-editor-image {
+        clear: both;
+    }
+
+    .blog-editor-content ul,
+    .blog-editor-content ol {
+        display: flow-root;
+    }
+
+    /* Les trois largeurs, puis les trois positions : deux groupes de boutons, celui du choix en place est marque. */
     .blog-editor-image-widths {
         display: inline-flex;
         gap: 1px;

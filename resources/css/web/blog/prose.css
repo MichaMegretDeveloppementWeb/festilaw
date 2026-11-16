@@ -36,3 +36,27 @@
 .prose .blog-figure--medium { max-width: 35rem; margin-inline: auto; }
 .prose .blog-figure--small { max-width: 22.5rem; margin-inline: auto; }
 .prose .blog-figure img { display: block; width: 100%; height: auto; border-radius: var(--radius); background: var(--color-line); }
+
+/* Image reduite placee a gauche ou a droite : le texte se met a cote d'elle des que la colonne est assez large
+   (seuils mesures sur la colonne de l'article, pas sur l'ecran). En dessous, et sur telephone, l'image reste
+   centree au-dessus du texte. Un navigateur qui ne connait pas @container garde ce second affichage. */
+.prose { container-type: inline-size; display: flow-root; }
+
+@container (min-width: 44rem) {
+    .prose .blog-figure--small.blog-figure--left { float: left; width: 22.5rem; margin: 1.55em 1.9em 1em 0; }
+    .prose .blog-figure--small.blog-figure--right { float: right; width: 22.5rem; margin: 1.55em 0 1em 1.9em; }
+}
+
+@container (min-width: 54rem) {
+    .prose .blog-figure--medium.blog-figure--left { float: left; width: 35rem; margin: 1.55em 1.9em 1em 0; }
+    .prose .blog-figure--medium.blog-figure--right { float: right; width: 35rem; margin: 1.55em 0 1em 1.9em; }
+}
+
+/* Un intertitre, une citation ou une autre image repartent sous l'image. Une liste reste un bloc a cote d'elle,
+   pour que ses puces ne passent pas sur l'image. */
+.prose h2,
+.prose h3,
+.prose blockquote,
+.prose .blog-figure { clear: both; }
+.prose ul,
+.prose ol { display: flow-root; }

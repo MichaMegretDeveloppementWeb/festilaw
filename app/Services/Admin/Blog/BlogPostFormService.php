@@ -141,8 +141,9 @@ final readonly class BlogPostFormService
     }
 
     /**
-     * Ce que le formulaire garde d'une image : son apercu, ses descriptions dans chaque langue, et pour une
-     * image recadrable l'adresse de sa source et son cadrage en place (en pixels de cette source).
+     * Ce que le formulaire garde d'une image : son apercu, ses descriptions dans chaque langue, l'adresse du
+     * fichier a partir duquel elle se recadre, et son cadrage en place (en pixels de ce fichier ; nul quand
+     * l'image n'a jamais ete recadree, le cadre couvre alors toute l'image).
      *
      * @return array{id: int, url: ?string, alt: array<string, string>, source: ?string, crop: ?array<string, int>}
      */

@@ -18,7 +18,7 @@ final readonly class BlogGenerationDetailView
     /**
      * @param  string  $launched  qui a lance la generation et quand, en une phrase
      * @param  string|null  $images  d'ou viennent les images et combien au plus (nul pour une generation anterieure a ce choix)
-     * @param  list<array{label: string, text: string}>  $report  compte rendu de l'IA, point par point
+     * @param  list<array{key: string, label: string, text: string}>  $report  compte rendu de l'IA, point par point (`key` : l'etape qui l'a ecrit)
      * @param  list<BlogGenerationStepView>  $steps  dans l'ordre du pipeline
      */
     public function __construct(

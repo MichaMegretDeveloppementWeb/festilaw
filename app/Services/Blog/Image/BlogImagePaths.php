@@ -47,6 +47,22 @@ final readonly class BlogImagePaths
         return $this->source($image->uuid, $image->basename);
     }
 
+    /**
+     * Le fichier a partir duquel une image se recadre : sa source non decoupee quand elle a ete gardee, sinon
+     * sa plus grande variante (image principale, image de partage, image placee avant le recadrage). Null si
+     * l'image n'a aucun fichier.
+     */
+    public function recropSourceOf(BlogImage $image): ?string
+    {
+        if ($image->hasSource()) {
+            return $this->sourceOf($image);
+        }
+
+        $widths = $image->widths();
+
+        return $widths === [] ? null : $this->variantOf($image, max($widths));
+    }
+
     public function variantOf(BlogImage $image, int $width): string
     {
         return $this->variant($image->uuid, $image->basename, $width);

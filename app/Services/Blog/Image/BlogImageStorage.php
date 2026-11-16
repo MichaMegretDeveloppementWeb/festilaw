@@ -58,8 +58,14 @@ final readonly class BlogImageStorage
      */
     public function readSource(BlogImage $image): string
     {
+        $path = $this->paths->recropSourceOf($image);
+
+        if ($path === null) {
+            throw BlogImageException::notRecroppable($image->id);
+        }
+
         try {
-            $contents = $this->disk()->get($this->paths->sourceOf($image));
+            $contents = $this->disk()->get($path);
         } catch (Throwable $e) {
             throw BlogImageException::storageFailed($image->uuid, $e);
         }

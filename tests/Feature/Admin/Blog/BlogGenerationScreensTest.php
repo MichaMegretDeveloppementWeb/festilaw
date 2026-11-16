@@ -54,18 +54,35 @@ it('sends a visitor who is not signed in to the login page', function (string $p
     'generation' => ['/admin/blog/generation/{generation}'],
 ]);
 
-it('serves every generation page to a signed-in admin, under one menu entry and three tabs', function () {
+it('serves every generation page to a signed-in admin, under one menu entry and without tabs', function () {
     $generation = BlogGeneration::factory()->completed()->create(['topic_hint' => 'Labels on Etsy']);
     actingAs(User::factory()->create());
 
+    // La page d'arrivee mene a l'historique par son lien et aux reglages par sa roue crantee.
+    get('/admin/blog/generation')->assertOk()
+        ->assertSee('Générer un article')
+        ->assertSee('href="'.route('admin.blog.generation.history').'"', false)
+        ->assertSee('href="'.route('admin.blog.generation.settings').'"', false)
+        ->assertSee('data-open-settings', false)
+        ->assertSee('Réglages de la génération IA')
+        ->assertDontSee('Vue d\'ensemble')
+        ->assertDontSee('data-back-to-generation', false);
+
+    // L'historique et les reglages sont deux pages a part, avec un lien de retour. Aucun onglet nulle part.
+    get('/admin/blog/generation/history')->assertOk()
+        ->assertSee('Historique des générations')
+        ->assertSee('data-back-to-generation', false)
+        ->assertSee('Générer un article')
+        ->assertDontSee('aria-current="page">Historique', false);
+
+    get('/admin/blog/generation/settings')->assertOk()
+        ->assertSee('Réglages de la génération IA')
+        ->assertSee('data-back-to-generation', false)
+        // Pas de bouton de lancement sur la page des reglages.
+        ->assertDontSee('data-launch-generation', false);
+
     foreach (['/admin/blog/generation', '/admin/blog/generation/history', '/admin/blog/generation/settings'] as $path) {
-        get($path)->assertOk()
-            ->assertSee('Génération IA')
-            // Les trois pages se tiennent par leurs onglets, et portent le bouton de lancement.
-            ->assertSee('href="'.route('admin.blog.generation.index').'"', false)
-            ->assertSee('href="'.route('admin.blog.generation.history').'"', false)
-            ->assertSee('href="'.route('admin.blog.generation.settings').'"', false)
-            ->assertSee('Générer un article');
+        get($path)->assertSee('Génération IA')->assertDontSee('Pages de cette rubrique');
     }
 
     get('/admin/blog/generation')->assertSee('<title>Génération IA · '.config('app.name').'</title>', false)->assertSee('Labels on Etsy');
@@ -96,19 +113,23 @@ it('shows the spend of the month against its cap, the automatic rhythm and the d
 });
 
 it('says when a worker is listening, and warns when none is', function () {
+    // Dit avec les mots de la personne qui ecrit des articles : ni « traitement », ni « a l'ecoute ».
     Livewire::test(GenerationDashboard::class)
-        ->assertSee('Aucun traitement n\'est à l\'écoute')
-        ->assertSee('Traitement à l\'arrêt');
+        ->assertSee('Les générations ne démarrent pas pour le moment')
+        ->assertSee('Un article demandé maintenant restera en attente.')
+        ->assertSee('Service de génération à l\'arrêt')
+        ->assertDontSee('traitement')
+        ->assertDontSee('Traitement');
 
     app(BlogGenerationWorkerRegistry::class)->register('worker-a');
 
     Livewire::test(GenerationDashboard::class)
-        ->assertSee('Traitement à l\'écoute')
-        ->assertDontSee('Aucun traitement n\'est à l\'écoute');
+        ->assertSee('Service de génération en marche')
+        ->assertDontSee('Les générations ne démarrent pas pour le moment');
 
     $this->travel(5)->minutes();
 
-    Livewire::test(GenerationDashboard::class)->assertSee('Traitement à l\'arrêt');
+    Livewire::test(GenerationDashboard::class)->assertSee('Service de génération à l\'arrêt');
 });
 
 it('tells whether the provider key is there in the service state, without ever showing it', function () {
@@ -274,7 +295,8 @@ it('renders the launch button without any query, and reads the default images on
     $launcher = Livewire::test(GenerationLauncher::class);
 
     expect(count(DB::getQueryLog()))->toBe(0);
-    $launcher->assertSee('Générer un article')->assertSee('Mode d\'essai')->assertSet('imageMode', '');
+    // Le mode d'essai ne se dit plus dans l'en-tete : une ligne neutre de l'etat du service suffit.
+    $launcher->assertSee('Générer un article')->assertDontSee('Mode d\'essai')->assertSet('imageMode', '');
 
     $launcher->call('prepare')
         ->assertSet('imageMode', 'generated')

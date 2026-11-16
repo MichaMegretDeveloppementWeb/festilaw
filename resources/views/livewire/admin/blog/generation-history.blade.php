@@ -2,7 +2,7 @@
      « Arrêter » de sa ligne). Chaque ligne mene a la page de sa generation, ou se lisent ses etapes, ses
      modeles et ses tokens. --}}
 <div x-data="{ pending: null }">
-    @include('livewire.admin.blog.generation.header', ['active' => 'history'])
+    @include('livewire.admin.blog.generation.header', ['page' => 'history'])
 
     @error('history-load-failed')
         <x-ui::card :padding="false">

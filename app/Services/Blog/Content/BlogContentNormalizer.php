@@ -223,6 +223,13 @@ final class BlogContentNormalizer
         // Pleine largeur : aucun attribut. Une largeur inconnue est retiree, l'image reprend toute la colonne.
         if (is_string($width) && in_array($width, Schema::IMAGE_WIDTHS, true)) {
             $attrs['width'] = $width;
+
+            // Une position n'a de sens que pour une image reduite : en pleine largeur, il n'y a pas de place a cote.
+            $align = $node['attrs']['align'] ?? null;
+
+            if (is_string($align) && in_array($align, Schema::IMAGE_ALIGNS, true)) {
+                $attrs['align'] = $align;
+            }
         }
 
         return ['type' => Schema::IMAGE, 'attrs' => $attrs];

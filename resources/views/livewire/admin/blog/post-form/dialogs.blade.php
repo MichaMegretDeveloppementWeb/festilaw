@@ -136,11 +136,21 @@
             <p class="text-[12px] leading-relaxed text-muted">{{ __('Étirez le cadre par ses poignées pour choisir la partie gardée. Faites glisser l\'image pour la déplacer sous le cadre.') }}</p>
 
             <div x-show="imageForm.mode === 'new'" class="space-y-4 border-t border-subtle pt-4">
-                <div>
-                    <p class="mb-1.5 text-[13px] font-medium text-gray-700 dark:text-gray-300">{{ __('Largeur dans l\'article') }}</p>
-                    <x-ui::segmented :legend="__('Largeur de l\'image dans l\'article')" x-model="imageForm.width"
-                        :options="['full' => __('Pleine'), 'medium' => __('Moyenne'), 'small' => __('Petite')]" />
+                <div class="flex flex-wrap items-end gap-x-6 gap-y-4">
+                    <div>
+                        <p class="mb-1.5 text-[13px] font-medium text-gray-700 dark:text-gray-300">{{ __('Largeur dans l\'article') }}</p>
+                        <x-ui::segmented :legend="__('Largeur de l\'image dans l\'article')" x-model="imageForm.width"
+                            :options="['full' => __('Pleine'), 'medium' => __('Moyenne'), 'small' => __('Petite')]" />
+                    </div>
+
+                    {{-- La position n'existe que pour une image reduite : en pleine largeur, il n'y a rien a cote. --}}
+                    <div x-show="imageForm.width !== 'full'" x-cloak>
+                        <p class="mb-1.5 text-[13px] font-medium text-gray-700 dark:text-gray-300">{{ __('Position') }}</p>
+                        <x-ui::segmented :legend="__('Position de l\'image dans l\'article')" x-model="imageForm.align"
+                            :options="['left' => __('Gauche'), 'center' => __('Centre'), 'right' => __('Droite')]" />
+                    </div>
                 </div>
+                <p x-show="imageForm.width !== 'full'" x-cloak class="-mt-1 text-[12px] leading-relaxed text-muted">{{ __('À gauche ou à droite, le texte se place à côté de l\'image sur un grand écran. Sur un écran plus étroit, l\'image passe au-dessus du texte.') }}</p>
 
                 <x-ui::form-group :label="__('Description de l\'image')" for="post-image-alt"
                     :hint="__('Une phrase qui dit ce que montre l\'image, pour les personnes qui ne la voient pas et pour Google.')">

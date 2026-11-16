@@ -7,6 +7,13 @@
         border-width: 0;
     }
 
+    /* Un bouton ou un champ fait 44 px de haut au plus (decision de Micha du 16/11/2026). Le kit (a477194) les
+       monte a 48 px des que l'ecran depasse 950 px de haut ; ils continuent de se reduire sur un ecran moins
+       haut, comme le kit le prevoit. */
+    :root {
+        --ui-field: min(calc((var(--ui-touch) * 4 - 2rem) / 3), 2.75rem);
+    }
+
     /* Titre de page : 22 px au lieu de 18. */
     .ui-page-header h1 {
         font-size: 1.375rem;

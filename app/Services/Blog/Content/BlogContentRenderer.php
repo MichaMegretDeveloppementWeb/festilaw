@@ -69,7 +69,7 @@ final class BlogContentRenderer
             Schema::BULLET_LIST => '<ul>'.$this->items($block['content'], $locale, $images).'</ul>',
             Schema::ORDERED_LIST => '<ol>'.$this->items($block['content'], $locale, $images).'</ol>',
             Schema::BLOCKQUOTE => '<blockquote>'.implode('', array_map(fn (array $child): string => $this->block($child, $locale, $images), $block['content'])).'</blockquote>',
-            Schema::IMAGE => $this->figure($images[$block['attrs']['imageId']] ?? null, $locale, $block['attrs']['width'] ?? null),
+            Schema::IMAGE => $this->figure($images[$block['attrs']['imageId']] ?? null, $locale, $block['attrs']['width'] ?? null, $block['attrs']['align'] ?? null),
             default => '',
         };
     }
@@ -173,7 +173,7 @@ final class BlogContentRenderer
      * classe de plus, et annonce au navigateur sa largeur a l'ecran pour qu'il charge une variante plus
      * legere.
      */
-    private function figure(?BlogImage $image, string $locale, ?string $width = null): string
+    private function figure(?BlogImage $image, string $locale, ?string $width = null, ?string $align = null): string
     {
         if ($image === null) {
             return '';
@@ -211,6 +211,11 @@ final class BlogContentRenderer
         }
 
         $class = $reduced === null ? 'blog-figure' : "blog-figure blog-figure--{$width}";
+
+        // A gauche ou a droite, le texte se place a cote de l'image (resources/css/web/blog/prose.css).
+        if ($reduced !== null && in_array($align, Schema::IMAGE_ALIGNS, true)) {
+            $class .= " blog-figure--{$align}";
+        }
 
         return "<figure class=\"{$class}\"><img{$html}></figure>";
     }

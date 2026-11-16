@@ -155,10 +155,32 @@ it('makes a new pending image from the kept source, with the same texts, and lea
         ->and([$first->fresh()->width, $first->fresh()->height])->toBe([1000, 1000]);
 });
 
-it('refuses to frame again an image whose source was not kept', function () {
-    $featured = app(StoreBlogImageAction::class)->execute(new StoreBlogImageData(BlogImageFiles::jpeg(1600, 900), BlogImageUsage::Featured));
+it('frames again an image placed before sources were kept, from its largest file', function () {
+    // Une image du texte telle que l'ancien envoi la laissait : ses variantes, sans source ni cadrage.
+    $older = app(StoreBlogImageAction::class)->execute(new StoreBlogImageData(BlogImageFiles::jpeg(2000, 1000), BlogImageUsage::Content));
+    $paths = app(BlogImagePaths::class);
 
-    expect(fn () => app(RecropBlogImageAction::class)->execute($featured->id, new BlogImageCrop(0, 0, 800, 600), null))
+    expect($older->hasSource())->toBeFalse()
+        ->and($paths->recropSourceOf($older))->toBe($paths->variantOf($older, 1600));
+
+    // Le rectangle se lit dans sa plus grande variante (1600 x 800).
+    $framed = app(RecropBlogImageAction::class)->execute($older->id, new BlogImageCrop(400, 100, 800, 600), null);
+
+    expect($framed->id)->not->toBe($older->id)
+        ->and([$framed->width, $framed->height])->toBe([800, 600])
+        ->and($framed->crop)->toBe(['x' => 400, 'y' => 100, 'width' => 800, 'height' => 600])
+        // La nouvelle image garde ce fichier comme source : elle se recadrera encore, sans perte de plus.
+        ->and($framed->hasSource())->toBeTrue()
+        ->and(Storage::disk('public')->get($paths->sourceOf($framed)))->toBe(Storage::disk('public')->get($paths->variantOf($older, 1600)))
+        ->and(croppedBlogFile($paths->sourceOf($framed)))->toBe([1600, 800, 'image/webp'])
+        // L'ancienne image n'a pas bouge.
+        ->and($older->fresh()->widths())->toBe([480, 768, 1200, 1600]);
+});
+
+it('refuses to frame again an image that has no file at all', function () {
+    $empty = BlogImage::factory()->create(['variants' => ['widths' => [], 'share' => false]]);
+
+    expect(fn () => app(RecropBlogImageAction::class)->execute($empty->id, new BlogImageCrop(0, 0, 800, 600), null))
         ->toThrow(BlogImageException::class, 'no kept source');
 
     expect(BlogImage::query()->count())->toBe(1);

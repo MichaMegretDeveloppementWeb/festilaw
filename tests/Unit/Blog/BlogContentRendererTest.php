@@ -129,6 +129,20 @@ it('marks a reduced image and tells the browser how wide it is shown, so that a 
     'small' => ['small', '(min-width: 360px) 360px, 100vw'],
 ]);
 
+it('marks a reduced image placed on one side, so that the text sits beside it', function (string $align) {
+    $html = renderBlogBlocks([['type' => 'blogImage', 'attrs' => ['imageId' => 7, 'width' => 'small', 'align' => $align]]], 'en', [blogImageForRender(7)]);
+
+    expect($html)->toStartWith("<figure class=\"blog-figure blog-figure--small blog-figure--{$align}\"><img");
+})->with(['left', 'right']);
+
+it('gives no position to a full width image, nor an unknown one to a reduced image', function () {
+    $full = renderBlogBlocks([['type' => 'blogImage', 'attrs' => ['imageId' => 7, 'align' => 'left']]], 'en', [blogImageForRender(7)]);
+    $unknown = renderBlogBlocks([['type' => 'blogImage', 'attrs' => ['imageId' => 7, 'width' => 'medium', 'align' => 'top']]], 'en', [blogImageForRender(7)]);
+
+    expect($full)->toStartWith('<figure class="blog-figure"><img')
+        ->and($unknown)->toStartWith('<figure class="blog-figure blog-figure--medium"><img');
+});
+
 it('renders an image whose width is not a known reduced width at full width', function () {
     $html = renderBlogBlocks([['type' => 'blogImage', 'attrs' => ['imageId' => 7, 'width' => 'huge']]], 'en', [blogImageForRender(7)]);
 

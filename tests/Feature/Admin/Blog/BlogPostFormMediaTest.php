@@ -192,7 +192,7 @@ describe('framing an image of the text', function () {
         Livewire::test(PostForm::class)
             ->set('imageUpload', uploadedImage(1600, 900))
             ->call('storeImage', 'featured', ['x' => 0, 'y' => 0, 'width' => 1300, 'height' => 700])
-            ->assertReturned(fn (array $summary): bool => $summary['source'] === null && $summary['crop'] === null);
+            ->assertReturned(fn (array $summary): bool => $summary['crop'] === null);
 
         $image = BlogImage::query()->sole();
 
@@ -232,7 +232,7 @@ describe('framing an image of the text', function () {
             ->and($first->fresh()->crop)->toBe(['x' => 0, 'y' => 0, 'width' => 2000, 'height' => 1000]);
     });
 
-    it('refuses to frame again without a rectangle, an image of another article, or an image without a kept source', function () {
+    it('refuses to frame again without a rectangle, an image of another article, or an image whose file is gone', function () {
         Log::spy();
         $post = BlogContent::draft('pending');
         $foreign = BlogImage::factory()->create(['blog_post_id' => BlogContent::draft('other')->id, 'variants' => ['widths' => [480], 'share' => false, 'source' => true]]);
@@ -262,11 +262,14 @@ describe('framing an image of the text', function () {
             'crop' => ['x' => 10, 'y' => 20, 'width' => 800, 'height' => 600],
         ]);
 
+        // Une image sans source gardee se recadre a partir de sa plus grande variante, cadre sur toute l'image.
+        $older = BlogImage::factory()->create(['blog_post_id' => $post->id]);
+
         Livewire::test(PostForm::class, ['post' => $post->id])
             ->assertViewHas('initialImages', fn (array $images): bool => str_ends_with((string) $images[$image->id]['source'], '-source.webp')
                 && $images[$image->id]['crop'] === ['x' => 10, 'y' => 20, 'width' => 800, 'height' => 600]
-                && $images[$post->featured_image_id]['source'] === null
-                && $images[$post->featured_image_id]['crop'] === null);
+                && str_ends_with((string) $images[$older->id]['source'], '-1600.webp')
+                && $images[$older->id]['crop'] === null);
     });
 });
 

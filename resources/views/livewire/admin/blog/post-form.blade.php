@@ -18,6 +18,8 @@
         'recrop' => __('Recadrer'),
         'width' => __('Largeur de l\'image dans l\'article'),
         'widths' => ['full' => __('Pleine'), 'medium' => __('Moyenne'), 'small' => __('Petite')],
+        'position' => __('Position de l\'image dans l\'article'),
+        'positions' => ['left' => __('Gauche'), 'center' => __('Centre'), 'right' => __('Droite')],
         // Memes phrases que les refus du serveur (BlogImageException) : le script les dit avant tout envoi.
         'wrongType' => __('Ce format d\'image n\'est pas pris en charge. Envoyez un fichier JPEG, PNG ou WebP.'),
         'unreadable' => __('Ce fichier n\'est pas une image lisible. Envoyez un fichier JPEG, PNG ou WebP.'),

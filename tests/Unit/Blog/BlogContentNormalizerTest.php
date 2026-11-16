@@ -79,6 +79,19 @@ it('keeps the width of an image of the text only when it is a known reduced widt
     'nothing' => [null, ['imageId' => 12]],
 ]);
 
+it('keeps the position of an image of the text only when the image is reduced and the position is known', function (array $attrs, array $expected) {
+    $content = blogNormalizer()->normalize(blogDoc(['type' => 'blogImage', 'attrs' => ['imageId' => 12, ...$attrs]]));
+
+    expect($content->document['content'][0]['attrs'])->toBe($expected);
+})->with([
+    'small on the left' => [['width' => 'small', 'align' => 'left'], ['imageId' => 12, 'width' => 'small', 'align' => 'left']],
+    'medium on the right' => [['width' => 'medium', 'align' => 'right'], ['imageId' => 12, 'width' => 'medium', 'align' => 'right']],
+    'centre is the absence of position' => [['width' => 'small', 'align' => 'center'], ['imageId' => 12, 'width' => 'small']],
+    'unknown position' => [['width' => 'small', 'align' => 'top'], ['imageId' => 12, 'width' => 'small']],
+    'no position at full width' => [['align' => 'left'], ['imageId' => 12]],
+    'no position when the width is unknown' => [['width' => 'huge', 'align' => 'right'], ['imageId' => 12]],
+]);
+
 it('removes unknown elements, marks and attributes', function () {
     $content = blogNormalizer()->normalize(blogDoc(
         ['type' => 'codeBlock', 'content' => [blogText('rm -rf')]],

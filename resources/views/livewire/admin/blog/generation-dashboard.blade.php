@@ -1,9 +1,9 @@
-{{-- Vue d'ensemble de la generation par IA : quatre tuiles (depense, automatique, brouillons a relire, en
-     cours), les dernieres generations, puis l'etat du service. Le lancement est une fenetre de l'en-tete,
-     l'historique et les reglages ont leur page. Rien n'apparait ni ne pousse la page : la tuile « En cours »
+{{-- Page d'arrivee de la generation par IA : quatre tuiles (depense, automatique, brouillons a relire, en
+     cours), les dernieres generations, puis l'etat du service. Le lancement est une fenetre de l'en-tete ;
+     l'historique s'ouvre par son lien, les reglages par la roue crantee de l'en-tete. Rien n'apparait ni ne pousse la page : la tuile « En cours »
      garde sa taille, qu'une generation tourne ou non. --}}
 <div>
-    @include('livewire.admin.blog.generation.header', ['active' => 'overview'])
+    @include('livewire.admin.blog.generation.header', ['page' => 'index'])
 
     @error('generation-load-failed')
         <x-ui::card :padding="false">
@@ -19,7 +19,8 @@
         @endif
 
         @unless ($overview->workerListening)
-            <x-ui::alert type="warning" class="mb-6" :title="__('Aucun traitement n\'est à l\'écoute')">{{ __('Une génération demandée maintenant attendra que les tâches automatiques du site repartent. Si cela dure, contactez l\'assistance technique.') }}</x-ui::alert>
+            {{-- Dit avec les mots de la personne qui ecrit des articles : ce qu'elle constate, ce que cela change pour elle, quoi faire. --}}
+            <x-ui::alert type="warning" class="mb-6" :title="__('Les générations ne démarrent pas pour le moment')">{{ __('Un article demandé maintenant restera en attente. Si cela dure, contactez l\'assistance technique.') }}</x-ui::alert>
         @endunless
 
         @if ($overview->capReached)
@@ -62,9 +63,11 @@
                         @php
                             $detailUrl = route('admin.blog.generation.show', ['generation' => $generation->id]);
                         @endphp
-                        <li wire:key="latest-{{ $generation->id }}" class="flex items-center gap-3 px-5 py-3" data-generation="{{ $generation->id }}" data-generation-status="{{ $generation->status->value }}">
+                        {{-- Toute la ligne ouvre la generation, comme dans l'historique : le lien du sujet s'etend sur
+                             la ligne entiere, et les boutons de la ligne passent au-dessus de lui. --}}
+                        <li wire:key="latest-{{ $generation->id }}" class="relative flex items-center gap-3 px-5 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-white/5" data-generation="{{ $generation->id }}" data-generation-status="{{ $generation->status->value }}">
                             <div class="min-w-0 flex-1">
-                                <a href="{{ $detailUrl }}" class="block truncate text-[13px] font-medium text-primary hover:underline">{{ $generation->subject ?? __('Sujet choisi par l\'IA') }}</a>
+                                <a href="{{ $detailUrl }}" class="block truncate text-[13px] font-medium text-primary after:absolute after:inset-0">{{ $generation->subject ?? __('Sujet choisi par l\'IA') }}</a>
                                 <p class="mt-0.5 truncate text-[12px] text-muted">
                                     @if ($generation->outcome)
                                         <span class="text-secondary">{{ $generation->outcome }}</span> ·
@@ -75,11 +78,11 @@
                             <span class="hidden shrink-0 text-[12px] tabular-nums text-muted sm:block">{{ $generation->cost }}</span>
                             <x-admin.blog.generation-status :status="$generation->status" class="shrink-0" />
                             @if ($generation->isRetryable())
-                                <x-ui::button variant="secondary" size="compact" class="shrink-0" wire:click="retry({{ $generation->id }})" :loading="true" target="retry({{ $generation->id }})">
+                                <x-ui::button variant="secondary" size="compact" class="relative z-10 shrink-0" wire:click="retry({{ $generation->id }})" :loading="true" target="retry({{ $generation->id }})">
                                     <x-ui::icon name="arrow-path" /> {{ __('Relancer') }}
                                 </x-ui::button>
                             @elseif ($generation->postId)
-                                <x-ui::button variant="secondary" size="compact" class="shrink-0" :href="route('admin.blog.posts.edit', ['post' => $generation->postId])">{{ __('Ouvrir le brouillon') }}</x-ui::button>
+                                <x-ui::button variant="secondary" size="compact" class="relative z-10 shrink-0" :href="route('admin.blog.posts.edit', ['post' => $generation->postId])">{{ __('Ouvrir le brouillon') }}</x-ui::button>
                             @endif
                         </li>
                     @endforeach
@@ -87,18 +90,25 @@
             @endif
         </x-admin.panel>
 
-        {{-- Pour qui veille sur le site : le traitement de fond tourne-t-il, la cle du fournisseur est-elle en place.
-             La cle elle-meme n'est jamais affichee. --}}
+        {{-- Pour qui veille sur le site : les generations peuvent-elles demarrer, la cle du fournisseur est-elle en
+             place. La cle elle-meme n'est jamais affichee. Le mode d'essai (etapes factices, en local seulement) se
+             dit ici, en texte neutre, et nulle part ailleurs. --}}
         <p class="flex flex-wrap items-center gap-x-5 gap-y-1 text-[12px] text-muted" data-service-state>
             <span class="font-medium text-secondary">{{ __('État du service') }}</span>
             <span class="inline-flex items-center gap-1.5" data-service="worker">
                 <span @class(['h-1.5 w-1.5 rounded-full', 'bg-emerald-500' => $overview->workerListening, 'bg-amber-500' => ! $overview->workerListening])></span>
-                {{ $overview->workerListening ? __('Traitement à l\'écoute') : __('Traitement à l\'arrêt') }}
+                {{ $overview->workerListening ? __('Service de génération en marche') : __('Service de génération à l\'arrêt') }}
             </span>
             <span class="inline-flex items-center gap-1.5" data-service="key">
                 <span @class(['h-1.5 w-1.5 rounded-full', 'bg-emerald-500' => $overview->apiKeyPresent, 'bg-amber-500' => ! $overview->apiKeyPresent])></span>
                 {{ $overview->apiKeyPresent ? __('Clé du fournisseur d\'IA en place') : __('Clé du fournisseur d\'IA absente') }}
             </span>
+            @if ($overview->simulated)
+                <span class="inline-flex items-center gap-1.5" data-service="trial">
+                    <span class="h-1.5 w-1.5 rounded-full bg-gray-400"></span>
+                    {{ __('Mode d\'essai, aucun modèle n\'est appelé') }}
+                </span>
+            @endif
         </p>
     @enderror
 </div>

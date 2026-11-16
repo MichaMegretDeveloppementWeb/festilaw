@@ -15,6 +15,10 @@ export const IMAGE_RECROP_EVENT = 'blog-image-recrop';
 // c'est l'absence d'attribut (meme regle que le serveur, BlogContentSchema::IMAGE_WIDTHS).
 const IMAGE_WIDTHS = ['full', 'medium', 'small'];
 
+// Positions d'une image REDUITE. « center » ne s'ecrit pas dans le document (absence d'attribut). A gauche ou a
+// droite, le texte se place a cote de l'image quand la colonne est assez large (BlogContentSchema::IMAGE_ALIGNS).
+const IMAGE_ALIGNS = ['left', 'center', 'right'];
+
 // Un document a du contenu des qu'il porte un texte non vide ou une image : un paragraphe vide n'en est pas.
 export const documentHasContent = (node) => {
     if (! node || typeof node !== 'object') {
@@ -32,7 +36,8 @@ export const documentHasContent = (node) => {
     return Array.isArray(node.content) && node.content.some(documentHasContent);
 };
 
-// Image du blog dans le texte : le document ne porte que son identifiant et, si elle est reduite, sa largeur.
+// Image du blog dans le texte : le document ne porte que son identifiant et, si elle est reduite, sa largeur et
+// sa position.
 // L'apercu et la description viennent de la liste d'images que tient le formulaire (`images()`), dans la
 // langue de l'editeur.
 const blogImage = ({ images, locale, labels }) => Node.create({
@@ -54,6 +59,11 @@ const blogImage = ({ images, locale, labels }) => Node.create({
                 parseHTML: (element) => (IMAGE_WIDTHS.includes(element.getAttribute('data-width')) && element.getAttribute('data-width') !== 'full' ? element.getAttribute('data-width') : null),
                 renderHTML: (attributes) => (attributes.width ? { 'data-width': attributes.width } : {}),
             },
+            align: {
+                default: null,
+                parseHTML: (element) => (['left', 'right'].includes(element.getAttribute('data-align')) ? element.getAttribute('data-align') : null),
+                renderHTML: (attributes) => (attributes.align ? { 'data-align': attributes.align } : {}),
+            },
         };
     },
 
@@ -67,7 +77,12 @@ const blogImage = ({ images, locale, labels }) => Node.create({
 
     addCommands() {
         return {
-            insertBlogImage: (imageId, width = null) => ({ commands }) => commands.insertContent({ type: this.name, attrs: { imageId, width: width === 'full' ? null : width } }),
+            insertBlogImage: (imageId, width = null, align = null) => ({ commands }) => {
+                const reduced = width === 'full' ? null : width;
+
+                // Une position n'a de sens que pour une image reduite.
+                return commands.insertContent({ type: this.name, attrs: { imageId, width: reduced, align: reduced && align !== 'center' ? align : null } });
+            },
         };
     },
 
@@ -79,6 +94,7 @@ const blogImage = ({ images, locale, labels }) => Node.create({
             const text = document.createElement('span');
             const actions = document.createElement('span');
             const current = node.attrs.width ?? 'full';
+            const position = node.attrs.width ? (node.attrs.align ?? 'center') : 'center';
 
             // Remplace les attributs du noeud (largeur). L'image reste a sa place dans le texte.
             const setAttributes = (attributes) => {
@@ -107,6 +123,7 @@ const blogImage = ({ images, locale, labels }) => Node.create({
             figure.contentEditable = 'false';
             figure.dataset.imageId = String(node.attrs.imageId);
             figure.dataset.width = current;
+            figure.dataset.align = position;
             picture.draggable = false;
             actions.className = 'blog-editor-image-actions';
 
@@ -118,11 +135,28 @@ const blogImage = ({ images, locale, labels }) => Node.create({
             widths.setAttribute('aria-label', labels.width);
 
             IMAGE_WIDTHS.forEach((width) => {
-                const choice = button(labels.widths[width], () => setAttributes({ width: width === 'full' ? null : width }));
+                // En pleine largeur, la position n'existe plus : elle est retiree avec la largeur.
+                const choice = button(labels.widths[width], () => setAttributes(width === 'full' ? { width: null, align: null } : { width }));
 
                 choice.dataset.width = width;
                 choice.setAttribute('aria-pressed', String(width === current));
                 widths.append(choice);
+            });
+
+            // Position dans l'article : proposee seulement pour une image reduite.
+            const aligns = document.createElement('span');
+
+            aligns.className = 'blog-editor-image-widths blog-editor-image-aligns';
+            aligns.setAttribute('role', 'group');
+            aligns.setAttribute('aria-label', labels.position);
+            aligns.hidden = current === 'full';
+
+            IMAGE_ALIGNS.forEach((align) => {
+                const choice = button(labels.positions[align], () => setAttributes({ align: align === 'center' ? null : align }));
+
+                choice.dataset.align = align;
+                choice.setAttribute('aria-pressed', String(align === position));
+                aligns.append(choice);
             });
 
             const recrop = button(labels.recrop, () => {
@@ -151,11 +185,11 @@ const blogImage = ({ images, locale, labels }) => Node.create({
                 picture.alt = alt;
                 text.textContent = alt === '' ? labels.missing : alt;
                 text.classList.toggle('blog-editor-image-missing', alt === '');
-                // Une image sans source gardee (anterieure au recadrage) ne se recadre pas.
+                // Toute image qui a un fichier se recadre (sa source gardee, sinon sa plus grande variante).
                 recrop.hidden = ! image?.source;
             };
 
-            actions.append(widths, recrop, describe, remove);
+            actions.append(widths, aligns, recrop, describe, remove);
             caption.append(text, actions);
             figure.append(picture, caption);
             paint();

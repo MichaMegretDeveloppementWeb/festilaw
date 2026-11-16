@@ -1,12 +1,6 @@
 {{-- Le bouton « Générer un article » et sa fenetre. Le bouton lit d'abord les images par defaut des reglages
-     (prepare), puis ouvre la fenetre ; le lancement redirige vers la page de la generation.
-     $simulated : les etapes sont factices (essais en local, jamais en production). --}}
+     (prepare), puis ouvre la fenetre ; le lancement redirige vers la page de la generation. --}}
 <div class="flex items-center gap-x-2">
-    @if ($simulated)
-        <x-ui::badge color="amber" data-simulated
-            title="{{ __('Les étapes sont factices. Aucun modèle n\'est appelé et aucun article n\'est créé. Ce mode n\'existe pas en production.') }}">{{ __('Mode d\'essai') }}</x-ui::badge>
-    @endif
-
     <x-ui::button data-launch-generation x-on:click="$wire.prepare().then(() => $dispatch('ui-open-modal', 'launch-generation'))">
         <x-ui::icon name="sparkles" /> {{ __('Générer un article') }}
     </x-ui::button>

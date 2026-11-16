@@ -168,7 +168,7 @@ final readonly class BlogGenerationDetailService
             $text = $rows->get($step)?->summary;
 
             if (filled($text)) {
-                $report[] = ['label' => $label, 'text' => (string) $text];
+                $report[] = ['key' => $step, 'label' => $label, 'text' => (string) $text];
             }
         }
 

@@ -35,7 +35,7 @@ const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 // Fenetre d'image remise a zero. `mode` : 'new' (une image a ajouter) ou 'recrop' (un nouveau cadrage).
 const emptyImageForm = () => ({
     mode: 'new', locale: null, imageId: null, position: null, file: null, preview: '', ready: false,
-    ratio: 'free', zoom: 0, width: 'full', alt: '', busy: false, error: '',
+    ratio: 'free', zoom: 0, width: 'full', align: 'center', alt: '', busy: false, error: '',
 });
 
 // Envoie un fichier dans une propriete du composant. L'envoi de Livewire travaille par fonctions de
@@ -471,7 +471,7 @@ const blogPostForm = (config) => ({
     // « Changer d'image » : retour au choix du fichier.
     resetImageFile() {
         this.releaseCropper();
-        this.imageForm = { ...emptyImageForm(), locale: this.imageForm.locale, width: this.imageForm.width, alt: this.imageForm.alt };
+        this.imageForm = { ...emptyImageForm(), locale: this.imageForm.locale, width: this.imageForm.width, align: this.imageForm.align, alt: this.imageForm.alt };
     },
 
     releaseCropper() {
@@ -530,7 +530,7 @@ const blogPostForm = (config) => ({
                 }
 
                 this.images[image.id] = image;
-                editor?.chain().focus().insertBlogImage(image.id, form.width).run();
+                editor?.chain().focus().insertBlogImage(image.id, form.width, form.align).run();
             }
 
             this.dirty = true;

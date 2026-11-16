@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Livewire\Admin\Blog;
 
 use App\Actions\Blog\Generation\QueueBlogGenerationAction;
-use App\Contracts\Blog\Generation\GenerationPipeline;
 use App\Data\Blog\Generation\BlogAiSettings;
 use App\Data\Blog\Generation\GenerationImageOptions;
 use App\Data\Blog\Generation\QueueBlogGenerationData;
@@ -14,7 +13,6 @@ use App\Exceptions\BaseAppException;
 use App\Livewire\Concerns\HandlesAdminErrors;
 use App\Services\Admin\Blog\Generation\BlogGenerationPresenter;
 use App\Services\Blog\Generation\BlogAiSettingsService;
-use App\Services\Blog\Generation\Simulation\SimulatedGenerationPipeline;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -118,11 +116,9 @@ class GenerationLauncher extends Component
         $this->redirectRoute('admin.blog.generation.show', ['generation' => $generationId]);
     }
 
-    public function render(BlogGenerationPresenter $presenter, GenerationPipeline $pipeline): View
+    public function render(BlogGenerationPresenter $presenter): View
     {
         return view('livewire.admin.blog.generation-launcher', [
-            // Etapes factices (essais en local) : l'en-tete le dit par une pastille, sur les trois pages.
-            'simulated' => $pipeline instanceof SimulatedGenerationPipeline,
             'imageModes' => collect(BlogAiImageMode::cases())->mapWithKeys(fn (BlogAiImageMode $mode): array => [$mode->value => $mode->label()])->all(),
             'imageCounts' => collect(range(1, BlogAiSettings::MAX_IMAGES))->mapWithKeys(fn (int $count): array => [(string) $count => $presenter->imageCountLabel($count)])->all(),
         ]);
