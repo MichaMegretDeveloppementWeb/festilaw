@@ -171,7 +171,9 @@
         }
     }
 
-    @container (min-width: 54rem) {
+    /* Un peu plus tot que sur la page publique (54rem) : la zone de saisie du formulaire est plus etroite que la
+       colonne de l'article, et l'image moyenne y garde 560 px. */
+    @container (min-width: 52rem) {
         .blog-editor-image[data-width='medium'][data-align='left'] {
             float: left;
             width: 35rem;

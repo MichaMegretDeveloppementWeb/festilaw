@@ -666,7 +666,7 @@ class PostForm extends Component
             'relatedCandidateLimit' => BlogPostFormService::RELATED_CANDIDATES,
             'previewUrlTemplate' => route('admin.blog.posts.preview', ['post' => '__ID__', 'locale' => '__LOCALE__']),
             'addressPrefixes' => $slugs->pathPrefixes('blog.show'),
-        ])->title(($this->postId === null ? __('Nouvel article') : __('Modifier l\'article')));
+        ])->title(($this->postId === null ? __('Nouvel article') : __('Modifier l\'article')))->layoutData(['surface' => 'plain']);
     }
 
     /**

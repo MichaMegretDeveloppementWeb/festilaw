@@ -1,7 +1,7 @@
 {{-- Sources de l'article : intitule et lien, dans l'ordre d'affichage (glisser pour ordonner).
      Une source s'ajoute et se modifie dans une fenetre (post-form/dialogs) : elle n'entre dans la liste
      qu'une fois valide, jamais sous la forme d'une ligne vide. --}}
-<x-admin.panel :title="__('Sources')" :description="__('Affichées à la fin de l\'article, dans les trois langues.')" class="overflow-hidden">
+<x-admin.section class="mt-12" :title="__('Sources')" :description="__('Affichées à la fin de l\'article, dans les trois langues.')">
     <x-slot:actions>
         @if (count($sources) < $sourceLimit)
             <x-ui::button variant="secondary" size="compact" class="shrink-0" data-add-source x-on:click="openSource()">
@@ -11,18 +11,18 @@
     </x-slot:actions>
 
     @error('sources')
-        <p class="px-5 pt-4 text-[12px] text-red-700 dark:text-red-400">{{ $message }}</p>
+        <p class="pt-4 text-[12px] text-red-700 dark:text-red-400">{{ $message }}</p>
     @enderror
 
     @if ($sources === [])
-        <p class="px-5 py-6 text-[13px] text-secondary">{{ __('Aucune source. Un article qui cite ses sources inspire davantage confiance.') }}</p>
+        <p class="py-6 text-[13px] text-secondary">{{ __('Aucune source. Un article qui cite ses sources inspire davantage confiance.') }}</p>
     @else
-        <ul wire:sort="sortSources" class="divide-y divide-subtle" data-sources>
+        <ul wire:sort="sortSources" class="-mx-4 divide-y divide-[var(--ui-border)] border-b border-default sm:-mx-5" data-sources>
             @foreach ($sources as $index => $source)
                 @php
                     $sourceError = $errors->first('sources.'.$index.'.label') ?: $errors->first('sources.'.$index.'.url');
                 @endphp
-                <li wire:key="source-{{ $index }}-{{ md5($source['label'].'|'.$source['url']) }}" wire:sort:item="{{ $index }}" class="flex items-center gap-2 px-3 py-2.5 sm:gap-3 sm:px-5">
+                <li wire:key="source-{{ $index }}-{{ md5($source['label'].'|'.$source['url']) }}" wire:sort:item="{{ $index }}" class="flex items-center gap-2 px-3 py-3 sm:gap-3 sm:px-4">
                     <span wire:sort:handle data-handle x-on:mouseup="dirty = true"
                         class="flex shrink-0 cursor-grab items-center self-center rounded-lg p-1.5 text-muted transition hover:text-secondary" title="{{ __('Glisser pour changer l\'ordre') }}">
                         <x-ui::icon name="bars-2" />
@@ -48,4 +48,4 @@
             @endforeach
         </ul>
     @endif
-</x-admin.panel>
+</x-admin.section>

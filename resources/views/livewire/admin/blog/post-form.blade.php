@@ -1,5 +1,5 @@
-{{-- Formulaire d'article : le contenu a gauche, les reglages communs dans un panneau etroit a droite, et
-     une barre d'actions qui reste en bas de l'ecran. Sur telephone, le panneau quitte la page et s'ouvre
+{{-- Formulaire d'article, sur page blanche : le contenu a gauche, sans carte, les reglages communs dans une
+     colonne a droite separee par un filet vertical, et une barre d'actions qui reste en bas de l'ecran. Sur telephone, le panneau quitte la page et s'ouvre
      en feuille depuis le bouton « Réglages » de la barre.
      L'etat des champs est dans le composant ; le contenu des trois langues, l'onglet actif, la feuille des
      reglages et l'alerte de modifications non enregistrees vivent dans le navigateur (blogPostForm,
@@ -68,17 +68,19 @@
             </x-ui::alert>
         @endif
 
-        <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem]">
-            <div class="min-w-0 space-y-6">
-                <x-ui::card :padding="false">
+        <div class="grid items-start gap-y-6 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem]">
+            <div class="min-w-0 lg:pr-8">
+                {{-- Les onglets debordent de la colonne comme les filets de la page : leur premier libelle reste
+                     aligne sur le titre. --}}
+                <div class="-mx-4 sm:-mx-5">
                     <x-admin.blog.language-tabs :locales="$locales" />
+                </div>
 
-                    @foreach ($locales as $locale => $language)
-                        <div x-show="tab === '{{ $locale }}'" @if ($locale !== 'en') x-cloak @endif role="tabpanel" class="space-y-5 p-5">
-                            @include('livewire.admin.blog.post-form.language', ['locale' => $locale, 'language' => $language])
-                        </div>
-                    @endforeach
-                </x-ui::card>
+                @foreach ($locales as $locale => $language)
+                    <div x-show="tab === '{{ $locale }}'" @if ($locale !== 'en') x-cloak @endif role="tabpanel" class="space-y-6 pt-8">
+                        @include('livewire.admin.blog.post-form.language', ['locale' => $locale, 'language' => $language])
+                    </div>
+                @endforeach
 
                 @include('livewire.admin.blog.post-form.sources')
             </div>

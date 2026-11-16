@@ -6,8 +6,8 @@
 <aside id="post-settings" aria-labelledby="post-settings-title"
     x-bind:data-open="settingsOpen.toString()"
     x-bind:inert="! wide && ! settingsOpen"
-    class="fixed inset-x-0 bottom-0 z-50 flex max-h-[85svh] translate-y-full flex-col rounded-t-2xl data-[open=true]:translate-y-0 bg-surface shadow-2xl transition-transform duration-200 ease-out lg:sticky lg:inset-x-auto lg:bottom-auto lg:top-6 lg:z-auto lg:max-h-[calc(100svh-7rem)] lg:translate-y-0 lg:rounded-xl lg:shadow-none lg:transition-none">
-    <div class="flex shrink-0 items-center justify-between gap-3 border-b border-subtle px-5 py-3.5">
+    class="fixed inset-x-0 bottom-0 z-50 flex max-h-[85svh] translate-y-full flex-col rounded-t-2xl data-[open=true]:translate-y-0 bg-surface shadow-2xl transition-transform duration-200 ease-out lg:sticky lg:inset-x-auto lg:bottom-auto lg:top-6 lg:z-auto lg:max-h-[calc(100svh-7rem)] lg:translate-y-0 lg:rounded-none lg:border-l lg:border-default lg:bg-transparent lg:pl-8 lg:shadow-none lg:transition-none">
+    <div class="flex shrink-0 items-center justify-between gap-3 border-b border-default px-5 py-3.5 lg:px-0 lg:pb-3 lg:pt-1">
         <div>
             <h2 id="post-settings-title" class="text-[15px] font-semibold leading-snug text-primary">{{ __('Réglages de l\'article') }}</h2>
             <p class="mt-0.5 text-[13px] text-muted">{{ __('Communs aux trois langues') }}</p>
@@ -19,7 +19,7 @@
     </div>
 
     {{-- Le contenu defile a l'interieur du panneau : sur ordinateur, il ne depasse jamais la hauteur de l'ecran. --}}
-    <div class="min-h-0 flex-1 space-y-6 overflow-y-auto p-5">
+    <div class="min-h-0 flex-1 overflow-y-auto p-5 lg:px-0 [&>*+*]:mt-6 [&>*+*]:border-t [&>*+*]:border-default [&>*+*]:pt-6">
         {{-- Categorie --}}
         @if ($categoryOptions === [])
             <div>
