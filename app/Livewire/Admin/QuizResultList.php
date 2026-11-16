@@ -51,6 +51,6 @@ class QuizResultList extends Component
             'results' => $result?->results,
             'outcomes' => QuizOutcome::cases(),
             'counts' => $result?->counts ?? [],
-        ])->title(__('Quiz'));
+        ])->title(__('Quiz'))->layoutData(['surface' => 'plain']);
     }
 }

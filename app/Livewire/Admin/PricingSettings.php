@@ -81,6 +81,6 @@ class PricingSettings extends Component
         return view('livewire.admin.pricing-settings', [
             'creatorDefault' => $this->toEuros($pricing->defaultCents(SubmissionType::Starter)),
             'proDefault' => $this->toEuros($pricing->defaultCents(SubmissionType::Pro)),
-        ])->title(__('Tarifs'));
+        ])->title(__('Tarifs'))->layoutData(['surface' => 'plain']);
     }
 }

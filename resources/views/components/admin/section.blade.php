@@ -1,7 +1,6 @@
 @props(['title', 'description' => null])
 {{-- Une section d'un ecran sur page blanche : un titre de 16 px, une phrase facultative, un filet, puis le
-     contenu. Elle remplace la carte a bandeau de titre (<x-admin.panel>) sur les ecrans du blog et de la
-     generation IA. $actions (facultatif) : ce qui se range a droite du titre (un lien, un compte).
+     contenu. Tous les ecrans du back-office l'emploient depuis le 16/11/2026, a la place des cartes a bandeau. $actions (facultatif) : ce qui se range a droite du titre (un lien, un compte).
      Le filet deborde de la colonne de la meme marge que les lignes des listes et la bande de chiffres
      (-mx-4 sm:-mx-5) : le texte reste aligne sur le titre de la page, les traits vont un peu au-dela. --}}
 <section {{ $attributes }}>

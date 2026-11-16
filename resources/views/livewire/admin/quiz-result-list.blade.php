@@ -1,24 +1,36 @@
+{{-- Reponses au quiz d'eligibilite, sur page blanche. En tete, la bande des nombres de reponses par resultat, qui
+     sert aussi de filtre (un clic choisit le resultat, la cellule choisie est soulignee), comme la liste des
+     articles. Puis le tableau sans carte. --}}
+@php
+    $outcomeCells = ['' => __('Tous')] + collect($outcomes)->mapWithKeys(fn ($case) => [$case->value => $case->label()])->all();
+    $chosenOutcome = \App\Enums\Quiz\QuizOutcome::tryFrom($outcome)?->value ?? '';
+    $totalCount = array_sum(array_map('intval', $counts));
+@endphp
 <div>
-    <x-ui::page-header :title="__('Quiz')" :description="__('Réponses au test d\'éligibilité (30 secondes) du site public.')" class="mb-6" />
+    <x-ui::page-header :title="__('Quiz')" :description="__('Réponses au test d\'éligibilité (30 secondes) du site public.')" class="mb-8" />
 
     @error('quiz-load-failed')
-        <x-ui::card :padding="false">
-            <x-ui::load-failure :title="$message" :description="__('Réessayez ; si le problème persiste, contactez-nous.')" retry="$refresh" />
-        </x-ui::card>
+        <x-ui::load-failure :title="$message" :description="__('Réessayez. Si le problème persiste, contactez l\'assistance technique.')" retry="$refresh" />
     @else
-        <div class="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <x-ui::stat-card :label="__('Concerné')" :value="$counts['concerned'] ?? 0" />
-            <x-ui::stat-card :label="__('Catégorie exclue')" :value="$counts['excluded'] ?? 0" />
-            <x-ui::stat-card :label="__('Non concerné')" :value="$counts['not_concerned'] ?? 0" />
-        </div>
+        <x-admin.stats tag="div" :columns="4" role="group" aria-label="{{ __('Filtrer par résultat') }}" data-outcome-filter>
+            @foreach ($outcomeCells as $value => $label)
+                {{-- Forme en bloc : la forme courte, entre parentheses, serait avalee par le bloc php du tableau plus bas. --}}
+                @php
+                    $selected = $chosenOutcome === $value;
+                @endphp
+                <button type="button" wire:click="$set('outcome', '{{ $value }}')" aria-pressed="{{ $selected ? 'true' : 'false' }}" data-outcome="{{ $value === '' ? 'all' : $value }}"
+                    @class([
+                        'group relative flex min-w-0 flex-col bg-surface px-4 py-5 text-left transition-colors sm:px-5',
+                        'hover:bg-elevated' => ! $selected,
+                    ])>
+                    <span @class(['text-[12px] font-medium', 'text-primary' => $selected, 'text-muted group-hover:text-secondary' => ! $selected])>{{ $label }}</span>
+                    <span class="mt-2 text-[26px] font-semibold leading-none tracking-tight tabular-nums text-primary">{{ $value === '' ? $totalCount : ($counts[$value] ?? 0) }}</span>
+                    <span @class(['absolute inset-x-0 -bottom-px h-0.5', 'bg-gray-900 dark:bg-white' => $selected, 'bg-transparent' => ! $selected])></span>
+                </button>
+            @endforeach
+        </x-admin.stats>
 
-        <div class="mb-4 max-w-xs">
-            <x-ui::form-group :label="__('Résultat')" for="f-outcome">
-                <x-ui::select id="f-outcome" wire:model.live="outcome" :options="collect($outcomes)->mapWithKeys(fn ($o) => [$o->value => $o->label()])->prepend(__('Tous'), '')->all()" />
-            </x-ui::form-group>
-        </div>
-
-        <x-ui::card :padding="false">
+        <div class="relative -mx-4 mt-8 border-t border-default sm:-mx-5">
             @if ($results === null || $results->isEmpty())
                 <x-ui::empty-state icon="question-mark-circle" :title="$outcome !== '' ? __('Aucune réponse ne correspond.') : __('Aucune réponse au quiz pour le moment.')" />
             @else
@@ -54,6 +66,6 @@
 
                 <x-ui::pagination :paginator="$results" mode="livewire" />
             @endif
-        </x-ui::card>
+        </div>
     @enderror
 </div>

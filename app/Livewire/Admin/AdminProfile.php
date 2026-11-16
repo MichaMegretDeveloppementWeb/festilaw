@@ -84,7 +84,7 @@ class AdminProfile extends Component
 
     public function render(): View
     {
-        return view('livewire.admin.profile')->title(__('Mon compte'));
+        return view('livewire.admin.profile')->title(__('Mon compte'))->layoutData(['surface' => 'plain']);
     }
 
     private function user(): User

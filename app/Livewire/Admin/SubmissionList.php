@@ -92,7 +92,7 @@ class SubmissionList extends Component
             'stateFilters' => $this->stateFilterOptions(),
             'types' => [SubmissionType::Starter, SubmissionType::Pro, SubmissionType::Scale],
             'dossierStates' => $result?->dossierStates ?? [],
-        ])->title(($this->contactsMode ? __('Prises de contact') : __('Dossiers')));
+        ])->title(($this->contactsMode ? __('Prises de contact') : __('Dossiers')))->layoutData(['surface' => 'plain']);
     }
 
     /**
