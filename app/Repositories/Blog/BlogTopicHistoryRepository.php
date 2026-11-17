@@ -17,7 +17,8 @@ use Illuminate\Database\Query\JoinClause;
  */
 final class BlogTopicHistoryRepository
 {
-    public function load(int $postLimit = 500, int $topicLimit = 300): BlogTopicHistory
+    /** @param  int|null  $exceptGenerationId  la generation en cours, dont le propre sujet n'est pas un doublon */
+    public function load(int $postLimit = 500, int $topicLimit = 300, ?int $exceptGenerationId = null): BlogTopicHistory
     {
         $translation = static fn (string $locale): callable => static function (JoinClause $join) use ($locale): void {
             $join->on("{$locale}.blog_post_id", '=', 'blog_posts.id')->where("{$locale}.locale", '=', $locale);
@@ -50,6 +51,7 @@ final class BlogTopicHistoryRepository
 
         $topics = BlogGeneration::query()->toBase()
             ->whereNotNull('topic_title')
+            ->when($exceptGenerationId !== null, fn ($query) => $query->where('id', '!=', $exceptGenerationId))
             ->orderByDesc('id')
             ->limit($topicLimit)
             ->get(['topic_title', 'topic_rejected_at'])

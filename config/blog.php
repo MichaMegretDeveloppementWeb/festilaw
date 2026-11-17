@@ -117,11 +117,10 @@ return [
     'ai' => [
 
         /*
-         | Liste des etapes executees : `simulated` (etapes factices, sans appel a un modele, REFUSEES en
-         | production) ou `editorial` (le vrai pipeline). Le pipeline editorial n'existe pas encore : il
-         | arrive avec le sous-chantier suivant, qui changera cette valeur par defaut.
+         | Liste des etapes executees : `editorial` (le vrai pipeline, SC6) ou `simulated` (etapes factices,
+         | sans appel a un modele, REFUSEES en production, pour le developpement et les tests).
          */
-        'pipeline' => env('BLOG_AI_PIPELINE', 'simulated'),
+        'pipeline' => env('BLOG_AI_PIPELINE', 'editorial'),
 
         /*
          | Fournisseur des agents du pipeline editorial, tel que le nomme `config/ai.php`. Tous les modeles

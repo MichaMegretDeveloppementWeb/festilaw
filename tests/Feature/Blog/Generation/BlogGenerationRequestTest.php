@@ -223,6 +223,8 @@ it('sends one message when a requested generation is over, to the recipient of t
             'cost' => '0,03 $',
             'url' => route('admin.blog.generation.show', ['generation' => $generation->id]),
             'draftUrl' => null,
+            'excerpt' => null,
+            'sources' => null,
         ]]
         && $mail->totalCost === '0,03 $'
         && $mail->postsUrl === route('admin.blog.posts.index')

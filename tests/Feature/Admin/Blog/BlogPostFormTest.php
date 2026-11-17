@@ -2,9 +2,12 @@
 
 use App\Enums\Blog\BlogPostStatus;
 use App\Livewire\Admin\Blog\PostForm;
+use App\Models\BlogGeneration;
+use App\Models\BlogGenerationStep;
 use App\Models\BlogPost;
 use App\Models\BlogPostRetiredSlug;
 use App\Models\User;
+use App\Services\Blog\Generation\BlogAiModelCatalog;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -412,6 +415,18 @@ it('shows a banner on an article proposed by the AI', function () {
 
     Livewire::test(PostForm::class, ['post' => $post->id])->assertSee('Article généré par IA');
     Livewire::test(PostForm::class)->assertDontSee('Article généré par IA');
+});
+
+it('names the model that wrote a generated article and links to its generation, without an extra query', function () {
+    $generation = BlogGeneration::factory()->completed()->create();
+    BlogGenerationStep::factory()->for($generation, 'generation')->named('writing', 3)->completed()->create(['model' => 'anthropic/claude-sonnet-5.5']);
+    $post = BlogContent::draft('machine');
+    $post->update(['origin' => 'ai', 'generation_id' => $generation->id]);
+    $name = app(BlogAiModelCatalog::class)->name('anthropic/claude-sonnet-5.5');
+
+    Livewire::test(PostForm::class, ['post' => $post->id])
+        ->assertSee("Ce brouillon a été rédigé par {$name}.")
+        ->assertSeeHtml('href="'.route('admin.blog.generation.show', ['generation' => $generation->id]).'"');
 });
 
 it('shows the public path in front of the address, and explains the two Google fields', function () {

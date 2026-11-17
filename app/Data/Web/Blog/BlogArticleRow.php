@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Data\Web\Blog;
 
+use App\Enums\Blog\BlogPostOrigin;
 use Carbon\CarbonImmutable;
 
 /**
@@ -31,6 +32,7 @@ final readonly class BlogArticleRow
         public ?string $metaDescription,
         public ?string $categoryName,
         public ?string $categorySlug,
+        public bool $generated = false,
     ) {}
 
     /**
@@ -60,6 +62,7 @@ final readonly class BlogArticleRow
             metaDescription: $row->meta_description,
             categoryName: $row->category_name,
             categorySlug: $row->category_slug,
+            generated: ($row->origin ?? null) === BlogPostOrigin::Ai->value,
         );
     }
 
@@ -81,6 +84,7 @@ final readonly class BlogArticleRow
             'blog_posts.published_at',
             'blog_posts.content_updated_at',
             'blog_posts.sources',
+            'blog_posts.origin',
             'blog_post_translations.title',
             'blog_post_translations.slug',
             'blog_post_translations.excerpt',

@@ -50,7 +50,7 @@ final class TopicStep extends EditorialStep
 
     public function execute(GenerationStepContext $context): GenerationStepResult
     {
-        $history = $this->history->load();
+        $history = $this->history->load(exceptGenerationId: $context->generationId);
         $agent = new TopicAgent($this->prompts->compose('festilaw-context', 'editorial-guidelines', 'step-topic'));
         $reply = $this->ask($context, $agent, implode("\n\n", [
             $this->block('Today', CarbonImmutable::now()->toDateString()),

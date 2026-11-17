@@ -62,9 +62,15 @@
             <x-ui::alert type="error" class="mb-6" :title="__('L\'article n\'a pas été enregistré')">{{ $message }}</x-ui::alert>
         @enderror
 
+        {{-- Article genere : le modele qui l'a redige et le lien vers sa generation (etapes, sources consultees). --}}
         @if ($view?->origin === \App\Enums\Blog\BlogPostOrigin::Ai)
-            <x-ui::alert type="info" class="mb-6" :title="__('Article généré par IA')">
-                {{ __('Ce brouillon a été proposé par l\'IA. Relisez-le et corrigez-le avant de le publier.') }}
+            <x-ui::alert type="info" class="mb-6" :title="__('Article généré par IA')" data-generated-banner>
+                {{ $view->writingModel
+                    ? __('Ce brouillon a été rédigé par :model. Relisez-le et corrigez-le avant de le publier.', ['model' => $view->writingModel])
+                    : __('Ce brouillon a été proposé par l\'IA. Relisez-le et corrigez-le avant de le publier.') }}
+                @if ($view->generationId)
+                    <a href="{{ route('admin.blog.generation.show', ['generation' => $view->generationId]) }}" class="font-medium underline underline-offset-2" data-generation-link>{{ __('Voir la génération') }}</a>
+                @endif
             </x-ui::alert>
         @endif
 

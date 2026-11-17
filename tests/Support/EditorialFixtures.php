@@ -26,7 +26,7 @@ final class EditorialFixtures
         $payload ??= ['images' => ['mode' => 'stock', 'max' => 2]];
 
         return new GenerationStepContext(
-            generationId: 1,
+            generationId: 999_999,
             type: BlogGenerationType::Article,
             topicHint: $topicHint,
             instructions: $instructions,

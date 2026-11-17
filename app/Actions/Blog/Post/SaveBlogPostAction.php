@@ -144,7 +144,7 @@ final readonly class SaveBlogPostAction
     private function lockOrNew(SaveBlogPostData $data): BlogPost
     {
         if ($data->postId === null) {
-            $post = new BlogPost(['origin' => $data->origin]);
+            $post = new BlogPost(['origin' => $data->origin, 'generation_id' => $data->generationId]);
             $post->setRelation('translations', $post->newCollection());
 
             return $post;

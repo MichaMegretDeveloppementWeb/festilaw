@@ -17,6 +17,12 @@
                 <strong style="color:#0B1E45;">{{ $row['subject'] }}</strong><br>
                 <span style="color:{{ $row['succeeded'] ? '#1c7a4a' : '#b4532a' }};">{{ $row['outcome'] }}</span>
                 <span style="color:#8a8f9c;"> · {{ $row['cost'] }}</span><br>
+                @if ($row['excerpt'] ?? null)
+                    <span style="color:#4a5568;">{{ $row['excerpt'] }}</span><br>
+                @endif
+                @if ($row['sources'] ?? null)
+                    <span style="color:#8a8f9c;">{{ trans_choice('{1} Une source citée.|[2,*] :count sources citées.', $row['sources'], ['count' => $row['sources']]) }}</span><br>
+                @endif
                 @if ($row['draftUrl'])
                     <a href="{{ $row['draftUrl'] }}" style="color:#0B1E45;">Ouvrir le brouillon</a>
                     <span style="color:#8a8f9c;"> · </span>

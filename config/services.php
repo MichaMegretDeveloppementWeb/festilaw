@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    /*
+     | Banque d'images du blog (generation d'articles, SC6). Cle gratuite creee sur pixabay.com/api/docs.
+     */
+    'pixabay' => [
+        'key' => env('PIXABAY_API_KEY'),
+    ],
+
 ];

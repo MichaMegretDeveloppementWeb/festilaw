@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Actions\Blog\Post;
 
 use App\Actions\Blog\Image\DeleteBlogImageAction;
+use App\Enums\Blog\BlogPostOrigin;
 use App\Models\BlogImage;
 use App\Models\BlogPost;
+use App\Repositories\Blog\BlogGenerationTopicRepository;
 use App\Services\Blog\Slug\BlogPostSlugAssigner;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -16,13 +18,15 @@ use Throwable;
  * Supprime un article. S'il a deja ete publie, ses adresses repondront "n'existe plus" (410) : ses
  * slugs sont gardes sans article. Ses textes et ses liens d'articles associes partent avec lui (cles
  * etrangeres). Ses images sont supprimees ensuite, apres la transaction, au mieux : celle qui
- * resisterait reste orpheline et la purge planifiee la reprendra.
+ * resisterait reste orpheline et la purge planifiee la reprendra. Un article genere par IA emporte son
+ * sujet : il est marque refuse et ne sera plus propose.
  */
 final readonly class DeleteBlogPostAction
 {
     public function __construct(
         private BlogPostSlugAssigner $slugs,
         private DeleteBlogImageAction $deleteImage,
+        private BlogGenerationTopicRepository $topics,
     ) {}
 
     /**
@@ -38,6 +42,10 @@ final readonly class DeleteBlogPostAction
             }
 
             $imageIds = BlogImage::query()->where('blog_post_id', $post->id)->pluck('id')->all();
+
+            if ($post->origin === BlogPostOrigin::Ai) {
+                $this->topics->rejectTopicOf($post->id, $post->generation_id);
+            }
 
             $this->slugs->entomb($post);
             $post->delete();

@@ -8,6 +8,7 @@ use App\Data\Web\Blog\BlogArticlePageData;
 use App\Data\Web\Blog\BlogArticleRow;
 use App\Data\Web\Blog\BlogCategoryLinkData;
 use App\Repositories\Blog\PublishedBlogPostCardRepository;
+use App\Services\Blog\Generation\BlogAiSettingsService;
 use App\Services\Blog\Post\BlogAuthorProvider;
 use App\Services\Web\Localization\LocalizedUrlGenerator;
 
@@ -30,6 +31,7 @@ final readonly class BlogArticlePageAssembler
         private BlogPictureFactory $pictures,
         private BlogAuthorProvider $authors,
         private LocalizedUrlGenerator $urls,
+        private BlogAiSettingsService $aiSettings,
         private int $relatedLimit = 3,
     ) {}
 
@@ -73,6 +75,23 @@ final readonly class BlogArticlePageAssembler
             sources: $row->sources,
             related: $this->cards->fromRows($related, $locale),
             author: $this->authors->forLocale($locale),
+            transparencyNotice: $this->transparencyNotice($row, $locale),
         );
+    }
+
+    /**
+     * La mention de transparence d'un article genere, dans la langue de la page, si elle est remplie dans les
+     * reglages (cahier des charges, A.10). Les reglages ne sont lus que pour un article genere : une requete de
+     * plus sur ces pages seulement.
+     */
+    private function transparencyNotice(BlogArticleRow $row, string $locale): ?string
+    {
+        if (! $row->generated) {
+            return null;
+        }
+
+        $notice = trim($this->aiSettings->current()->transparencyNotice[$locale] ?? '');
+
+        return $notice === '' ? null : $notice;
     }
 }

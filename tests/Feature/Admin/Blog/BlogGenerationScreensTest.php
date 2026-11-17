@@ -266,7 +266,7 @@ it('follows the running generation in the tile, in 2 queries', function () {
     $tile = Livewire::test(GenerationActivity::class);
 
     expect(count(DB::getQueryLog()))->toBe(2);
-    $tile->assertSee('Étape 2 sur 8')
+    $tile->assertSee('Étape 2 sur 9')
         ->assertSee('Recherche')
         ->assertSee('Suivre la génération')
         ->assertSeeHtml('data-generation-activity="running"');
@@ -478,7 +478,7 @@ it('shows a generation step by step, with its model, tokens and cost under each 
         ->assertSee('2 recherches web')
         ->assertSee('essai 3')
         ->assertSee('estimé')
-        ->assertSee('1 étape terminée sur 8')
+        ->assertSee('1 étape terminée sur 9')
         ->assertSee('Relancer')
         // Le compte rendu de l'IA, et celui de l'etape.
         ->assertSee('Compte rendu de l\'IA')
@@ -498,7 +498,7 @@ it('says who stopped a generation, when, and after which step', function () {
 
     $detail = Livewire::test(GenerationDetail::class, ['generation' => $generation->id])
         ->assertSeeHtml('wire:poll.2s')
-        ->assertSee('Étape 3 sur 8')
+        ->assertSee('Étape 3 sur 9')
         ->assertSee('Arrêter')
         ->call('cancel')
         ->assertDispatched('ui-toast', type: 'success')

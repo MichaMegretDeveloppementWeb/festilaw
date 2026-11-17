@@ -5,6 +5,7 @@ use App\Actions\Blog\Post\UnpublishBlogPostAction;
 use App\Models\BlogPostRetiredSlug;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\BlogAi;
 use Tests\Support\BlogContent;
 
 use function Pest\Laravel\get;
@@ -152,4 +153,17 @@ it('answers gone, in the language of the address, for a published post that was 
         ->assertDontSee('hreflang', false);
 
     get('/blog/label-en')->assertStatus(410)->assertSee('This page no longer exists');
+});
+
+it('shows the transparency notice of the page language under a generated article only, when the settings have one', function () {
+    BlogAi::saveSettings(['transparency_notice' => ['en' => 'Prepared with the help of an AI tool and reviewed by the author.', 'fr' => 'Article préparé avec l\'aide d\'un outil d\'IA et relu par l\'autrice.', 'es' => '']]);
+    $generated = BlogContent::published('machine');
+    $generated->update(['origin' => 'ai']);
+    BlogContent::published('handmade');
+
+    get('/blog/machine-en')->assertSuccessful()->assertSee('Prepared with the help of an AI tool and reviewed by the author.');
+    get('/fr/blog/machine-fr')->assertSuccessful()->assertSee('Article préparé avec l\'aide d\'un outil d\'IA et relu par l\'autrice.');
+    // Mention vide dans la langue : rien n'est affiche.
+    get('/es/blog/machine-es')->assertSuccessful()->assertDontSee('data-transparency-notice', false);
+    get('/blog/handmade-en')->assertSuccessful()->assertDontSee('data-transparency-notice', false);
 });

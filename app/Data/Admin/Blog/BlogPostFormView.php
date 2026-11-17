@@ -31,6 +31,8 @@ final readonly class BlogPostFormView
         public array $publicUrls,
         public array $related,
         public array $images,
+        public ?int $generationId = null,
+        public ?string $writingModel = null,
     ) {}
 
     public function isReady(): bool

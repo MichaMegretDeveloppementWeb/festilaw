@@ -15,7 +15,9 @@ use Illuminate\Mail\Mailables\Envelope;
  * et vers les articles a relire et publier. Aucun message technique : la cause d'un echec est au journal du
  * serveur.
  *
- * @phpstan-type GenerationRow array{subject: string, outcome: string, succeeded: bool, failed: bool, cost: string, url: string, draftUrl: string|null}
+ * Pour un brouillon cree, la ligne donne aussi son extrait (anglais) et le nombre de sources citees.
+ *
+ * @phpstan-type GenerationRow array{subject: string, outcome: string, succeeded: bool, failed: bool, cost: string, url: string, draftUrl: string|null, excerpt?: string|null, sources?: int|null}
  */
 final class BlogGenerationBatchFinished extends Mailable
 {

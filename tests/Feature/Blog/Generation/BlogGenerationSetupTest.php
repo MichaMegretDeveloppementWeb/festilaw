@@ -113,15 +113,23 @@ it('refuses the simulated steps in production', function () {
 });
 
 it('refuses a pipeline name it does not know', function () {
-    config(['blog.ai.pipeline' => 'editorial']);
+    config(['blog.ai.pipeline' => 'unknown-pipeline']);
 
     expect(fn () => app(GenerationPipeline::class)->steps(BlogGenerationType::Article))
         ->toThrow(function (BlogGenerationException $e): void {
-            expect($e->getMessage())->toContain('[editorial]');
+            expect($e->getMessage())->toContain('[unknown-pipeline]');
         });
 });
 
-it('runs a whole simulated generation: eight steps, a made-up cost, no call to any model', function () {
+it('runs the editorial pipeline by default, in nine steps, production included', function () {
+    config(['blog.ai.pipeline' => 'editorial']);
+    app()->detectEnvironment(fn (): string => 'production');
+
+    expect(array_map(fn ($step): string => $step->key(), app(GenerationPipeline::class)->steps(BlogGenerationType::Article)))
+        ->toBe(['topic', 'research', 'writing', 'verification', 'style', 'translation_fr', 'translation_es', 'images', 'assembly']);
+});
+
+it('runs a whole simulated generation: nine steps, a made-up cost, no call to any model', function () {
     $generation = BlogGeneration::factory()->create();
 
     app(ProcessNextBlogGenerationAction::class)->execute('worker-a');
@@ -130,14 +138,14 @@ it('runs a whole simulated generation: eight steps, a made-up cost, no call to a
     $costPerStep = config('blog.ai.simulation.cost_microusd_per_step');
 
     expect($generation->status)->toBe(BlogGenerationStatus::Completed)
-        ->and($generation->steps->pluck('step')->all())->toBe(['topic', 'research', 'writing', 'verification', 'translation_fr', 'translation_es', 'images', 'assembly'])
-        ->and($generation->cost_microusd)->toBe(7 * $costPerStep)
+        ->and($generation->steps->pluck('step')->all())->toBe(['topic', 'research', 'writing', 'verification', 'style', 'translation_fr', 'translation_es', 'images', 'assembly'])
+        ->and($generation->cost_microusd)->toBe(8 * $costPerStep)
         ->and($generation->steps->firstWhere('step', 'writing')->model)->toBe(config('blog.ai.defaults.models.writing'))
         ->and($generation->steps->firstWhere('step', 'images')->model)->toBe(config('blog.ai.defaults.models.image'))
         ->and($generation->steps->firstWhere('step', 'writing')->cost_is_estimated)->toBeTrue()
         ->and($generation->steps->firstWhere('step', 'assembly')->cost_microusd)->toBe(0)
         ->and($generation->blog_post_id)->toBeNull();
-    Sleep::assertSleptTimes(8);
+    Sleep::assertSleptTimes(9);
 });
 
 it('runs the two steps of a simulated translation', function () {

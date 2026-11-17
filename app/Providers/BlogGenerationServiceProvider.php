@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Actions\Blog\Generation\Editorial\GenerateBlogDraftImagesAction;
 use App\Actions\Blog\Generation\ProcessNextBlogGenerationAction;
 use App\Actions\Blog\Generation\RunBlogGenerationAction;
 use App\Contracts\Blog\Generation\GenerationPipeline;
 use App\Contracts\Blog\Generation\HostResolver;
+use App\Contracts\Blog\Generation\StockImageProvider;
 use App\Exceptions\Blog\BlogGenerationException;
 use App\Services\Admin\Blog\Generation\BlogGenerationOverviewService;
 use App\Services\Blog\Generation\BlogAiCostEstimator;
@@ -17,6 +19,9 @@ use App\Services\Blog\Generation\BlogGenerationAlertService;
 use App\Services\Blog\Generation\BlogGenerationStepRunner;
 use App\Services\Blog\Generation\Editorial\BlogAgentCaller;
 use App\Services\Blog\Generation\Editorial\BlogPromptLibrary;
+use App\Services\Blog\Generation\Editorial\EditorialGenerationPipeline;
+use App\Services\Blog\Generation\Editorial\Images\BlogAiImageGenerator;
+use App\Services\Blog\Generation\Editorial\Images\PixabayStockImageProvider;
 use App\Services\Blog\Generation\Editorial\Sources\DnsHostResolver;
 use App\Services\Blog\Generation\Simulation\SimulatedGenerationPipeline;
 use App\Services\Blog\Generation\UnavailableGenerationPipeline;
@@ -55,17 +60,26 @@ final class BlogGenerationServiceProvider extends ServiceProvider
 
         $this->app->when(BlogAgentCaller::class)->needs('$provider')->giveConfig('blog.ai.provider');
         $this->app->bind(HostResolver::class, DnsHostResolver::class);
+        $this->app->bind(StockImageProvider::class, PixabayStockImageProvider::class);
+        $this->app->when(PixabayStockImageProvider::class)->needs('$apiKey')->giveConfig('services.pixabay.key');
+        $this->app->when(BlogAiImageGenerator::class)->needs('$provider')->giveConfig('blog.ai.provider');
+        $this->app->when(GenerateBlogDraftImagesAction::class)->needs('$featuredMinWidth')->giveConfig('blog.images.min_featured.width');
+        $this->app->when(GenerateBlogDraftImagesAction::class)->needs('$featuredMinHeight')->giveConfig('blog.images.min_featured.height');
         $this->app->when(BlogPromptLibrary::class)->needs('$directory')->giveConfig('blog.ai.prompts_directory');
         $this->app->when(BlogAiCostEstimator::class)->needs('$webSearchMicrousd')->giveConfig('blog.ai.web_search_microusd');
     }
 
     /**
-     * Les etapes factices ne tournent jamais en production : un brouillon « genere » sans aucun modele n'a
-     * rien a y faire. Le pipeline editorial n'existe pas encore (sous-chantier suivant).
+     * Le pipeline editorial par defaut. Les etapes factices ne tournent jamais en production : un brouillon
+     * « genere » sans aucun modele n'a rien a y faire.
      */
     private function pipeline(Application $app): GenerationPipeline
     {
         $name = (string) config('blog.ai.pipeline');
+
+        if ($name === 'editorial') {
+            return $app->make(EditorialGenerationPipeline::class);
+        }
 
         if ($name !== 'simulated') {
             return new UnavailableGenerationPipeline(BlogGenerationException::unknownPipeline($name));

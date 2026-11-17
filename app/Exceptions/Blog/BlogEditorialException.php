@@ -29,6 +29,14 @@ final class BlogEditorialException extends BaseAppException
         );
     }
 
+    public static function imageSourceFailed(string $reason): self
+    {
+        return new self(
+            technicalMessage: "Blog image source failed: {$reason}",
+            userMessage: __('La banque d\'images n\'a pas répondu.'),
+        );
+    }
+
     public static function noModel(string $step, string $setting): self
     {
         return new self(

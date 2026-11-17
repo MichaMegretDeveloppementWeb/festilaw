@@ -17,6 +17,7 @@ final readonly class SaveBlogPostData
      * @param  list<int>  $relatedPostIds  articles associes, dans l'ordre voulu
      * @param  list<BlogSourceData>  $sources
      * @param  BlogPostOrigin  $origin  pris en compte a la creation seulement
+     * @param  int|null  $generationId  la generation qui cree ce brouillon, a la creation seulement (unique)
      */
     public function __construct(
         public ?int $postId,
@@ -27,6 +28,7 @@ final readonly class SaveBlogPostData
         public array $relatedPostIds = [],
         public array $sources = [],
         public BlogPostOrigin $origin = BlogPostOrigin::Manual,
+        public ?int $generationId = null,
     ) {}
 
     /** Textes de la langue demandee ; une langue absente equivaut a une langue vide. */

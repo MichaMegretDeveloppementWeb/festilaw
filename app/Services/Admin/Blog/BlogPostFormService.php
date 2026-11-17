@@ -13,6 +13,7 @@ use App\Models\BlogImage;
 use App\Models\BlogPost;
 use App\Repositories\Blog\AdminBlogCategoryRepository;
 use App\Repositories\Blog\AdminBlogPostFormRepository;
+use App\Services\Blog\Generation\BlogAiModelCatalog;
 use App\Services\Blog\Post\BlogPostReadinessCalculator;
 use App\Services\Web\Localization\LocalizedUrlGenerator;
 
@@ -49,6 +50,7 @@ final readonly class BlogPostFormService
         private BlogPostReadinessCalculator $readiness,
         private BlogImagePreviewFactory $previews,
         private LocalizedUrlGenerator $urls,
+        private BlogAiModelCatalog $models,
         private array $locales,
     ) {}
 
@@ -211,6 +213,8 @@ final readonly class BlogPostFormService
             publicUrls: $publicUrls,
             related: $this->relatedRows($relatedIds === null ? $this->posts->listRelated($post->id) : $this->posts->listByIds($relatedIds)),
             images: $images,
+            generationId: $post->generation_id,
+            writingModel: $this->models->name($post->getAttribute('writing_model')),
         );
     }
 

@@ -38,6 +38,7 @@ final readonly class BlogArticlePageData
         public array $sources,
         public array $related,
         public BlogAuthorData $author,
+        public ?string $transparencyNotice = null,
     ) {}
 
     public function publishedLabel(string $locale): string

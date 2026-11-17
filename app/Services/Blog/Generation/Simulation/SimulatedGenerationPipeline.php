@@ -15,7 +15,7 @@ use App\Enums\Blog\Generation\BlogGenerationType;
 final readonly class SimulatedGenerationPipeline implements GenerationPipeline
 {
     private const STEPS = [
-        'article' => ['topic', 'research', 'writing', 'verification', 'translation_fr', 'translation_es', 'images', 'assembly'],
+        'article' => ['topic', 'research', 'writing', 'verification', 'style', 'translation_fr', 'translation_es', 'images', 'assembly'],
         'translation' => ['translation_fr', 'translation_es'],
     ];
 
