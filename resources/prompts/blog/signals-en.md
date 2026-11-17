@@ -1,6 +1,7 @@
 # Signs counted by the writing signals check (English). Same sources as writing-voice-en.md.
 # A plain line is an expression, matched as whole words, case ignored.
 # A line starting with "~" is a pattern: a regular expression (case ignored), then " => " and its name.
+# A line starting with "~+" is a pattern tolerated once per text: it is flagged from its second sentence on.
 # Patterns are tested sentence by sentence, so "^" is the start of a sentence.
 
 # Words and expressions models over-use
@@ -80,7 +81,7 @@ ultimately
 ~ \b(?:this|our) (?:guide|article|post)\b => text talking about itself
 ~ \bas (?:mentioned|noted|discussed|explained) (?:above|earlier|below)\b => text talking about itself
 ~ \bthere are (?:two|three|four|five|six|seven) (?:main |key |simple )?(?:things|steps|places|ways|points|questions|options|reasons|fields|actions)\b => list announced by its count
-~ \b(?:two|three|four|five|six|seven) (?:\w+ ){0,2}(?:things|steps|places|ways|points|entries|fields|actions|requirements|changes|items)\s*: => list announced by its count
+~ \b(?:two|three|four|five|six|seven) (?:\w+ ){0,2}(?:things|steps|places|ways|points|entries|fields|actions|requirements|changes|items)\b[^.:!?]{0,40}: => list announced by its count
 ~ ^what\s+(?:\S+\s+){1,5}is\b => staged "what X is"
 ~ ^here(?:'s|’s| is| are) (?:what|the|how|why)\b => announcement
 ~ ^(?:so|in short|overall|in other words),?\s => opener that restates
@@ -89,4 +90,6 @@ ultimately
 ~ \b(?:the|a) (?:key|real|main|important) (?:point|question|takeaway|thing|difference) (?:is|here)\b => staged key point
 ~ \b(?:serves|stands|functions|acts) as\b => copula avoidance
 ~ \b(?:experts|observers|industry reports|many sellers|most sellers)\s+(?:say|argue|agree|note|find|believe)\b => vague authority
+~+ \b(?:etsy|amazon|ebay|shopify|tiktok shop|the (?:european )?commission|the regulation|the gpsr)(?:'s|’s)?\s+(?:(?:help (?:page|centre|center)|seller handbook|handbook|guidance|wording|guide|page|instruction)s?\s+)?(?:(?:also|only|now|still|clearly|explicitly|simply)\s+)?(?:says?|states?|describes?|explains?|notes?|treats?|uses?|covers?|directs?|suggests?|mentions?|specifies|defines?|lists?|frames?)\b => repeated attribution
+~+ \baccording to\b => repeated attribution
 ~ \b(?:may|might|could) (?:potentially|possibly)\b => stacked hedge

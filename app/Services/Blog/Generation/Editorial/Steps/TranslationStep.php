@@ -19,7 +19,11 @@ use App\Services\Blog\Generation\Editorial\BlogWritingSignalsInspector;
  * Etapes 6 et 7 · la version francaise ou espagnole, redigee dans la langue avec ses regles d'ecriture et le
  * lexique du domaine (annexe A.8, A.12 point 4). Les memes jetons de liens et emplacements d'images que
  * l'anglais sont exiges : sinon une demande de correction, puis l'echec de l'etape, que le moteur reessaie.
- * Un nombre ecrit autrement ne bloque rien mais reste au journal, comme les signes comptes.
+ * Un nombre ecrit autrement ne bloque rien mais reste au journal.
+ *
+ * Comme la relecture du style en anglais, le controle des signes de la langue releve les phrases qui en
+ * portent encore. Au-dela du seuil (config blog.ai.style.max_flagged_sentences), elles sont renvoyees au
+ * modele pour un second passage, un seul, garde seulement s'il respecte les memes liens, jetons et images.
  */
 final class TranslationStep extends EditorialStep
 {
@@ -31,6 +35,7 @@ final class TranslationStep extends EditorialStep
         private readonly BlogFactGuard $guard,
         private readonly BlogWritingSignalsInspector $signals,
         private readonly string $locale,
+        private readonly int $maxFlaggedSentences = 0,
     ) {
         if (! isset(self::LANGUAGES[$locale])) {
             throw new \InvalidArgumentException("No translation step for locale [{$locale}].");
@@ -92,6 +97,27 @@ final class TranslationStep extends EditorialStep
         }
 
         $translated = EditorialArticle::fromArray($reply->structured());
+        $signs = $this->prompts->lines('signals-'.$this->locale);
+        $signals = $this->signals->inspect($this->checkedText($translated), $signs);
+        $secondPass = null;
+
+        if (count($signals['flagged']) > $this->maxFlaggedSentences) {
+            $second = $this->ask($context, $agent, spent: $usage, prompt: $prompt."\n\n".$this->block('Your previous answer', $reply->structured())
+                ."\n\n".$this->block('Sentences that still show signs of generated text', implode("\n", array_map(
+                    static fn (array $flag): string => '- '.$flag['sentence'].' ('.implode(', ', $flag['signs']).')',
+                    $signals['flagged'],
+                ))));
+            $usage = $usage->plus($second->usage);
+            $secondProblems = $this->problems($source, $second);
+            $secondPass = ['flagged_before' => count($signals['flagged']), 'applied' => $secondProblems === [], 'differences' => $secondProblems];
+
+            if ($secondProblems === []) {
+                $reply = $second;
+                $translated = EditorialArticle::fromArray($reply->structured());
+                $signals = $this->signals->inspect($this->checkedText($translated), $signs);
+            }
+        }
+
         $alts = [];
 
         foreach ($this->items($reply->structured(), 'image_alts') as $alt) {
@@ -109,13 +135,20 @@ final class TranslationStep extends EditorialStep
                     $this->guard->differences($source->text(), $translated->text()),
                     static fn (string $difference): bool => str_starts_with($difference, 'numbers'),
                 )),
-                'signals' => $this->signals->inspect($translated->body, $this->prompts->lines('signals-'.$this->locale)),
+                'second_pass' => $secondPass,
+                'signals' => $signals,
             ],
             $usage,
             $this->report($reply, $this->locale === 'fr'
                 ? __('La version française a été rédigée dans la langue, avec le lexique du domaine.')
                 : __('La version espagnole a été rédigée dans la langue, avec le lexique du domaine.')),
         );
+    }
+
+    /** Le texte que le controle des signes lit : le titre, comme un intertitre, puis le corps. */
+    private function checkedText(EditorialArticle $article): string
+    {
+        return '# '.$article->title."\n\n".$article->body;
     }
 
     /**

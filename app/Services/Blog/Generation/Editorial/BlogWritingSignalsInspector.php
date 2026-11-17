@@ -33,7 +33,8 @@ final class BlogWritingSignalsInspector
 
     /**
      * @param  list<string>  $signs  les signes de la langue, une ligne chacun : une expression (mot entier, sans
-     *                               casse), ou « ~ expression reguliere => nom » pour une tournure
+     *                               casse), « ~ expression reguliere => nom » pour une tournure, ou « ~+ ... »
+     *                               pour une tournure toleree une fois par texte (relevee des la deuxieme)
      * @return array{words: int, sentences: int, dashes: int, semicolons: int, colon_paragraphs: int, colons_in_headings: int, phrases: array<string, int>, patterns: array<string, int>, flagged: list<array{signs: list<string>, sentence: string}>, sentence_length_mean: float, sentence_length_variation: float, short_endings: int}
      */
     public function inspect(string $markdown, array $signs): array
@@ -68,6 +69,7 @@ final class BlogWritingSignalsInspector
         $flagged = [];
         $patternCounts = [];
         $openings = [];
+        $tolerated = array_unique(array_column(array_filter($patterns, static fn (array $pattern): bool => $pattern['tolerated_once']), 'name'));
 
         foreach ($prose as $block) {
             foreach (preg_split('/\n/', $this->plain($block)) ?: [] as $line) {
@@ -87,6 +89,12 @@ final class BlogWritingSignalsInspector
 
                     foreach (array_intersect($found, array_unique(array_column($patterns, 'name'))) as $name) {
                         $patternCounts[$name] = ($patternCounts[$name] ?? 0) + 1;
+
+                        // Une tournure toleree une fois (nommer sa source a la premiere mention) ne compte
+                        // comme signe qu'a partir de sa deuxieme phrase.
+                        if (in_array($name, $tolerated, true) && $patternCounts[$name] === 1) {
+                            $found = array_values(array_diff($found, [$name]));
+                        }
                     }
 
                     if ($found !== []) {
@@ -122,7 +130,7 @@ final class BlogWritingSignalsInspector
      * Les expressions d'un cote, les tournures de l'autre (plusieurs tournures peuvent porter le meme nom).
      *
      * @param  list<string>  $signs
-     * @return array{0: list<string>, 1: list<array{name: string, pattern: string}>}
+     * @return array{0: list<string>, 1: list<array{name: string, pattern: string, tolerated_once: bool}>}
      */
     public function split(array $signs): array
     {
@@ -130,8 +138,8 @@ final class BlogWritingSignalsInspector
         $patterns = [];
 
         foreach ($signs as $sign) {
-            if (preg_match('/^~\s*(.+?)\s+=>\s+(.+)$/u', $sign, $match) === 1) {
-                $patterns[] = ['name' => trim($match[2]), 'pattern' => '{'.$match[1].'}iu'];
+            if (preg_match('/^~(\+?)\s*(.+?)\s+=>\s+(.+)$/u', $sign, $match) === 1) {
+                $patterns[] = ['name' => trim($match[3]), 'pattern' => '{'.$match[2].'}iu', 'tolerated_once' => $match[1] === '+'];
             } elseif (trim($sign) !== '') {
                 $phrases[] = trim($sign);
             }
@@ -144,7 +152,7 @@ final class BlogWritingSignalsInspector
      * Les signes que porte une phrase : ponctuation, expressions, tournures.
      *
      * @param  list<string>  $phrases
-     * @param  list<array{name: string, pattern: string}>  $patterns
+     * @param  list<array{name: string, pattern: string, tolerated_once: bool}>  $patterns
      * @return list<string>
      */
     private function signsOf(string $sentence, array $phrases, array $patterns): array

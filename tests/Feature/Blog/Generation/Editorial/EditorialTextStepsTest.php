@@ -285,12 +285,22 @@ it('sends the sentences that still show signs back once, and keeps that second p
         && $prompt->contains('- There are four things to do. (list announced by its count)'));
 });
 
-it('asks for no second pass when few sentences show signs', function () {
+it('asks for no second pass when no sentence shows a sign', function () {
+    StyleAgent::fake([[...Fixtures::article(), 'report_fr' => 'Style revu.']])->preventStrayPrompts();
+
+    $result = app(StyleStep::class)->execute(Fixtures::context(['verification' => Fixtures::articleOutput()]));
+
+    // Aucune phrase relevee : un seul appel (preventStrayPrompts le garantit).
+    expect($result->output['second_pass'])->toBeNull()
+        ->and($result->output['signals']['flagged'])->toBe([]);
+});
+
+it('allows as many flagged sentences as the setting says before a second pass', function () {
+    config(['blog.ai.style.max_flagged_sentences' => 1]);
     StyleAgent::fake([[...Fixtures::article(['body_markdown' => Fixtures::body()."\n\nThere are four things to do."]), 'report_fr' => 'Style revu.']])->preventStrayPrompts();
 
     $result = app(StyleStep::class)->execute(Fixtures::context(['verification' => Fixtures::articleOutput()]));
 
-    // Une seule phrase relevee, sous le seuil de deux : un seul appel (preventStrayPrompts le garantit).
     expect($result->output['second_pass'])->toBeNull()
         ->and($result->output['signals']['flagged'])->toHaveCount(1);
 });
@@ -340,6 +350,25 @@ it('writes the French version with the same links and images, and the image desc
         ->and($result->output['number_warnings'])->toBe([])
         ->and($result->output['signals'])->toHaveKey('phrases');
     TranslatorAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('A parcel on a workbench'));
+});
+
+it('sends the French sentences that still show signs back once, and keeps that second pass when links and images are intact', function () {
+    $french = "Depuis le 13 décembre 2024, chaque produit vendu dans l'UE a besoin d'un opérateur économique. [Lire le règlement](https://eur-lex.europa.eu/eli/reg/2023/988/oj).\n\n"
+        ."## Ce que demande Etsy\n\nEtsy le demande dans les réglages de l'annonce. [Vérifier votre cas](festilaw:page/quiz).\n\n[[image:1]]\n\n"
+        ."## La suite\n\nRassemblez les informations avant de modifier vos annonces. [Voir nos tarifs](festilaw:page/pricing).";
+    $marked = str_replace('Rassemblez les informations', 'Voici la suite. Il y a trois choses à faire. Rassemblez les informations', $french);
+    TranslatorAgent::fake([
+        [...Fixtures::article(['title' => 'Ajouter un opérateur économique sur Etsy', 'body_markdown' => $marked]), 'report_fr' => 'x'],
+        [...Fixtures::article(['title' => 'Ajouter un opérateur économique sur Etsy', 'body_markdown' => $french]), 'report_fr' => 'Deux phrases reprises.'],
+    ])->preventStrayPrompts();
+
+    $result = app()->make(TranslationStep::class, ['locale' => 'fr'])->execute(Fixtures::context(['writing' => Fixtures::writingOutput(), 'style' => Fixtures::articleOutput()]));
+
+    expect($result->output['article']['body'])->toBe($french)
+        ->and($result->output['second_pass'])->toBe(['flagged_before' => 2, 'applied' => true, 'differences' => []])
+        ->and($result->output['signals']['flagged'])->toBe([]);
+    TranslatorAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Sentences that still show signs of generated text')
+        && $prompt->contains('- Il y a trois choses à faire. (liste annoncee par son nombre)'));
 });
 
 it('asks once for a correction when a translation loses a link or an image, then fails if it still does', function () {

@@ -247,10 +247,11 @@ return [
         /*
          | Relecture du style : au-dela de ce nombre de phrases qui portent encore un signe de texte genere
          | (BlogWritingSignalsInspector, liste signals-en.md), un second passage, cible sur ces phrases, est
-         | demande au modele. Un seul. Au premier essai reel (brouillon 96), 11 phrases sur 55 en portaient.
+         | demande au modele. Un seul. Au premier essai reel (brouillon 96), 13 phrases sur 55 en portaient.
+         | Zero : une seule phrase suffit, car ce passage coute environ 0,2 centime avec Haiku 5.5.
          */
         'style' => [
-            'max_flagged_sentences' => 2,
+            'max_flagged_sentences' => 0,
         ],
 
         /*

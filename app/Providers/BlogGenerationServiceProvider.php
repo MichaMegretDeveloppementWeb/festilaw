@@ -25,6 +25,7 @@ use App\Services\Blog\Generation\Editorial\Images\BlogAiImageGenerator;
 use App\Services\Blog\Generation\Editorial\Images\PixabayStockImageProvider;
 use App\Services\Blog\Generation\Editorial\Sources\DnsHostResolver;
 use App\Services\Blog\Generation\Editorial\Steps\StyleStep;
+use App\Services\Blog\Generation\Editorial\Steps\TranslationStep;
 use App\Services\Blog\Generation\Simulation\SimulatedGenerationPipeline;
 use App\Services\Blog\Generation\UnavailableGenerationPipeline;
 use Illuminate\Contracts\Foundation\Application;
@@ -53,6 +54,7 @@ final class BlogGenerationServiceProvider extends ServiceProvider
         $this->app->when(BlogGenerationStepRunner::class)->needs('$retryWaitSeconds')->giveConfig('blog.ai.step.retry_wait_seconds');
         $this->app->when(RunBlogGenerationAction::class)->needs('$lockMarginSeconds')->giveConfig('blog.ai.step.lock_margin_seconds');
         $this->app->when(StyleStep::class)->needs('$maxFlaggedSentences')->giveConfig('blog.ai.style.max_flagged_sentences');
+        $this->app->when(TranslationStep::class)->needs('$maxFlaggedSentences')->giveConfig('blog.ai.style.max_flagged_sentences');
         $this->app->when(ProcessNextBlogGenerationAction::class)->needs('$claimSeconds')->giveConfig('blog.ai.step.lock_margin_seconds');
 
         $this->app->when(BlogGenerationAlertService::class)->needs('$failuresThreshold')->giveConfig('blog.ai.consecutive_failures_alert');
