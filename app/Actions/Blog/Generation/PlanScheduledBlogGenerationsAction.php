@@ -18,6 +18,7 @@ use App\Repositories\Blog\ScheduledBlogGenerationRepository;
 use App\Services\Blog\Generation\BlogAiSettingsService;
 use App\Services\Blog\Generation\BlogGenerationAlertService;
 use App\Services\Blog\Generation\BlogGenerationBudget;
+use App\Services\Blog\Generation\BlogGenerationCostForecaster;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -26,7 +27,8 @@ use Illuminate\Support\Str;
  * La generation automatique : une fois par periode, met en file un lot d'articles. Appelee chaque jour par
  * la tache planifiee ; elle ne fait rien tant que la periode reglee n'est pas echue depuis le dernier lot
  * lance. Un lot du mais bloque par un plafond est inscrit au journal (une ligne « non lancee », sans jamais
- * repeter deux fois de suite la meme raison), et sera lance des que le plafond le permet.
+ * repeter deux fois de suite la meme raison), et sera lance des que le plafond le permet. Le cout estime d'un
+ * article, borne haute, doit tenir sous le plafond par article (decision de Micha du 17/11).
  *
  * Rejouable : relancee le meme jour apres avoir lance un lot, elle ne trouve plus rien de du.
  */
@@ -38,6 +40,7 @@ final readonly class PlanScheduledBlogGenerationsAction
         private BlogGenerationBudget $budget,
         private ScheduledBlogGenerationRepository $scheduled,
         private BlogGenerationAlertService $alerts,
+        private BlogGenerationCostForecaster $forecaster,
     ) {}
 
     /** @param  bool  $dryRun  dit ce qui serait fait, sans rien ecrire ni envoyer */
@@ -56,6 +59,10 @@ final readonly class PlanScheduledBlogGenerationsAction
         }
 
         $this->pipeline->steps(BlogGenerationType::Article);
+
+        if ($this->forecaster->forSettings($settings)->exceeds($settings->articleSpendCapMicrousd())) {
+            return $this->block(BlogGenerationOutcomeReason::ForecastAboveArticleCap, $settings, $dryRun);
+        }
 
         if ($this->budget->spendCapReached($settings)) {
             return $this->block(BlogGenerationOutcomeReason::SpendCapReached, $settings, $dryRun);
@@ -124,9 +131,11 @@ final readonly class PlanScheduledBlogGenerationsAction
                 'finished_at' => $now,
             ]);
 
-            if ($reason === BlogGenerationOutcomeReason::SpendCapReached) {
-                $this->alerts->spendLimitReached($settings, creditExhausted: false);
-            }
+            match ($reason) {
+                BlogGenerationOutcomeReason::SpendCapReached => $this->alerts->spendLimitReached($settings, creditExhausted: false),
+                BlogGenerationOutcomeReason::ForecastAboveArticleCap => $this->alerts->forecastAboveArticleCap($settings),
+                default => null,
+            };
         }
 
         return ScheduledGenerationPlan::blocked($reason);

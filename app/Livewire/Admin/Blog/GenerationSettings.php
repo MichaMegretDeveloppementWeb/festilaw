@@ -7,12 +7,14 @@ namespace App\Livewire\Admin\Blog;
 use App\Actions\Blog\Generation\UpdateBlogAiSettingsAction;
 use App\Data\Blog\Generation\ArticleLengthRules;
 use App\Data\Blog\Generation\BlogAiSettings;
+use App\Data\Blog\Generation\GenerationImageOptions;
 use App\Enums\Blog\Generation\BlogAiImageMode;
 use App\Enums\Blog\Generation\BlogAiPeriodUnit;
 use App\Livewire\Concerns\HandlesAdminErrors;
 use App\Services\Admin\Blog\Generation\BlogGenerationPresenter;
 use App\Services\Blog\Generation\BlogAiModelCatalog;
 use App\Services\Blog\Generation\BlogAiSettingsService;
+use App\Services\Blog\Generation\BlogGenerationCostForecaster;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Livewire\Attributes\Layout;
@@ -27,6 +29,9 @@ use Throwable;
  *
  * Un modele se choisit dans une liste fermee (BlogAiModelCatalog), jamais par saisie. Les sujets sont des
  * listes. La lecture passe par BlogAiSettingsService, l'enregistrement par UpdateBlogAiSettingsAction.
+ *
+ * La fourchette de cout d'un article se calcule sur les valeurs a l'ecran, avant meme l'enregistrement, pour
+ * qu'on voie l'effet d'un changement de longueur, de modele ou de plafond avant de le garder.
  */
 #[Layout('layouts.admin')]
 class GenerationSettings extends Component
@@ -227,11 +232,17 @@ class GenerationSettings extends Component
         $this->dispatch('ui-toast', title: __('Réglages enregistrés.'), type: 'success');
     }
 
-    public function render(BlogGenerationPresenter $presenter, BlogAiModelCatalog $catalog): View
+    public function render(BlogGenerationPresenter $presenter, BlogAiModelCatalog $catalog, BlogGenerationCostForecaster $forecaster, ArticleLengthRules $length): View
     {
         $steps = collect($this->models)->keys();
+        $images = new GenerationImageOptions(
+            BlogAiImageMode::tryFrom($this->imageMode) ?? BlogAiImageMode::Stock,
+            min(BlogAiSettings::MAX_IMAGES, max(1, (int) $this->maxImages)),
+        );
+        $cap = is_numeric($this->articleSpendCap) ? (int) round(((float) $this->articleSpendCap) * 100) * 10_000 : null;
 
         return view('livewire.admin.blog.generation-settings', [
+            'forecast' => $presenter->forecast($forecaster->forecast($this->models, $length->clamp((int) $this->articleWords), $images), $cap),
             'modelLabels' => $steps->mapWithKeys(fn (string $step): array => [$step => $presenter->modelSettingLabel($step)])->all(),
             // Un modele enregistre qui n'est plus dans la liste reste visible, pour dire qu'il faut en choisir un autre.
             'modelOptions' => $steps->mapWithKeys(function (string $step) use ($catalog): array {

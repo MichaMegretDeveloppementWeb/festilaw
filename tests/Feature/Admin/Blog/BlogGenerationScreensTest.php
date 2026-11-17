@@ -309,6 +309,39 @@ it('renders the launch button without any query, and reads the default images on
     expect(count(DB::getQueryLog()))->toBe(1);
 });
 
+it('shows the estimated cost of the article in the launch window, and follows its length', function () {
+    $launcher = Livewire::test(GenerationLauncher::class)
+        ->call('prepare')
+        ->assertSet('articleWords', '1000')
+        ->assertSeeHtml('data-forecast-range')
+        ->assertSee('Entre ')
+        ->assertDontSeeHtml('data-forecast-above-cap');
+
+    $short = $launcher->viewData('forecast')['high'];
+    $launcher->set('articleWords', '2000');
+
+    expect($launcher->viewData('forecast')['high'])->not->toBe($short);
+    expect($launcher->html())->not->toMatch('/<button(?=[^>]*data-confirm-launch)(?=[^>]*\sdisabled[\s>])[^>]*>/');
+});
+
+it('disables the launch button when the article could cost more than the cap per article, and refuses it on the server too', function () {
+    BlogAi::saveSettings(['article_spend_cap_cents' => 1]);
+
+    $launcher = Livewire::test(GenerationLauncher::class)
+        ->call('prepare')
+        ->assertSeeHtml('data-forecast-above-cap')
+        ->assertSee('Si même 400 mots ne passent pas');
+
+    expect($launcher->html())->toMatch('/<button(?=[^>]*data-confirm-launch)(?=[^>]*\sdisabled[\s>])[^>]*>/');
+
+    // Le bouton desactive ne suffit pas : l'appel direct est refuse, et la raison est dite.
+    $launcher->call('launch')
+        ->assertDispatched('ui-toast', type: 'error')
+        ->assertNoRedirect();
+
+    expect(BlogGeneration::count())->toBe(0);
+});
+
 it('queues a generation with its topic, its instructions and its own images, then opens its page', function () {
     $user = User::factory()->create();
     actingAs($user);
@@ -656,6 +689,22 @@ it('saves the settings', function () {
         ->and($saved->articleWords)->toBe(1_500)
         ->and($saved->notificationEmail)->toBe('owner@example.com')
         ->and($saved->transparencyNotice['fr'])->toBe('Article rédigé avec l\'aide d\'une IA.');
+});
+
+it('shows the estimated cost of an article in the settings, warns as soon as it goes above the cap, and still saves', function () {
+    $settings = Livewire::test(GenerationSettings::class)
+        ->assertSee('Coût estimé d\'un article')
+        ->assertSeeHtml('data-forecast-range')
+        ->assertDontSeeHtml('data-forecast-above-cap');
+
+    // Les valeurs a l'ecran comptent avant l'enregistrement : un plafond baisse fait paraitre l'alerte.
+    $settings->set('articleSpendCap', '0.01')
+        ->assertSeeHtml('data-forecast-above-cap')
+        ->assertSee('aucun article ne partira, ni à la main ni automatiquement')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(app(BlogAiSettingsService::class)->current()->articleSpendCapCents)->toBe(1);
 });
 
 it('refuses settings that make no sense, each with its own message', function () {

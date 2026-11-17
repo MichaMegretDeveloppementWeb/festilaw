@@ -29,6 +29,18 @@ final class BlogGenerationException extends BaseAppException
         );
     }
 
+    /**
+     * @param  string  $high  la borne haute du cout estime, deja ecrite en dollars
+     * @param  string  $cap  le plafond par article, deja ecrit en dollars
+     */
+    public static function forecastAboveArticleCap(int $highMicrousd, int $capMicrousd, string $high, string $cap): self
+    {
+        return new self(
+            technicalMessage: "Blog generation refused: estimated cost up to {$highMicrousd} micro-USD is above the article cap of {$capMicrousd}.",
+            userMessage: __('Cet article peut coûter jusqu\'à :high, au-dessus du plafond de :cap par article. Baissez la longueur, ou choisissez d\'autres modèles ou un plafond plus haut dans les réglages.', ['high' => $high, 'cap' => $cap]),
+        );
+    }
+
     public static function notRetryable(int $generationId, BlogGenerationStatus $status): self
     {
         return new self(

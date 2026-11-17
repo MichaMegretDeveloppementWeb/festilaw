@@ -69,6 +69,7 @@ final readonly class BlogGenerationLabels
             null => null,
             BlogGenerationOutcomeReason::StepFailed => __('Aucun article n\'a été créé. Vous pouvez relancer la génération. Elle reprendra à l\'étape qui a échoué, sans refaire ni repayer les étapes terminées. Si l\'échec se répète, contactez l\'assistance technique.'),
             BlogGenerationOutcomeReason::CreditExhausted => __('Aucun article n\'a été créé. Rechargez le crédit du compte chez le fournisseur d\'IA, puis relancez la génération. Elle reprendra à l\'étape qui a échoué. Si l\'échec se répète, contactez l\'assistance technique.'),
+            BlogGenerationOutcomeReason::ForecastAboveArticleCap => __('Aucun article n\'a été créé. Avec les réglages en vigueur, un article peut coûter plus que le plafond par article. Baissez la longueur, choisissez des modèles moins chers ou relevez le plafond dans les réglages.'),
             BlogGenerationOutcomeReason::ArticleSpendCapReached => __('Aucun article n\'a été créé. La génération s\'est arrêtée avant un appel à l\'IA qui risquait de dépasser le plafond par article fixé dans les réglages. Vérifiez les modèles choisis dans les réglages avant d\'en lancer une autre.'),            default => __('Aucun article n\'a été créé.'),
         };
     }

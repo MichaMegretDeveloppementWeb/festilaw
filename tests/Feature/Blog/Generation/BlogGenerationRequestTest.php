@@ -76,6 +76,21 @@ it('refuses a request once the monthly spend cap is reached, and says why', func
     expect(BlogGeneration::count())->toBe(1);
 });
 
+it('refuses an article that could cost more than the cap per article, and says what to change', function () {
+    BlogAi::saveSettings(['article_spend_cap_cents' => 1]);
+
+    expect(fn () => app(QueueBlogGenerationAction::class)->execute(new QueueBlogGenerationData(articleWords: 400)))
+        ->toThrow(function (BlogGenerationException $e): void {
+            expect($e->getUserMessage())->toContain('au-dessus du plafond de 0,0100 $ par article')
+                ->toContain('Baissez la longueur');
+        });
+
+    // Une traduction assistee n'est pas un article : elle ne passe pas par cette estimation.
+    app(QueueBlogGenerationAction::class)->execute(new QueueBlogGenerationData(type: BlogGenerationType::Translation, payload: ['translation' => []]));
+
+    expect(BlogGeneration::query()->pluck('type')->all())->toBe([BlogGenerationType::Translation]);
+});
+
 it('does not hold a manual request back because generated drafts are waiting', function () {
     BlogAi::saveSettings(['pending_drafts_cap' => 1]);
     BlogPost::factory()->fromAi()->count(3)->create();
@@ -310,7 +325,8 @@ it('renders the message of a finished batch: how many succeeded, where the other
 });
 
 it('gives a requested generation its own images and length, or the default ones of the settings', function () {
-    BlogAi::saveSettings(['image_mode' => 'generated', 'max_images' => 3, 'article_words' => 1_200]);
+    // Trois images generees et 1 200 mots montent au-dessus des 15 centimes par defaut : le plafond suit.
+    BlogAi::saveSettings(['image_mode' => 'generated', 'max_images' => 3, 'article_words' => 1_200, 'article_spend_cap_cents' => 50]);
 
     $withDefaults = app(QueueBlogGenerationAction::class)->execute(new QueueBlogGenerationData);
     $withItsOwn = app(QueueBlogGenerationAction::class)->execute(new QueueBlogGenerationData(

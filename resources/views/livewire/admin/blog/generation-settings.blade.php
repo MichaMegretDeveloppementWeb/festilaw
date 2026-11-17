@@ -40,45 +40,43 @@
             <div class="grid grid-cols-1 gap-5 pt-6 sm:grid-cols-3">
                 <x-ui::form-group :label="__('Longueur du texte (mots)')" for="ai-article-words" :error="$errors->first('articleWords')"
                     :hint="__('De :min à :max mots. Un mot compte environ 6 caractères, soit 6 000 caractères pour 1 000 mots.', ['min' => $minWords, 'max' => number_format($maxWords, 0, ',', ' ')])">
-                    <x-ui::input type="number" step="50" :min="$minWords" :max="$maxWords" id="ai-article-words" wire:model="articleWords" :error="$errors->has('articleWords')" />
+                    <x-ui::input type="number" step="50" :min="$minWords" :max="$maxWords" id="ai-article-words" wire:model.live.debounce.500ms="articleWords" :error="$errors->has('articleWords')" />
                 </x-ui::form-group>
 
                 <x-ui::form-group :label="__('Origine des images')" for="ai-image-mode" :error="$errors->first('imageMode')">
-                    <x-ui::select id="ai-image-mode" wire:model="imageMode" :error="$errors->has('imageMode')" :options="$imageModes" />
+                    <x-ui::select id="ai-image-mode" wire:model.live="imageMode" :error="$errors->has('imageMode')" :options="$imageModes" />
                 </x-ui::form-group>
 
                 <div x-show="$wire.imageMode !== 'none'">
                     <x-ui::form-group :label="__('Nombre d\'images')" for="ai-max-images" :error="$errors->first('maxImages')">
-                        <x-ui::select id="ai-max-images" wire:model="maxImages" :error="$errors->has('maxImages')" :options="$imageCounts" />
+                        <x-ui::select id="ai-max-images" wire:model.live="maxImages" :error="$errors->has('maxImages')" :options="$imageCounts" />
                     </x-ui::form-group>
                 </div>
             </div>
         </x-admin.section>
 
-        <div class="grid gap-x-16 gap-y-12 lg:grid-cols-2">
-            <x-admin.section data-settings-card :title="__('Budget')"
-                :description="__('Deux plafonds, en dollars, la monnaie dans laquelle le fournisseur d\'IA facture. Celui du mois bloque tout lancement une fois atteint. Celui par article arrête une génération qui le dépasse.')">
-                <div class="space-y-5 pt-6">
-                    <x-ui::form-group :label="__('Plafond de dépense du mois ($)')" for="ai-spend-cap" :error="$errors->first('monthlySpendCap')"
-                        :hint="__('Une fois ce montant dépensé dans le mois, plus rien ne se lance jusqu\'au mois suivant.')">
-                        <x-ui::input type="number" step="0.01" min="0" id="ai-spend-cap" wire:model="monthlySpendCap" :error="$errors->has('monthlySpendCap')" />
-                    </x-ui::form-group>
-                    <x-ui::form-group :label="__('Plafond de dépense par article ($)')" for="ai-article-spend-cap" :error="$errors->first('articleSpendCap')"
-                        :hint="__('Une génération qui dépasse ce montant s\'arrête avant son étape suivante, sans brouillon. Ce qui a déjà été dépensé reste dépensé.')">
-                        <x-ui::input type="number" step="0.01" min="0.01" id="ai-article-spend-cap" wire:model="articleSpendCap" :error="$errors->has('articleSpendCap')" />
-                    </x-ui::form-group>
-                </div>
-            </x-admin.section>
+        <x-admin.section data-settings-card :title="__('Budget')"
+            :description="__('Deux plafonds, en dollars, la monnaie dans laquelle le fournisseur d\'IA facture. Celui du mois bloque tout lancement une fois atteint. Celui par article retient tout article dont le coût estimé peut le dépasser.')">
+            <div class="grid grid-cols-1 gap-5 pt-6 sm:grid-cols-2">
+                <x-ui::form-group :label="__('Plafond de dépense du mois ($)')" for="ai-spend-cap" :error="$errors->first('monthlySpendCap')"
+                    :hint="__('Une fois ce montant dépensé dans le mois, plus rien ne se lance jusqu\'au mois suivant.')">
+                    <x-ui::input type="number" step="0.01" min="0" id="ai-spend-cap" wire:model="monthlySpendCap" :error="$errors->has('monthlySpendCap')" />
+                </x-ui::form-group>
+                <x-ui::form-group :label="__('Plafond de dépense par article ($)')" for="ai-article-spend-cap" :error="$errors->first('articleSpendCap')"
+                    :hint="__('Un article ne se lance que si le haut de sa fourchette de coût tient sous ce montant. Pendant la génération, aucun appel à l\'IA ne part s\'il risque de le dépasser.')">
+                    <x-ui::input type="number" step="0.01" min="0.01" id="ai-article-spend-cap" wire:model.live.debounce.500ms="articleSpendCap" :error="$errors->has('articleSpendCap')" />
+                </x-ui::form-group>
+            </div>
+        </x-admin.section>
 
-            <x-admin.section data-settings-card :title="__('E-mail')"
-                :description="__('Adresse qui reçoit un e-mail à la fin de chaque lancement, réussi ou non.')">
-                <div class="pt-6">
-                    <x-ui::form-group :label="__('Adresse e-mail')" for="ai-notification-email" :error="$errors->first('notificationEmail')">
-                        <x-ui::input type="email" id="ai-notification-email" wire:model="notificationEmail" :error="$errors->has('notificationEmail')" />
-                    </x-ui::form-group>
-                </div>
-            </x-admin.section>
-        </div>
+        <x-admin.section data-settings-card :title="__('E-mail')"
+            :description="__('Adresse qui reçoit un e-mail à la fin de chaque lancement, réussi ou non.')">
+            <div class="grid grid-cols-1 gap-5 pt-6 sm:grid-cols-2">
+                <x-ui::form-group :label="__('Adresse e-mail')" for="ai-notification-email" :error="$errors->first('notificationEmail')">
+                    <x-ui::input type="email" id="ai-notification-email" wire:model="notificationEmail" :error="$errors->has('notificationEmail')" />
+                </x-ui::form-group>
+            </div>
+        </x-admin.section>
 
         <x-admin.section data-settings-card :title="__('Sujets')"
             :description="__('Sujets que l\'IA doit privilégier, et sujets qu\'elle doit laisser de côté.')">
@@ -104,9 +102,19 @@
             <div class="grid grid-cols-1 gap-5 pt-6 md:grid-cols-2 xl:grid-cols-3">
                 @foreach ($modelLabels as $step => $label)
                     <x-ui::form-group :label="$label" :for="'ai-model-'.$step" :error="$errors->first('models.'.$step)" wire:key="ai-model-{{ $step }}">
-                        <x-ui::select :id="'ai-model-'.$step" wire:model="models.{{ $step }}" :options="$modelOptions[$step]" :error="$errors->has('models.'.$step)" />
+                        <x-ui::select :id="'ai-model-'.$step" wire:model.live="models.{{ $step }}" :options="$modelOptions[$step]" :error="$errors->has('models.'.$step)" />
                     </x-ui::form-group>
                 @endforeach
+            </div>
+        </x-admin.section>
+
+        <x-admin.section data-settings-card data-cost-forecast :title="__('Coût estimé d\'un article')"
+            :description="__('Calculé d\'après la longueur, les images et les modèles choisis plus haut, et recalculé à chaque changement. Un article ne se lance, à la main ou automatiquement, que si le haut de la fourchette tient sous le plafond par article.')">
+            <div class="space-y-5 pt-6">
+                @include('livewire.admin.blog.generation.cost-forecast', [
+                    'forecast' => $forecast,
+                    'advice' => __('Un article peut coûter jusqu\'à :high, au-dessus du plafond de :cap. Avec ces réglages, aucun article ne partira, ni à la main ni automatiquement. Baissez la longueur, choisissez des modèles moins chers ou relevez le plafond par article.', ['high' => $forecast['high'], 'cap' => $forecast['cap']]),
+                ])
             </div>
         </x-admin.section>
 

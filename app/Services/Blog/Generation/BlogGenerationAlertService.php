@@ -6,6 +6,7 @@ namespace App\Services\Blog\Generation;
 
 use App\Data\Blog\Generation\BlogAiSettings;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
+use App\Mail\BlogForecastAboveCap;
 use App\Mail\BlogGenerationFailuresAlert;
 use App\Mail\BlogSpendLimitReached;
 use App\Models\BlogGeneration;
@@ -33,6 +34,7 @@ final readonly class BlogGenerationAlertService
         private BlogGenerationBudget $budget,
         private BlogAiCostFormatter $costs,
         private BlogGenerationLabels $labels,
+        private BlogGenerationCostForecaster $forecaster,
         private FailedBlogGenerationStepRepository $failedSteps,
         private UrlGenerator $url,
         private int $failuresThreshold,
@@ -106,7 +108,24 @@ final readonly class BlogGenerationAlertService
         );
     }
 
-    private function send(string $recipient, BlogGenerationFailuresAlert|BlogSpendLimitReached $mail, string $failureMessage): void
+    /** La generation automatique retient son lot : un article peut couter plus que le plafond par article. */
+    public function forecastAboveArticleCap(BlogAiSettings $settings): void
+    {
+        $forecast = $this->forecaster->forSettings($settings);
+
+        $this->send(
+            $settings->notificationEmail,
+            new BlogForecastAboveCap(
+                $this->costs->dollars($forecast->lowMicrousd),
+                $this->costs->dollars($forecast->highMicrousd),
+                $this->costs->dollars($settings->articleSpendCapMicrousd()),
+                $this->url->route('admin.blog.generation.settings'),
+            ),
+            'Blog forecast above cap message failed to send.',
+        );
+    }
+
+    private function send(string $recipient, BlogGenerationFailuresAlert|BlogSpendLimitReached|BlogForecastAboveCap $mail, string $failureMessage): void
     {
         try {
             Mail::to($recipient)->send($mail);

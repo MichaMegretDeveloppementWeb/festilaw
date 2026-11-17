@@ -4,18 +4,38 @@ declare(strict_types=1);
 
 namespace App\Services\Admin\Blog\Generation;
 
+use App\Data\Blog\Generation\GenerationCostForecast;
 use App\Data\Blog\Generation\GenerationImageOptions;
 use App\Enums\Blog\Generation\BlogAiImageMode;
 use App\Enums\Blog\Generation\BlogAiPeriodUnit;
+use App\Services\Blog\Generation\BlogAiCostFormatter;
 use Carbon\CarbonImmutable;
 
 /**
  * Mise en mots de ce que seul le back-office affiche d'une generation : reglage de modele, rythme, duree,
- * date, images, sujet. Les mots partages avec les e-mails (etape, issue) sont dans BlogGenerationLabels. Calcul pur, aucune
- * requete.
+ * date, images, longueur, cout estime, sujet. Les mots partages avec les e-mails (etape, issue) sont dans
+ * BlogGenerationLabels. Calcul pur, aucune requete.
  */
 final readonly class BlogGenerationPresenter
 {
+    public function __construct(private BlogAiCostFormatter $costs) {}
+
+    /**
+     * La fourchette de cout d'un article telle que les ecrans l'affichent, et si son haut depasse le plafond.
+     * Sans plafond lisible (saisie en cours), rien n'est dit du depassement.
+     *
+     * @return array{low: string, high: string, cap: string|null, exceeds: bool}
+     */
+    public function forecast(GenerationCostForecast $forecast, ?int $capMicrousd): array
+    {
+        return [
+            'low' => $this->costs->dollars($forecast->lowMicrousd),
+            'high' => $this->costs->dollars($forecast->highMicrousd),
+            'cap' => $capMicrousd === null ? null : $this->costs->dollars($capMicrousd),
+            'exceeds' => $capMicrousd !== null && $forecast->exceeds($capMicrousd),
+        ];
+    }
+
     /** Libelle d'un reglage « modele par etape » (une cle par famille d'etapes). */
     public function modelSettingLabel(string $key): string
     {

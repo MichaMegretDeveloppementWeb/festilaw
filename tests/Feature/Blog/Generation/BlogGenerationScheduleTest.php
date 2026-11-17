@@ -9,6 +9,7 @@ use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogGenerationTrigger;
 use App\Exceptions\Blog\BlogGenerationException;
+use App\Mail\BlogForecastAboveCap;
 use App\Mail\BlogSpendLimitReached;
 use App\Models\BlogGeneration;
 use App\Models\BlogPost;
@@ -122,6 +123,44 @@ it('does not queue a batch once the monthly spend cap is reached, writes it once
         && $mail->hasTo('owner@example.com')
         && $mail->spent === '1,0000 $'
         && $mail->cap === '1,0000 $');
+});
+
+it('holds back the batch when an article could cost more than the cap per article, writes it once and tells the recipient once', function () {
+    BlogAi::saveSettings(['enabled' => true, 'article_spend_cap_cents' => 1, 'notification_email' => 'owner@example.com']);
+
+    $plan = planScheduledGenerations();
+
+    // Decision de Micha du 17/11 : le haut de la fourchette decide, sans tolerance. Rien n'est depense.
+    $line = BlogGeneration::query()->where('trigger', BlogGenerationTrigger::Scheduled)->sole();
+    expect($plan->launched)->toBe(0)
+        ->and($plan->blockedBy)->toBe(BlogGenerationOutcomeReason::ForecastAboveArticleCap)
+        ->and($line->status)->toBe(BlogGenerationStatus::Abandoned)
+        ->and($line->started_at)->toBeNull()
+        ->and($line->cost_microusd)->toBe(0);
+
+    $this->travelTo('2026-11-17 06:00:05');
+    planScheduledGenerations();
+
+    expect(BlogGeneration::query()->where('trigger', BlogGenerationTrigger::Scheduled)->count())->toBe(1);
+    Mail::assertSent(BlogForecastAboveCap::class, 1);
+    Mail::assertSent(BlogForecastAboveCap::class, fn (BlogForecastAboveCap $mail): bool => $mail->hasTo('owner@example.com')
+        && $mail->cap === '0,0100 $'
+        && str_contains($mail->settingsUrl, '/admin/blog/generation/settings'));
+
+    // Le plafond releve, le lot part au passage suivant.
+    BlogAi::saveSettings(['enabled' => true, 'article_spend_cap_cents' => 15]);
+
+    expect(planScheduledGenerations()->launched)->toBe(1);
+});
+
+it('renders the message about a batch held back by the estimated cost, with what to change', function () {
+    $html = (new BlogForecastAboveCap('0,0567 $', '0,0844 $', '0,0500 $', 'https://example.test/admin/blog/generation/settings'))->render();
+
+    expect($html)->toContain('Génération automatique retenue')
+        ->toContain('0,0844 $')
+        ->toContain('0,0500 $')
+        ->toContain('baissez la longueur des articles')
+        ->toContain('Rien n\'a été dépensé');
 });
 
 it('queues the batch as soon as the cap allows it again, and writes a later blocking again', function () {

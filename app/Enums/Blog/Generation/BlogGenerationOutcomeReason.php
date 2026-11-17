@@ -20,6 +20,7 @@ enum BlogGenerationOutcomeReason: string
     case CreditExhausted = 'credit_exhausted';
     case StepFailed = 'step_failed';
     case CancelledByUser = 'cancelled_by_user';
+    case ForecastAboveArticleCap = 'forecast_above_article_cap';
 
     public function label(): string
     {
@@ -33,6 +34,7 @@ enum BlogGenerationOutcomeReason: string
             self::CreditExhausted => __('Crédit épuisé chez le fournisseur d\'IA'),
             self::StepFailed => __('Une étape a échoué après plusieurs essais'),
             self::CancelledByUser => __('Arrêtée avant la fin'),
+            self::ForecastAboveArticleCap => __('Coût estimé au-dessus du plafond par article'),
         };
     }
 }
