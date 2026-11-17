@@ -68,11 +68,28 @@ abstract class BlogAgent implements Agent, HasMiddleware, HasProviderOptions
         return $this->requestOptions;
     }
 
-    /** Le SDK n'expose pas la limite d'un agent : on relit son attribut `MaxTokens`. Elle compte la reflexion. */
+    /**
+     * Le SDK n'expose pas la limite d'un agent : on la relit comme lui, la methode `maxTokens()` d'abord, puis
+     * l'attribut `MaxTokens`. Elle compte la reflexion.
+     */
     public function maxOutputTokens(): int
     {
+        if (method_exists($this, 'maxTokens')) {
+            return (int) $this->maxTokens();
+        }
+
         $attribute = (new ReflectionClass($this))->getAttributes(MaxTokens::class)[0] ?? null;
 
         return $attribute === null ? self::DEFAULT_MAX_TOKENS : (int) $attribute->newInstance()->value;
+    }
+
+    /**
+     * Limite d'une reponse qui porte l'article : la reflexion, que DeepSeek V4.1 Flash pousse jusqu'a 9 000
+     * jetons quel que soit l'effort demande (17/11, generation 77), plus deux fois la reponse visible, a
+     * environ 2,5 jetons par mot, JSON compris. Sans longueur connue, 16 000 jetons.
+     */
+    protected static function tokensForArticle(?int $words): int
+    {
+        return $words === null ? 16_000 : 10_000 + 5 * $words;
     }
 }

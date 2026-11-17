@@ -1,5 +1,6 @@
 <?php
 
+use App\Data\Blog\Generation\ArticleLengthRules;
 use App\Data\Blog\Generation\BlogAiSettings;
 use App\Data\Blog\Generation\GenerationUsage;
 use App\Enums\Blog\Generation\BlogAiImageMode;
@@ -104,8 +105,9 @@ it('brings stored settings back within their bounds', function () {
         'enabled' => false, 'period_count' => 1, 'period_unit' => 'week', 'articles_per_run' => 1,
         'pending_drafts_cap' => 3, 'monthly_spend_cap_cents' => 1_000, 'priority_topics' => '', 'avoided_topics' => '',
         'models' => ['writing' => 'default/model'], 'image_mode' => 'stock', 'max_images' => 1,
-        'notification_email' => null, 'transparency_notice' => ['en' => '', 'fr' => ''],
+        'notification_email' => null, 'transparency_notice' => ['en' => '', 'fr' => ''], 'article_words' => 1_000,
     ];
+    $length = new ArticleLengthRules(minWords: 400, maxWords: 2_000, askedTolerancePercent: 10, acceptedTolerancePercent: 20);
 
     $settings = BlogAiSettings::fromStored([
         'enabled' => 1,
@@ -119,7 +121,8 @@ it('brings stored settings back within their bounds', function () {
         'max_images' => 9,
         'notification_email' => '  ',
         'transparency_notice' => ['fr' => '  Rédigé avec une IA.  ', 'de' => 'x'],
-    ], $defaults, 'team@example.com', ['en', 'fr']);
+        'article_words' => 5_000,
+    ], $defaults, 'team@example.com', ['en', 'fr'], $length);
 
     expect($settings->enabled)->toBeTrue()
         ->and($settings->periodCount)->toBe(1)
@@ -132,7 +135,8 @@ it('brings stored settings back within their bounds', function () {
         ->and($settings->maxImages)->toBe(3)
         ->and($settings->notificationEmail)->toBe('team@example.com')
         ->and($settings->transparencyNotice)->toBe(['en' => '', 'fr' => 'Rédigé avec une IA.'])
-        ->and(BlogAiSettings::fromStored($settings->toStored(), $defaults, 'other@example.com', ['en', 'fr']))->toEqual($settings);
+        ->and($settings->articleWords)->toBe(2_000)
+        ->and(BlogAiSettings::fromStored($settings->toStored(), $defaults, 'other@example.com', ['en', 'fr'], $length))->toEqual($settings);
 });
 
 it('adds a period to a date', function () {

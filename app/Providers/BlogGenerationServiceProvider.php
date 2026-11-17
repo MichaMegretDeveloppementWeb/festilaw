@@ -11,12 +11,14 @@ use App\Actions\Blog\Generation\RunBlogGenerationAction;
 use App\Contracts\Blog\Generation\GenerationPipeline;
 use App\Contracts\Blog\Generation\HostResolver;
 use App\Contracts\Blog\Generation\StockImageProvider;
+use App\Data\Blog\Generation\ArticleLengthRules;
 use App\Exceptions\Blog\BlogGenerationException;
 use App\Services\Admin\Blog\Generation\BlogGenerationOverviewService;
 use App\Services\Blog\Generation\BlogAiCostEstimator;
 use App\Services\Blog\Generation\BlogAiModelCatalog;
 use App\Services\Blog\Generation\BlogAiSettingsService;
 use App\Services\Blog\Generation\BlogGenerationAlertService;
+use App\Services\Blog\Generation\BlogGenerationCostForecaster;
 use App\Services\Blog\Generation\BlogGenerationStepRunner;
 use App\Services\Blog\Generation\Editorial\BlogAgentCaller;
 use App\Services\Blog\Generation\Editorial\BlogPromptLibrary;
@@ -43,6 +45,9 @@ final class BlogGenerationServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(GenerationPipeline::class, fn (Application $app): GenerationPipeline => $this->pipeline($app));
+        $this->app->singleton(ArticleLengthRules::class, static fn (): ArticleLengthRules => ArticleLengthRules::fromConfig((array) config('blog.ai.article_length')));
+        $this->app->when(BlogGenerationCostForecaster::class)->needs('$profile')->giveConfig('blog.ai.forecast.steps');
+        $this->app->when(BlogGenerationCostForecaster::class)->needs('$defaultMarginPercent')->giveConfig('blog.ai.forecast.default_price_margin_percent');
 
         $this->app->when(BlogAiSettingsService::class)->needs('$defaults')->giveConfig('blog.ai.defaults');
         $this->app->when(BlogAiSettingsService::class)->needs('$fallbackEmail')->giveConfig('festilaw.notification_email');

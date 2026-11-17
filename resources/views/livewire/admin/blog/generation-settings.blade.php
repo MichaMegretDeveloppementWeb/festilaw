@@ -35,9 +35,14 @@
             </div>
         </x-admin.section>
 
-        <x-admin.section data-settings-card :title="__('Images par défaut')"
-            :description="__('Appliquées aux générations automatiques. La fenêtre « Générer un article » les propose aussi, et elles se changent alors pour un seul article.')">
-            <div class="grid grid-cols-1 gap-5 pt-6 sm:grid-cols-2">
+        <x-admin.section data-settings-card :title="__('Article par défaut')"
+            :description="__('Longueur et images appliquées aux générations automatiques. La fenêtre « Générer un article » les propose aussi, et elles se changent alors pour un seul article.')">
+            <div class="grid grid-cols-1 gap-5 pt-6 sm:grid-cols-3">
+                <x-ui::form-group :label="__('Longueur du texte (mots)')" for="ai-article-words" :error="$errors->first('articleWords')"
+                    :hint="__('De :min à :max mots. Un mot compte environ 6 caractères, soit 6 000 caractères pour 1 000 mots.', ['min' => $minWords, 'max' => number_format($maxWords, 0, ',', ' ')])">
+                    <x-ui::input type="number" step="50" :min="$minWords" :max="$maxWords" id="ai-article-words" wire:model="articleWords" :error="$errors->has('articleWords')" />
+                </x-ui::form-group>
+
                 <x-ui::form-group :label="__('Origine des images')" for="ai-image-mode" :error="$errors->first('imageMode')">
                     <x-ui::select id="ai-image-mode" wire:model="imageMode" :error="$errors->has('imageMode')" :options="$imageModes" />
                 </x-ui::form-group>

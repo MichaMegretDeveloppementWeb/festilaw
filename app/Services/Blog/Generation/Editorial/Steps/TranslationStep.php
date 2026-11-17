@@ -54,6 +54,12 @@ final class TranslationStep extends EditorialStep
         return 500;
     }
 
+    /** Le francais et l'espagnol comptent environ un quart de mots de plus que l'anglais (655 et 608 pour 522, le 17/11). */
+    private function translatedWords(GenerationStepContext $context): ?int
+    {
+        return $context->length === null ? null : (int) ceil($context->length->acceptedMax * 1.25);
+    }
+
     public function execute(GenerationStepContext $context): GenerationStepResult
     {
         $source = EditorialArticle::fromArray($context->output('style')['article'] ?? []);
@@ -74,7 +80,7 @@ final class TranslationStep extends EditorialStep
             $this->prompts->get('writing-voice-'.$this->locale),
             $this->prompts->get('lexicon-'.$this->locale),
             $this->prompts->render('step-translation', ['language' => $language]),
-        ]));
+        ]), $this->translatedWords($context));
         $prompt = implode("\n\n", [
             $this->block('Article', $source->forPrompt()),
             $this->block('Image descriptions', array_values(array_filter($images, static fn (array $image): bool => $image['description'] !== ''))),

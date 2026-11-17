@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace App\Actions\Blog\Generation;
 
 use App\Contracts\Blog\Generation\GenerationPipeline;
+use App\Data\Blog\Generation\ArticleLengthRules;
 use App\Data\Blog\Generation\GenerationImageOptions;
+use App\Data\Blog\Generation\GenerationLength;
 use App\Data\Blog\Generation\QueueBlogGenerationData;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogGenerationTrigger;
+use App\Enums\Blog\Generation\BlogGenerationType;
 use App\Exceptions\Blog\BlogGenerationException;
 use App\Models\BlogGeneration;
 use App\Services\Blog\Generation\BlogAiSettingsService;
@@ -28,6 +31,7 @@ final readonly class QueueBlogGenerationAction
         private GenerationPipeline $pipeline,
         private BlogAiSettingsService $settings,
         private BlogGenerationBudget $budget,
+        private ArticleLengthRules $length,
     ) {}
 
     /** @return int l'identifiant de la generation creee */
@@ -52,10 +56,13 @@ final readonly class QueueBlogGenerationAction
             'batch_uuid' => (string) Str::uuid(),
             'topic_hint' => $topicHint !== '' ? $topicHint : null,
             'instructions' => $instructions !== '' ? $instructions : null,
-            // Les images sont celles de CETTE generation : le pipeline ne lira pas les reglages du moment.
+            // Les images et la longueur sont celles de CETTE generation : le pipeline ne lira pas les reglages du moment.
             'payload' => [
                 ...$data->payload,
                 GenerationImageOptions::PAYLOAD_KEY => ($data->images ?? GenerationImageOptions::fromSettings($settings))->toPayload(),
+                ...($data->type === BlogGenerationType::Article
+                    ? [GenerationLength::PAYLOAD_KEY => GenerationLength::payloadFor($this->length->clamp($data->articleWords ?? $settings->articleWords))]
+                    : []),
             ],
         ])->id;
     }

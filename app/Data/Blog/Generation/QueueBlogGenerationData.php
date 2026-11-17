@@ -8,8 +8,8 @@ use App\Enums\Blog\Generation\BlogGenerationType;
 
 /**
  * Une demande de generation faite par une personne : le type, et ce qu'elle a eventuellement impose (sujet,
- * consignes, images). `payload` porte les donnees propres au type (l'article a traduire, pour une
- * traduction). `images` nul : les valeurs par defaut des reglages.
+ * consignes, images, longueur). `payload` porte les donnees propres au type (l'article a traduire, pour une
+ * traduction). `images` et `articleWords` nuls : les valeurs par defaut des reglages.
  */
 final readonly class QueueBlogGenerationData
 {
@@ -21,5 +21,6 @@ final readonly class QueueBlogGenerationData
         public ?int $requestedBy = null,
         public array $payload = [],
         public ?GenerationImageOptions $images = null,
+        public ?int $articleWords = null,
     ) {}
 }

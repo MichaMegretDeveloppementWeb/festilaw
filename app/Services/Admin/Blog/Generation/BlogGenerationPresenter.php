@@ -87,6 +87,15 @@ final readonly class BlogGenerationPresenter
             : __(':source, :count au plus', ['source' => $source, 'count' => $options->maxImages]);
     }
 
+    /** « Environ 1 000 mots (6 000 caractères) ». Un mot anglais compte environ 6 caracteres, espace comprise. */
+    public function length(int $words): string
+    {
+        return __('Environ :words mots (:characters caractères)', [
+            'words' => number_format($words, 0, ',', ' '),
+            'characters' => number_format($words * 6, 0, ',', ' '),
+        ]);
+    }
+
     /** Libelle d'un nombre d'images au plus, pour les listes de choix. Ce nombre comprend l'image principale. */
     public function imageCountLabel(int $count): string
     {

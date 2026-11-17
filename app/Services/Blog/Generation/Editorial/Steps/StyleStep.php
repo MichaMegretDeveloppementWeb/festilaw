@@ -53,7 +53,7 @@ final class StyleStep extends EditorialStep
             throw BlogEditorialException::missingInput($this->key(), 'the checked article');
         }
 
-        $agent = new StyleAgent($this->prompts->compose('festilaw-context', 'editorial-guidelines', 'writing-voice-en', 'step-style'));
+        $agent = new StyleAgent($this->prompts->compose('festilaw-context', 'editorial-guidelines', 'writing-voice-en', 'step-style'), $context->length?->acceptedMax);
         $reply = $this->ask($context, $agent, $this->block('Article to edit', $checked->forPrompt()));
         $styled = EditorialArticle::fromArray($reply->structured());
         $usage = $reply->usage;

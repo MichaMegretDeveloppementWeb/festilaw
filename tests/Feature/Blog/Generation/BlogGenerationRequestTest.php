@@ -309,20 +309,22 @@ it('renders the message of a finished batch: how many succeeded, where the other
     expect($message([$succeeded]))->toContain('Ouvrir les articles')->not->toContain('assistance technique');
 });
 
-it('gives a requested generation its own images, or the default ones of the settings', function () {
-    BlogAi::saveSettings(['image_mode' => 'generated', 'max_images' => 3]);
+it('gives a requested generation its own images and length, or the default ones of the settings', function () {
+    BlogAi::saveSettings(['image_mode' => 'generated', 'max_images' => 3, 'article_words' => 1_200]);
 
     $withDefaults = app(QueueBlogGenerationAction::class)->execute(new QueueBlogGenerationData);
     $withItsOwn = app(QueueBlogGenerationAction::class)->execute(new QueueBlogGenerationData(
         payload: ['post_id' => 7],
         images: new GenerationImageOptions(BlogAiImageMode::None, 1),
+        articleWords: 9_000,
     ));
 
-    // Les reglages changent ensuite : les generations deja demandees gardent leurs images.
-    BlogAi::saveSettings(['image_mode' => 'stock', 'max_images' => 1]);
+    // Les reglages changent ensuite : les generations deja demandees gardent leurs images et leur longueur.
+    BlogAi::saveSettings(['image_mode' => 'stock', 'max_images' => 1, 'article_words' => 600]);
 
-    expect(BlogGeneration::query()->findOrFail($withDefaults)->payload)->toEqual(['images' => ['mode' => 'generated', 'max' => 3]])
-        ->and(BlogGeneration::query()->findOrFail($withItsOwn)->payload)->toEqual(['post_id' => 7, 'images' => ['mode' => 'none', 'max' => 1]]);
+    // Une longueur hors des bornes est ramenee a la borne (2 000 mots au plus).
+    expect(BlogGeneration::query()->findOrFail($withDefaults)->payload)->toEqual(['images' => ['mode' => 'generated', 'max' => 3], 'length' => ['words' => 1_200]])
+        ->and(BlogGeneration::query()->findOrFail($withItsOwn)->payload)->toEqual(['post_id' => 7, 'images' => ['mode' => 'none', 'max' => 1], 'length' => ['words' => 2_000]]);
 });
 
 it('keeps who stopped a generation and when, whether it was waiting or already running', function () {

@@ -42,6 +42,7 @@ final readonly class BlogAiSettings
         public int $maxImages,
         public string $notificationEmail,
         public array $transparencyNotice,
+        public int $articleWords,
     ) {}
 
     /**
@@ -49,7 +50,7 @@ final readonly class BlogAiSettings
      * @param  array<string, mixed>  $defaults  valeurs de depart (config/blog.php, section ai.defaults)
      * @param  list<string>  $locales
      */
-    public static function fromStored(array $stored, array $defaults, string $fallbackEmail, array $locales): self
+    public static function fromStored(array $stored, array $defaults, string $fallbackEmail, array $locales, ArticleLengthRules $length): self
     {
         $value = static fn (string $key): mixed => $stored[$key] ?? $defaults[$key] ?? null;
 
@@ -81,6 +82,7 @@ final readonly class BlogAiSettings
             maxImages: min(self::MAX_IMAGES, max(1, (int) $value('max_images'))),
             notificationEmail: $email !== '' ? $email : $fallbackEmail,
             transparencyNotice: $notice,
+            articleWords: $length->clamp((int) $value('article_words')),
         );
     }
 
@@ -145,6 +147,7 @@ final readonly class BlogAiSettings
             'max_images' => $this->maxImages,
             'notification_email' => $this->notificationEmail,
             'transparency_notice' => $this->transparencyNotice,
+            'article_words' => $this->articleWords,
         ];
     }
 }

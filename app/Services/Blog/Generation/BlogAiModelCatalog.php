@@ -15,13 +15,33 @@ final readonly class BlogAiModelCatalog
     public const IMAGE_SETTING = 'image';
 
     /**
-     * @param  array<string, array{name?: string, provider?: string, input?: int, output?: int}>  $textModels
+     * @param  array<string, array{name?: string, provider?: string, input?: int, output?: int, price_margin_percent?: int, reasoning_tokens?: array{0: int, 1: int}}>  $textModels
      * @param  array<string, array{name?: string, provider?: string, reserve_microusd?: int}>  $imageModels
      */
     public function __construct(
         private array $textModels,
         private array $imageModels,
     ) {}
+
+    /** Ce que le modele coute vraiment, en pour cent du catalogue, quand on l'a mesure ; nul sinon. */
+    public function priceMarginPercent(?string $id): ?int
+    {
+        $margin = $this->textModels[(string) $id]['price_margin_percent'] ?? null;
+
+        return is_int($margin) ? $margin : null;
+    }
+
+    /**
+     * La reflexion, basse et haute, d'un modele qui ignore l'effort demande ; nulle pour un modele qui le respecte.
+     *
+     * @return array{0: int, 1: int}|null
+     */
+    public function reasoningTokens(?string $id): ?array
+    {
+        $tokens = $this->textModels[(string) $id]['reasoning_tokens'] ?? null;
+
+        return is_array($tokens) && count($tokens) === 2 ? [(int) $tokens[0], (int) $tokens[1]] : null;
+    }
 
     /**
      * Ce qu'on reserve sur le plafond avant de demander une image a ce modele. Un modele sans reserve connue

@@ -36,6 +36,17 @@ final readonly class BlogAiCostEstimator
         return $this->tokensMicrousd($model, $inputTokens, $outputTokens) * max(1, $margin) + $webSearches * $this->webSearchMicrousd;
     }
 
+    /** Les jetons au prix du catalogue, un modele absent de la table compte comme le plus cher. */
+    public function catalogMicrousd(?string $model, int $inputTokens, int $outputTokens): int
+    {
+        return $this->reserveMicrousd($model, $inputTokens, $outputTokens, 0, 1);
+    }
+
+    public function webSearchesMicrousd(int $searches): int
+    {
+        return $searches * $this->webSearchMicrousd;
+    }
+
     private function tokensMicrousd(?string $model, int $inputTokens, int $outputTokens): int
     {
         $price = $this->prices[(string) $model] ?? ['input' => 0, 'output' => 0];

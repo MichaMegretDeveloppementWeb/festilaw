@@ -331,8 +331,8 @@ it('queues a generation with its topic, its instructions and its own images, the
         ->and($generation->topic_hint)->toBe('Labels on Etsy')
         ->and($generation->instructions)->toBe('Short, for beginners.')
         ->and($generation->requested_by)->toBe($user->id)
-        // Les images sont celles de cette generation, pas celles des reglages.
-        ->and($generation->payload)->toBe(['images' => ['mode' => 'generated', 'max' => 2]])
+        // Les images sont celles de cette generation, pas celles des reglages ; la longueur, celle des reglages.
+        ->and($generation->payload)->toBe(['images' => ['mode' => 'generated', 'max' => 2], 'length' => ['words' => 1_000]])
         ->and(session('toast-success'))->toBe('Génération lancée.');
 });
 
@@ -444,7 +444,7 @@ it('shows a generation step by step, with its model, tokens and cost under each 
         'topic_hint' => 'Labels on Etsy',
         'instructions' => 'Short.',
         'requested_by' => $user->id,
-        'payload' => ['images' => ['mode' => 'stock', 'max' => 2]],
+        'payload' => ['images' => ['mode' => 'stock', 'max' => 2], 'length' => ['words' => 1_200]],
         'cost_microusd' => 42_500,
         'last_error' => 'Provider is down.',
     ]);
@@ -474,6 +474,7 @@ it('shows a generation step by step, with its model, tokens and cost under each 
         ->assertSee('0,0300 $')
         ->assertSee('0,0125 $')
         ->assertSee('Banque d\'images, 2 au plus')
+        ->assertSee('Environ 1 200 mots (7 200 caractères)')
         // Le modele sous son nom commercial, les tokens par sens avec le mot « tokens », plus aucune phrase « jetons lus ».
         ->assertSee('Claude Sonnet 5.5')
         ->assertDontSee('anthropic/claude-sonnet-5.5')
@@ -627,6 +628,7 @@ it('saves the settings', function () {
         ->set('models.image', 'openai/gpt-5.4-image-2')
         ->set('imageMode', 'generated')
         ->set('maxImages', '3')
+        ->set('articleWords', '1500')
         ->set('notificationEmail', 'owner@example.com')
         ->set('transparencyNotice.fr', 'Article rédigé avec l\'aide d\'une IA.')
         ->call('save')
@@ -651,6 +653,7 @@ it('saves the settings', function () {
         ->and($saved->modelFor('topic'))->toBe(config('blog.ai.defaults.models.topic'))
         ->and($saved->imageMode)->toBe(BlogAiImageMode::Generated)
         ->and($saved->maxImages)->toBe(3)
+        ->and($saved->articleWords)->toBe(1_500)
         ->and($saved->notificationEmail)->toBe('owner@example.com')
         ->and($saved->transparencyNotice['fr'])->toBe('Article rédigé avec l\'aide d\'une IA.');
 });
@@ -669,9 +672,11 @@ it('refuses settings that make no sense, each with its own message', function ()
         ->set('priorityTopics', [str_repeat('a', 121)])
         ->set('imageMode', 'hologram')
         ->set('maxImages', '4')
+        ->set('articleWords', '2500')
         ->set('notificationEmail', 'not-an-email')
         ->call('save')
-        ->assertHasErrors(['periodCount', 'periodUnit', 'articlesPerRun', 'pendingDraftsCap', 'monthlySpendCap', 'articleSpendCap', 'models.writing', 'models.image', 'priorityTopics.0', 'imageMode', 'maxImages', 'notificationEmail'])
+        ->assertHasErrors(['periodCount', 'periodUnit', 'articlesPerRun', 'pendingDraftsCap', 'monthlySpendCap', 'articleSpendCap', 'models.writing', 'models.image', 'priorityTopics.0', 'imageMode', 'maxImages', 'articleWords', 'notificationEmail'])
+        ->assertSee('Le texte compte 2 000 mots au plus.')
         ->assertSee('La période est d\'au moins 1.')
         ->assertSee('Un lot compte 10 articles au plus.')
         ->assertSee('Le plafond de dépense ne peut pas être négatif.')

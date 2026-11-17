@@ -115,7 +115,7 @@
             {{-- 2. La demande d'origine : la meme forme, en plus discret (valeurs en 14 px). Le filet du titre de
                  section sert de bord haut a la bande. --}}
             <x-admin.section class="mt-12" :title="__('La demande')" data-generation-request>
-                <x-admin.stats class="border-t-0" :columns="3">
+                <x-admin.stats class="border-t-0" :columns="4">
                     <x-admin.stats.item icon="bolt" :label="__('Lancement')" size="sm">{{ $generation->trigger->label() }}</x-admin.stats.item>
                     <x-admin.stats.item icon="chat-bubble-left-ellipsis" :label="__('Sujet demandé')" size="sm">
                         @if ($generation->topicHint)
@@ -125,6 +125,7 @@
                         @endif
                     </x-admin.stats.item>
                     <x-admin.stats.item icon="photo" :label="__('Images')" size="sm">{{ $generation->images ?? '–' }}</x-admin.stats.item>
+                    <x-admin.stats.item icon="document-text" :label="__('Longueur demandée')" size="sm">{{ $generation->length ?? '–' }}</x-admin.stats.item>
                 </x-admin.stats>
 
                 @if ($generation->instructions)

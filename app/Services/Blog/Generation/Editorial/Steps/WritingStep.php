@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Services\Blog\Generation\Editorial\Steps;
 
 use App\Ai\Agents\Blog\WriterAgent;
+use App\Data\Blog\Generation\ArticleLengthRules;
 use App\Data\Blog\Generation\EditorialArticle;
 use App\Data\Blog\Generation\GenerationImageOptions;
+use App\Data\Blog\Generation\GenerationLength;
 use App\Data\Blog\Generation\GenerationStepContext;
 use App\Data\Blog\Generation\GenerationStepResult;
 use App\Enums\Blog\Generation\BlogAiImageMode;
@@ -15,14 +17,15 @@ use App\Repositories\Blog\BlogEditorialContextRepository;
 use App\Services\Blog\Generation\Editorial\BlogAgentCaller;
 use App\Services\Blog\Generation\Editorial\BlogInternalLinkResolver;
 use App\Services\Blog\Generation\Editorial\BlogPromptLibrary;
+use App\Services\Blog\Generation\Editorial\BlogWritingSignalsInspector;
 use App\Services\Blog\Generation\Editorial\EditorialMarkdown;
 
 /**
  * Etape 5 · la redaction de l'article anglais, a partir du seul dossier de recherche. Le code controle ce
- * qu'il recoit : structure, longueurs, liens (jetons internes connus, liens externes du dossier seulement),
- * emplacements d'images dans la limite reglee, sources du dossier. Un ecart donne lieu a une seule demande de
- * correction. Ce qui reste ensuite est garde au journal ; seul un article vide ou sans source fait echouer
- * l'etape, que le moteur reessaie.
+ * qu'il recoit : structure, longueurs (le nombre de mots du texte compris), liens (jetons internes connus,
+ * liens externes du dossier seulement), emplacements d'images dans la limite reglee, sources du dossier. Un
+ * ecart donne lieu a une seule demande de correction. Ce qui reste ensuite est garde au journal ; seul un
+ * article vide ou sans source fait echouer l'etape, que le moteur reessaie.
  */
 final class WritingStep extends EditorialStep
 {
@@ -30,6 +33,8 @@ final class WritingStep extends EditorialStep
         BlogAgentCaller $caller,
         BlogPromptLibrary $prompts,
         private readonly BlogEditorialContextRepository $blog,
+        private readonly BlogWritingSignalsInspector $inspector,
+        private readonly ArticleLengthRules $lengthRules,
     ) {
         parent::__construct($caller, $prompts);
     }
@@ -66,13 +71,20 @@ final class WritingStep extends EditorialStep
             $this->block('Pages you can link to', array_map(static fn (string $key): string => "festilaw:page/{$key}", array_keys(BlogInternalLinkResolver::PAGES))),
             $this->block('Inline images allowed', (string) $maxInline),
         ]);
-        $agent = new WriterAgent($this->prompts->compose('festilaw-context', 'editorial-guidelines', 'writing-voice-en', 'step-writing'));
+        $length = $context->length ?? $this->lengthRules->for($context->settings->articleWords);
+        $instructions = $this->prompts->compose('festilaw-context', 'editorial-guidelines', 'writing-voice-en')."\n\n".$this->prompts->render('step-writing', [
+            'words' => $length->words,
+            'min_words' => $length->askedMin,
+            'max_words' => $length->askedMax,
+        ]);
+        $agent = new WriterAgent($instructions, $length->acceptedMax);
         $allowed = [
             'sources' => array_column($research['sources'] ?? [], 'url', 'id'),
             'categories' => array_column($categories, 'id'),
             'posts' => array_column($posts, 'id'),
             'max_inline' => $maxInline,
             'kind' => $topic['kind'] ?? 'evergreen',
+            'length' => $context->length,
         ];
 
         $reply = $this->ask($context, $agent, $prompt);
@@ -113,7 +125,7 @@ final class WritingStep extends EditorialStep
      * La reponse du redacteur, nettoyee, et la liste de ce qui ne respecte pas les consignes.
      *
      * @param  array<string, mixed>  $answer
-     * @param  array{sources: array<string, string>, categories: list<int>, posts: list<int>, max_inline: int, kind: string}  $allowed
+     * @param  array{sources: array<string, string>, categories: list<int>, posts: list<int>, max_inline: int, kind: string, length: GenerationLength|null}  $allowed
      * @return array{article: EditorialArticle, source_ids: list<string>, category_id: int|null, related_post_ids: list<int>, featured_image: array<string, string>, inline_images: list<array<string, mixed>>, problems: list<string>}
      */
     private function draft(array $answer, array $allowed): array
@@ -153,6 +165,13 @@ final class WritingStep extends EditorialStep
 
         if (preg_match('/^#\s/m', $article->body) === 1) {
             $problems[] = 'The body must not contain a "#" heading.';
+        }
+
+        $length = $allowed['length'];
+        $words = $this->inspector->words($article->body);
+
+        if ($length !== null && $article->body !== '' && ! $length->accepts($words)) {
+            $problems[] = "The body has {$words} words. It must have between {$length->askedMin} and {$length->askedMax} words, without padding.";
         }
 
         $tokens = EditorialMarkdown::linkTokens($article->body);

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Support;
 
 use App\Contracts\Blog\Generation\HostResolver;
+use App\Data\Blog\Generation\ArticleLengthRules;
 use App\Data\Blog\Generation\GenerationStepContext;
 use App\Enums\Blog\Generation\BlogGenerationType;
 use App\Services\Blog\Generation\BlogAiSettingsService;
@@ -21,7 +22,7 @@ final class EditorialFixtures
      * @param  array<string, array<string, mixed>>  $outputs
      * @param  array<string, mixed>|null  $payload
      */
-    public static function context(array $outputs = [], ?string $topicHint = null, ?string $instructions = null, ?array $payload = null, ?int $budgetLeft = null): GenerationStepContext
+    public static function context(array $outputs = [], ?string $topicHint = null, ?string $instructions = null, ?array $payload = null, ?int $budgetLeft = null, ?int $words = null): GenerationStepContext
     {
         $payload ??= ['images' => ['mode' => 'stock', 'max' => 2]];
 
@@ -35,6 +36,7 @@ final class EditorialFixtures
             payload: $payload,
             attempt: 1,
             budgetLeftMicrousd: $budgetLeft,
+            length: $words === null ? null : app(ArticleLengthRules::class)->for($words),
         );
     }
 

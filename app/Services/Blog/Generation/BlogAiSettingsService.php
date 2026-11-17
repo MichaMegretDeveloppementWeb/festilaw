@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Blog\Generation;
 
+use App\Data\Blog\Generation\ArticleLengthRules;
 use App\Data\Blog\Generation\BlogAiSettings;
 use App\Repositories\SettingRepository;
 
@@ -22,6 +23,7 @@ final readonly class BlogAiSettingsService
      */
     public function __construct(
         private SettingRepository $settings,
+        private ArticleLengthRules $length,
         private array $defaults,
         private string $fallbackEmail,
         private array $locales,
@@ -36,6 +38,7 @@ final readonly class BlogAiSettingsService
             $this->defaults,
             $this->fallbackEmail,
             $this->locales,
+            $this->length,
         );
     }
 }

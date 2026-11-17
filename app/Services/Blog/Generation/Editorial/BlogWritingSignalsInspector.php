@@ -31,6 +31,12 @@ final class BlogWritingSignalsInspector
         'semicolon joining clauses' => '/;/u',
     ];
 
+    /** Les mots du texte, compte de la meme facon que le controle : intertitres et emplacements d'images exclus. */
+    public function words(string $markdown): int
+    {
+        return $this->inspect($markdown, [])['words'];
+    }
+
     /**
      * Le point-virgule qui clot un element de liste n'est pas releve : la typographie francaise et espagnole le
      * demande (writing-voice-fr, writing-voice-es), et il ne relie pas deux propositions.

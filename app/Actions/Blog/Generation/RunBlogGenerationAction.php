@@ -6,7 +6,9 @@ namespace App\Actions\Blog\Generation;
 
 use App\Contracts\Blog\Generation\GenerationPipeline;
 use App\Contracts\Blog\Generation\GenerationStep;
+use App\Data\Blog\Generation\ArticleLengthRules;
 use App\Data\Blog\Generation\BlogAiSettings;
+use App\Data\Blog\Generation\GenerationLength;
 use App\Data\Blog\Generation\GenerationStepContext;
 use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
@@ -45,6 +47,7 @@ final readonly class RunBlogGenerationAction
         private BlogGenerationLockRepository $locks,
         private BlogGenerationSpendRepository $spend,
         private BlogGenerationBudget $budget,
+        private ArticleLengthRules $length,
         private BlogAiSettingsService $settings,
         private BlogGenerationAlertService $alerts,
         private NotifyFinishedBlogGenerationBatchAction $notifyBatch,
@@ -181,6 +184,7 @@ final readonly class RunBlogGenerationAction
             payload: $generation->payload ?? [],
             attempt: $attempt,
             budgetLeftMicrousd: min($this->budgetLeft($generation->id, $settings)),
+            length: $this->length->for(GenerationLength::wordsFromPayload($generation->payload) ?? $settings->articleWords),
         );
     }
 

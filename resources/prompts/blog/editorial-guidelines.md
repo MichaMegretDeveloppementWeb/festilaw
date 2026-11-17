@@ -24,7 +24,7 @@ Prefer precise subjects tied to a platform, a country, a product type or a real 
 
 ## Two kinds of articles
 
-An evergreen guide answers one precise question completely and stays useful for a long time. A news article explains a recent, verifiable change and what it means in practice for sellers. Both are 600 to 800 words for now, so choose a question narrow enough to answer fully in that length. Never pad.
+An evergreen guide answers one precise question completely and stays useful for a long time. A news article explains a recent, verifiable change and what it means in practice for sellers. The length of each article is given with the request: choose a question that can be answered fully in that length. Never pad.
 
 ## Sources
 

@@ -266,6 +266,19 @@ it('asks once for a correction when the article breaks the rules, then keeps the
         && $prompt->contains('https://random.example/page is not a source'));
 });
 
+it('asks the writer for the length of the generation, and once for a correction when the body is outside the accepted range', function () {
+    WriterAgent::fake([Fixtures::writerAnswer(), Fixtures::writerAnswer()])->preventStrayPrompts();
+
+    $result = app(WritingStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic(), 'research' => Fixtures::research()], words: 1_000));
+
+    // Au premier article reel, 600 a 800 mots demandes et 522 ecrits : la consigne seule ne tient pas la longueur.
+    WriterAgent::assertPrompted(fn ($prompt): bool => str_contains($prompt->agent->instructions(), 'about 1000 words, between 900 and 1100')
+        && ! $prompt->contains('Fix these problems'));
+    WriterAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('It must have between 900 and 1100 words'));
+    // La correction reste trop courte : l'article est garde, l'ecart reste au journal de l'etape.
+    expect(collect($result->output['warnings'])->contains(fn (string $warning): bool => str_starts_with($warning, 'The body has')))->toBeTrue();
+});
+
 it('limits the images inside the text to the number set for the generation', function () {
     WriterAgent::fake([Fixtures::writerAnswer(), Fixtures::writerAnswer()])->preventStrayPrompts();
 

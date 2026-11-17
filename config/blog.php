@@ -166,8 +166,22 @@ return [
             ],
             'image_mode' => 'stock',
             'max_images' => 1,
+            'article_words' => 1_000,
             'notification_email' => null,
             'transparency_notice' => ['en' => '', 'fr' => '', 'es' => ''],
+        ],
+
+        /*
+         | Longueur du texte d'un article, en mots du texte anglais (decision de Micha du 17/11 : de 400 a
+         | 2 000 mots, 1 000 par defaut). Les consignes demandent la cible a `asked_tolerance_percent` pres ;
+         | la redaction accepte un ecart de `accepted_tolerance_percent`, et demande une correction au-dela.
+         | Au premier article reel, les consignes demandaient 600 a 800 mots et le modele en a ecrit 522.
+         */
+        'article_length' => [
+            'min_words' => 400,
+            'max_words' => 2_000,
+            'asked_tolerance_percent' => 10,
+            'accepted_tolerance_percent' => 20,
         ],
 
         /*
@@ -180,11 +194,16 @@ return [
          | prix indicatif affiche a cote du modele, et l'ESTIMATION d'un cout quand le fournisseur ne renvoie
          | pas le cout reel (l'etape est alors marquee « cout estime »). La qualite de ces modeles n'est pas
          | presumee : le banc d'essai tranche, et resserrera cette liste.
+         |
+         | Deux mesures facultatives, pour le cout estime d'un article (generation 77 du 17/11) :
+         | `price_margin_percent`, ce que le modele coute vraiment par rapport au catalogue (Haiku 5.5 au prix
+         | du catalogue, DeepSeek V4.1 Flash 2,8 fois plus cher en ecriture chez Wafer), et `reasoning_tokens`,
+         | la reflexion d'un modele qui ignore l'effort demande (DeepSeek, de 1 800 a 9 000 jetons par appel).
          */
         'models' => [
             'anthropic/claude-opus-5.5' => ['name' => 'Claude Opus 5.5', 'provider' => 'Anthropic', 'input' => 400, 'output' => 2_000],
             'anthropic/claude-sonnet-5.5' => ['name' => 'Claude Sonnet 5.5', 'provider' => 'Anthropic', 'input' => 200, 'output' => 1_000],
-            'anthropic/claude-haiku-5.5' => ['name' => 'Claude Haiku 5.5', 'provider' => 'Anthropic', 'input' => 10, 'output' => 50],
+            'anthropic/claude-haiku-5.5' => ['name' => 'Claude Haiku 5.5', 'provider' => 'Anthropic', 'input' => 10, 'output' => 50, 'price_margin_percent' => 100],
             'openai/gpt-6.1-sol' => ['name' => 'GPT-6.1 Sol', 'provider' => 'OpenAI', 'input' => 200, 'output' => 1_000],
             'openai/gpt-6.1-terra' => ['name' => 'GPT-6.1 Terra', 'provider' => 'OpenAI', 'input' => 100, 'output' => 500],
             'openai/gpt-6-luna' => ['name' => 'GPT-6 Luna', 'provider' => 'OpenAI', 'input' => 10, 'output' => 50],
@@ -193,7 +212,7 @@ return [
             'google/gemini-3.1-flash-lite' => ['name' => 'Gemini 3.1 Flash Lite', 'provider' => 'Google', 'input' => 25, 'output' => 150],
             'x-ai/grok-4.7' => ['name' => 'Grok 4.7', 'provider' => 'SpaceXAI', 'input' => 200, 'output' => 600],
             'mistralai/mistral-large-4-0' => ['name' => 'Mistral Large 4', 'provider' => 'Mistral', 'input' => 70, 'output' => 210],
-            'deepseek/deepseek-v4.1-flash' => ['name' => 'DeepSeek V4.1 Flash', 'provider' => 'DeepSeek', 'input' => 5, 'output' => 20],
+            'deepseek/deepseek-v4.1-flash' => ['name' => 'DeepSeek V4.1 Flash', 'provider' => 'DeepSeek', 'input' => 5, 'output' => 20, 'price_margin_percent' => 300, 'reasoning_tokens' => [1_800, 9_000]],
         ],
 
         /*
@@ -250,6 +269,32 @@ return [
          | au catalogue).
          */
         'reservation_margin' => 3,
+
+        /*
+         | Cout estime d'un article (BlogGenerationCostForecaster), affiche avant le lancement. Profil de
+         | chaque etape, par appel, cale sur la generation 77 du 17/11 (journal « Blog AI call. », brouillon
+         | 97 de 522 mots) : jetons lus (fixes, et par millier de mots du texte), jetons visibles ecrits,
+         | reflexion basse et haute, nombre d'appels bas et haut (correction, second passage ; les nouveaux
+         | essais, des incidents, ne comptent pas), recherches web. Un appel apres le premier relit en plus
+         | la reponse precedente. La reflexion de chaque etape est celle d'un modele qui respecte l'effort
+         | demande (Haiku 5.5) ; un modele qui l'ignore porte la sienne au catalogue (`reasoning_tokens`).
+         | Les jetons sont comptes au prix mesure du modele (`price_margin_percent` du catalogue) ; un modele
+         | jamais mesure compte au catalogue en bas et a `default_price_margin_percent` en haut.
+         */
+        'forecast' => [
+            'default_price_margin_percent' => 150,
+            'steps' => [
+                'topic_scan' => ['setting' => 'topic', 'input' => 9_500, 'output' => 1_400, 'reasoning' => [200, 1_000], 'calls' => [1, 1], 'searches' => 2],
+                'topic' => ['setting' => 'topic', 'input' => 7_900, 'output' => 500, 'reasoning' => [0, 0], 'calls' => [1, 1]],
+                'research_notes' => ['setting' => 'research', 'input' => 22_800, 'output' => 2_800, 'reasoning' => [250, 1_000], 'calls' => [1, 1], 'searches' => 3],
+                'research' => ['setting' => 'research', 'input' => 8_500, 'output' => 2_650, 'reasoning' => [0, 0], 'calls' => [1, 1]],
+                'writing' => ['setting' => 'writing', 'input' => 9_700, 'output_per_1000_words' => 2_100, 'reasoning' => [1_000, 3_000], 'calls' => [1, 2]],
+                'verification' => ['setting' => 'verification', 'input' => 7_000, 'input_per_1000_words' => 2_100, 'output_per_1000_words' => 3_100, 'reasoning' => [1_500, 3_000], 'calls' => [1, 1]],
+                'style' => ['setting' => 'writing', 'input' => 5_300, 'input_per_1000_words' => 2_100, 'output_per_1000_words' => 1_750, 'reasoning' => [1_000, 3_000], 'calls' => [1, 2]],
+                'translation_fr' => ['setting' => 'translation', 'input' => 5_500, 'input_per_1000_words' => 2_100, 'output_per_1000_words' => 2_700, 'reasoning' => [1_000, 3_000], 'calls' => [1, 3]],
+                'translation_es' => ['setting' => 'translation', 'input' => 5_500, 'input_per_1000_words' => 2_100, 'output_per_1000_words' => 2_400, 'reasoning' => [1_000, 3_000], 'calls' => [1, 3]],
+            ],
+        ],
 
         /*
          | Worker. Il cherche une generation a traiter toutes les `poll_seconds`. A vide, il s'arrete des

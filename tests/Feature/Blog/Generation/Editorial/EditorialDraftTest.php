@@ -275,7 +275,8 @@ it('runs the whole editorial pipeline through the worker and delivers a draft to
     WebSearchAgent::fake(['Notes from the web scan.', Fixtures::notesCiting()])->preventStrayPrompts();
     TopicAgent::fake([[...Fixtures::topic(), 'report_fr' => 'Sujet demandé par les vendeurs.']])->preventStrayPrompts();
     ResearchAgent::fake([[...Fixtures::research(), 'report_fr' => 'Deux sources officielles.']])->preventStrayPrompts();
-    WriterAgent::fake([Fixtures::writerAnswer()])->preventStrayPrompts();
+    // Le texte d'exemple est plus court que les 1 000 mots par defaut : la redaction demande une correction.
+    WriterAgent::fake([Fixtures::writerAnswer(), Fixtures::writerAnswer()])->preventStrayPrompts();
     FactCheckAgent::fake([[...Fixtures::article(), 'removed_claims' => [], 'report_fr' => 'Tout est appuyé.']])->preventStrayPrompts();
     StyleAgent::fake([[...Fixtures::article(), 'report_fr' => 'Style relu.']])->preventStrayPrompts();
     TranslatorAgent::fake([

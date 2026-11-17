@@ -9,6 +9,7 @@ use App\Contracts\Blog\Generation\GenerationStep;
 use App\Data\Admin\Blog\Generation\BlogGenerationDetailView;
 use App\Data\Admin\Blog\Generation\BlogGenerationStepView;
 use App\Data\Blog\Generation\GenerationImageOptions;
+use App\Data\Blog\Generation\GenerationLength;
 use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogGenerationStepStatus;
@@ -79,6 +80,7 @@ final readonly class BlogGenerationDetailService
         $keys = collect($this->pipelineKeys($generation))->merge($rows->keys())->unique()->values();
         $failedStep = $rows->first(static fn (BlogGenerationStep $row): bool => $row->status === BlogGenerationStepStatus::Failed)?->step;
         $images = GenerationImageOptions::fromPayload($generation->payload);
+        $words = GenerationLength::wordsFromPayload($generation->payload);
 
         return new BlogGenerationDetailView(
             id: $generation->id,
@@ -97,6 +99,7 @@ final readonly class BlogGenerationDetailService
             inputTokens: (int) $rows->sum('input_tokens'),
             outputTokens: (int) $rows->sum('output_tokens'),
             images: $images === null ? null : $this->presenter->images($images),
+            length: $words === null ? null : $this->presenter->length($words),
             postId: $generation->blog_post_id,
             report: $this->report($rows),
             steps: $keys->map(fn (string $key): BlogGenerationStepView => $this->stepView($key, $rows->get($key)))->all(),

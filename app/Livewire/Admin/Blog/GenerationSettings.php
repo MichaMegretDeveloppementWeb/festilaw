@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Livewire\Admin\Blog;
 
 use App\Actions\Blog\Generation\UpdateBlogAiSettingsAction;
+use App\Data\Blog\Generation\ArticleLengthRules;
 use App\Data\Blog\Generation\BlogAiSettings;
 use App\Enums\Blog\Generation\BlogAiImageMode;
 use App\Enums\Blog\Generation\BlogAiPeriodUnit;
@@ -15,11 +16,12 @@ use App\Services\Blog\Generation\BlogAiSettingsService;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Throwable;
 
 /**
- * Back-office : reglages de la generation par IA (automatique et ses images par defaut, budget, sujets,
+ * Back-office : reglages de la generation par IA (automatique, longueur et images par defaut, budget, sujets,
  * modele par etape, destinataire, mention de transparence). Aucune cle d'API ici : elle vit dans le fichier
  * d'environnement, et ne regarde pas la personne qui regle.
  *
@@ -64,14 +66,27 @@ class GenerationSettings extends Component
 
     public string $maxImages = '';
 
+    /** Longueur par defaut du texte, en mots (saisie). */
+    public string $articleWords = '';
+
+    #[Locked]
+    public int $minWords = 0;
+
+    #[Locked]
+    public int $maxWords = 0;
+
     public string $notificationEmail = '';
 
     /** @var array<string, string> mention de transparence par langue */
     public array $transparencyNotice = [];
 
-    public function mount(BlogAiSettingsService $settings): void
+    public function mount(BlogAiSettingsService $settings, ArticleLengthRules $length): void
     {
         $current = $settings->current();
+
+        $this->minWords = $length->minWords;
+        $this->maxWords = $length->maxWords;
+        $this->articleWords = (string) $current->articleWords;
 
         $this->enabled = $current->enabled;
         $this->periodCount = (string) $current->periodCount;
@@ -106,6 +121,7 @@ class GenerationSettings extends Component
             'avoidedTopics.*' => ['string', 'max:'.BlogAiSettings::TOPIC_MAX_LENGTH],
             'imageMode' => ['required', Rule::enum(BlogAiImageMode::class)],
             'maxImages' => ['required', 'integer', 'min:1', 'max:'.BlogAiSettings::MAX_IMAGES],
+            'articleWords' => ['required', 'integer', 'min:'.$this->minWords, 'max:'.$this->maxWords],
             'notificationEmail' => ['required', 'email', 'max:180'],
             'transparencyNotice.*' => ['nullable', 'string', 'max:500'],
         ];
@@ -165,6 +181,10 @@ class GenerationSettings extends Component
             'maxImages.integer' => __('Choisissez le nombre d\'images.'),
             'maxImages.min' => __('Choisissez le nombre d\'images.'),
             'maxImages.max' => __('Choisissez le nombre d\'images.'),
+            'articleWords.required' => __('Indiquez la longueur du texte.'),
+            'articleWords.integer' => __('La longueur est un nombre entier de mots.'),
+            'articleWords.min' => __('Le texte compte au moins :min mots.', ['min' => $this->minWords]),
+            'articleWords.max' => __('Le texte compte :max mots au plus.', ['max' => number_format($this->maxWords, 0, ',', ' ')]),
             'notificationEmail.required' => __('Indiquez l\'adresse qui reçoit les e-mails.'),
             'notificationEmail.email' => __('Cette adresse e-mail n\'est pas valide.'),
             'notificationEmail.max' => __('L\'adresse e-mail ne doit pas dépasser 180 caractères.'),
@@ -192,6 +212,7 @@ class GenerationSettings extends Component
                 maxImages: (int) $validated['maxImages'],
                 notificationEmail: trim((string) $validated['notificationEmail']),
                 transparencyNotice: array_map(static fn (?string $notice): string => trim((string) $notice), $this->transparencyNotice),
+                articleWords: (int) $validated['articleWords'],
             ));
         } catch (Throwable $e) {
             $this->reportAdminError($e, 'Admin update blog AI settings');
