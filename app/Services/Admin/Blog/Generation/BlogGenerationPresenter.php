@@ -8,12 +8,13 @@ use App\Data\Blog\Generation\GenerationCostForecast;
 use App\Data\Blog\Generation\GenerationImageOptions;
 use App\Enums\Blog\Generation\BlogAiImageMode;
 use App\Enums\Blog\Generation\BlogAiPeriodUnit;
+use App\Enums\Blog\Generation\MonthlySpendLevel;
 use App\Services\Blog\Generation\BlogAiCostFormatter;
 use Carbon\CarbonImmutable;
 
 /**
  * Mise en mots de ce que seul le back-office affiche d'une generation : reglage de modele, rythme, duree,
- * date, images, longueur, cout estime, sujet. Les mots partages avec les e-mails (etape, issue) sont dans
+ * date, images, longueur, cout estime, depense du mois, sujet. Les mots partages avec les e-mails (etape, issue) sont dans
  * BlogGenerationLabels. Calcul pur, aucune requete.
  */
 final readonly class BlogGenerationPresenter
@@ -34,6 +35,39 @@ final readonly class BlogGenerationPresenter
             'cap' => $capMicrousd === null ? null : $this->costs->dollars($capMicrousd),
             'exceeds' => $capMicrousd !== null && $forecast->exceeds($capMicrousd),
         ];
+    }
+
+    /**
+     * L'avertissement du plafond du mois, le meme sur le tableau de bord, les reglages et la fenetre de
+     * lancement. Ce plafond ne bloque rien : le texte le dit, pour qu'on ne croie pas la generation arretee.
+     *
+     * @return array{level: MonthlySpendLevel, title: string, text: string}|null
+     */
+    public function monthlyWarning(MonthlySpendLevel $level, int $spentMicrousd, int $capMicrousd): ?array
+    {
+        $spent = $this->costs->dollars($spentMicrousd);
+        $cap = $this->costs->dollars($capMicrousd);
+
+        return match ($level) {
+            MonthlySpendLevel::Under => null,
+            MonthlySpendLevel::Near => [
+                'level' => $level,
+                'title' => __('La dépense du mois approche du plafond'),
+                'text' => __('La génération a dépensé :spent ce mois-ci, soit :percent % du plafond de :cap. Les générations continuent, car ce plafond ne fait qu\'avertir.', [
+                    'spent' => $spent,
+                    'cap' => $cap,
+                    'percent' => intdiv(100 * $spentMicrousd, max(1, $capMicrousd)),
+                ]),
+            ],
+            MonthlySpendLevel::Over => [
+                'level' => $level,
+                'title' => __('Le plafond de dépense du mois est dépassé'),
+                'text' => __('La génération a dépensé :spent ce mois-ci, au-delà du plafond de :cap. Les générations continuent, car ce plafond ne fait qu\'avertir. Si cette dépense est prévue, relevez le plafond.', [
+                    'spent' => $spent,
+                    'cap' => $cap,
+                ]),
+            ],
+        };
     }
 
     /** Libelle d'un reglage « modele par etape » (une cle par famille d'etapes). */

@@ -56,17 +56,21 @@
         </x-admin.section>
 
         <x-admin.section data-settings-card :title="__('Budget')"
-            :description="__('Deux plafonds, en dollars, la monnaie dans laquelle le fournisseur d\'IA facture. Celui du mois bloque tout lancement une fois atteint. Celui par article retient tout article dont le coût estimé peut le dépasser.')">
+            :description="__('Deux plafonds, en dollars, la monnaie dans laquelle le fournisseur d\'IA facture. Celui par article retient tout article dont le coût estimé peut le dépasser. Celui du mois ne fait qu\'avertir.')">
             <div class="grid grid-cols-1 gap-5 pt-6 sm:grid-cols-2">
                 <x-ui::form-group :label="__('Plafond de dépense du mois ($)')" for="ai-spend-cap" :error="$errors->first('monthlySpendCap')"
-                    :hint="__('Une fois ce montant dépensé dans le mois, plus rien ne se lance jusqu\'au mois suivant.')">
-                    <x-ui::input type="number" step="0.01" min="0" id="ai-spend-cap" wire:model="monthlySpendCap" :error="$errors->has('monthlySpendCap')" />
+                    :hint="__('Ce plafond ne bloque rien. Vous êtes averti à l\'écran et par e-mail quand la dépense du mois en atteint :percent %, puis quand elle le dépasse.', ['percent' => $warningPercent])">
+                    <x-ui::input type="number" step="0.01" min="0" id="ai-spend-cap" wire:model.live.debounce.500ms="monthlySpendCap" :error="$errors->has('monthlySpendCap')" />
                 </x-ui::form-group>
                 <x-ui::form-group :label="__('Plafond de dépense par article ($)')" for="ai-article-spend-cap" :error="$errors->first('articleSpendCap')"
                     :hint="__('Un article ne se lance que si le haut de sa fourchette de coût tient sous ce montant. Pendant la génération, aucun appel à l\'IA ne part s\'il risque de le dépasser.')">
                     <x-ui::input type="number" step="0.01" min="0.01" id="ai-article-spend-cap" wire:model.live.debounce.500ms="articleSpendCap" :error="$errors->has('articleSpendCap')" />
                 </x-ui::form-group>
             </div>
+
+            @if ($monthlyWarning)
+                @include('livewire.admin.blog.generation.monthly-warning', ['warning' => $monthlyWarning, 'class' => 'mt-6'])
+            @endif
         </x-admin.section>
 
         <x-admin.section data-settings-card :title="__('E-mail')"

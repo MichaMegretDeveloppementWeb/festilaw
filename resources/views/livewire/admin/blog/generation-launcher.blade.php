@@ -45,6 +45,10 @@
                 </div>
             @endif
 
+            @if ($monthlyWarning)
+                @include('livewire.admin.blog.generation.monthly-warning', ['warning' => $monthlyWarning])
+            @endif
+
             <p class="text-[12px] leading-relaxed text-muted">{{ __('La génération démarre en quelques secondes et dure plusieurs minutes. Vous pouvez quitter la page, un e-mail vous préviendra quand elle sera terminée.') }}</p>
         </form>
 

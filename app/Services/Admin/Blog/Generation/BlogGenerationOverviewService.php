@@ -62,7 +62,7 @@ final readonly class BlogGenerationOverviewService
             spent: $this->costs->dollars($spent),
             cap: $this->costs->dollars($cap),
             spentPercent: $cap > 0 ? min(100, (int) round(100 * $spent / $cap)) : 100,
-            capReached: $spent >= $cap,
+            monthlyWarning: $this->presenter->monthlyWarning($this->budget->monthlyLevel($spent, $cap), $spent, $cap),
             pendingDrafts: $this->budget->pendingDrafts(),
             latest: $this->journal->latest(self::LATEST),
             apiKeyPresent: filled($this->apiKey),

@@ -226,8 +226,7 @@ it('does not retry when the provider credit is exhausted, and says so once a mon
         ->and($pipeline->calls('writing'))->toBe(2);
     Sleep::assertNeverSlept();
     Mail::assertSent(BlogSpendLimitReached::class, 1);
-    Mail::assertSent(BlogSpendLimitReached::class, fn (BlogSpendLimitReached $mail): bool => $mail->creditExhausted
-        && $mail->hasTo(config('festilaw.notification_email')));
+    Mail::assertSent(BlogSpendLimitReached::class, fn (BlogSpendLimitReached $mail): bool => $mail->hasTo(config('festilaw.notification_email')));
 });
 
 it('keeps what the failed attempts of a step consumed', function () {

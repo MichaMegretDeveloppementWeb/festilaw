@@ -2,6 +2,7 @@
 
 use App\Actions\Blog\Generation\ProcessNextBlogGenerationAction;
 use App\Mail\BlogGenerationFailuresAlert;
+use App\Mail\BlogMonthlySpendWarning;
 use App\Mail\BlogSpendLimitReached;
 use App\Models\BlogGeneration;
 use App\Services\Blog\Generation\BlogGenerationAlertService;
@@ -80,35 +81,69 @@ it('falls back on the notification address when no technical contact is set', fu
     Mail::assertSent(BlogGenerationFailuresAlert::class, fn (BlogGenerationFailuresAlert $mail): bool => $mail->hasTo('team@example.com'));
 });
 
-it('tells about a spend limit once a month for each cause', function () {
+it('tells about the exhausted provider credit once a month', function () {
     $settings = BlogAi::saveSettings(['notification_email' => 'owner@example.com']);
     $alerts = app(BlogGenerationAlertService::class);
     $this->travelTo('2026-11-14 10:00:00');
 
-    $alerts->spendLimitReached($settings, creditExhausted: false);
-    $alerts->spendLimitReached($settings, creditExhausted: false);
-    $alerts->spendLimitReached($settings, creditExhausted: true);
-    Mail::assertSent(BlogSpendLimitReached::class, 2);
+    $alerts->creditExhausted($settings);
+    $alerts->creditExhausted($settings);
+    Mail::assertSent(BlogSpendLimitReached::class, 1);
 
     $this->travelTo('2026-12-01 10:00:00');
-    $alerts->spendLimitReached($settings, creditExhausted: false);
-    Mail::assertSent(BlogSpendLimitReached::class, 3);
+    $alerts->creditExhausted($settings);
+    Mail::assertSent(BlogSpendLimitReached::class, 2);
 });
 
-it('renders both alert messages', function () {
+it('warns once a month as the spend nears the monthly cap, then once more when it passes it', function () {
+    $settings = BlogAi::saveSettings(['monthly_spend_cap_cents' => 100, 'notification_email' => 'owner@example.com']);
+    $alerts = app(BlogGenerationAlertService::class);
+    $this->travelTo('2026-11-14 10:00:00');
+    $spent = BlogGeneration::factory()->completed(costMicrousd: 700_000)->create();
+
+    $alerts->monthlySpend($settings);
+    Mail::assertNothingSent();
+
+    $spent->update(['cost_microusd' => 850_000]);
+    $alerts->monthlySpend($settings);
+    $alerts->monthlySpend($settings);
+    Mail::assertSent(BlogMonthlySpendWarning::class, 1);
+    Mail::assertSent(BlogMonthlySpendWarning::class, fn (BlogMonthlySpendWarning $mail): bool => ! $mail->over
+        && $mail->percent === 85
+        && $mail->spent === '0,8500 $'
+        && $mail->hasTo('owner@example.com'));
+
+    $spent->update(['cost_microusd' => 1_200_000]);
+    $alerts->monthlySpend($settings);
+    $alerts->monthlySpend($settings);
+    Mail::assertSent(BlogMonthlySpendWarning::class, 2);
+    Mail::assertSent(BlogMonthlySpendWarning::class, fn (BlogMonthlySpendWarning $mail): bool => $mail->over && $mail->cap === '1,0000 $');
+
+    // Le mois suivant, la depense repart de zero, et chaque seuil peut de nouveau avertir une fois.
+    $this->travelTo('2026-12-01 10:00:00');
+    $alerts->monthlySpend($settings);
+    BlogGeneration::factory()->completed(costMicrousd: 900_000)->create();
+    $alerts->monthlySpend($settings);
+    Mail::assertSent(BlogMonthlySpendWarning::class, 3);
+});
+
+it('renders the alert messages', function () {
     $failures = (new BlogGenerationFailuresAlert(
         3,
         [['subject' => 'Labels on Etsy', 'outcome' => 'Échec à l\'étape « Recherche »', 'url' => 'https://example.test/admin/blog/generation/4']],
         'https://example.test/admin/blog/generation',
     ))->render();
-    $cap = (new BlogSpendLimitReached(false, '10,00 $', '10,00 $'))->render();
-    $credit = (new BlogSpendLimitReached(true, '4,20 $', '10,00 $'))->render();
+    $credit = (new BlogSpendLimitReached('4,20 $', '10,00 $'))->render();
+    $near = (new BlogMonthlySpendWarning(false, '8,50 $', '10,00 $', 85, 'https://example.test/admin/blog/generation/settings'))->render();
+    $over = (new BlogMonthlySpendWarning(true, '12,00 $', '10,00 $', 120, 'https://example.test/admin/blog/generation/settings'))->render();
 
     expect($failures)->toContain('3 dernières générations')
         ->toContain('Labels on Etsy')
         ->toContain('étape « Recherche »')
         ->toContain('href="https://example.test/admin/blog/generation/4"')
         ->toContain('storage/logs/laravel.log')
-        ->and($cap)->toContain('Plafond de dépense atteint')->toContain('10,00 $')
-        ->and($credit)->toContain('Crédit d\'IA épuisé')->toContain('4,20 $');
+        ->and($credit)->toContain('Crédit d\'IA épuisé')->toContain('4,20 $')
+        ->and($near)->toContain('La dépense du mois approche du plafond')->toContain('85 %')->toContain('Rien n\'est bloqué')
+        ->and($over)->toContain('Plafond de dépense du mois dépassé')->toContain('12,00 $')
+        ->toContain('href="https://example.test/admin/blog/generation/settings"');
 });

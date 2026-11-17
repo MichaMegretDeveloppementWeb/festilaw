@@ -14,6 +14,7 @@ use App\Livewire\Concerns\HandlesAdminErrors;
 use App\Services\Admin\Blog\Generation\BlogGenerationPresenter;
 use App\Services\Blog\Generation\BlogAiModelCatalog;
 use App\Services\Blog\Generation\BlogAiSettingsService;
+use App\Services\Blog\Generation\BlogGenerationBudget;
 use App\Services\Blog\Generation\BlogGenerationCostForecaster;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -30,8 +31,9 @@ use Throwable;
  * Un modele se choisit dans une liste fermee (BlogAiModelCatalog), jamais par saisie. Les sujets sont des
  * listes. La lecture passe par BlogAiSettingsService, l'enregistrement par UpdateBlogAiSettingsAction.
  *
- * La fourchette de cout d'un article se calcule sur les valeurs a l'ecran, avant meme l'enregistrement, pour
- * qu'on voie l'effet d'un changement de longueur, de modele ou de plafond avant de le garder.
+ * La fourchette de cout d'un article et l'avertissement du plafond du mois se calculent sur les valeurs a
+ * l'ecran, avant meme l'enregistrement, pour qu'on voie l'effet d'un changement de longueur, de modele ou de
+ * plafond avant de le garder.
  */
 #[Layout('layouts.admin')]
 class GenerationSettings extends Component
@@ -85,9 +87,14 @@ class GenerationSettings extends Component
     /** @var array<string, string> mention de transparence par langue */
     public array $transparencyNotice = [];
 
-    public function mount(BlogAiSettingsService $settings, ArticleLengthRules $length): void
+    /** Lue une fois a l'ouverture, pour situer le plafond du mois saisi sans relire la base a chaque frappe. */
+    #[Locked]
+    public int $spentThisMonthMicrousd = 0;
+
+    public function mount(BlogAiSettingsService $settings, ArticleLengthRules $length, BlogGenerationBudget $budget): void
     {
         $current = $settings->current();
+        $this->spentThisMonthMicrousd = $budget->spentThisMonthMicrousd();
 
         $this->minWords = $length->minWords;
         $this->maxWords = $length->maxWords;
@@ -232,17 +239,29 @@ class GenerationSettings extends Component
         $this->dispatch('ui-toast', title: __('Réglages enregistrés.'), type: 'success');
     }
 
-    public function render(BlogGenerationPresenter $presenter, BlogAiModelCatalog $catalog, BlogGenerationCostForecaster $forecaster, ArticleLengthRules $length): View
-    {
+    public function render(
+        BlogGenerationPresenter $presenter,
+        BlogAiModelCatalog $catalog,
+        BlogGenerationCostForecaster $forecaster,
+        ArticleLengthRules $length,
+        BlogGenerationBudget $budget,
+    ): View {
         $steps = collect($this->models)->keys();
         $images = new GenerationImageOptions(
             BlogAiImageMode::tryFrom($this->imageMode) ?? BlogAiImageMode::Stock,
             min(BlogAiSettings::MAX_IMAGES, max(1, (int) $this->maxImages)),
         );
-        $cap = is_numeric($this->articleSpendCap) ? (int) round(((float) $this->articleSpendCap) * 100) * 10_000 : null;
+        $cap = self::microusd($this->articleSpendCap);
+        $monthlyCap = self::microusd($this->monthlySpendCap);
 
         return view('livewire.admin.blog.generation-settings', [
             'forecast' => $presenter->forecast($forecaster->forecast($this->models, $length->clamp((int) $this->articleWords), $images), $cap),
+            'monthlyWarning' => $monthlyCap === null ? null : $presenter->monthlyWarning(
+                $budget->monthlyLevel($this->spentThisMonthMicrousd, $monthlyCap),
+                $this->spentThisMonthMicrousd,
+                $monthlyCap,
+            ),
+            'warningPercent' => $budget->warningPercent(),
             'modelLabels' => $steps->mapWithKeys(fn (string $step): array => [$step => $presenter->modelSettingLabel($step)])->all(),
             // Un modele enregistre qui n'est plus dans la liste reste visible, pour dire qu'il faut en choisir un autre.
             'modelOptions' => $steps->mapWithKeys(function (string $step) use ($catalog): array {
@@ -256,5 +275,11 @@ class GenerationSettings extends Component
             'imageCounts' => collect(range(1, BlogAiSettings::MAX_IMAGES))->mapWithKeys(fn (int $count): array => [(string) $count => $presenter->imageCountLabel($count)])->all(),
             'localeNames' => self::LOCALE_NAMES,
         ])->title(__('Réglages de la génération IA'))->layoutData(['surface' => 'plain']);
+    }
+
+    /** Un montant saisi en dollars, ou nul tant que la saisie n'est pas un nombre positif. */
+    private static function microusd(string $dollars): ?int
+    {
+        return is_numeric($dollars) && (float) $dollars >= 0 ? (int) round(((float) $dollars) * 100) * 10_000 : null;
     }
 }

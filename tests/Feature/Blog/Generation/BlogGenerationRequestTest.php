@@ -14,12 +14,14 @@ use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogGenerationStepStatus;
 use App\Enums\Blog\Generation\BlogGenerationTrigger;
 use App\Enums\Blog\Generation\BlogGenerationType;
+use App\Enums\Blog\Generation\MonthlySpendLevel;
 use App\Exceptions\Blog\BlogGenerationException;
 use App\Mail\BlogGenerationBatchFinished;
 use App\Models\BlogGeneration;
 use App\Models\BlogGenerationStep;
 use App\Models\BlogPost;
 use App\Models\User;
+use App\Services\Blog\Generation\BlogGenerationBudget;
 use App\Services\Blog\Generation\UnavailableGenerationPipeline;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -64,16 +66,13 @@ it('queues a generation requested by someone, with what they imposed', function 
         ->and($generation->started_at)->toBeNull();
 });
 
-it('refuses a request once the monthly spend cap is reached, and says why', function () {
+it('still accepts a request above the monthly spend cap, which only warns', function () {
     BlogAi::saveSettings(['monthly_spend_cap_cents' => 100]);
     BlogGeneration::factory()->completed(costMicrousd: 1_000_000)->create();
 
-    expect(fn () => app(QueueBlogGenerationAction::class)->execute(new QueueBlogGenerationData))
-        ->toThrow(function (BlogGenerationException $e): void {
-            expect($e->getUserMessage())->toContain('plafond de dépense');
-        });
+    app(QueueBlogGenerationAction::class)->execute(new QueueBlogGenerationData);
 
-    expect(BlogGeneration::count())->toBe(1);
+    expect(BlogGeneration::count())->toBe(2);
 });
 
 it('refuses an article that could cost more than the cap per article, and says what to change', function () {
@@ -100,14 +99,21 @@ it('does not hold a manual request back because generated drafts are waiting', f
     expect(BlogGeneration::count())->toBe(1);
 });
 
-it('counts only the spend of the current month against the cap', function () {
-    BlogAi::saveSettings(['monthly_spend_cap_cents' => 100]);
+it('counts only the spend of the current month against the monthly cap', function () {
     BlogGeneration::factory()->completed(costMicrousd: 5_000_000)->create(['created_at' => now()->subMonthNoOverflow()]);
+    BlogGeneration::factory()->completed(costMicrousd: 300_000)->create();
 
-    app(QueueBlogGenerationAction::class)->execute(new QueueBlogGenerationData);
-
-    expect(BlogGeneration::count())->toBe(2);
+    expect(app(BlogGenerationBudget::class)->spentThisMonthMicrousd())->toBe(300_000);
 });
+
+it('places the spend of the month against its cap, warning from 80 % and over it once passed', function (int $spent, MonthlySpendLevel $level) {
+    expect(app(BlogGenerationBudget::class)->monthlyLevel($spent, 1_000_000))->toBe($level);
+})->with([
+    'under the warning' => [799_999, MonthlySpendLevel::Under],
+    'at the warning' => [800_000, MonthlySpendLevel::Near],
+    'at the cap' => [1_000_000, MonthlySpendLevel::Near],
+    'over the cap' => [1_000_001, MonthlySpendLevel::Over],
+]);
 
 it('refuses a request at once when the pipeline cannot be used', function () {
     $this->app->instance(GenerationPipeline::class, new UnavailableGenerationPipeline(BlogGenerationException::simulatedPipelineInProduction()));
@@ -164,14 +170,13 @@ it('only restarts a generation that failed', function (string $state) {
         ->toThrow(BlogGenerationException::class);
 })->with(['completed', 'running', 'abandoned', 'cancelled']);
 
-it('refuses to restart once the monthly spend cap is reached', function () {
+it('restarts a failed generation above the monthly spend cap, which only warns', function () {
     BlogAi::saveSettings(['monthly_spend_cap_cents' => 100]);
     $generation = BlogGeneration::factory()->failed()->create(['cost_microusd' => 1_000_000]);
 
-    expect(fn () => app(RetryBlogGenerationAction::class)->execute($generation->id))
-        ->toThrow(BlogGenerationException::class);
+    app(RetryBlogGenerationAction::class)->execute($generation->id);
 
-    expect($generation->refresh()->status)->toBe(BlogGenerationStatus::Failed);
+    expect($generation->refresh()->status)->toBe(BlogGenerationStatus::Queued);
 });
 
 it('stops a waiting generation at once', function () {

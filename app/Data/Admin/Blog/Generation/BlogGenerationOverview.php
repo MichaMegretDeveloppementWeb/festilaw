@@ -5,23 +5,27 @@ declare(strict_types=1);
 namespace App\Data\Admin\Blog\Generation;
 
 use App\Data\Blog\Generation\BlogAiSettings;
+use App\Enums\Blog\Generation\MonthlySpendLevel;
 use Carbon\CarbonImmutable;
 
 /**
- * La vue d'ensemble de la generation par IA : ou en est la depense du mois, combien de brouillons generes
+ * La vue d'ensemble de la generation par IA : ou en est la depense du mois et son avertissement, combien de brouillons generes
  * attendent une relecture, les dernieres generations, et si la generation peut tourner (cle presente, worker
  * a l'ecoute, pipeline utilisable). La cle elle-meme n'est jamais exposee.
  */
 final readonly class BlogGenerationOverview
 {
-    /** @param  list<BlogGenerationJournalRow>  $latest  les dernieres generations, la plus recente d'abord */
+    /**
+     * @param  array{level: MonthlySpendLevel, title: string, text: string}|null  $monthlyWarning  l'avertissement du plafond du mois, nul en dessous du seuil
+     * @param  list<BlogGenerationJournalRow>  $latest  les dernieres generations, la plus recente d'abord
+     */
     public function __construct(
         public BlogAiSettings $settings,
         public string $automaticRhythm,
         public string $spent,
         public string $cap,
         public int $spentPercent,
-        public bool $capReached,
+        public ?array $monthlyWarning,
         public int $pendingDrafts,
         public array $latest,
         public bool $apiKeyPresent,
@@ -31,9 +35,13 @@ final readonly class BlogGenerationOverview
         public ?string $unavailableReason,
     ) {}
 
-    /** Rien n'empeche de lancer une generation maintenant. */
-    public function canLaunch(): bool
+    /** Les couleurs que la barre du kit connait : ambre a l'approche du plafond du mois, rouge au-dela. */
+    public function spendBarColor(): string
     {
-        return $this->unavailableReason === null && ! $this->capReached;
+        return match ($this->monthlyWarning['level'] ?? null) {
+            MonthlySpendLevel::Over => 'red',
+            MonthlySpendLevel::Near => 'amber',
+            default => 'indigo',
+        };
     }
 }

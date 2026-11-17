@@ -10,7 +10,6 @@ use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogGenerationTrigger;
 use App\Exceptions\Blog\BlogGenerationException;
 use App\Mail\BlogForecastAboveCap;
-use App\Mail\BlogSpendLimitReached;
 use App\Models\BlogGeneration;
 use App\Models\BlogPost;
 use App\Services\Blog\Generation\UnavailableGenerationPipeline;
@@ -98,31 +97,17 @@ it('counts the period in days or months as well', function (int $count, string $
     'every month' => [1, 'month', '2026-12-15 06:00:00', '2026-12-16 06:00:00'],
 ]);
 
-it('does not queue a batch once the monthly spend cap is reached, writes it once and tells the recipient once', function () {
+it('still queues the batch above the monthly spend cap, which only warns', function () {
+    // Decision de Micha du 17/11 : le plafond du mois ne retient rien. L'avertissement part a la fin d'une generation.
     BlogAi::saveSettings(['enabled' => true, 'monthly_spend_cap_cents' => 100, 'notification_email' => 'owner@example.com']);
     BlogGeneration::factory()->completed(costMicrousd: 1_000_000)->create();
 
     $plan = planScheduledGenerations();
 
-    $line = BlogGeneration::query()->where('trigger', BlogGenerationTrigger::Scheduled)->sole();
-
-    expect($plan->launched)->toBe(0)
-        ->and($plan->blockedBy)->toBe(BlogGenerationOutcomeReason::SpendCapReached)
-        ->and($line->status)->toBe(BlogGenerationStatus::Abandoned)
-        ->and($line->outcome_reason)->toBe(BlogGenerationOutcomeReason::SpendCapReached)
-        ->and($line->started_at)->toBeNull()
-        ->and($line->batch_notified_at)->not->toBeNull();
-
-    // Le lendemain, meme blocage : ni nouvelle ligne, ni nouveau message.
-    $this->travelTo('2026-11-17 06:00:05');
-    planScheduledGenerations();
-
-    expect(BlogGeneration::query()->where('trigger', BlogGenerationTrigger::Scheduled)->count())->toBe(1);
-    Mail::assertSent(BlogSpendLimitReached::class, 1);
-    Mail::assertSent(BlogSpendLimitReached::class, fn (BlogSpendLimitReached $mail): bool => ! $mail->creditExhausted
-        && $mail->hasTo('owner@example.com')
-        && $mail->spent === '1,0000 $'
-        && $mail->cap === '1,0000 $');
+    expect($plan->launched)->toBe(1)
+        ->and($plan->blockedBy)->toBeNull()
+        ->and(BlogGeneration::query()->where('status', BlogGenerationStatus::Abandoned)->exists())->toBeFalse();
+    Mail::assertNothingSent();
 });
 
 it('holds back the batch when an article could cost more than the cap per article, writes it once and tells the recipient once', function () {
@@ -163,17 +148,17 @@ it('renders the message about a batch held back by the estimated cost, with what
         ->toContain('Rien n\'a été dépensé');
 });
 
-it('queues the batch as soon as the cap allows it again, and writes a later blocking again', function () {
-    BlogAi::saveSettings(['enabled' => true, 'monthly_spend_cap_cents' => 100]);
-    $spent = BlogGeneration::factory()->completed(costMicrousd: 1_000_000)->create();
+it('queues the batch as soon as the holding reason falls, and writes a later holding again', function () {
+    BlogAi::saveSettings(['enabled' => true, 'pending_drafts_cap' => 1]);
+    BlogPost::factory()->fromAi()->create();
     planScheduledGenerations();
 
-    // Le plafond est releve : le lot attendu part.
-    BlogAi::saveSettings(['enabled' => true, 'monthly_spend_cap_cents' => 500]);
+    // Le plafond de brouillons est releve : le lot attendu part.
+    BlogAi::saveSettings(['enabled' => true, 'pending_drafts_cap' => 2]);
     expect(planScheduledGenerations()->launched)->toBe(1);
 
-    // Une periode plus tard, le plafond bloque de nouveau : c'est une nouvelle ligne du journal.
-    $spent->update(['cost_microusd' => 5_000_000]);
+    // Une periode plus tard, le plafond retient de nouveau : c'est une nouvelle ligne du journal.
+    BlogAi::saveSettings(['enabled' => true, 'pending_drafts_cap' => 1]);
     $this->travelTo('2026-11-23 06:00:05');
     planScheduledGenerations();
 
@@ -208,10 +193,11 @@ it('tells what it would do, without writing or sending anything, on a dry run', 
         ->expectsOutputToContain('[DRY-RUN] Lot planifie : 2 generation(s)')
         ->assertSuccessful();
 
-    BlogAi::saveSettings(['enabled' => true, 'monthly_spend_cap_cents' => 0]);
+    BlogAi::saveSettings(['enabled' => true, 'pending_drafts_cap' => 1]);
+    BlogPost::factory()->fromAi()->create();
 
     $this->artisan('festilaw:blog-generation-schedule', ['--dry' => true])
-        ->expectsOutputToContain('[DRY-RUN] Lot du mais non lance : spend_cap_reached')
+        ->expectsOutputToContain('[DRY-RUN] Lot du mais non lance : pending_drafts_cap_reached')
         ->assertSuccessful();
 
     expect(BlogGeneration::count())->toBe(0);

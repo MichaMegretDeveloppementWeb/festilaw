@@ -138,9 +138,10 @@ return [
          | rien n'y est enregistre, ce sont elles qui s'appliquent. La generation automatique est eteinte
          | par defaut : rien ne part sans que quelqu'un l'ait allumee. `notification_email` nul = l'adresse
          | des notifications internes (festilaw.notification_email). Les plafonds de depense sont en cents
-         | de dollar : le fournisseur facture en dollars. Les deux se verifient avant chaque appel a l'IA,
-         | par reservation (voir `reservation_margin`) ; celui du mois se verifie aussi au lancement. Plafond
-         | par article de 15 cents, decision du 17/11.
+         | de dollar : le fournisseur facture en dollars. Celui par article bloque. Un article ne se lance
+         | que si son cout estime tient dessous, et chaque appel a l'IA reserve son cout maximal (voir
+         | `reservation_margin`). Plafond par article de 15 cents, decision du 17/11. Celui du mois ne bloque
+         | rien, il avertit a `monthly_warning_percent` puis une fois depasse (decision de Micha du 17/11).
          |
          | Modeles : les moins chers qui savent faire chaque tache (prix au 17/11 : Haiku 5.5 a 0,10 $ et
          | 0,50 $ par million de jetons, GPT-5 Image Mini a environ 1,3 centime l'image). Au premier essai
@@ -269,6 +270,12 @@ return [
          | au catalogue).
          */
         'reservation_margin' => 3,
+
+        /*
+         | Le plafond du mois avertit (ecran et e-mail) quand la depense en atteint ce pourcentage, puis
+         | une fois qu'elle le depasse. Chaque e-mail part une fois par mois.
+         */
+        'monthly_warning_percent' => 80,
 
         /*
          | Cout estime d'un article (BlogGenerationCostForecaster), affiche avant le lancement. Profil de

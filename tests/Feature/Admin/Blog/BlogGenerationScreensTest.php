@@ -288,7 +288,7 @@ it('tells the page when the generation it shows changes state', function () {
 
 // --- Fenetre de lancement -------------------------------------------------------------------------
 
-it('renders the launch button without any query, and reads the default images only when the window opens', function () {
+it('renders the launch button without any query, and reads the settings and the spend of the month only when the window opens', function () {
     BlogAi::saveSettings(['image_mode' => 'generated', 'max_images' => 3]);
 
     DB::enableQueryLog();
@@ -306,7 +306,7 @@ it('renders the launch button without any query, and reads the default images on
         ->call('prepare')
         ->assertSet('imageMode', 'none');
 
-    expect(count(DB::getQueryLog()))->toBe(1);
+    expect(count(DB::getQueryLog()))->toBe(2);
 });
 
 it('shows the estimated cost of the article in the launch window, and follows its length', function () {
@@ -384,20 +384,32 @@ it('refuses a topic, instructions or images that make no sense, in plain words',
     expect(BlogGeneration::count())->toBe(0);
 });
 
-it('refuses to launch once the monthly spend cap is reached, and says why', function () {
+it('warns as the spend of the month nears its cap, then passes it, and still launches', function () {
     BlogAi::saveSettings(['monthly_spend_cap_cents' => 100]);
-    BlogGeneration::factory()->completed(costMicrousd: 1_000_000)->create();
-    Log::spy();
+    $spent = BlogGeneration::factory()->completed(costMicrousd: 850_000)->create();
 
-    Livewire::test(GenerationDashboard::class)->assertSee('Le plafond de dépense du mois est atteint');
+    Livewire::test(GenerationDashboard::class)
+        ->assertSee('La dépense du mois approche du plafond')
+        ->assertSee('soit 85 % du plafond de 1,0000 $')
+        ->assertSeeHtml('data-monthly-warning="near"')
+        ->assertSeeHtml('ui:bg-amber-500');
+
+    // Decision de Micha du 17/11 : au-dela du plafond, tout continue, la page le dit.
+    $spent->update(['cost_microusd' => 1_200_000]);
+
+    Livewire::test(GenerationDashboard::class)
+        ->assertSee('Le plafond de dépense du mois est dépassé')
+        ->assertSee('Les générations continuent, car ce plafond ne fait qu\'avertir.')
+        ->assertSeeHtml('ui:bg-red-500');
 
     Livewire::test(GenerationLauncher::class)
         ->call('prepare')
+        ->assertSeeHtml('data-monthly-warning="over"')
         ->call('launch')
-        ->assertDispatched('ui-toast', type: 'error', title: 'Le plafond de dépense du mois est atteint. Relevez-le dans les réglages pour lancer une génération.')
-        ->assertNoRedirect();
+        ->assertHasNoErrors()
+        ->assertRedirect();
 
-    expect(BlogGeneration::count())->toBe(1);
+    expect(BlogGeneration::count())->toBe(2);
 });
 
 // --- Historique -----------------------------------------------------------------------------------
@@ -608,7 +620,7 @@ it('says a generation cannot be found', function () {
 
 // --- Reglages --------------------------------------------------------------------------------------
 
-it('opens the settings on their current values, in a single query', function () {
+it('opens the settings on their current values, in 2 queries with the spend of the month', function () {
     BlogAi::saveSettings([
         'enabled' => true, 'period_count' => 2, 'period_unit' => 'month', 'monthly_spend_cap_cents' => 2_550, 'article_spend_cap_cents' => 20,
         'priority_topics' => ['Etsy', 'Amazon'], 'notification_email' => 'owner@example.com',
@@ -617,7 +629,7 @@ it('opens the settings on their current values, in a single query', function () 
     DB::enableQueryLog();
     $settings = Livewire::test(GenerationSettings::class);
 
-    expect(count(DB::getQueryLog()))->toBe(1);
+    expect(count(DB::getQueryLog()))->toBe(2);
     $settings->assertSet('enabled', true)
         ->assertSet('periodCount', '2')
         ->assertSet('periodUnit', 'month')
@@ -705,6 +717,18 @@ it('shows the estimated cost of an article in the settings, warns as soon as it 
         ->assertHasNoErrors();
 
     expect(app(BlogAiSettingsService::class)->current()->articleSpendCapCents)->toBe(1);
+});
+
+it('warns next to the monthly cap in the settings, following the cap typed, without blocking anything', function () {
+    BlogAi::saveSettings(['monthly_spend_cap_cents' => 100]);
+    BlogGeneration::factory()->completed(costMicrousd: 850_000)->create();
+
+    $settings = Livewire::test(GenerationSettings::class)
+        ->assertSee('Ce plafond ne bloque rien. Vous êtes averti à l\'écran et par e-mail quand la dépense du mois en atteint 80 %')
+        ->assertSeeHtml('data-monthly-warning="near"');
+
+    $settings->set('monthlySpendCap', '0.50')->assertSeeHtml('data-monthly-warning="over"');
+    $settings->set('monthlySpendCap', '5')->assertDontSeeHtml('data-monthly-warning');
 });
 
 it('refuses settings that make no sense, each with its own message', function () {

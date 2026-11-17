@@ -22,6 +22,7 @@ use App\Enums\Blog\Generation\BlogGenerationType;
 use App\Exceptions\Blog\BlogAiProviderException;
 use App\Exceptions\Blog\BlogEditorialException;
 use App\Mail\BlogGenerationBatchFinished;
+use App\Mail\BlogMonthlySpendWarning;
 use App\Models\BlogGeneration;
 use App\Models\BlogImage;
 use App\Models\BlogPost;
@@ -268,7 +269,9 @@ it('marks the topic as rejected when a generated draft is deleted, and only then
 
 // --- Pipeline complet
 
-it('runs the whole editorial pipeline through the worker and delivers a draft to review', function () {
+/** Chaque agent du pipeline editorial repond, comme pour un article qui va au bout. */
+function fakeWholeEditorialPipeline(): void
+{
     config(['blog.ai.pipeline' => 'editorial']);
     fakePixabay();
     $french = str_replace(['What Etsy asks for', 'What to do next'], ['Ce que demande Etsy', 'La suite'], Fixtures::body());
@@ -283,6 +286,10 @@ it('runs the whole editorial pipeline through the worker and delivers a draft to
         [...Fixtures::article(['title' => 'Ajouter un opérateur économique sur Etsy', 'body_markdown' => $french]), 'image_alts' => [['number' => 0, 'alt' => 'Un colis']], 'report_fr' => 'Version française.'],
         [...Fixtures::article(['title' => 'Añadir un operador económico en Etsy']), 'image_alts' => [['number' => 0, 'alt' => 'Un paquete']], 'report_fr' => 'Versión española.'],
     ])->preventStrayPrompts();
+}
+
+it('runs the whole editorial pipeline through the worker and delivers a draft to review', function () {
+    fakeWholeEditorialPipeline();
     $generation = BlogGeneration::factory()->create(['payload' => ['images' => ['mode' => 'stock', 'max' => 2]]]);
 
     app(ProcessNextBlogGenerationAction::class)->execute('worker-test');
@@ -318,16 +325,14 @@ it('stops before a call that could exceed the article cap, without sending it', 
     WebSearchAgent::assertNeverPrompted();
 });
 
-it('stops before a call that could exceed the monthly cap, and names that cap', function () {
-    config(['blog.ai.pipeline' => 'editorial']);
-    BlogAi::saveSettings(['monthly_spend_cap_cents' => 100]);
-    BlogGeneration::factory()->completed(costMicrousd: 995_000)->create();
-    WebSearchAgent::fake()->preventStrayPrompts();
-    $generation = BlogGeneration::factory()->create();
+it('runs a generation to the end above the monthly cap, which only warns, then says the cap is passed', function () {
+    fakeWholeEditorialPipeline();
+    BlogAi::saveSettings(['monthly_spend_cap_cents' => 100, 'notification_email' => 'owner@example.com']);
+    BlogGeneration::factory()->completed(costMicrousd: 1_200_000)->create();
+    $generation = BlogGeneration::factory()->create(['payload' => ['images' => ['mode' => 'stock', 'max' => 2]]]);
 
     app(ProcessNextBlogGenerationAction::class)->execute('worker-test');
 
-    expect($generation->refresh()->status)->toBe(BlogGenerationStatus::Abandoned)
-        ->and($generation->outcome_reason)->toBe(BlogGenerationOutcomeReason::SpendCapReached);
-    WebSearchAgent::assertNeverPrompted();
+    expect($generation->refresh()->status)->toBe(BlogGenerationStatus::Completed);
+    Mail::assertSent(BlogMonthlySpendWarning::class, fn (BlogMonthlySpendWarning $mail): bool => $mail->over && $mail->hasTo('owner@example.com'));
 });

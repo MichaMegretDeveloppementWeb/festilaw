@@ -7,18 +7,23 @@ namespace App\Services\Blog\Generation;
 use App\Data\Blog\Generation\BlogAiSettings;
 use App\Enums\Blog\BlogPostOrigin;
 use App\Enums\Blog\BlogPostStatus;
+use App\Enums\Blog\Generation\MonthlySpendLevel;
 use App\Models\BlogPost;
 use App\Repositories\Blog\BlogGenerationSpendRepository;
 use Carbon\CarbonImmutable;
 
 /**
- * Les deux plafonds de la generation : la depense du mois civil (UTC), et le nombre de brouillons generes
- * qui attendent encore une relecture. Ils se verifient au lancement ; la depense du mois se verifie aussi
- * avant chaque appel a l'IA (RunBlogGenerationAction).
+ * La depense du mois civil (UTC) et le nombre de brouillons generes qui attendent encore une relecture. La
+ * depense du mois ne bloque rien, elle avertit (MonthlySpendLevel) ; le plafond de brouillons suspend la
+ * generation automatique.
  */
 final readonly class BlogGenerationBudget
 {
-    public function __construct(private BlogGenerationSpendRepository $spend) {}
+    /** @param  int  $warningPercent  le pourcentage du plafond du mois a partir duquel on avertit */
+    public function __construct(
+        private BlogGenerationSpendRepository $spend,
+        private int $warningPercent = 80,
+    ) {}
 
     /** Depense du mois en cours, en millioniemes de dollar. */
     public function spentThisMonthMicrousd(): int
@@ -28,9 +33,22 @@ final readonly class BlogGenerationBudget
         return $this->spend->spentMicrousdBetween($start, $start->addMonth());
     }
 
-    public function spendCapReached(BlogAiSettings $settings): bool
+    /**
+     * Sans requete : la depense se lit une fois par l'appelant, qui peut la comparer a un plafond pas encore
+     * enregistre (celui de l'ecran des reglages).
+     */
+    public function monthlyLevel(int $spentMicrousd, int $capMicrousd): MonthlySpendLevel
     {
-        return $this->spentThisMonthMicrousd() >= $settings->monthlySpendCapMicrousd();
+        return match (true) {
+            $spentMicrousd > $capMicrousd => MonthlySpendLevel::Over,
+            $capMicrousd > 0 && $spentMicrousd * 100 >= $capMicrousd * $this->warningPercent => MonthlySpendLevel::Near,
+            default => MonthlySpendLevel::Under,
+        };
+    }
+
+    public function warningPercent(): int
+    {
+        return $this->warningPercent;
     }
 
     /** Articles d'origine IA encore en brouillon : ceux que personne n'a encore publies ni supprimes. */

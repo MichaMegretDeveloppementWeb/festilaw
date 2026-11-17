@@ -9,23 +9,18 @@ use App\Enums\Blog\Generation\BlogGenerationStepStatus;
 use App\Exceptions\Blog\BlogGenerationException;
 use App\Models\BlogGeneration;
 use App\Models\BlogGenerationStep;
-use App\Services\Blog\Generation\BlogAiSettingsService;
-use App\Services\Blog\Generation\BlogGenerationBudget;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
  * Relance une generation en echec. Elle repart de l'etape qui a echoue : les etapes deja terminees sont
  * gardees telles quelles (ni refaites, ni repayees), les autres retrouvent tous leurs essais. La generation
- * devient son propre lot : un nouveau message partira quand elle se terminera.
+ * devient son propre lot : un nouveau message partira quand elle se terminera. Ni le plafond du mois, qui ne
+ * fait qu'avertir, ni le cout estime ne l'empechent : l'article a deja ete accepte, et la reservation de
+ * chaque appel le protege.
  */
 final readonly class RetryBlogGenerationAction
 {
-    public function __construct(
-        private BlogAiSettingsService $settings,
-        private BlogGenerationBudget $budget,
-    ) {}
-
     public function execute(int $generationId): void
     {
         $generation = BlogGeneration::query()->find($generationId, ['id', 'status']);
@@ -36,12 +31,6 @@ final readonly class RetryBlogGenerationAction
 
         if ($generation->status !== BlogGenerationStatus::Failed) {
             throw BlogGenerationException::notRetryable($generationId, $generation->status);
-        }
-
-        $settings = $this->settings->current();
-
-        if ($this->budget->spendCapReached($settings)) {
-            throw BlogGenerationException::spendCapReached($this->budget->spentThisMonthMicrousd(), $settings->monthlySpendCapMicrousd());
         }
 
         DB::transaction(static function () use ($generationId): void {

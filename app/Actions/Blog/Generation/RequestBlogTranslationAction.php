@@ -16,8 +16,9 @@ use App\Services\Blog\Content\BlogDocumentMarkdownWriter;
 /**
  * Traduction assistee d'un article (tache 6.14) : le texte d'une langue du formulaire part en generation de
  * type `translation`, traitee par le worker comme toute generation (jamais dans la requete web). Le texte est
- * donne au modele en Markdown, ses images en emplacements numerotes avec leurs attributs gardes a part. Le
- * plafond de depense s'applique. Rien n'est enregistre sur l'article : le resultat revient dans le formulaire.
+ * donne au modele en Markdown, ses images en emplacements numerotes avec leurs attributs gardes a part. Son
+ * appel reserve son cout sous le plafond par article. Rien n'est enregistre sur l'article : le resultat
+ * revient dans le formulaire.
  */
 final readonly class RequestBlogTranslationAction
 {
@@ -35,7 +36,7 @@ final readonly class RequestBlogTranslationAction
      * @return int la generation creee
      *
      * @throws BlogEditorialException quand la demande n'a pas de sens
-     * @throws BlogGenerationException quand le plafond de depense est atteint
+     * @throws BlogGenerationException quand la configuration du pipeline ne permet pas de generer
      */
     public function execute(RequestBlogTranslationData $data): int
     {

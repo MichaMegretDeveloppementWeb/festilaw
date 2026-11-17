@@ -8,7 +8,6 @@ use App\Data\Blog\Generation\RequestBlogTranslationData;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogGenerationType;
 use App\Exceptions\Blog\BlogEditorialException;
-use App\Exceptions\Blog\BlogGenerationException;
 use App\Livewire\Admin\Blog\PostTranslation;
 use App\Mail\BlogGenerationBatchFinished;
 use App\Models\BlogGeneration;
@@ -111,12 +110,13 @@ it('refuses a translation into the same language, from an unknown language, or o
     'nothing to translate' => ['fr', 'en', ' '],
 ]);
 
-it('refuses a translation once the spend cap of the month is reached', function () {
+it('still queues a translation above the spend cap of the month, which only warns', function () {
     BlogAi::saveSettings(['monthly_spend_cap_cents' => 100]);
     BlogGeneration::factory()->completed(2_000_000)->create();
 
-    expect(fn () => app(RequestBlogTranslationAction::class)->execute(new RequestBlogTranslationData('fr', 'en', 'Titre', '', '', '', null)))
-        ->toThrow(BlogGenerationException::class);
+    $id = app(RequestBlogTranslationAction::class)->execute(new RequestBlogTranslationData('fr', 'en', 'Titre', '', '', '', null));
+
+    expect(BlogGeneration::query()->findOrFail($id)->type)->toBe(BlogGenerationType::Translation);
 });
 
 it('translates with the rules and lexicon of the target language and keeps links and images', function () {

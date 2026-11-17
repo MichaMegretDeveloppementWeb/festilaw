@@ -21,14 +21,6 @@ final class BlogGenerationException extends BaseAppException
         );
     }
 
-    public static function spendCapReached(int $spentMicrousd, int $capMicrousd): self
-    {
-        return new self(
-            technicalMessage: "Blog generation refused: monthly spend {$spentMicrousd} micro-USD has reached the cap of {$capMicrousd}.",
-            userMessage: __('Le plafond de dépense du mois est atteint. Relevez-le dans les réglages pour lancer une génération.'),
-        );
-    }
-
     /**
      * @param  string  $high  la borne haute du cout estime, deja ecrite en dollars
      * @param  string  $cap  le plafond par article, deja ecrit en dollars

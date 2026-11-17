@@ -26,9 +26,10 @@ use Illuminate\Support\Str;
 /**
  * La generation automatique : une fois par periode, met en file un lot d'articles. Appelee chaque jour par
  * la tache planifiee ; elle ne fait rien tant que la periode reglee n'est pas echue depuis le dernier lot
- * lance. Un lot du mais bloque par un plafond est inscrit au journal (une ligne « non lancee », sans jamais
- * repeter deux fois de suite la meme raison), et sera lance des que le plafond le permet. Le cout estime d'un
- * article, borne haute, doit tenir sous le plafond par article (decision de Micha du 17/11).
+ * lance. Un lot du mais retenu est inscrit au journal (une ligne « non lancee », sans jamais repeter deux fois
+ * de suite la meme raison), et sera lance des que la raison tombe. Deux raisons le retiennent : le cout estime
+ * d'un article, borne haute, au-dessus du plafond par article, et trop de brouillons en attente. Le plafond
+ * du mois ne retient rien, il avertit (decisions de Micha du 17/11).
  *
  * Rejouable : relancee le meme jour apres avoir lance un lot, elle ne trouve plus rien de du.
  */
@@ -62,10 +63,6 @@ final readonly class PlanScheduledBlogGenerationsAction
 
         if ($this->forecaster->forSettings($settings)->exceeds($settings->articleSpendCapMicrousd())) {
             return $this->block(BlogGenerationOutcomeReason::ForecastAboveArticleCap, $settings, $dryRun);
-        }
-
-        if ($this->budget->spendCapReached($settings)) {
-            return $this->block(BlogGenerationOutcomeReason::SpendCapReached, $settings, $dryRun);
         }
 
         $count = min($settings->articlesPerRun, $this->budget->remainingDraftRoom($settings));
@@ -131,11 +128,9 @@ final readonly class PlanScheduledBlogGenerationsAction
                 'finished_at' => $now,
             ]);
 
-            match ($reason) {
-                BlogGenerationOutcomeReason::SpendCapReached => $this->alerts->spendLimitReached($settings, creditExhausted: false),
-                BlogGenerationOutcomeReason::ForecastAboveArticleCap => $this->alerts->forecastAboveArticleCap($settings),
-                default => null,
-            };
+            if ($reason === BlogGenerationOutcomeReason::ForecastAboveArticleCap) {
+                $this->alerts->forecastAboveArticleCap($settings);
+            }
         }
 
         return ScheduledGenerationPlan::blocked($reason);

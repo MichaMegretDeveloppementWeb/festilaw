@@ -9,7 +9,8 @@
         <x-ui::load-failure :title="__('Le chargement de la génération par IA a échoué.')"
             :description="__('Réessayez. Si le problème persiste, contactez l\'assistance technique.')" retry="$refresh" />
     @else
-        {{-- Une alerte seulement quand quelque chose empeche de generer, avec ce que la personne peut faire. --}}
+        {{-- Une alerte quand quelque chose empeche de generer, avec ce que la personne peut faire, et l'avertissement
+             du plafond du mois, qui n'empeche rien. --}}
         @if ($overview->unavailableReason)
             <x-ui::alert type="error" class="mb-6" :title="__('La génération n\'est pas disponible')">{{ $overview->unavailableReason }} {{ __('Contactez l\'assistance technique.') }}</x-ui::alert>
         @elseif (! $overview->simulated && ! $overview->apiKeyPresent)
@@ -21,8 +22,8 @@
             <x-ui::alert type="warning" class="mb-6" :title="__('Les générations ne démarrent pas pour le moment')">{{ __('Un article demandé maintenant restera en attente. Si cela dure, contactez l\'assistance technique.') }}</x-ui::alert>
         @endunless
 
-        @if ($overview->capReached)
-            <x-ui::alert type="warning" class="mb-6" :title="__('Le plafond de dépense du mois est atteint')">{{ __('Aucune génération ne se lance jusqu\'au mois prochain. Le plafond se relève dans les réglages.') }}</x-ui::alert>
+        @if ($overview->monthlyWarning)
+            @include('livewire.admin.blog.generation.monthly-warning', ['warning' => $overview->monthlyWarning, 'class' => 'mb-6'])
         @endif
 
         <x-admin.stats :columns="4">
@@ -30,7 +31,7 @@
                 {{ $overview->spent }}
                 <x-slot:extra>
                     {{ __('sur :cap de plafond', ['cap' => $overview->cap]) }}
-                    <x-ui::progress class="mt-2.5" :value="$overview->spentPercent" :color="$overview->capReached ? 'red' : 'indigo'" :show-value="false" />
+                    <x-ui::progress class="mt-2.5" :value="$overview->spentPercent" :color="$overview->spendBarColor()" :show-value="false" />
                 </x-slot:extra>
             </x-admin.stats.item>
 

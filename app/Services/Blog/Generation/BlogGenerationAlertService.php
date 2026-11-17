@@ -6,8 +6,10 @@ namespace App\Services\Blog\Generation;
 
 use App\Data\Blog\Generation\BlogAiSettings;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
+use App\Enums\Blog\Generation\MonthlySpendLevel;
 use App\Mail\BlogForecastAboveCap;
 use App\Mail\BlogGenerationFailuresAlert;
+use App\Mail\BlogMonthlySpendWarning;
 use App\Mail\BlogSpendLimitReached;
 use App\Models\BlogGeneration;
 use App\Repositories\Blog\FailedBlogGenerationStepRepository;
@@ -15,15 +17,18 @@ use App\Repositories\SettingRepository;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Mail\Mailable;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
 
 /**
- * Alertes de la generation par IA : une serie d'echecs (au prestataire technique), et la suspension pour une
- * raison d'argent (au destinataire des notifications, une fois par mois et par cause). Envoi au mieux : un
- * e-mail qui ne part pas est journalise, jamais leve, pour ne pas faire echouer la generation elle-meme.
- * Aucun de ces e-mails ne porte la cause technique d'un echec : elle n'est ecrite qu'au journal du serveur.
+ * Alertes de la generation par IA : une serie d'echecs (au prestataire technique), et au destinataire des
+ * notifications les raisons d'argent. Ce sont le credit epuise chez le fournisseur, l'approche puis le
+ * depassement du plafond du mois (une fois par mois et par cause), et le lot automatique retenu par le cout
+ * estime. Envoi au mieux : un e-mail qui ne part pas est journalise, jamais leve, pour ne pas faire echouer la
+ * generation elle-meme. Aucun de ces e-mails ne porte la cause technique d'un echec : elle n'est ecrite qu'au
+ * journal du serveur.
  */
 final readonly class BlogGenerationAlertService
 {
@@ -85,27 +90,64 @@ final readonly class BlogGenerationAlertService
         ])->values()->all();
     }
 
-    /** Suspension pour une raison d'argent : plafond du back-office atteint, ou credit epuise chez le fournisseur. */
-    public function spendLimitReached(BlogAiSettings $settings, bool $creditExhausted): void
+    /** Le credit du compte chez le fournisseur d'IA est epuise : la generation s'arrete jusqu'au rechargement. */
+    public function creditExhausted(BlogAiSettings $settings): void
     {
-        $key = self::SPEND_ALERT_KEY.($creditExhausted ? 'credit' : 'cap');
-        $month = CarbonImmutable::now()->format('Y-m');
-
-        if ($this->settings->get($key) === $month) {
+        if (! $this->firstThisMonth('credit')) {
             return;
         }
-
-        $this->settings->put($key, $month);
 
         $this->send(
             $settings->notificationEmail,
             new BlogSpendLimitReached(
-                $creditExhausted,
                 $this->costs->dollars($this->budget->spentThisMonthMicrousd()),
                 $this->costs->dollars($settings->monthlySpendCapMicrousd()),
             ),
             'Blog spend limit message failed to send.',
         );
+    }
+
+    /**
+     * A appeler a la fin de chaque generation : la depense ne bouge qu'a ce moment-la. Avertit quand elle
+     * approche du plafond du mois, puis quand elle le depasse, une fois par mois pour chacun des deux seuils.
+     * Une generation qui saute le premier seuil n'envoie que le second.
+     */
+    public function monthlySpend(BlogAiSettings $settings): void
+    {
+        $spent = $this->budget->spentThisMonthMicrousd();
+        $cap = $settings->monthlySpendCapMicrousd();
+        $level = $this->budget->monthlyLevel($spent, $cap);
+
+        if ($level === MonthlySpendLevel::Under || ! $this->firstThisMonth($level->value)) {
+            return;
+        }
+
+        $this->send(
+            $settings->notificationEmail,
+            new BlogMonthlySpendWarning(
+                $level === MonthlySpendLevel::Over,
+                $this->costs->dollars($spent),
+                $this->costs->dollars($cap),
+                intdiv(100 * $spent, max(1, $cap)),
+                $this->url->route('admin.blog.generation.settings'),
+            ),
+            'Blog monthly spend warning failed to send.',
+        );
+    }
+
+    /** Vrai la premiere fois du mois pour cette cause, alors notee pour ne pas renvoyer le meme message. */
+    private function firstThisMonth(string $cause): bool
+    {
+        $key = self::SPEND_ALERT_KEY.$cause;
+        $month = CarbonImmutable::now()->format('Y-m');
+
+        if ($this->settings->get($key) === $month) {
+            return false;
+        }
+
+        $this->settings->put($key, $month);
+
+        return true;
     }
 
     /** La generation automatique retient son lot : un article peut couter plus que le plafond par article. */
@@ -125,7 +167,7 @@ final readonly class BlogGenerationAlertService
         );
     }
 
-    private function send(string $recipient, BlogGenerationFailuresAlert|BlogSpendLimitReached|BlogForecastAboveCap $mail, string $failureMessage): void
+    private function send(string $recipient, Mailable $mail, string $failureMessage): void
     {
         try {
             Mail::to($recipient)->send($mail);

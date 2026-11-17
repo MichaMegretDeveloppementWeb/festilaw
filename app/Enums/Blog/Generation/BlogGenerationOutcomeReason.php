@@ -14,6 +14,7 @@ enum BlogGenerationOutcomeReason: string
     case NoRelevantTopic = 'no_relevant_topic';
     case DuplicateTopic = 'duplicate_topic';
     case InsufficientSources = 'insufficient_sources';
+    /** Plus ecrite depuis le 17/11, le plafond du mois ne bloquant plus rien ; gardee pour les lignes deja en base. */
     case SpendCapReached = 'spend_cap_reached';
     case ArticleSpendCapReached = 'article_spend_cap_reached';
     case PendingDraftsCapReached = 'pending_drafts_cap_reached';
