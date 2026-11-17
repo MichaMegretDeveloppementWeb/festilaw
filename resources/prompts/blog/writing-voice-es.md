@@ -43,6 +43,7 @@ Cada regla da su razón, para que usted la aplique a los casos que no nombra.
 - Evite la pasiva con «ser» calcada del inglés y el gerundio de posterioridad («…, garantizando así…»).
 - Conserve las etiquetas que el vendedor ve en pantalla tal cual, entre comillas, con una explicación en español la primera vez.
 - Tipografía española. Comillas angulares « », signos de apertura ¿ y ¡, números escritos «1200» o «12 000», fechas escritas «13 de diciembre de 2024».
+- Puntuación de las listas. En una lista introducida por dos puntos, un elemento que no es una oración completa empieza con minúscula y termina con punto y coma, el último con punto. Un elemento que forma una oración completa empieza con mayúscula y termina con punto.
 
 ## Señales de un texto generado, y qué escribir en su lugar
 

@@ -85,6 +85,17 @@ it('points at each sentence that carries a sign of generated text, with the name
     ])->and($signals['patterns'])->toBe(['list announced by its count' => 1, 'staged "what X is"' => 1, 'remark on the sources' => 1, 'X, not Y' => 1]);
 });
 
+it('accepts the semicolon that ends a list item in French, and still flags one that joins two clauses', function () {
+    $markdown = "L'offre doit indiquer :\n\n- le nom du fabricant ;\n- l'adresse de la personne responsable.\n\nLa fiche est complète ; le vendeur peut publier.";
+
+    $signals = (new BlogWritingSignalsInspector)->inspect($markdown, []);
+
+    // Typographie francaise des listes, demandee le 17/11 apres le premier article reel.
+    expect($signals['flagged'])->toBe([
+        ['signs' => ['semicolon joining clauses'], 'sentence' => 'La fiche est complète ; le vendeur peut publier.'],
+    ]);
+});
+
 it('sees no sign in plain, varied prose', function () {
     $markdown = "Etsy asks every seller who ships to the EU to name an economic operator in the listing settings.\n\nIf you sell from Leeds, that person must be established in the Union, and the platform hides listings that lack one.";
 

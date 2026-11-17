@@ -44,6 +44,7 @@ Chaque règle donne sa raison, pour que vous l'appliquiez aux cas qu'elle ne nom
 - Évitez les calques. « Adresser un problème » s'écrit « traiter un problème ». « Faire sens » s'écrit « avoir du sens ». « En termes de » se remplace par le mot juste. « Opportunité » s'écrit « occasion » quand c'est le sens. « Être basé à » s'écrit « être établi à » ou « être installé à ». « Supporter » s'écrit « prendre en charge » pour un logiciel. « Éventuellement » ne veut pas dire « eventually ».
 - Gardez les libellés que le vendeur voit à l'écran tels quels, entre guillemets, avec une explication en français la première fois (« le champ "economic operator" (opérateur économique) »).
 - Typographie française. Guillemets « » avec espaces insécables, espace insécable avant « ; : ! ? », nombres écrits « 1 200 », dates écrites « 13 décembre 2024 », pourcentages écrits « 4 % ».
+- Ponctuation des listes. Dans une liste introduite par un deux-points, un élément qui n'est pas une phrase complète commence par une minuscule et se termine par un point-virgule, le dernier par un point. Un élément qui forme une phrase complète commence par une majuscule et se termine par un point.
 
 ## Signes d'un texte généré, et quoi écrire à la place
 

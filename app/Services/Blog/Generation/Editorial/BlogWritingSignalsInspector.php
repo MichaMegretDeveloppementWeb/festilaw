@@ -32,6 +32,9 @@ final class BlogWritingSignalsInspector
     ];
 
     /**
+     * Le point-virgule qui clot un element de liste n'est pas releve : la typographie francaise et espagnole le
+     * demande (writing-voice-fr, writing-voice-es), et il ne relie pas deux propositions.
+     *
      * @param  list<string>  $signs  les signes de la langue, une ligne chacun : une expression (mot entier, sans
      *                               casse), « ~ expression reguliere => nom » pour une tournure, ou « ~+ ... »
      *                               pour une tournure toleree une fois par texte (relevee des la deuxieme)
@@ -72,7 +75,11 @@ final class BlogWritingSignalsInspector
         $tolerated = array_unique(array_column(array_filter($patterns, static fn (array $pattern): bool => $pattern['tolerated_once']), 'name'));
 
         foreach ($prose as $block) {
+            $isList = preg_match('/^\s*(?:[-*+]|\d+[.)])\s/', $block) === 1;
+
             foreach (preg_split('/\n/', $this->plain($block)) ?: [] as $line) {
+                $line = $isList ? (string) preg_replace('/;\s*$/u', '', $line) : $line;
+
                 foreach ($this->sentences($line) as $sentence) {
                     $found = $this->signsOf($sentence, $phrases, $patterns);
 

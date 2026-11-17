@@ -245,9 +245,11 @@ return [
         /*
          | Plafond par article : avant chaque appel, son cout maximal (texte envoye, extraits de recherche,
          | longueur maximale de la reponse, prix des recherches) doit tenir dans ce qui reste. La part des
-         | jetons est multipliee par cette marge : le prix d'un modele change selon le fournisseur qui repond.
+         | jetons est multipliee par cette marge : le prix d'un modele change selon le fournisseur qui repond
+         | (le 17/11, DeepSeek V4.1 Flash facture 0,567 $ le million de jetons ecrits chez Wafer, pour 0,20 $
+         | au catalogue).
          */
-        'reservation_margin' => 2,
+        'reservation_margin' => 3,
 
         /*
          | Worker. Il cherche une generation a traiter toutes les `poll_seconds`. A vide, il s'arrete des

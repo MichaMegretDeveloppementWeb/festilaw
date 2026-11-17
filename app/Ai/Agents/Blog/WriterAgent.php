@@ -11,8 +11,12 @@ use Laravel\Ai\Contracts\HasStructuredOutput;
 /**
  * Etape « redaction » : ecrit l'article anglais a partir du seul dossier de recherche. Aucun outil : un
  * contenu piege lu sur le web ne peut rien declencher ici (cahier des charges, § 11).
+ *
+ * Limite de 16 000 jetons, reflexion comprise : DeepSeek V4.1 Flash ignore l'effort « low » et a reflechi
+ * jusqu'a 9 000 jetons le 17/11 (generation 77), ce qui coupait la reponse. Decision de Micha du 17/11 :
+ * garder la reflexion et relever la limite.
  */
-#[MaxTokens(9000)]
+#[MaxTokens(16000)]
 final class WriterAgent extends BlogAgent implements HasStructuredOutput
 {
     public function schema(JsonSchema $schema): array

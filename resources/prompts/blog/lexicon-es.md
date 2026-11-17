@@ -35,3 +35,5 @@ Use these terms consistently. When a platform shows a label in English to seller
 | seller | vendedor, vendedora |
 | EU, European Union | UE, Unión Europea |
 | eligibility quiz | test de elegibilidad |
+| the country you ship to, ship to the EU | el país al que envía, enviar a la UE (destino, nunca «el país desde el que envía») |
+| the country you ship from, ship from the UK | el país desde el que envía, enviar desde el Reino Unido (origen) |
