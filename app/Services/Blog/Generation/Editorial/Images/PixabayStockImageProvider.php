@@ -53,7 +53,8 @@ final readonly class PixabayStockImageProvider implements StockImageProvider
                     'per_page' => 30,
                 ]);
             } catch (Throwable $e) {
-                throw BlogEditorialException::imageSourceFailed('Pixabay did not answer: '.$e->getMessage());
+                // Le message d'une connexion manquee reprend l'adresse appelee, cle comprise : elle n'atteint jamais le journal.
+                throw BlogEditorialException::imageSourceFailed('Pixabay did not answer: '.str_replace((string) $this->apiKey, '[PIXABAY_API_KEY]', $e->getMessage()));
             }
 
             if (! $response->successful()) {

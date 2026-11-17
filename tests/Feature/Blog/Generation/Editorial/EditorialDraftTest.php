@@ -11,6 +11,7 @@ use App\Ai\Agents\Blog\TopicAgent;
 use App\Ai\Agents\Blog\TranslatorAgent;
 use App\Ai\Agents\Blog\WebSearchAgent;
 use App\Ai\Agents\Blog\WriterAgent;
+use App\Contracts\Blog\Generation\StockImageProvider;
 use App\Data\Blog\Generation\GenerationStepContext;
 use App\Enums\Blog\BlogImageCreditSource;
 use App\Enums\Blog\BlogPostOrigin;
@@ -19,6 +20,7 @@ use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogGenerationType;
 use App\Exceptions\Blog\BlogAiProviderException;
+use App\Exceptions\Blog\BlogEditorialException;
 use App\Mail\BlogGenerationBatchFinished;
 use App\Models\BlogGeneration;
 use App\Models\BlogImage;
@@ -134,6 +136,17 @@ it('never downloads a stock photo from another host than the image bank', functi
 
     Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), 'evil.example'));
     expect(BlogImage::query()->count())->toBe(0);
+});
+
+it('keeps the image bank key out of the error when the bank cannot be reached', function () {
+    Http::fake(['https://pixabay.com/api/*' => Http::failedConnection()]);
+
+    expect(fn () => app(StockImageProvider::class)->search('a parcel on a workbench', 1200, 630))
+        ->toThrow(function (BlogEditorialException $e) {
+            expect($e->getMessage())->toContain('Pixabay did not answer')
+                ->toContain('key=[PIXABAY_API_KEY]')
+                ->not->toContain('test-key');
+        });
 });
 
 it('generates the images with the image model of the settings when the generation asks for it, and credits the model', function () {
