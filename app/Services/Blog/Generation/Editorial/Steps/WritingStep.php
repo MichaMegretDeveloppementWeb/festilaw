@@ -18,7 +18,7 @@ use App\Services\Blog\Generation\Editorial\BlogPromptLibrary;
 use App\Services\Blog\Generation\Editorial\EditorialMarkdown;
 
 /**
- * Etape 3 · la redaction de l'article anglais, a partir du seul dossier de recherche. Le code controle ce
+ * Etape 5 · la redaction de l'article anglais, a partir du seul dossier de recherche. Le code controle ce
  * qu'il recoit : structure, longueurs, liens (jetons internes connus, liens externes du dossier seulement),
  * emplacements d'images dans la limite reglee, sources du dossier. Un ecart donne lieu a une seule demande de
  * correction. Ce qui reste ensuite est garde au journal ; seul un article vide ou sans source fait echouer

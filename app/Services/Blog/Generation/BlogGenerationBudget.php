@@ -13,7 +13,8 @@ use Carbon\CarbonImmutable;
 
 /**
  * Les deux plafonds de la generation : la depense du mois civil (UTC), et le nombre de brouillons generes
- * qui attendent encore une relecture. Ils se verifient au lancement ; une generation commencee va au bout.
+ * qui attendent encore une relecture. Ils se verifient au lancement ; la depense du mois se verifie aussi
+ * avant chaque appel a l'IA (RunBlogGenerationAction).
  */
 final readonly class BlogGenerationBudget
 {

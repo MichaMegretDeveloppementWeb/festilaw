@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Services\Blog\Generation\Editorial\Steps;
 
 use App\Ai\Agents\Blog\ResearchAgent;
-use App\Ai\Agents\Blog\WebSearchAgent;
 use App\Data\Blog\Generation\GenerationStepContext;
 use App\Data\Blog\Generation\GenerationStepResult;
 use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
@@ -16,20 +15,15 @@ use App\Services\Blog\Generation\Editorial\Sources\SourceLinkChecker;
 use Carbon\CarbonImmutable;
 
 /**
- * Etape 2 · la recherche, en deux temps. Un agent cherche sur le web (trois recherches au plus) et rend ses notes en
- * texte libre ; un second agent, sans outil, en fait le dossier de faits (deux temps : un modele qui cherche
- * sur le web ignore le format JSON demande, essai reel du 17/11). Une source dont l'adresse n'est ni dans les
- * notes ni dans les pages citees par la recherche est ecartee : une adresse inventee n'entre jamais. Chaque
- * lien est ensuite teste : un lien mort sort du dossier, avec les faits qui ne reposaient que sur lui
- * (cahier des charges, § 11). Sans source officielle ou professionnelle restante, ou sans fait, la generation s'arrete : un
- * article sans sources fiables ne s'ecrit pas.
+ * Le dossier de faits, tire des notes de la recherche sur le web. Une source dont l'adresse n'est ni dans les
+ * notes ni dans les pages citees est ecartee : une adresse inventee n'entre jamais. Un lien mort sort du
+ * dossier avec les faits qui ne reposaient que sur lui (cahier des charges, § 11). Sans source officielle ou
+ * professionnelle restante, ou sans fait, la generation s'arrete : un article sans sources fiables ne s'ecrit
+ * pas.
  */
 final class ResearchStep extends EditorialStep
 {
     private const SOURCE_TYPES = ['official', 'professional', 'forum'];
-
-    /** Recherches web des notes (0,01 $ chacune, plus les pages qu'elles chargent) : decision du 17/11. */
-    private const WEB_SEARCHES = 3;
 
     public function __construct(
         BlogAgentCaller $caller,
@@ -52,29 +46,30 @@ final class ResearchStep extends EditorialStep
     public function execute(GenerationStepContext $context): GenerationStepResult
     {
         $topic = $context->output('topic');
+        $research = $context->output('research_notes');
+        $notes = trim((string) ($research['notes'] ?? ''));
+        $citations = is_array($research['citations'] ?? null) ? $research['citations'] : [];
 
         if (($topic['title'] ?? '') === '') {
             throw BlogEditorialException::missingInput($this->key(), 'the topic');
         }
 
-        $request = [
+        if ($notes === '') {
+            throw BlogEditorialException::missingInput($this->key(), 'the research notes');
+        }
+
+        $agent = new ResearchAgent($this->prompts->compose('festilaw-context', 'editorial-guidelines', 'step-research'));
+        $reply = $this->ask($context, $agent, implode("\n\n", [
             $this->block('Today', CarbonImmutable::now()->toDateString()),
             $this->block('Topic', array_intersect_key($topic, array_flip(['kind', 'title', 'angle', 'reader', 'keywords']))),
             $this->block('Instructions from the editor', $context->instructions ?? 'None.'),
-        ];
-
-        $researcher = new WebSearchAgent($this->prompts->compose('festilaw-context', 'editorial-guidelines', 'step-research-notes'), searches: self::WEB_SEARCHES);
-        $notes = $this->ask($context, $researcher, implode("\n\n", $request));
-        $agent = new ResearchAgent($this->prompts->compose('festilaw-context', 'editorial-guidelines', 'step-research'));
-        $reply = $this->ask($context, $agent, spent: $notes->usage, prompt: implode("\n\n", [
-            ...$request,
-            $this->block('Research notes', $notes->text() !== '' ? $notes->text() : 'No notes.'),
-            $this->block('Pages cited by the search', $notes->citations()),
+            $this->block('Research notes', $notes),
+            $this->block('Pages cited by the search', $citations),
         ]));
-        $usage = $notes->usage->plus($reply->usage);
+        $usage = $reply->usage;
 
         $answer = $reply->structured();
-        $seen = $this->seenAddresses($notes->text(), $notes->citations());
+        $seen = $this->seenAddresses($notes, $citations);
         $sources = array_values(array_filter($this->sources($answer), fn (array $source): bool => in_array($this->address($source['url']), $seen, true)));
         $facts = $this->facts($answer);
 
@@ -97,7 +92,8 @@ final class ResearchStep extends EditorialStep
             'facts' => $facts,
             'notes' => $this->text($answer, 'notes'),
             'removed_links' => array_column($removed, 'url'),
-            'citations' => $notes->citations(),
+            'citations' => $citations,
+            'warnings' => ($research['cut_off'] ?? false) === true ? ['research notes cut off at their length limit'] : [],
         ];
 
         if ($reliable === [] || $facts === []) {

@@ -138,8 +138,9 @@ return [
          | rien n'y est enregistre, ce sont elles qui s'appliquent. La generation automatique est eteinte
          | par defaut : rien ne part sans que quelqu'un l'ait allumee. `notification_email` nul = l'adresse
          | des notifications internes (festilaw.notification_email). Les plafonds de depense sont en cents
-         | de dollar : le fournisseur facture en dollars. Celui du mois se verifie au lancement ; celui par
-         | article arrete une generation qui le depasse, avant son etape suivante (15 cents, decision du 17/11).
+         | de dollar : le fournisseur facture en dollars. Les deux se verifient avant chaque appel a l'IA,
+         | par reservation (voir `reservation_margin`) ; celui du mois se verifie aussi au lancement. Plafond
+         | par article de 15 cents, decision du 17/11.
          |
          | Modeles : les moins chers qui savent faire chaque tache (prix au 17/11 : Haiku 5.5 a 0,10 $ et
          | 0,50 $ par million de jetons, GPT-5 Image Mini a environ 1,3 centime l'image). Au premier essai
@@ -200,20 +201,53 @@ return [
          | catalogue d'OpenRouter le 16/11/2026. Prix d'une image paysage mesures le 17/11 : GPT-5 Image Mini
          | environ 1,3 centime (1536 x 1024), Nano Banana 2 de 6,7 a 10 centimes. Gemini 3.1 Flash Lite Image
          | n'est pas propose : OpenRouter refuse le reglage de resolution que le SDK lui envoie.
+         |
+         | `reserve_microusd` : ce qu'on reserve sur le plafond par article avant de demander une image (une
+         | image ne part que si ce montant tient dans ce qui reste). Mesure du 17/11 doublee pour GPT-5 Image
+         | Mini et Nano Banana 2 ; pour les trois autres, deduit du prix public d'un jeton d'image (17/11)
+         | rapporte a ces deux mesures.
          */
         'image_models' => [
-            'openai/gpt-5-image-mini' => ['name' => 'GPT-5 Image Mini', 'provider' => 'OpenAI'],
-            'google/gemini-3.1-flash-image' => ['name' => 'Nano Banana 2', 'provider' => 'Google'],
-            'google/gemini-nano-banana-2.1' => ['name' => 'Nano Banana 2.1', 'provider' => 'Google'],
-            'google/gemini-3-pro-image' => ['name' => 'Nano Banana Pro', 'provider' => 'Google'],
-            'openai/gpt-5.4-image-2' => ['name' => 'GPT-5.4 Image 2', 'provider' => 'OpenAI'],
+            'openai/gpt-5-image-mini' => ['name' => 'GPT-5 Image Mini', 'provider' => 'OpenAI', 'reserve_microusd' => 30_000],
+            'google/gemini-3.1-flash-image' => ['name' => 'Nano Banana 2', 'provider' => 'Google', 'reserve_microusd' => 120_000],
+            'google/gemini-nano-banana-2.1' => ['name' => 'Nano Banana 2.1', 'provider' => 'Google', 'reserve_microusd' => 60_000],
+            'google/gemini-3-pro-image' => ['name' => 'Nano Banana Pro', 'provider' => 'Google', 'reserve_microusd' => 240_000],
+            'openai/gpt-5.4-image-2' => ['name' => 'GPT-5.4 Image 2', 'provider' => 'OpenAI', 'reserve_microusd' => 60_000],
         ],
 
         /*
-         | Cout estime d'une recherche web, en millioniemes de dollar (10 000 = 0,01 $). Unite a confirmer
-         | par l'essai reel : ne sert, comme la table ci-dessus, qu'au cout de repli.
+         | Recherche web des agents (outil `openrouter:web_search`). Le moteur Exa est impose : la recherche
+         | native d'Anthropic, choisie sinon pour Haiku, rend des pages dont la taille ne se regle pas (47 000
+         | jetons pour deux recherches le 17/11). Exa rend des extraits, au plus `max_results` par recherche
+         | et `max_characters` par extrait, soit environ 2 000 jetons par recherche. Prix public d'Exa au
+         | 17/11 : 0,007 $ par recherche, dix resultats compris (documentation d'OpenRouter). Le contenu des
+         | extraits est facture en plus, comme du texte lu.
          */
-        'web_search_microusd' => 10_000,
+        'web_search' => [
+            'engine' => 'exa',
+            'max_results' => 5,
+            'max_characters' => 1_500,
+            'price_microusd' => 7_000,
+        ],
+
+        /*
+         | Reflexion du modele avant de repondre (`reasoning.effort` d'OpenRouter), par etape. Elle est
+         | facturee comme du texte ecrit et compte dans la meme limite que la reponse : au 17/11, celle de
+         | Haiku 5.5 (effort moyen par defaut) a coupe le dossier de faits. `none` pour les etapes qui ne font
+         | que mettre des notes en forme, `low` ailleurs.
+         */
+        'reasoning' => [
+            'default' => 'low',
+            'topic' => 'none',
+            'research' => 'none',
+        ],
+
+        /*
+         | Plafond par article : avant chaque appel, son cout maximal (texte envoye, extraits de recherche,
+         | longueur maximale de la reponse, prix des recherches) doit tenir dans ce qui reste. La part des
+         | jetons est multipliee par cette marge : le prix d'un modele change selon le fournisseur qui repond.
+         */
+        'reservation_margin' => 2,
 
         /*
          | Worker. Il cherche une generation a traiter toutes les `poll_seconds`. A vide, il s'arrete des

@@ -11,7 +11,8 @@ use Throwable;
 /**
  * Echec d'un appel au fournisseur d'IA pendant une etape. Porte ce qui a deja ete consomme (un appel qui
  * echoue peut avoir ete facture) pour que le moteur l'enregistre. Un credit epuise n'est pas reessaye :
- * recommencer ne changerait rien tant que le compte n'est pas recharge.
+ * recommencer ne changerait rien tant que le compte n'est pas recharge. Un appel refuse par la reservation
+ * (son cout maximal ne tient plus dans le plafond) n'est pas parti : le moteur arrete la generation.
  */
 final class BlogAiProviderException extends BaseAppException
 {
@@ -21,8 +22,21 @@ final class BlogAiProviderException extends BaseAppException
         public readonly bool $creditExhausted,
         public readonly ?GenerationUsage $usage,
         ?Throwable $previous,
+        public readonly bool $overBudget = false,
     ) {
         parent::__construct($technicalMessage, $userMessage, 0, $previous);
+    }
+
+    public static function overBudget(string $step, int $reservedMicrousd, int $leftMicrousd, ?GenerationUsage $usage = null): self
+    {
+        return new self(
+            technicalMessage: "AI call of step [{$step}] not sent: it may cost up to {$reservedMicrousd} microusd and only {$leftMicrousd} are left under the spend cap.",
+            userMessage: __('Le plafond de dépense ne permettait pas l\'appel suivant à l\'IA.'),
+            creditExhausted: false,
+            usage: $usage,
+            previous: null,
+            overBudget: true,
+        );
     }
 
     public static function creditExhausted(?Throwable $previous = null, ?GenerationUsage $usage = null): self
@@ -42,7 +56,7 @@ final class BlogAiProviderException extends BaseAppException
      */
     public function withEarlierUsage(GenerationUsage $earlier): self
     {
-        return new self($this->getMessage(), $this->getUserMessage(), $this->creditExhausted, $earlier->plus($this->usage ?? GenerationUsage::none()), $this->getPrevious());
+        return new self($this->getMessage(), $this->getUserMessage(), $this->creditExhausted, $earlier->plus($this->usage ?? GenerationUsage::none()), $this->getPrevious(), $this->overBudget);
     }
 
     public static function callFailed(string $step, Throwable $previous, ?GenerationUsage $usage = null): self

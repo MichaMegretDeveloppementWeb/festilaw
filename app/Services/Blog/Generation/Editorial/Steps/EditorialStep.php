@@ -23,7 +23,9 @@ abstract class EditorialStep implements GenerationStep
 {
     /** Le reglage de modele de chaque etape (la passe de style emploie le modele de la redaction). */
     private const MODEL_SETTINGS = [
+        'topic_scan' => 'topic',
         'topic' => 'topic',
+        'research_notes' => 'research',
         'research' => 'research',
         'writing' => 'writing',
         'verification' => 'verification',
@@ -57,12 +59,18 @@ abstract class EditorialStep implements GenerationStep
     }
 
     /**
+     * L'appel ne part que si son cout maximal tient dans ce qui reste sous le plafond, deduction faite de ce
+     * que l'etape a deja depense pendant cet essai.
+     *
      * @param  GenerationUsage|null  $spent  ce que l'etape a deja depense avant cet appel : garde si l'appel echoue
      */
     protected function ask(GenerationStepContext $context, BlogAgent $agent, string $prompt, ?GenerationUsage $spent = null): BlogAgentReply
     {
         try {
-            return $this->caller->call($this->key(), $agent, $prompt, $this->model($context), $this->turnTimeoutSeconds());
+            return $this->caller->call(
+                $this->key(), $agent, $prompt, $this->model($context), $this->turnTimeoutSeconds(),
+                $context->generationId, $context->budgetLeftAfter($spent),
+            );
         } catch (BlogAiProviderException $e) {
             throw $spent === null ? $e : $e->withEarlierUsage($spent);
         }

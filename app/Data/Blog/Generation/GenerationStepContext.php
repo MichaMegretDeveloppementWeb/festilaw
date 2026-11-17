@@ -8,13 +8,15 @@ use App\Enums\Blog\Generation\BlogGenerationType;
 
 /**
  * Ce qu'une etape recoit pour travailler : la demande (sujet et consignes eventuels), les reglages en
- * vigueur, et ce que les etapes deja terminees ont produit.
+ * vigueur, ce que les etapes deja terminees ont produit, et ce qui reste sous les plafonds de depense au
+ * debut de l'essai.
  */
 final readonly class GenerationStepContext
 {
     /**
      * @param  array<string, array<string, mixed>>  $outputs  resultat de chaque etape terminee, par cle d'etape
      * @param  array<string, mixed>  $payload  donnees propres a la demande (par exemple l'article a traduire)
+     * @param  int|null  $budgetLeftMicrousd  ce qui reste sous le plus bas des deux plafonds (article, mois) ; nul : aucun
      */
     public function __construct(
         public int $generationId,
@@ -25,7 +27,14 @@ final readonly class GenerationStepContext
         public array $outputs,
         public array $payload,
         public int $attempt,
+        public ?int $budgetLeftMicrousd = null,
     ) {}
+
+    /** Ce qui reste pour un appel, une fois deduit ce que l'etape a deja depense pendant cet essai. */
+    public function budgetLeftAfter(?GenerationUsage $spent): ?int
+    {
+        return $this->budgetLeftMicrousd === null ? null : $this->budgetLeftMicrousd - ($spent?->costMicrousd ?? 0);
+    }
 
     /**
      * Le resultat d'une etape precedente.

@@ -267,7 +267,7 @@ it('follows the running generation in the tile, in 2 queries', function () {
 
     expect(count(DB::getQueryLog()))->toBe(2);
     $tile->assertSee('Étape 2 sur 9')
-        ->assertSee('Recherche')
+        ->assertSee('Dossier de faits')
         ->assertSee('Suivre la génération')
         ->assertSeeHtml('data-generation-activity="running"');
 });
@@ -382,7 +382,7 @@ it('lists every generation in the history, newest first, twenty per page, in 3 q
     expect(count(DB::getQueryLog()))->toBe(3)
         ->and(substr_count($history->html(), 'data-generation="'))->toBe(20);
 
-    $history->assertSeeInOrder(['Sujet choisi par l\'IA', 'Labels on Etsy', 'Échec à l\'étape « Recherche »'])
+    $history->assertSeeInOrder(['Sujet choisi par l\'IA', 'Labels on Etsy', 'Échec à l\'étape « Dossier de faits »'])
         ->assertSee('Automatique')
         ->assertSeeHtml('wire:click="retry('.$failed->id.')"')
         ->assertSeeHtml('pending = '.$waiting->id)
@@ -465,7 +465,7 @@ it('shows a generation step by step, with its model, tokens and cost under each 
         ->assertSee('Lancée par Alex Martin le '.$generation->created_at->format('d/m/Y à H:i').' (UTC)')
         ->assertSee('Labels on Etsy')
         ->assertSee('Short.')
-        ->assertSee('Échec à l\'étape « Recherche »')
+        ->assertSee('Échec à l\'étape « Dossier de faits »')
         ->assertSee('Vous pouvez relancer la génération. Elle reprendra à l\'étape qui a échoué')
         ->assertSee('contactez l\'assistance technique')
         ->assertDontSee('Provider is down.')
@@ -514,7 +514,7 @@ it('says who stopped a generation, when, and after which step', function () {
         ->and($generation->cancel_requested_by)->toBe($user->id);
 
     // L'arret est immediat : l'ecran le dit aussitot, sans attendre de worker.
-    $detail->assertSee('Arrêtée par Alex Martin le '.$generation->cancel_requested_at->format('d/m/Y à H:i').' (UTC), après l\'étape « Recherche ».')
+    $detail->assertSee('Arrêtée par Alex Martin le '.$generation->cancel_requested_at->format('d/m/Y à H:i').' (UTC), après l\'étape « Dossier de faits ».')
         ->assertSee('Aucun article n\'a été créé.')
         ->assertDontSee('Arrêtée au back-office')
         ->assertDontSeeHtml('wire:poll');

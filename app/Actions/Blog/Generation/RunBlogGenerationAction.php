@@ -17,6 +17,7 @@ use App\Repositories\Blog\BlogGenerationLockRepository;
 use App\Repositories\Blog\BlogGenerationSpendRepository;
 use App\Services\Blog\Generation\BlogAiSettingsService;
 use App\Services\Blog\Generation\BlogGenerationAlertService;
+use App\Services\Blog\Generation\BlogGenerationBudget;
 use App\Services\Blog\Generation\BlogGenerationStepRunner;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Foundation\Application;
@@ -43,6 +44,7 @@ final readonly class RunBlogGenerationAction
         private BlogGenerationStepRunner $runner,
         private BlogGenerationLockRepository $locks,
         private BlogGenerationSpendRepository $spend,
+        private BlogGenerationBudget $budget,
         private BlogAiSettingsService $settings,
         private BlogGenerationAlertService $alerts,
         private NotifyFinishedBlogGenerationBatchAction $notifyBatch,
@@ -114,7 +116,7 @@ final readonly class RunBlogGenerationAction
                 $index + 1,
                 fn (int $attempt): GenerationStepContext => $this->context($generation, $settings, $outputs, $attempt),
                 fn (): bool => $this->holdLock($generation->id, $owner, $step),
-                fn (): bool => $this->spend->costOf($generation->id) < $settings->articleSpendCapMicrousd(),
+                fn (): bool => min($this->budgetLeft($generation->id, $settings)) > 0,
             );
 
             if ($outcome->lockLost) {
@@ -122,13 +124,21 @@ final readonly class RunBlogGenerationAction
             }
 
             if ($outcome->overBudget) {
-                Log::warning('Blog generation stopped: article spend cap reached.', [
+                $left = $this->budgetLeft($generation->id, $settings);
+                $monthly = $left['month'] < $left['article'];
+
+                Log::warning('Blog generation stopped before exceeding a spend cap.', [
                     'generation_id' => $generation->id,
                     'step' => $step->key(),
-                    'cap_microusd' => $settings->articleSpendCapMicrousd(),
+                    'cap' => $monthly ? 'month' : 'article',
+                    'left_microusd' => $left,
                 ]);
 
-                $this->finish($generation, $owner, $settings, BlogGenerationStatus::Abandoned, BlogGenerationOutcomeReason::ArticleSpendCapReached, null);
+                $this->finish(
+                    $generation, $owner, $settings, BlogGenerationStatus::Abandoned,
+                    $monthly ? BlogGenerationOutcomeReason::SpendCapReached : BlogGenerationOutcomeReason::ArticleSpendCapReached,
+                    null,
+                );
 
                 return;
             }
@@ -170,7 +180,22 @@ final readonly class RunBlogGenerationAction
             outputs: $outputs,
             payload: $generation->payload ?? [],
             attempt: $attempt,
+            budgetLeftMicrousd: min($this->budgetLeft($generation->id, $settings)),
         );
+    }
+
+    /**
+     * Le plafond du mois compte aussi pendant une generation : un lot de plusieurs articles le depasserait
+     * sinon de tout ce que coutent les articles lances avant qu'il soit atteint.
+     *
+     * @return array{article: int, month: int}
+     */
+    private function budgetLeft(int $generationId, BlogAiSettings $settings): array
+    {
+        return [
+            'article' => $settings->articleSpendCapMicrousd() - $this->spend->costOf($generationId),
+            'month' => $settings->monthlySpendCapMicrousd() - $this->budget->spentThisMonthMicrousd(),
+        ];
     }
 
     private function holdLock(int $generationId, string $owner, GenerationStep $step): bool

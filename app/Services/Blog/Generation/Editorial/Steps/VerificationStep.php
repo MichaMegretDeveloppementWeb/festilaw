@@ -15,7 +15,7 @@ use App\Services\Blog\Generation\Editorial\BlogPromptLibrary;
 use App\Services\Blog\Generation\Editorial\EditorialMarkdown;
 
 /**
- * Etape 4 · la verification. L'agent relit l'article contre le dossier et retire toute affirmation que le
+ * Etape 6 · la verification. L'agent relit l'article contre le dossier et retire toute affirmation que le
  * dossier n'etaye pas. Il ne doit rien ajouter : une version qui apporte un chiffre, un lien ou un jeton
  * absent du texte de depart, ou qui perd un emplacement d'image, est refusee et l'etape reessayee. Ce qui a
  * ete retire ne va qu'au journal technique de l'etape, jamais sur le brouillon.

@@ -21,6 +21,23 @@ final class BlogEditorialException extends BaseAppException
         );
     }
 
+    public static function cutOff(string $step, int $maxTokens): self
+    {
+        return new self(
+            technicalMessage: "Blog generation step [{$step}] got an answer cut off at its limit of {$maxTokens} tokens (finish reason: length).",
+            userMessage: __('L\'IA a rendu une réponse incomplète.'),
+        );
+    }
+
+    /** Le SDK rend vide, sans rien lever, une sortie structuree qui n'est pas du JSON lisible. */
+    public static function notJson(string $step): self
+    {
+        return new self(
+            technicalMessage: "Blog generation step [{$step}] got an answer that is not valid JSON for its schema.",
+            userMessage: __('L\'IA a rendu une réponse inutilisable.'),
+        );
+    }
+
     public static function missingInput(string $step, string $what): self
     {
         return new self(

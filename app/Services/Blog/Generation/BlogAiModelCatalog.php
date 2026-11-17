@@ -16,12 +16,23 @@ final readonly class BlogAiModelCatalog
 
     /**
      * @param  array<string, array{name?: string, provider?: string, input?: int, output?: int}>  $textModels
-     * @param  array<string, array{name?: string, provider?: string}>  $imageModels
+     * @param  array<string, array{name?: string, provider?: string, reserve_microusd?: int}>  $imageModels
      */
     public function __construct(
         private array $textModels,
         private array $imageModels,
     ) {}
+
+    /**
+     * Ce qu'on reserve sur le plafond avant de demander une image a ce modele. Un modele sans reserve connue
+     * reserve la plus forte de la liste : on ne demande pas une image dont on ignore le prix.
+     */
+    public function imageReserveMicrousd(string $id): int
+    {
+        $known = array_map(static fn (array $model): int => (int) ($model['reserve_microusd'] ?? 0), $this->imageModels);
+
+        return (int) ($this->imageModels[$id]['reserve_microusd'] ?? ($known === [] ? 0 : max($known)));
+    }
 
     /**
      * Les identifiants acceptes pour un reglage de modele.

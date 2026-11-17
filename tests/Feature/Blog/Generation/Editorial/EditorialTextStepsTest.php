@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Blog\Generation\ProcessNextBlogGenerationAction;
 use App\Ai\Agents\Blog\FactCheckAgent;
 use App\Ai\Agents\Blog\ResearchAgent;
 use App\Ai\Agents\Blog\StyleAgent;
@@ -8,11 +9,14 @@ use App\Ai\Agents\Blog\TranslatorAgent;
 use App\Ai\Agents\Blog\WebSearchAgent;
 use App\Ai\Agents\Blog\WriterAgent;
 use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
+use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogTopicKind;
 use App\Exceptions\Blog\BlogAiProviderException;
 use App\Models\BlogGeneration;
+use App\Services\Blog\Generation\Editorial\Steps\ResearchNotesStep;
 use App\Services\Blog\Generation\Editorial\Steps\ResearchStep;
 use App\Services\Blog\Generation\Editorial\Steps\StyleStep;
+use App\Services\Blog\Generation\Editorial\Steps\TopicScanStep;
 use App\Services\Blog\Generation\Editorial\Steps\TopicStep;
 use App\Services\Blog\Generation\Editorial\Steps\TranslationStep;
 use App\Services\Blog\Generation\Editorial\Steps\VerificationStep;
@@ -21,6 +25,8 @@ use GuzzleHttp\Psr7\Response as Psr7Response;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Sleep;
 use Laravel\Ai\Responses\Data\Meta;
 use Laravel\Ai\Responses\Data\TextUsage;
 use Laravel\Ai\Responses\TextResponse;
@@ -67,16 +73,38 @@ it('chooses a topic from the settings, the request and every known title, and ke
     WebSearchAgent::assertNeverPrompted();
 });
 
-it('scans the web for a free topic, with two searches at most, and hands the notes to the editor', function () {
+it('scans the web for a free topic with two bounded searches, and keeps the notes for the editor', function () {
     BlogAi::saveSettings(['priority_topics' => ['Etsy and the GPSR']]);
     WebSearchAgent::fake(['Notes from the web scan.'])->preventStrayPrompts();
+
+    $scan = app(TopicScanStep::class)->execute(Fixtures::context());
+
+    expect($scan->output['notes'])->toBe('Notes from the web scan.');
+    // Des extraits courts du moteur Exa : la recherche native d'Haiku rendait des pages entieres (17/11).
+    WebSearchAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Etsy and the GPSR')
+        && str_contains($prompt->agent->instructions(), 'at most 2 web searches')
+        && collect($prompt->agent->tools())->sole()->maxSearches === 2
+        && collect($prompt->agent->tools())->sole()->providerOptions('openrouter') === ['engine' => 'exa', 'max_results' => 5, 'max_characters' => 1_500, 'max_total_results' => 10]);
+});
+
+it('chooses the topic from the stored notes of the web scan, without searching again', function () {
+    WebSearchAgent::fake()->preventStrayPrompts();
     TopicAgent::fake([Fixtures::topic()])->preventStrayPrompts();
 
-    app(TopicStep::class)->execute(Fixtures::context());
+    app(TopicStep::class)->execute(Fixtures::context(['topic_scan' => ['notes' => 'Notes from the web scan.', 'citations' => [], 'cut_off' => false]]));
 
-    WebSearchAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Etsy and the GPSR')
-        && collect($prompt->agent->tools())->sole()->maxSearches === 2);
     TopicAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Notes from the web scan.'));
+    WebSearchAgent::assertNeverPrompted();
+});
+
+it('skips the web scan when the topic is imposed', function () {
+    WebSearchAgent::fake()->preventStrayPrompts();
+
+    $scan = app(TopicScanStep::class)->execute(Fixtures::context(topicHint: 'Etsy economic operator'));
+
+    expect($scan->output['skipped'])->toBeTrue()
+        ->and($scan->usage->costMicrousd)->toBe(0);
+    WebSearchAgent::assertNeverPrompted();
 });
 
 it('writes nothing when no topic is relevant enough', function () {
@@ -109,49 +137,80 @@ it('fails the topic step on an unusable answer, so the engine tries again', func
     expect(fn () => app(TopicStep::class)->execute(Fixtures::context()))->toThrow(BlogAiProviderException::class, 'unusable answer');
 });
 
-it('keeps the cost of the web scan when the second call of the topic step fails', function () {
+it('keeps the paid web scan when the topic choice fails, and never pays it again on a new attempt', function () {
+    Sleep::fake();
+    Mail::fake();
+    config(['blog.ai.pipeline' => 'editorial']);
     $raw = new Response(new Psr7Response(200, [], (string) json_encode(['usage' => [
-        'prompt_tokens' => 4_000, 'completion_tokens' => 900, 'cost' => 0.12, 'server_tool_use_details' => ['web_search_requests' => 3],
+        'prompt_tokens' => 4_000, 'completion_tokens' => 900, 'cost' => 0.012, 'server_tool_use_details' => ['web_search_requests' => 2],
     ]])));
-    WebSearchAgent::fake([(new TextResponse('Notes.', new TextUsage(4_000, 900), new Meta('openrouter', 'm')))->withRawResponse($raw)]);
-    TopicAgent::fake(fn () => throw new RuntimeException('Provider returned error'));
+    $scans = 0;
+    WebSearchAgent::fake(function () use (&$scans, $raw) {
+        $scans++;
 
-    // Le moteur enregistre ce cout sur l'essai qui a echoue : la recherche deja facturee n'est pas perdue.
-    expect(fn () => app(TopicStep::class)->execute(Fixtures::context()))
-        ->toThrow(function (BlogAiProviderException $e): void {
-            expect($e->usage->costMicrousd)->toBe(120_000)
-                ->and($e->usage->webSearches)->toBe(3)
-                ->and($e->creditExhausted)->toBeFalse();
-        });
+        return (new TextResponse('Notes.', new TextUsage(4_000, 900), new Meta('openrouter', 'm')))->withRawResponse($raw);
+    });
+    TopicAgent::fake(fn () => throw new RuntimeException('Provider returned error'));
+    $generation = BlogGeneration::factory()->create();
+
+    app(ProcessNextBlogGenerationAction::class)->execute('worker-test');
+
+    $steps = $generation->steps()->get()->keyBy('step');
+    // Au 17/11, chaque nouvel essai de la recherche refaisait ses recherches web : trois essais, huit recherches.
+    expect($generation->refresh()->status)->toBe(BlogGenerationStatus::Failed)
+        ->and($steps['topic']->attempt)->toBe(3)
+        ->and($scans)->toBe(1)
+        ->and($steps['topic_scan']->cost_microusd)->toBe(12_000)
+        ->and($generation->cost_microusd)->toBe(12_000);
 });
 
 // --- Recherche
+
+it('searches the web for the chosen topic with three bounded searches, and keeps the notes', function () {
+    WebSearchAgent::fake([Fixtures::notesCiting()])->preventStrayPrompts();
+
+    $result = app(ResearchNotesStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic()]));
+
+    expect($result->output['notes'])->toBe(Fixtures::notesCiting())
+        ->and($result->output['cut_off'])->toBeFalse();
+    WebSearchAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Adding an economic operator on Etsy')
+        && str_contains($prompt->agent->instructions(), 'at most 3 web searches')
+        && collect($prompt->agent->tools())->sole()->maxSearches === 3
+        && collect($prompt->agent->tools())->sole()->providerOptions('openrouter')['engine'] === 'exa');
+});
+
+it('fails the web search step when it brings back no notes, so the engine tries again', function () {
+    WebSearchAgent::fake(['  '])->preventStrayPrompts();
+
+    expect(fn () => app(ResearchNotesStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic()])))
+        ->toThrow(BlogAiProviderException::class, 'no research notes');
+});
 
 it('keeps the live sources of the research file and drops a dead link with the facts that relied on it', function () {
     $research = Fixtures::research();
     $research['sources'][] = ['id' => 'S3', 'title' => 'Old page', 'url' => 'https://old.example/gone', 'publisher' => 'Blog', 'type' => 'professional', 'date' => null];
     $research['facts'][] = ['id' => 'F3', 'claim' => 'Something from a dead page.', 'source_ids' => ['S3'], 'date' => null];
-    WebSearchAgent::fake([Fixtures::notesCiting($research['sources'])]);
+    WebSearchAgent::fake()->preventStrayPrompts();
     ResearchAgent::fake([[...$research, 'report_fr' => 'Trois sources consultées.']])->preventStrayPrompts();
     Http::fake(['https://old.example/*' => Http::response('', 404), '*' => Http::response('ok')]);
 
-    $result = app(ResearchStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic()]));
+    $result = app(ResearchStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic(), 'research_notes' => Fixtures::researchNotes($research['sources'])]));
 
     expect(array_column($result->output['sources'], 'id'))->toBe(['S1', 'S2'])
         ->and(array_column($result->output['facts'], 'id'))->toBe(['F1', 'F2'])
         ->and($result->output['removed_links'])->toBe(['https://old.example/gone'])
         ->and($result->summary)->toBe('Trois sources consultées.');
-    ResearchAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Adding an economic operator on Etsy'));
-    WebSearchAgent::assertPrompted(fn ($prompt): bool => collect($prompt->agent->tools())->sole()->maxSearches === 3);
+    ResearchAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Adding an economic operator on Etsy') && $prompt->contains('Old page'));
+    // Le dossier se tire des notes enregistrees : un nouvel essai ne repaie aucune recherche.
+    WebSearchAgent::assertNeverPrompted();
 });
 
 it('leaves out a source whose address the search never met, so an invented address never enters the file', function () {
     $research = Fixtures::research();
-    WebSearchAgent::fake([Fixtures::notesCiting([$research['sources'][0]])]);
     ResearchAgent::fake([[...$research, 'report_fr' => 'x']])->preventStrayPrompts();
     Http::fake(['*' => Http::response('ok')]);
 
-    $result = app(ResearchStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic()]));
+    $result = app(ResearchStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic(), 'research_notes' => Fixtures::researchNotes([$research['sources'][0]])]));
 
     // L'adresse d'Etsy n'etait pas dans les notes : la source sort, et le fait qui ne reposait que sur elle aussi.
     expect(array_column($result->output['sources'], 'id'))->toBe(['S1'])
@@ -159,7 +218,6 @@ it('leaves out a source whose address the search never met, so an invented addre
 });
 
 it('stops when no official or professional source is left', function () {
-    WebSearchAgent::fake(['Seen on https://forum.example/t/1']);
     ResearchAgent::fake([[
         'sources' => [['id' => 'S1', 'title' => 'A forum', 'url' => 'https://forum.example/t/1', 'publisher' => 'Forum', 'type' => 'forum']],
         'facts' => [['id' => 'F1', 'claim' => 'Sellers say so.', 'source_ids' => ['S1']]],
@@ -167,7 +225,7 @@ it('stops when no official or professional source is left', function () {
     ]])->preventStrayPrompts();
     Http::fake(['*' => Http::response('ok')]);
 
-    $result = app(ResearchStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic()]));
+    $result = app(ResearchStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic(), 'research_notes' => Fixtures::researchNotes(notes: 'Seen on https://forum.example/t/1')]));
 
     expect($result->stopReason)->toBe(BlogGenerationOutcomeReason::InsufficientSources);
 });
@@ -395,8 +453,8 @@ it('gives every agent the company context first, then the editorial rules', func
     };
 
     match ($step) {
-        'topic' => [WebSearchAgent::fake(['Notes.']), TopicAgent::fake([['decision' => 'none', 'reason' => 'x', 'report_fr' => 'x']]), app(TopicStep::class)->execute(Fixtures::context())],
-        'research' => [WebSearchAgent::fake([Fixtures::notesCiting()]), ResearchAgent::fake([[...Fixtures::research(), 'report_fr' => 'x']]), app(ResearchStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic()]))],
+        'topic' => [TopicAgent::fake([['decision' => 'none', 'reason' => 'x', 'report_fr' => 'x']]), app(TopicStep::class)->execute(Fixtures::context())],
+        'research' => [ResearchAgent::fake([[...Fixtures::research(), 'report_fr' => 'x']]), app(ResearchStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic(), 'research_notes' => Fixtures::researchNotes()]))],
         'writing' => [WriterAgent::fake([Fixtures::writerAnswer()]), app(WritingStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic(), 'research' => Fixtures::research()]))],
         'verification' => [FactCheckAgent::fake([[...Fixtures::article(), 'removed_claims' => [], 'report_fr' => 'x']]), app(VerificationStep::class)->execute(Fixtures::context(['research' => Fixtures::research(), 'writing' => Fixtures::articleOutput()]))],
         'style' => [StyleAgent::fake([[...Fixtures::article(), 'report_fr' => 'x']]), app(StyleStep::class)->execute(Fixtures::context(['verification' => Fixtures::articleOutput()]))],

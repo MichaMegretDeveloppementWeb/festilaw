@@ -21,7 +21,7 @@ final class EditorialFixtures
      * @param  array<string, array<string, mixed>>  $outputs
      * @param  array<string, mixed>|null  $payload
      */
-    public static function context(array $outputs = [], ?string $topicHint = null, ?string $instructions = null, ?array $payload = null): GenerationStepContext
+    public static function context(array $outputs = [], ?string $topicHint = null, ?string $instructions = null, ?array $payload = null, ?int $budgetLeft = null): GenerationStepContext
     {
         $payload ??= ['images' => ['mode' => 'stock', 'max' => 2]];
 
@@ -34,6 +34,7 @@ final class EditorialFixtures
             outputs: $outputs,
             payload: $payload,
             attempt: 1,
+            budgetLeftMicrousd: $budgetLeft,
         );
     }
 
@@ -50,7 +51,7 @@ final class EditorialFixtures
     }
 
     /**
-     * Les notes du premier temps de la recherche, qui citent les adresses des sources donnees (une source
+     * Les notes de l'etape « recherche sur le web », qui citent les adresses des sources donnees (une source
      * dont l'adresse n'est pas dans les notes est ecartee par l'etape).
      *
      * @param  list<array<string, mixed>>|null  $sources
@@ -60,6 +61,17 @@ final class EditorialFixtures
         $sources ??= self::research()['sources'];
 
         return "Sources found:\n".implode("\n", array_map(static fn (array $source): string => '- '.$source['title'].' ('.$source['url'].')', $sources));
+    }
+
+    /**
+     * Ce que l'etape « recherche sur le web » enregistre.
+     *
+     * @param  list<array<string, mixed>>|null  $sources
+     * @return array<string, mixed>
+     */
+    public static function researchNotes(?array $sources = null, ?string $notes = null): array
+    {
+        return ['notes' => $notes ?? self::notesCiting($sources), 'citations' => [], 'cut_off' => false];
     }
 
     /** @return array<string, mixed> */

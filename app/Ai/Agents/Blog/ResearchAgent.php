@@ -9,11 +9,14 @@ use Laravel\Ai\Attributes\MaxTokens;
 use Laravel\Ai\Contracts\HasStructuredOutput;
 
 /**
- * Etape « recherche », second temps : met en forme le dossier de faits sources (affirmation, source, date,
- * type de source) a partir des notes de recherche du premier temps (WebSearchAgent), qui seul a cherche sur le web.
- * Sans outil : une sortie structuree ne tient pas avec la recherche web (essai reel du 17/11).
+ * Met en forme le dossier de faits a partir des notes de recherche. Sans outil : une sortie structuree ne
+ * tient pas avec la recherche web (essai reel du 17/11).
+ *
+ * Limite de longueur : le dossier tire de 900 mots de notes fait environ 2 500 jetons, et cette etape ne
+ * reflechit pas (`blog.ai.reasoning`). Au 17/11, 6 000 jetons avec la reflexion par defaut de Haiku 5.5
+ * coupaient la reponse.
  */
-#[MaxTokens(6000)]
+#[MaxTokens(8000)]
 final class ResearchAgent extends BlogAgent implements HasStructuredOutput
 {
     public function schema(JsonSchema $schema): array

@@ -11,7 +11,7 @@ use App\Data\Blog\Generation\GenerationUsage;
  * et cout reel. OpenRouter renvoie le cout sans qu'on le demande (`usage.cost`, en credits, soit en
  * dollars) ; s'il manque, le cout est estime d'apres la table de tarifs et marque comme tel.
  *
- * Champs releves dans la documentation d'OpenRouter le 14/11/2026 ; a confirmer par l'essai reel.
+ * Champs releves dans la documentation d'OpenRouter le 14/11/2026, confirmes par les essais reels du 17/11.
  */
 final readonly class OpenRouterUsageReader
 {

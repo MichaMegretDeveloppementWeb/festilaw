@@ -88,13 +88,16 @@ it('turns internal link tokens into the address of each language, and drops a li
         ->toContain('[this guide](/es/blog/etiquetas-etsy)');
 });
 
-it('lists every known title for the topic step, in two queries, english first and rejected topics included', function () {
+it('lists every known title for the topic step, in two queries, english first, rejected topics included and stopped ones left out', function () {
     BlogContent::published('label');
     $french = BlogContent::draft('bougies');
     BlogPostTranslation::query()->where('blog_post_id', $french->id)->whereIn('locale', ['en', 'es'])->update(['title' => null, 'excerpt' => null]);
     BlogGeneration::factory()->create(['topic_title' => 'Toy safety on Amazon']);
     BlogGeneration::factory()->create(['topic_title' => 'Candle warnings', 'topic_rejected_at' => now()]);
     BlogGeneration::factory()->create(['topic_title' => null]);
+    // Arretee a la main, la generation libere son sujet ; en echec, elle le garde (elle peut etre relancee).
+    BlogGeneration::factory()->cancelled()->create(['topic_title' => 'Product liability from December']);
+    BlogGeneration::factory()->failed()->create(['topic_title' => 'Jewellery nickel limits']);
 
     DB::flushQueryLog();
     DB::enableQueryLog();
@@ -105,7 +108,8 @@ it('lists every known title for the topic step, in two queries, english first an
     expect(collect($history->posts)->pluck('title')->sort()->values()->all())->toBe(['Bougies fr', 'Label en'])
         ->and(collect($history->proposedTopics)->sortBy('title')->values()->all())->toBe([
             ['title' => 'Candle warnings', 'rejected' => true],
+            ['title' => 'Jewellery nickel limits', 'rejected' => false],
             ['title' => 'Toy safety on Amazon', 'rejected' => false],
         ])
-        ->and($history->titles())->toHaveCount(4);
+        ->and($history->titles())->toHaveCount(5);
 });

@@ -34,6 +34,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Sleep;
 use Laravel\Ai\Exceptions\InsufficientCreditsException;
 use Laravel\Ai\Image;
+use Tests\Support\BlogAi;
 use Tests\Support\BlogContent;
 use Tests\Support\BlogImageFiles;
 use Tests\Support\EditorialFixtures as Fixtures;
@@ -163,6 +164,17 @@ it('generates the images with the image model of the settings when the generatio
     Image::assertGenerated(fn ($prompt): bool => $prompt->contains('A parcel on a wooden workbench.') && $prompt->contains('No identifiable person'));
 });
 
+it('does not ask for a generated image whose reserve no longer fits under the spend cap, and delivers the draft without it', function () {
+    Image::fake()->preventStrayImages();
+
+    // GPT-5 Image Mini reserve 0,03 $ ; il n'en reste que 0,02 $.
+    $result = app(GenerateBlogDraftImagesAction::class)->execute(Fixtures::context(textOutputs(), payload: ['images' => ['mode' => 'generated', 'max' => 1]], budgetLeft: 20_000));
+
+    expect(BlogImage::query()->count())->toBe(0)
+        ->and($result->output['warnings'])->toBe(['no main image']);
+    Image::assertNothingGenerated();
+});
+
 it('stops everything when the credit runs out while generating an image', function () {
     Image::fake(fn () => throw InsufficientCreditsException::forProvider('openrouter', 402));
 
@@ -277,7 +289,7 @@ it('runs the whole editorial pipeline through the worker and delivers a draft to
     $generation->refresh();
     $post = BlogPost::query()->sole();
     expect($generation->status)->toBe(BlogGenerationStatus::Completed)
-        ->and($generation->steps()->pluck('step')->all())->toBe(['topic', 'research', 'writing', 'verification', 'style', 'translation_fr', 'translation_es', 'images', 'assembly'])
+        ->and($generation->steps()->pluck('step')->all())->toBe(['topic_scan', 'topic', 'research_notes', 'research', 'writing', 'verification', 'style', 'translation_fr', 'translation_es', 'images', 'assembly'])
         ->and($generation->topic_title)->toBe('Adding an economic operator on Etsy')
         ->and($generation->blog_post_id)->toBe($post->id)
         ->and($post->generation_id)->toBe($generation->id)
@@ -287,4 +299,34 @@ it('runs the whole editorial pipeline through the worker and delivers a draft to
     Mail::assertSent(BlogGenerationBatchFinished::class, fn (BlogGenerationBatchFinished $mail): bool => $mail->rows[0]['excerpt'] === Fixtures::article()['excerpt']
         && $mail->rows[0]['sources'] === 2
         && $mail->rows[0]['subject'] === 'Adding an economic operator on Etsy');
+});
+
+it('stops before a call that could exceed the article cap, without sending it', function () {
+    config(['blog.ai.pipeline' => 'editorial']);
+    BlogAi::saveSettings(['article_spend_cap_cents' => 1]);
+    WebSearchAgent::fake()->preventStrayPrompts();
+    $generation = BlogGeneration::factory()->create();
+
+    app(ProcessNextBlogGenerationAction::class)->execute('worker-test');
+
+    // La veille reserve deux recherches a 0,007 $ : plus que le centime du plafond. Au 17/11, le plafond ne se
+    // verifiait qu'entre deux essais, et un seul essai de recherche a coute 0,1078 $.
+    expect($generation->refresh()->status)->toBe(BlogGenerationStatus::Abandoned)
+        ->and($generation->outcome_reason)->toBe(BlogGenerationOutcomeReason::ArticleSpendCapReached)
+        ->and($generation->cost_microusd)->toBe(0);
+    WebSearchAgent::assertNeverPrompted();
+});
+
+it('stops before a call that could exceed the monthly cap, and names that cap', function () {
+    config(['blog.ai.pipeline' => 'editorial']);
+    BlogAi::saveSettings(['monthly_spend_cap_cents' => 100]);
+    BlogGeneration::factory()->completed(costMicrousd: 995_000)->create();
+    WebSearchAgent::fake()->preventStrayPrompts();
+    $generation = BlogGeneration::factory()->create();
+
+    app(ProcessNextBlogGenerationAction::class)->execute('worker-test');
+
+    expect($generation->refresh()->status)->toBe(BlogGenerationStatus::Abandoned)
+        ->and($generation->outcome_reason)->toBe(BlogGenerationOutcomeReason::SpendCapReached);
+    WebSearchAgent::assertNeverPrompted();
 });

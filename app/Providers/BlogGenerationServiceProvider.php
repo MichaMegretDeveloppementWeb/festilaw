@@ -24,7 +24,9 @@ use App\Services\Blog\Generation\Editorial\EditorialGenerationPipeline;
 use App\Services\Blog\Generation\Editorial\Images\BlogAiImageGenerator;
 use App\Services\Blog\Generation\Editorial\Images\PixabayStockImageProvider;
 use App\Services\Blog\Generation\Editorial\Sources\DnsHostResolver;
+use App\Services\Blog\Generation\Editorial\Steps\ResearchNotesStep;
 use App\Services\Blog\Generation\Editorial\Steps\StyleStep;
+use App\Services\Blog\Generation\Editorial\Steps\TopicScanStep;
 use App\Services\Blog\Generation\Editorial\Steps\TranslationStep;
 use App\Services\Blog\Generation\Simulation\SimulatedGenerationPipeline;
 use App\Services\Blog\Generation\UnavailableGenerationPipeline;
@@ -64,6 +66,9 @@ final class BlogGenerationServiceProvider extends ServiceProvider
         $this->app->when(BlogAiCostEstimator::class)->needs('$prices')->giveConfig('blog.ai.models');
 
         $this->app->when(BlogAgentCaller::class)->needs('$provider')->giveConfig('blog.ai.provider');
+        $this->app->when(BlogAgentCaller::class)->needs('$reasoning')->giveConfig('blog.ai.reasoning');
+        $this->app->when(BlogAgentCaller::class)->needs('$reservationMargin')->giveConfig('blog.ai.reservation_margin');
+        $this->app->when([TopicScanStep::class, ResearchNotesStep::class])->needs('$webSearch')->giveConfig('blog.ai.web_search');
         $this->app->bind(HostResolver::class, DnsHostResolver::class);
         $this->app->when(RequestBlogTranslationAction::class)->needs('$locales')->giveConfig('festilaw.supported_locales');
         $this->app->bind(StockImageProvider::class, PixabayStockImageProvider::class);
@@ -72,7 +77,7 @@ final class BlogGenerationServiceProvider extends ServiceProvider
         $this->app->when(GenerateBlogDraftImagesAction::class)->needs('$featuredMinWidth')->giveConfig('blog.images.min_featured.width');
         $this->app->when(GenerateBlogDraftImagesAction::class)->needs('$featuredMinHeight')->giveConfig('blog.images.min_featured.height');
         $this->app->when(BlogPromptLibrary::class)->needs('$directory')->giveConfig('blog.ai.prompts_directory');
-        $this->app->when(BlogAiCostEstimator::class)->needs('$webSearchMicrousd')->giveConfig('blog.ai.web_search_microusd');
+        $this->app->when(BlogAiCostEstimator::class)->needs('$webSearchMicrousd')->giveConfig('blog.ai.web_search.price_microusd');
     }
 
     /**

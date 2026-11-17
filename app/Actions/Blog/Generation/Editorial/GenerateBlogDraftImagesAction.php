@@ -24,14 +24,15 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Etape 8 · les images d'un article genere (taches 6.8 a 6.10). L'image principale toujours, sauf si la
+ * Etape 10 · les images d'un article genere (taches 6.8 a 6.10). L'image principale toujours, sauf si la
  * generation n'en demande aucune, puis les images du texte prevues par le redacteur, dans la limite reglee.
  * Selon la generation, une photo de banque (avec son credit) ou une image generee par IA. Chaque image passe
  * par le meme enregistrement qu'une image envoyee au back-office, avec ses descriptions dans les trois
  * langues ; elle reste en attente jusqu'a l'assemblage, et part au menage si la generation n'aboutit pas.
  *
  * Une image introuvable ne fait pas echouer la generation : le brouillon arrive sans elle, et le journal le
- * dit. Seul un credit epuise chez le fournisseur arrete tout.
+ * dit. Il en va de meme d'une image generee dont la reserve ne tient plus sous le plafond : elle n'est pas
+ * demandee. Seul un credit epuise chez le fournisseur arrete tout.
  *
  * C'est une Action, comme l'assemblage : elle ecrit (images) et appelle StoreBlogImageAction.
  */
@@ -88,6 +89,15 @@ final readonly class GenerateBlogDraftImagesAction implements GenerationStep
         $usedStockIds = [];
 
         foreach ($requests as $number => $request) {
+            $left = $context->budgetLeftAfter($usage);
+
+            if ($model !== null && $left !== null && $this->models->imageReserveMicrousd($model) > $left) {
+                Log::warning('Blog generation image not requested: it could exceed the spend cap.', ['generation' => $context->generationId, 'image' => $number, 'left_microusd' => $left]);
+                $warnings[] = $number === 0 ? 'no main image' : "no image {$number}";
+
+                continue;
+            }
+
             $alt = array_filter([
                 'en' => trim((string) ($request['description'] ?? '')),
                 'fr' => $context->output('translation_fr')['image_alts'][(string) $number] ?? null,

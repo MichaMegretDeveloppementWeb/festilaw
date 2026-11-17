@@ -124,12 +124,12 @@ it('refuses a pipeline name it does not know', function () {
         });
 });
 
-it('runs the editorial pipeline by default, in nine steps, production included', function () {
+it('runs the editorial pipeline by default, in eleven steps, production included', function () {
     config(['blog.ai.pipeline' => 'editorial']);
     app()->detectEnvironment(fn (): string => 'production');
 
     expect(array_map(fn ($step): string => $step->key(), app(GenerationPipeline::class)->steps(BlogGenerationType::Article)))
-        ->toBe(['topic', 'research', 'writing', 'verification', 'style', 'translation_fr', 'translation_es', 'images', 'assembly']);
+        ->toBe(['topic_scan', 'topic', 'research_notes', 'research', 'writing', 'verification', 'style', 'translation_fr', 'translation_es', 'images', 'assembly']);
 });
 
 it('runs a whole simulated generation: nine steps, a made-up cost, no call to any model', function () {

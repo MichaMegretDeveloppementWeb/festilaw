@@ -25,7 +25,7 @@ use App\Services\Blog\Generation\Editorial\EditorialMarkdown;
 use Throwable;
 
 /**
- * Etape 9 · l'assemblage du brouillon (tache 6.11). Les trois versions passent par le meme chemin qu'un
+ * Etape 11 · l'assemblage du brouillon (tache 6.11). Les trois versions passent par le meme chemin qu'un
  * article ecrit au back-office (`SaveBlogPostAction`) : jetons de liens traduits dans chaque langue,
  * Markdown converti en document, images placees a leurs emplacements, slugs produits depuis les titres,
  * sources du dossier, categorie, articles associes, image principale. Le brouillon est marque IA et lie a sa

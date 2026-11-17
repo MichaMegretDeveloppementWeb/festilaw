@@ -15,7 +15,7 @@ use App\Services\Blog\Generation\Editorial\BlogPromptLibrary;
 use App\Services\Blog\Generation\Editorial\BlogWritingSignalsInspector;
 
 /**
- * Etape 5 · la relecture du style (annexe A.12, tache 6.18). L'agent recrit les tournures d'un texte genere
+ * Etape 7 · la relecture du style (annexe A.12, tache 6.18). L'agent recrit les tournures d'un texte genere
  * sans toucher a un fait. Le code compare chaque version au texte verifie : si un nombre, un lien, un jeton
  * ou un emplacement d'image a change, la version est ecartee.
  *

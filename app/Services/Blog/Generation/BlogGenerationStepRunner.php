@@ -34,7 +34,7 @@ final readonly class BlogGenerationStepRunner
     /**
      * @param  Closure(int): GenerationStepContext  $context  le contexte de l'etape, pour un numero d'essai
      * @param  Closure(): bool  $holdLock  prolonge le verrou ; faux si un autre worker a repris la generation
-     * @param  Closure(): bool  $withinBudget  faux quand la generation a deja depense son plafond : aucun essai de plus
+     * @param  Closure(): bool  $withinBudget  faux quand un plafond est deja atteint : aucun essai de plus
      */
     public function run(int $generationId, GenerationStep $step, int $position, Closure $context, Closure $holdLock, Closure $withinBudget): GenerationStepOutcome
     {
@@ -43,8 +43,8 @@ final readonly class BlogGenerationStepRunner
                 return GenerationStepOutcome::lockLost();
             }
 
-            // Verifie avant chaque essai, reprises comprises : une etape qui echoue en boucle ne peut pas
-            // depenser au-dela du plafond. Un essai deja parti va au bout (il est facture de toute facon).
+            // Verifie avant chaque essai, reprises comprises ; pendant l'essai, chaque appel a l'IA reserve
+            // son cout maximal et ne part pas s'il risque de depasser le plafond.
             if (! $withinBudget()) {
                 return GenerationStepOutcome::overBudget();
             }
@@ -64,6 +64,10 @@ final readonly class BlogGenerationStepRunner
                 $result = $step->execute($context($row->attempt));
             } catch (BlogAiProviderException $e) {
                 $this->recorder->fail($row, $e->getMessage(), $e->usage, $this->elapsedMs($startedAt));
+
+                if ($e->overBudget) {
+                    return GenerationStepOutcome::overBudget();
+                }
 
                 if ($e->creditExhausted || $row->attempt >= $this->maxAttempts) {
                     return GenerationStepOutcome::failed($e, $e->creditExhausted);

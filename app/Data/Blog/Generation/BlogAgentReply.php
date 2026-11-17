@@ -9,15 +9,17 @@ use Laravel\Ai\Responses\Data\UrlCitation;
 use Laravel\Ai\Responses\StructuredAgentResponse;
 
 /**
- * La reponse d'un agent du pipeline editorial, avec ce que l'appel a consomme sur tous ses tours. La sortie
- * structuree est rendue telle quelle : un JSON que le modele a rate arrive vide (le SDK ne leve rien), et
- * c'est l'etape qui verifie ce qu'elle recoit.
+ * La reponse d'un agent du pipeline editorial, avec ce que l'appel a consomme sur tous ses tours. Une sortie
+ * structuree vide ou coupee n'arrive jamais ici (BlogAgentCaller la refuse) ; l'etape verifie le reste de ce
+ * qu'elle recoit. Un texte libre coupe par la limite arrive, marque comme tel : il a ete paye et reste en
+ * partie utilisable.
  */
 final readonly class BlogAgentReply
 {
     public function __construct(
         public AgentResponse $response,
         public GenerationUsage $usage,
+        public bool $cutOff = false,
     ) {}
 
     /** @return array<string, mixed> */

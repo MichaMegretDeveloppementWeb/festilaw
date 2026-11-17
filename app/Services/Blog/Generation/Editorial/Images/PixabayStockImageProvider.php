@@ -33,6 +33,10 @@ final readonly class PixabayStockImageProvider implements StockImageProvider
 
     public function __construct(private ?string $apiKey) {}
 
+    /**
+     * La cle voyage dans l'adresse de la recherche, et le message d'une connexion manquee reprend cette adresse :
+     * la cle y est masquee avant que le message n'atteigne le journal.
+     */
     public function search(string $query, int $minWidth, int $minHeight): array
     {
         if (blank($this->apiKey)) {
@@ -53,7 +57,6 @@ final readonly class PixabayStockImageProvider implements StockImageProvider
                     'per_page' => 30,
                 ]);
             } catch (Throwable $e) {
-                // Le message d'une connexion manquee reprend l'adresse appelee, cle comprise : elle n'atteint jamais le journal.
                 throw BlogEditorialException::imageSourceFailed('Pixabay did not answer: '.str_replace((string) $this->apiKey, '[PIXABAY_API_KEY]', $e->getMessage()));
             }
 

@@ -9,9 +9,9 @@ use Laravel\Ai\Attributes\MaxTokens;
 use Laravel\Ai\Contracts\HasStructuredOutput;
 
 /**
- * Etape « sujet », second temps : choisit le sujet d'un article, ou repond qu'aucun n'est assez pertinent, a
- * partir des notes de veille du premier temps (WebSearchAgent) et de la liste des titres connus. Sans outil :
- * une sortie structuree ne tient pas avec la recherche web (essai reel du 17/11).
+ * Choisit le sujet d'un article, ou repond qu'aucun n'est assez pertinent, a partir des notes de l'etape de
+ * veille et de la liste des titres connus. Sans outil : une sortie structuree ne tient pas avec la recherche
+ * web (essai reel du 17/11).
  */
 #[MaxTokens(2000)]
 final class TopicAgent extends BlogAgent implements HasStructuredOutput

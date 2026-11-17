@@ -11,8 +11,8 @@ use Laravel\Ai\PendingStep;
 
 /**
  * Intermediaire de tour d'un agent du SDK : garde la reponse de chaque tour, avec sa reponse brute, des
- * qu'elle arrive. Le SDK ne garde a la fin que la reponse brute du dernier tour ; c'est ici qu'on retrouve le
- * cout de tous les tours, y compris quand un tour suivant echoue. Un releve par appel.
+ * qu'elle arrive. Quand un tour suivant echoue, le SDK leve une exception et ne rend aucune reponse : c'est
+ * ici qu'on retrouve le cout des tours deja factures. Un releve par appel.
  */
 final class AgentStepRecorder
 {

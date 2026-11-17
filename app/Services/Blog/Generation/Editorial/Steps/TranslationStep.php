@@ -16,7 +16,7 @@ use App\Services\Blog\Generation\Editorial\BlogPromptLibrary;
 use App\Services\Blog\Generation\Editorial\BlogWritingSignalsInspector;
 
 /**
- * Etapes 6 et 7 · la version francaise ou espagnole, redigee dans la langue avec ses regles d'ecriture et le
+ * Etapes 8 et 9 · la version francaise ou espagnole, redigee dans la langue avec ses regles d'ecriture et le
  * lexique du domaine (annexe A.8, A.12 point 4). Les memes jetons de liens et emplacements d'images que
  * l'anglais sont exiges : sinon une demande de correction, puis l'echec de l'etape, que le moteur reessaie.
  * Un nombre ecrit autrement ne bloque rien mais reste au journal.
