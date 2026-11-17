@@ -124,6 +124,17 @@ return [
         'pipeline' => env('BLOG_AI_PIPELINE', 'simulated'),
 
         /*
+         | Fournisseur des agents du pipeline editorial, tel que le nomme `config/ai.php`. Tous les modeles
+         | passent par OpenRouter ; un compte direct chez un editeur se brancherait ici, sans changer le code.
+         */
+        'provider' => 'openrouter',
+
+        /*
+         | Dossier des consignes des agents (fichiers .md versionnes, en anglais), lues par BlogPromptLibrary.
+         */
+        'prompts_directory' => resource_path('prompts/blog'),
+
+        /*
          | Valeurs de depart des reglages du back-office (cle `blog.ai` de la table settings). Tant que
          | rien n'y est enregistre, ce sont elles qui s'appliquent. La generation automatique est eteinte
          | par defaut : rien ne part sans que quelqu'un l'ait allumee. `notification_email` nul = l'adresse

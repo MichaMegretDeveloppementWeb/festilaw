@@ -8,6 +8,7 @@ use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogGenerationTrigger;
 use App\Enums\Blog\Generation\BlogGenerationType;
+use App\Enums\Blog\Generation\BlogTopicKind;
 use Database\Factories\BlogGenerationFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -66,6 +67,7 @@ class BlogGeneration extends Model
             'trigger' => BlogGenerationTrigger::class,
             'status' => BlogGenerationStatus::class,
             'outcome_reason' => BlogGenerationOutcomeReason::class,
+            'topic_kind' => BlogTopicKind::class,
             'batch_notified_at' => 'immutable_datetime',
             'topic_rejected_at' => 'immutable_datetime',
             'payload' => 'array',

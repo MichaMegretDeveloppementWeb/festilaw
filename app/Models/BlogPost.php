@@ -29,6 +29,7 @@ class BlogPost extends Model
         'share_image_id',
         'status',
         'origin',
+        'generation_id',
         'scheduled_for',
         'published_at',
         'content_updated_at',
@@ -63,6 +64,16 @@ class BlogPost extends Model
     public function translations(): HasMany
     {
         return $this->hasMany(BlogPostTranslation::class);
+    }
+
+    /**
+     * La generation qui a cree ce brouillon (nulle pour un article ecrit a la main).
+     *
+     * @return BelongsTo<BlogGeneration, $this>
+     */
+    public function generation(): BelongsTo
+    {
+        return $this->belongsTo(BlogGeneration::class, 'generation_id');
     }
 
     /** @return BelongsTo<BlogImage, $this> */

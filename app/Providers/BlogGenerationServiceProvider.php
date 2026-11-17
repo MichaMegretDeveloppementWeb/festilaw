@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Actions\Blog\Generation\ProcessNextBlogGenerationAction;
 use App\Actions\Blog\Generation\RunBlogGenerationAction;
 use App\Contracts\Blog\Generation\GenerationPipeline;
+use App\Contracts\Blog\Generation\HostResolver;
 use App\Exceptions\Blog\BlogGenerationException;
 use App\Services\Admin\Blog\Generation\BlogGenerationOverviewService;
 use App\Services\Blog\Generation\BlogAiCostEstimator;
@@ -14,6 +15,9 @@ use App\Services\Blog\Generation\BlogAiModelCatalog;
 use App\Services\Blog\Generation\BlogAiSettingsService;
 use App\Services\Blog\Generation\BlogGenerationAlertService;
 use App\Services\Blog\Generation\BlogGenerationStepRunner;
+use App\Services\Blog\Generation\Editorial\BlogAgentCaller;
+use App\Services\Blog\Generation\Editorial\BlogPromptLibrary;
+use App\Services\Blog\Generation\Editorial\Sources\DnsHostResolver;
 use App\Services\Blog\Generation\Simulation\SimulatedGenerationPipeline;
 use App\Services\Blog\Generation\UnavailableGenerationPipeline;
 use Illuminate\Contracts\Foundation\Application;
@@ -48,6 +52,10 @@ final class BlogGenerationServiceProvider extends ServiceProvider
         $this->app->when(BlogGenerationAlertService::class)->needs('$fallbackEmail')->giveConfig('festilaw.notification_email');
 
         $this->app->when(BlogAiCostEstimator::class)->needs('$prices')->giveConfig('blog.ai.models');
+
+        $this->app->when(BlogAgentCaller::class)->needs('$provider')->giveConfig('blog.ai.provider');
+        $this->app->bind(HostResolver::class, DnsHostResolver::class);
+        $this->app->when(BlogPromptLibrary::class)->needs('$directory')->giveConfig('blog.ai.prompts_directory');
         $this->app->when(BlogAiCostEstimator::class)->needs('$webSearchMicrousd')->giveConfig('blog.ai.web_search_microusd');
     }
 

@@ -13,6 +13,7 @@ enum BlogGenerationOutcomeReason: string
 {
     case NoRelevantTopic = 'no_relevant_topic';
     case DuplicateTopic = 'duplicate_topic';
+    case InsufficientSources = 'insufficient_sources';
     case SpendCapReached = 'spend_cap_reached';
     case PendingDraftsCapReached = 'pending_drafts_cap_reached';
     case CreditExhausted = 'credit_exhausted';
@@ -24,6 +25,7 @@ enum BlogGenerationOutcomeReason: string
         return match ($this) {
             self::NoRelevantTopic => __('Aucun sujet assez pertinent'),
             self::DuplicateTopic => __('Sujet déjà traité ou refusé'),
+            self::InsufficientSources => __('Pas assez de sources fiables sur ce sujet'),
             self::SpendCapReached => __('Plafond de dépense du mois atteint'),
             self::PendingDraftsCapReached => __('Trop de brouillons générés en attente de relecture'),
             self::CreditExhausted => __('Crédit épuisé chez le fournisseur d\'IA'),

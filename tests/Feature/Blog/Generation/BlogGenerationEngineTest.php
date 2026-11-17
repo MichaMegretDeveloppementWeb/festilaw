@@ -3,18 +3,21 @@
 use App\Actions\Blog\Generation\CancelBlogGenerationAction;
 use App\Actions\Blog\Generation\ProcessNextBlogGenerationAction;
 use App\Contracts\Blog\Generation\GenerationPipeline;
+use App\Data\Blog\Generation\GenerationFindings;
 use App\Data\Blog\Generation\GenerationStepContext;
 use App\Data\Blog\Generation\GenerationStepResult;
 use App\Data\Blog\Generation\GenerationUsage;
 use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogGenerationStepStatus;
+use App\Enums\Blog\Generation\BlogTopicKind;
 use App\Exceptions\Blog\BlogAiProviderException;
 use App\Exceptions\Blog\BlogGenerationException;
 use App\Mail\BlogGenerationBatchFinished;
 use App\Mail\BlogSpendLimitReached;
 use App\Models\BlogGeneration;
 use App\Models\BlogGenerationStep;
+use App\Models\BlogPost;
 use App\Repositories\Blog\BlogGenerationLockRepository;
 use App\Repositories\Blog\PendingBlogGenerationRepository;
 use App\Services\Blog\Generation\UnavailableGenerationPipeline;
@@ -98,6 +101,43 @@ it('hands each step the request and what the previous steps produced', function 
         ->and($seen->output('assembly'))->toBe([])
         ->and($seen->attempt)->toBe(1)
         ->and($seen->settings->enabled)->toBeFalse();
+});
+
+it('keeps on the generation the topic a step chose and the draft a step created, without the steps touching it', function () {
+    $post = BlogPost::factory()->fromAi()->create();
+    FakeGenerationPipeline::bind()
+        ->on('topic', fn (): GenerationStepResult => GenerationStepResult::continue(findings: new GenerationFindings(
+            topicTitle: 'Adding an economic operator on Etsy',
+            topicSummary: 'A guide for UK sellers.',
+            topicKind: BlogTopicKind::Evergreen,
+        )))
+        // Une etape qui ne trouve rien ne vide pas ce qu'une autre a trouve.
+        ->on('writing', fn (): GenerationStepResult => GenerationStepResult::continue(findings: new GenerationFindings))
+        ->on('assembly', fn (): GenerationStepResult => GenerationStepResult::continue(findings: new GenerationFindings(postId: $post->id)));
+    $generation = BlogGeneration::factory()->create();
+
+    generationWorkerPass();
+
+    expect($generation->refresh()->status)->toBe(BlogGenerationStatus::Completed)
+        ->and($generation->topic_title)->toBe('Adding an economic operator on Etsy')
+        ->and($generation->topic_summary)->toBe('A guide for UK sellers.')
+        ->and($generation->topic_kind)->toBe(BlogTopicKind::Evergreen)
+        ->and($generation->blog_post_id)->toBe($post->id);
+});
+
+it('keeps the topic a step turned down as a duplicate, so the history says what was proposed', function () {
+    FakeGenerationPipeline::bind()->on('topic', fn (): GenerationStepResult => GenerationStepResult::stop(
+        BlogGenerationOutcomeReason::DuplicateTopic,
+        findings: new GenerationFindings(topicTitle: str_repeat('Labels ', 60)),
+    ));
+    $generation = BlogGeneration::factory()->create();
+
+    generationWorkerPass();
+
+    expect($generation->refresh()->status)->toBe(BlogGenerationStatus::Abandoned)
+        ->and($generation->outcome_reason)->toBe(BlogGenerationOutcomeReason::DuplicateTopic)
+        // Coupe a la longueur de la colonne.
+        ->and(mb_strlen($generation->topic_title))->toBe(300);
 });
 
 it('stops without an error when a step finds nothing worth writing', function () {

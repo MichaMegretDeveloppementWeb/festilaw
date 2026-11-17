@@ -60,4 +60,12 @@ final class BlogGenerationException extends BaseAppException
             userMessage: __('La génération n\'est pas disponible, car sa configuration est invalide.'),
         );
     }
+
+    public static function missingPrompt(string $name): self
+    {
+        return new self(
+            technicalMessage: "Blog generation prompt [{$name}] is missing or unreadable (resources/prompts/blog).",
+            userMessage: __('La génération n\'est pas disponible, car ses consignes sont incomplètes.'),
+        );
+    }
 }

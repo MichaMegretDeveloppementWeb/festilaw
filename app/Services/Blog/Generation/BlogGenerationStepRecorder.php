@@ -15,7 +15,8 @@ use Illuminate\Support\Str;
 /**
  * Ecrit la ligne d'une etape : debut d'un essai, fin reussie, echec. C'est cet enregistrement, fait avant de
  * passer a l'etape suivante, qui permet de reprendre une generation coupee. La consommation se cumule sur
- * tous les essais, et le cout total de la generation est recopie sur sa ligne a chaque ecriture.
+ * tous les essais, et le cout total de la generation est recopie sur sa ligne a chaque ecriture, avec ce que
+ * l'etape a trouve (sujet, brouillon cree) quand elle reussit.
  */
 final readonly class BlogGenerationStepRecorder
 {
@@ -55,7 +56,7 @@ final readonly class BlogGenerationStepRecorder
             ...$this->consumption($row, $result->usage, $durationMs),
         ]);
 
-        $this->refreshGenerationCost($row->blog_generation_id);
+        $this->refreshGenerationCost($row->blog_generation_id, $result->findings?->columns() ?? []);
     }
 
     public function fail(BlogGenerationStep $row, string $error, ?GenerationUsage $usage, int $durationMs): void
@@ -90,11 +91,16 @@ final readonly class BlogGenerationStepRecorder
         ];
     }
 
-    /** Recopie sur la generation la somme des couts de ses etapes. Rejouable sans effet. */
-    private function refreshGenerationCost(int $generationId): void
+    /**
+     * Recopie sur la generation la somme des couts de ses etapes, et les colonnes trouvees par l'etape.
+     * Rejouable sans effet.
+     *
+     * @param  array<string, string|int>  $findings
+     */
+    private function refreshGenerationCost(int $generationId, array $findings = []): void
     {
         $total = (int) BlogGenerationStep::query()->where('blog_generation_id', $generationId)->sum('cost_microusd');
 
-        BlogGeneration::query()->whereKey($generationId)->update(['cost_microusd' => $total]);
+        BlogGeneration::query()->whereKey($generationId)->update(['cost_microusd' => $total, ...$findings]);
     }
 }
