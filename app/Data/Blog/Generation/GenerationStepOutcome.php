@@ -8,7 +8,8 @@ use Throwable;
 
 /**
  * Comment s'est finie l'execution d'une etape, tous essais faits : reussie (avec son resultat), en echec
- * (avec l'erreur du dernier essai), ou interrompue parce qu'un autre worker a repris la generation.
+ * (avec l'erreur du dernier essai), interrompue parce qu'un autre worker a repris la generation, ou pas
+ * tentee parce que la generation a deja depasse son plafond de depense.
  */
 final readonly class GenerationStepOutcome
 {
@@ -17,6 +18,7 @@ final readonly class GenerationStepOutcome
         public ?Throwable $error,
         public bool $creditExhausted,
         public bool $lockLost,
+        public bool $overBudget = false,
     ) {}
 
     public static function completed(GenerationStepResult $result): self
@@ -32,6 +34,11 @@ final readonly class GenerationStepOutcome
     public static function lockLost(): self
     {
         return new self(null, null, false, true);
+    }
+
+    public static function overBudget(): self
+    {
+        return new self(null, null, false, false, true);
     }
 
     public function succeeded(): bool

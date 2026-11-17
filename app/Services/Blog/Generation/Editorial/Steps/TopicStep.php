@@ -9,6 +9,7 @@ use App\Ai\Agents\Blog\WebSearchAgent;
 use App\Data\Blog\Generation\GenerationFindings;
 use App\Data\Blog\Generation\GenerationStepContext;
 use App\Data\Blog\Generation\GenerationStepResult;
+use App\Data\Blog\Generation\GenerationUsage;
 use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Enums\Blog\Generation\BlogTopicKind;
 use App\Repositories\Blog\BlogTopicHistoryRepository;
@@ -24,9 +25,14 @@ use Carbon\CarbonImmutable;
  * pertinent : la generation s'arrete alors sans article. Deux temps, car un modele qui cherche sur le web
  * ignore le format JSON demande (essai reel du 17/11). Un titre fait des memes mots qu'un titre connu est
  * ecarte en code (doublon), meme si l'agent ne l'a pas vu.
+ *
+ * Un sujet impose se passe de veille : la recherche de l'article cherchera de toute facon sur le web.
  */
 final class TopicStep extends EditorialStep
 {
+    /** Recherches web de la veille (0,01 $ chacune, plus les pages qu'elles chargent) : decision du 17/11. */
+    private const WEB_SEARCHES = 2;
+
     public function __construct(
         BlogAgentCaller $caller,
         BlogPromptLibrary $prompts,
@@ -64,16 +70,23 @@ final class TopicStep extends EditorialStep
             $this->block('Topics to avoid', $context->settings->avoidedTopics),
         ];
 
-        $scan = $this->ask($context, new WebSearchAgent($this->prompts->compose('festilaw-context', 'step-topic-scan'), searches: 5), implode("\n\n", $request));
+        $scan = filled($context->topicHint)
+            ? null
+            : $this->ask($context, new WebSearchAgent($this->prompts->compose('festilaw-context', 'step-topic-scan'), searches: self::WEB_SEARCHES), implode("\n\n", $request));
+        $spent = $scan->usage ?? GenerationUsage::none();
         $agent = new TopicAgent($this->prompts->compose('festilaw-context', 'editorial-guidelines', 'step-topic'));
-        $reply = $this->ask($context, $agent, spent: $scan->usage, prompt: implode("\n\n", [
+        $reply = $this->ask($context, $agent, spent: $spent, prompt: implode("\n\n", [
             ...$request,
             $this->block('Existing articles', array_map(static fn (array $post): array => ['title' => $post['title'], 'excerpt' => $post['excerpt'], 'status' => $post['status']], $history->posts)),
             $this->block('Topics already proposed', $history->proposedTopics),
-            $this->block('Notes from the web scan', $scan->text() !== '' ? $scan->text() : 'No notes.'),
-            $this->block('Pages cited by the search', $scan->citations()),
+            $this->block('Notes from the web scan', match (true) {
+                $scan === null => 'No web scan: the topic is imposed, and the research step will search the web.',
+                $scan->text() === '' => 'No notes.',
+                default => $scan->text(),
+            }),
+            $this->block('Pages cited by the search', $scan?->citations() ?? []),
         ]));
-        $usage = $scan->usage->plus($reply->usage);
+        $usage = $spent->plus($reply->usage);
 
         $answer = $reply->structured();
         $decision = $this->text($answer, 'decision');
@@ -106,7 +119,7 @@ final class TopicStep extends EditorialStep
             'reader' => $this->text($answer, 'reader'),
             'keywords' => array_values(array_filter($this->items($answer, 'keywords'), is_string(...))),
             'reason' => $this->text($answer, 'reason'),
-            'citations' => $scan->citations(),
+            'citations' => $scan?->citations() ?? [],
         ];
         $duplicateOf = $this->similarity->duplicateOf($title, $history->titles());
 

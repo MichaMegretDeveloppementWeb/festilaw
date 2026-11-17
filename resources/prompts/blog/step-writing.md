@@ -15,6 +15,7 @@ Links:
 - Internal links use tokens, never addresses. Link to the eligibility quiz with `[text](festilaw:page/quiz)`, to the pricing page with `festilaw:page/pricing`, and to the other pages listed below with their token. Link to another article of the blog with `festilaw:post/ID`, using the ID of a published article listed below.
 - Include at least one link to the quiz or to the pricing page, where it helps the reader. Link to another article when one is relevant.
 - External links point only to addresses of the research file.
+- Never write a list or a line of sources in the body. The site shows the sources under the article, from "source_ids".
 
 Images:
 

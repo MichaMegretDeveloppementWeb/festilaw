@@ -573,7 +573,7 @@ it('says a generation cannot be found', function () {
 
 it('opens the settings on their current values, in a single query', function () {
     BlogAi::saveSettings([
-        'enabled' => true, 'period_count' => 2, 'period_unit' => 'month', 'monthly_spend_cap_cents' => 2_550,
+        'enabled' => true, 'period_count' => 2, 'period_unit' => 'month', 'monthly_spend_cap_cents' => 2_550, 'article_spend_cap_cents' => 20,
         'priority_topics' => ['Etsy', 'Amazon'], 'notification_email' => 'owner@example.com',
     ]);
 
@@ -585,6 +585,7 @@ it('opens the settings on their current values, in a single query', function () 
         ->assertSet('periodCount', '2')
         ->assertSet('periodUnit', 'month')
         ->assertSet('monthlySpendCap', '25.50')
+        ->assertSet('articleSpendCap', '0.20')
         ->assertSet('priorityTopics', ['Etsy', 'Amazon'])
         ->assertSet('notificationEmail', 'owner@example.com')
         ->assertSet('models.writing', config('blog.ai.defaults.models.writing'))
@@ -616,6 +617,7 @@ it('saves the settings', function () {
         ->set('articlesPerRun', '2')
         ->set('pendingDraftsCap', '5')
         ->set('monthlySpendCap', '12.5')
+        ->set('articleSpendCap', '0.08')
         ->set('priorityTopics', ['Etsy', ' Amazon ', 'etsy', ''])
         ->set('avoidedTopics', ['Crypto'])
         ->set('models.writing', 'openai/gpt-6.1-terra')
@@ -638,6 +640,7 @@ it('saves the settings', function () {
         ->and($saved->articlesPerRun)->toBe(2)
         ->and($saved->pendingDraftsCap)->toBe(5)
         ->and($saved->monthlySpendCapCents)->toBe(1_250)
+        ->and($saved->articleSpendCapCents)->toBe(8)
         ->and($saved->priorityTopics)->toBe(['Etsy', 'Amazon'])
         ->and($saved->avoidedTopics)->toBe(['Crypto'])
         ->and($saved->modelFor('writing'))->toBe('openai/gpt-6.1-terra')
@@ -656,6 +659,7 @@ it('refuses settings that make no sense, each with its own message', function ()
         ->set('articlesPerRun', '11')
         ->set('pendingDraftsCap', '')
         ->set('monthlySpendCap', '-1')
+        ->set('articleSpendCap', '0')
         // La liste des modeles est fermee : ni identifiant libre, ni modele de texte pour l'etape des images.
         ->set('models.writing', 'someone/unknown-model')
         ->set('models.image', 'anthropic/claude-sonnet-5.5')
@@ -664,10 +668,11 @@ it('refuses settings that make no sense, each with its own message', function ()
         ->set('maxImages', '4')
         ->set('notificationEmail', 'not-an-email')
         ->call('save')
-        ->assertHasErrors(['periodCount', 'periodUnit', 'articlesPerRun', 'pendingDraftsCap', 'monthlySpendCap', 'models.writing', 'models.image', 'priorityTopics.0', 'imageMode', 'maxImages', 'notificationEmail'])
+        ->assertHasErrors(['periodCount', 'periodUnit', 'articlesPerRun', 'pendingDraftsCap', 'monthlySpendCap', 'articleSpendCap', 'models.writing', 'models.image', 'priorityTopics.0', 'imageMode', 'maxImages', 'notificationEmail'])
         ->assertSee('La période est d\'au moins 1.')
         ->assertSee('Un lot compte 10 articles au plus.')
         ->assertSee('Le plafond de dépense ne peut pas être négatif.')
+        ->assertSee('Le plafond par article est d\'au moins 0,01 $.')
         ->assertSee('Choisissez un modèle dans la liste.')
         ->assertSee('Un sujet ne doit pas dépasser 120 caractères.')
         ->assertSee('Cette adresse e-mail n\'est pas valide.')

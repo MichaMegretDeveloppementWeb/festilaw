@@ -47,7 +47,7 @@ it('chooses a topic from the settings, the request and every known title, and ke
     BlogAi::saveSettings(['priority_topics' => ['Etsy and the GPSR']]);
     BlogContent::published('label');
     BlogGeneration::factory()->create(['topic_title' => 'Candle warnings', 'topic_rejected_at' => now()]);
-    WebSearchAgent::fake(['Notes from the web scan.']);
+    WebSearchAgent::fake()->preventStrayPrompts();
     TopicAgent::fake([[...Fixtures::topic(), 'report_fr' => 'Les vendeurs Etsy posent cette question chaque semaine.']])->preventStrayPrompts();
 
     $result = app(TopicStep::class)->execute(Fixtures::context(topicHint: 'Etsy economic operator'));
@@ -57,14 +57,26 @@ it('chooses a topic from the settings, the request and every known title, and ke
         ->and($result->summary)->toBe('Les vendeurs Etsy posent cette question chaque semaine.')
         ->and($result->findings->topicTitle)->toBe('Adding an economic operator on Etsy')
         ->and($result->findings->topicKind)->toBe(BlogTopicKind::Evergreen)
-        ->and($result->usage->model)->toBe('anthropic/claude-sonnet-5.5');
+        ->and($result->usage->model)->toBe('anthropic/claude-haiku-5.5');
     TopicAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Etsy economic operator')
         && $prompt->contains('Etsy and the GPSR')
         && $prompt->contains('Label en')
         && $prompt->contains('Candle warnings')
-        && $prompt->contains('Notes from the web scan.'));
-    // La veille web voit la demande et les priorites, et cherche sans sortie structuree.
-    WebSearchAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Etsy economic operator') && $prompt->contains('Etsy and the GPSR'));
+        && $prompt->contains('No web scan'));
+    // Un sujet impose se passe de veille : la recherche de l'article cherchera sur le web.
+    WebSearchAgent::assertNeverPrompted();
+});
+
+it('scans the web for a free topic, with two searches at most, and hands the notes to the editor', function () {
+    BlogAi::saveSettings(['priority_topics' => ['Etsy and the GPSR']]);
+    WebSearchAgent::fake(['Notes from the web scan.'])->preventStrayPrompts();
+    TopicAgent::fake([Fixtures::topic()])->preventStrayPrompts();
+
+    app(TopicStep::class)->execute(Fixtures::context());
+
+    WebSearchAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Etsy and the GPSR')
+        && collect($prompt->agent->tools())->sole()->maxSearches === 2);
+    TopicAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Notes from the web scan.'));
 });
 
 it('writes nothing when no topic is relevant enough', function () {
@@ -130,6 +142,7 @@ it('keeps the live sources of the research file and drops a dead link with the f
         ->and($result->output['removed_links'])->toBe(['https://old.example/gone'])
         ->and($result->summary)->toBe('Trois sources consultées.');
     ResearchAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Adding an economic operator on Etsy'));
+    WebSearchAgent::assertPrompted(fn ($prompt): bool => collect($prompt->agent->tools())->sole()->maxSearches === 3);
 });
 
 it('leaves out a source whose address the search never met, so an invented address never enters the file', function () {
@@ -254,6 +267,46 @@ it('keeps the style edit when it changed no fact, and counts the signs of the fi
         ->and($result->output['article']['body'])->toBe($edited)
         ->and($result->output['signals'])->toHaveKeys(['dashes', 'phrases', 'sentence_length_variation'])
         ->and($result->summary)->toBe('Deux phrases ont été reprises.');
+});
+
+it('sends the sentences that still show signs back once, and keeps that second pass when it changed no fact', function () {
+    $marked = Fixtures::body()."\n\nThere are four things to do. What you can see is the status of your shop. Where those pages stop, this guide stops too.";
+    StyleAgent::fake([
+        [...Fixtures::article(['body_markdown' => $marked]), 'report_fr' => 'Style revu.'],
+        [...Fixtures::article(), 'report_fr' => 'Trois phrases reprises.'],
+    ])->preventStrayPrompts();
+
+    $result = app(StyleStep::class)->execute(Fixtures::context(['verification' => Fixtures::articleOutput()]));
+
+    expect($result->output['article']['body'])->toBe(Fixtures::body())
+        ->and($result->output['second_pass'])->toBe(['flagged_before' => 3, 'applied' => true, 'differences' => []])
+        ->and($result->output['signals']['flagged'])->toBe([]);
+    StyleAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Sentences that still show signs of generated text')
+        && $prompt->contains('- There are four things to do. (list announced by its count)'));
+});
+
+it('asks for no second pass when few sentences show signs', function () {
+    StyleAgent::fake([[...Fixtures::article(['body_markdown' => Fixtures::body()."\n\nThere are four things to do."]), 'report_fr' => 'Style revu.']])->preventStrayPrompts();
+
+    $result = app(StyleStep::class)->execute(Fixtures::context(['verification' => Fixtures::articleOutput()]));
+
+    // Une seule phrase relevee, sous le seuil de deux : un seul appel (preventStrayPrompts le garantit).
+    expect($result->output['second_pass'])->toBeNull()
+        ->and($result->output['signals']['flagged'])->toHaveCount(1);
+});
+
+it('keeps the first style edit when the second pass changes a figure', function () {
+    $marked = Fixtures::body()."\n\nThere are four things to do. What you can see is the status of your shop. Where those pages stop, this guide stops too.";
+    StyleAgent::fake([
+        [...Fixtures::article(['body_markdown' => $marked]), 'report_fr' => 'Style revu.'],
+        [...Fixtures::article(['body_markdown' => str_replace('2024', '2025', Fixtures::body())]), 'report_fr' => 'x'],
+    ])->preventStrayPrompts();
+
+    $result = app(StyleStep::class)->execute(Fixtures::context(['verification' => Fixtures::articleOutput()]));
+
+    expect($result->output['article']['body'])->toBe($marked)
+        ->and($result->output['second_pass']['applied'])->toBeFalse()
+        ->and($result->output['second_pass']['differences'])->toBe(['numbers changed: missing [2024], added [2025]']);
 });
 
 it('discards a style edit that changed a figure or a link, and keeps the checked text', function () {

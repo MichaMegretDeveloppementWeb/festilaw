@@ -14,6 +14,7 @@ use App\Enums\Blog\Generation\BlogGenerationStepStatus;
 use App\Models\BlogGeneration;
 use App\Models\BlogGenerationStep;
 use App\Repositories\Blog\BlogGenerationLockRepository;
+use App\Repositories\Blog\BlogGenerationSpendRepository;
 use App\Services\Blog\Generation\BlogAiSettingsService;
 use App\Services\Blog\Generation\BlogGenerationAlertService;
 use App\Services\Blog\Generation\BlogGenerationStepRunner;
@@ -41,6 +42,7 @@ final readonly class RunBlogGenerationAction
         private GenerationPipeline $pipeline,
         private BlogGenerationStepRunner $runner,
         private BlogGenerationLockRepository $locks,
+        private BlogGenerationSpendRepository $spend,
         private BlogAiSettingsService $settings,
         private BlogGenerationAlertService $alerts,
         private NotifyFinishedBlogGenerationBatchAction $notifyBatch,
@@ -112,9 +114,22 @@ final readonly class RunBlogGenerationAction
                 $index + 1,
                 fn (int $attempt): GenerationStepContext => $this->context($generation, $settings, $outputs, $attempt),
                 fn (): bool => $this->holdLock($generation->id, $owner, $step),
+                fn (): bool => $this->spend->costOf($generation->id) < $settings->articleSpendCapMicrousd(),
             );
 
             if ($outcome->lockLost) {
+                return;
+            }
+
+            if ($outcome->overBudget) {
+                Log::warning('Blog generation stopped: article spend cap reached.', [
+                    'generation_id' => $generation->id,
+                    'step' => $step->key(),
+                    'cap_microusd' => $settings->articleSpendCapMicrousd(),
+                ]);
+
+                $this->finish($generation, $owner, $settings, BlogGenerationStatus::Abandoned, BlogGenerationOutcomeReason::ArticleSpendCapReached, null);
+
                 return;
             }
 

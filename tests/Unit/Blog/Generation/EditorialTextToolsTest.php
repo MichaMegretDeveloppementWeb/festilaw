@@ -61,13 +61,38 @@ MD;
         ->and($signals['sentence_length_variation'])->toBeGreaterThan(0.0);
 });
 
+it('points at each sentence that carries a sign of generated text, with the name of the sign', function () {
+    $markdown = "There are four things to do. What you can see is the status of your shop.\n\n"
+        ."The pages reviewed here do not say more, so this guide stops. That is the wording, not a legal definition.\n\n"
+        .'Etsy asks for the address of the person who makes the product.';
+    $signs = [
+        'matters',
+        '~ \\bthere are (?:two|three|four) (?:things|steps)\\b => list announced by its count',
+        '~ ^what\\s+(?:\\S+\\s+){1,5}is\\b => staged "what X is"',
+        '~ \\b(?:pages?|sources?)\\s+reviewed\\s+here\\b => remark on the sources',
+        '~ \\b(?:this|our) (?:guide|article)\\b => remark on the sources',
+        '~ ,\\s+not\\s+(?:a|an|the)\\b => X, not Y',
+    ];
+
+    $signals = (new BlogWritingSignalsInspector)->inspect($markdown, $signs);
+
+    // Deux motifs du meme nom comptent tous les deux, mais une phrase ne porte un nom qu'une fois.
+    expect($signals['flagged'])->toBe([
+        ['signs' => ['list announced by its count'], 'sentence' => 'There are four things to do.'],
+        ['signs' => ['staged "what X is"'], 'sentence' => 'What you can see is the status of your shop.'],
+        ['signs' => ['remark on the sources'], 'sentence' => 'The pages reviewed here do not say more, so this guide stops.'],
+        ['signs' => ['X, not Y'], 'sentence' => 'That is the wording, not a legal definition.'],
+    ])->and($signals['patterns'])->toBe(['list announced by its count' => 1, 'staged "what X is"' => 1, 'remark on the sources' => 1, 'X, not Y' => 1]);
+});
+
 it('sees no sign in plain, varied prose', function () {
     $markdown = "Etsy asks every seller who ships to the EU to name an economic operator in the listing settings.\n\nIf you sell from Leeds, that person must be established in the Union, and the platform hides listings that lack one.";
 
     $signals = (new BlogWritingSignalsInspector)->inspect($markdown, ['crucial']);
 
     expect($signals['dashes'] + $signals['semicolons'] + $signals['colon_paragraphs'] + $signals['short_endings'])->toBe(0)
-        ->and($signals['phrases'])->toBe([]);
+        ->and($signals['phrases'])->toBe([])
+        ->and($signals['flagged'])->toBe([]);
 });
 
 it('spots a topic that repeats a known title, whatever its case, accents or small words', function (string $candidate, ?string $expected) {

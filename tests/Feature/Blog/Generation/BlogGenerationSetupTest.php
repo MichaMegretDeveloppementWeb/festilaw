@@ -47,6 +47,9 @@ it('starts from safe defaults: nothing is generated until someone switches it on
         ->and($settings->pendingDraftsCap)->toBe(3)
         ->and($settings->monthlySpendCapCents)->toBe(1_000)
         ->and($settings->monthlySpendCapMicrousd())->toBe(10_000_000)
+        // 15 centimes par article (decision du 17/11) : une generation qui les depasse s'arrete.
+        ->and($settings->articleSpendCapCents)->toBe(15)
+        ->and($settings->articleSpendCapMicrousd())->toBe(150_000)
         ->and($settings->imageMode)->toBe(BlogAiImageMode::Stock)
         ->and($settings->maxImages)->toBe(1)
         ->and($settings->notificationEmail)->toBe('team@example.com')

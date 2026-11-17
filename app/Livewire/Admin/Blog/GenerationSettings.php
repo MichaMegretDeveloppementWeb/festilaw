@@ -47,6 +47,9 @@ class GenerationSettings extends Component
     /** Plafond de depense du mois, en dollars (saisie). */
     public string $monthlySpendCap = '';
 
+    /** Plafond de depense d'une generation, en dollars (saisie). */
+    public string $articleSpendCap = '';
+
     /** @var list<string> sujets et mots-cles a privilegier */
     public array $priorityTopics = [];
 
@@ -76,6 +79,7 @@ class GenerationSettings extends Component
         $this->articlesPerRun = (string) $current->articlesPerRun;
         $this->pendingDraftsCap = (string) $current->pendingDraftsCap;
         $this->monthlySpendCap = number_format($current->monthlySpendCapCents / 100, 2, '.', '');
+        $this->articleSpendCap = number_format($current->articleSpendCapCents / 100, 2, '.', '');
         $this->priorityTopics = $current->priorityTopics;
         $this->avoidedTopics = $current->avoidedTopics;
         $this->models = $current->models;
@@ -95,6 +99,7 @@ class GenerationSettings extends Component
             'articlesPerRun' => ['required', 'integer', 'min:1', 'max:10'],
             'pendingDraftsCap' => ['required', 'integer', 'min:1', 'max:50'],
             'monthlySpendCap' => ['required', 'numeric', 'min:0', 'max:10000'],
+            'articleSpendCap' => ['required', 'numeric', 'min:0.01', 'max:100'],
             'priorityTopics' => ['array', 'max:'.BlogAiSettings::MAX_TOPICS],
             'priorityTopics.*' => ['string', 'max:'.BlogAiSettings::TOPIC_MAX_LENGTH],
             'avoidedTopics' => ['array', 'max:'.BlogAiSettings::MAX_TOPICS],
@@ -144,6 +149,10 @@ class GenerationSettings extends Component
             'monthlySpendCap.numeric' => __('Le plafond de dépense est un montant.'),
             'monthlySpendCap.min' => __('Le plafond de dépense ne peut pas être négatif.'),
             'monthlySpendCap.max' => __('Le plafond de dépense ne peut pas dépasser 10 000 $.'),
+            'articleSpendCap.required' => __('Indiquez le plafond de dépense par article.'),
+            'articleSpendCap.numeric' => __('Le plafond par article est un montant.'),
+            'articleSpendCap.min' => __('Le plafond par article est d\'au moins 0,01 $.'),
+            'articleSpendCap.max' => __('Le plafond par article ne peut pas dépasser 100 $.'),
             'priorityTopics.max' => __('Une liste compte :max sujets au plus.', ['max' => BlogAiSettings::MAX_TOPICS]),
             'priorityTopics.*.max' => __('Un sujet ne doit pas dépasser :max caractères.', ['max' => BlogAiSettings::TOPIC_MAX_LENGTH]),
             'avoidedTopics.max' => __('Une liste compte :max sujets au plus.', ['max' => BlogAiSettings::MAX_TOPICS]),
@@ -175,6 +184,7 @@ class GenerationSettings extends Component
                 articlesPerRun: (int) $validated['articlesPerRun'],
                 pendingDraftsCap: (int) $validated['pendingDraftsCap'],
                 monthlySpendCapCents: (int) round(((float) $validated['monthlySpendCap']) * 100),
+                articleSpendCapCents: (int) round(((float) $validated['articleSpendCap']) * 100),
                 priorityTopics: BlogAiSettings::topics($this->priorityTopics),
                 avoidedTopics: BlogAiSettings::topics($this->avoidedTopics),
                 models: $this->models,

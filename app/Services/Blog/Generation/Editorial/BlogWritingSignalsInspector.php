@@ -5,30 +5,48 @@ declare(strict_types=1);
 namespace App\Services\Blog\Generation\Editorial;
 
 /**
- * Compte quelques signes mesurables d'un texte genere (annexe A.12, point 3, tache 6.19) : tirets employes
- * comme liaison, points-virgules, deux-points par paragraphe et dans les intertitres, expressions de la
- * liste de la langue, regularite de la longueur des phrases, paragraphes qui finissent sur une phrase tres
- * courte. Le resultat va au journal technique de l'etape et sert au banc d'essai ; il ne bloque rien. Un
- * signe isole ne trahit rien, c'est leur accumulation qui se voit.
+ * Compte les signes mesurables d'un texte genere (annexe A.12, point 3, tache 6.19) et releve chaque phrase
+ * qui en porte un. Signes communs a toutes les langues : tirets employes comme liaison, points-virgules,
+ * deux-points par paragraphe et dans les intertitres, regularite de la longueur des phrases, paragraphes qui
+ * finissent sur une phrase tres courte. Signes propres a la langue, lus dans son fichier (signals-xx.md) :
+ * des expressions, et des tournures decrites par une expression reguliere.
+ *
+ * Un signe isole ne trahit rien, c'est leur accumulation qui se voit. La relecture du style s'en sert depuis
+ * le 17/11 : au-dela d'un seuil, elle renvoie les phrases relevees au modele, une fois.
  */
 final class BlogWritingSignalsInspector
 {
     /** Une phrase de cette longueur ou moins, en fin de paragraphe, compte comme une chute. */
     private const SHORT_ENDING_WORDS = 5;
 
-    /**
-     * @param  list<string>  $phrases  les expressions a reperer dans cette langue (sans casse)
-     * @return array{words: int, sentences: int, dashes: int, semicolons: int, colon_paragraphs: int, colons_in_headings: int, phrases: array<string, int>, sentence_length_mean: float, sentence_length_variation: float, short_endings: int}
-     */
-    public function inspect(string $markdown, array $phrases): array
-    {
-        $blocks = array_values(array_filter(array_map(trim(...), preg_split('/\n\s*\n/', str_replace("\r\n", "\n", $markdown)) ?: [])));
-        $headings = array_filter($blocks, static fn (string $block): bool => str_starts_with($block, '#'));
-        $paragraphs = array_values(array_filter($blocks, static fn (string $block): bool => ! str_starts_with($block, '#')
-            && preg_match('/^\s*(?:[-*+]|\d+[.)])\s/', $block) !== 1
-            && preg_match(EditorialMarkdown::IMAGE_PLACEHOLDER, $block) !== 1));
+    /** Au-dela, une phrase en contient presque toujours deux (Plain English Campaign : 15 a 20 mots en moyenne). */
+    private const LONG_SENTENCE_WORDS = 35;
 
-        $prose = $this->plain(implode("\n\n", array_filter($blocks, static fn (string $block): bool => ! str_starts_with($block, '#'))));
+    /** Tant de phrases de suite ouvertes par le meme mot font un signe (humanizer, motif 7). */
+    private const REPEATED_OPENINGS = 3;
+
+    /** Signes de ponctuation, communs a toutes les langues. */
+    private const PUNCTUATION_SIGNS = [
+        'dash used to join clauses' => '/[\x{2014}\x{2013}]|(?<=\S) - (?=\S)/u',
+        'semicolon joining clauses' => '/;/u',
+    ];
+
+    /**
+     * @param  list<string>  $signs  les signes de la langue, une ligne chacun : une expression (mot entier, sans
+     *                               casse), ou « ~ expression reguliere => nom » pour une tournure
+     * @return array{words: int, sentences: int, dashes: int, semicolons: int, colon_paragraphs: int, colons_in_headings: int, phrases: array<string, int>, patterns: array<string, int>, flagged: list<array{signs: list<string>, sentence: string}>, sentence_length_mean: float, sentence_length_variation: float, short_endings: int}
+     */
+    public function inspect(string $markdown, array $signs): array
+    {
+        [$phrases, $patterns] = $this->split($signs);
+
+        $blocks = array_values(array_filter(array_map(trim(...), preg_split('/\n\s*\n/', str_replace("\r\n", "\n", $markdown)) ?: [])));
+        $headings = array_values(array_filter($blocks, static fn (string $block): bool => str_starts_with($block, '#')));
+        $prose = array_values(array_filter($blocks, static fn (string $block): bool => ! str_starts_with($block, '#')
+            && preg_match(EditorialMarkdown::IMAGE_PLACEHOLDER, $block) !== 1));
+        $paragraphs = array_values(array_filter($prose, static fn (string $block): bool => preg_match('/^\s*(?:[-*+]|\d+[.)])\s/', $block) !== 1));
+
+        $plainProse = $this->plain(implode("\n\n", $prose));
         $sentenceLengths = [];
         $shortEndings = 0;
         $colonParagraphs = 0;
@@ -47,18 +65,112 @@ final class BlogWritingSignalsInspector
             }
         }
 
+        $flagged = [];
+        $patternCounts = [];
+        $openings = [];
+
+        foreach ($prose as $block) {
+            foreach (preg_split('/\n/', $this->plain($block)) ?: [] as $line) {
+                foreach ($this->sentences($line) as $sentence) {
+                    $found = $this->signsOf($sentence, $phrases, $patterns);
+
+                    if ($this->wordCount($sentence) > self::LONG_SENTENCE_WORDS) {
+                        $found[] = 'sentence over '.self::LONG_SENTENCE_WORDS.' words';
+                    }
+
+                    $openings[] = mb_strtolower((string) preg_replace('/^\W*(\w+).*$/us', '$1', $sentence));
+                    $lastOpenings = array_slice($openings, -self::REPEATED_OPENINGS);
+
+                    if (count($lastOpenings) === self::REPEATED_OPENINGS && count(array_unique($lastOpenings)) === 1) {
+                        $found[] = 'same opening word as the two sentences before';
+                    }
+
+                    foreach (array_intersect($found, array_unique(array_column($patterns, 'name'))) as $name) {
+                        $patternCounts[$name] = ($patternCounts[$name] ?? 0) + 1;
+                    }
+
+                    if ($found !== []) {
+                        $flagged[] = ['signs' => $found, 'sentence' => $sentence];
+                    }
+                }
+            }
+        }
+
+        $headingsWithColon = array_values(array_filter($headings, fn (string $heading): bool => $this->colons($this->plain($heading)) > 0));
+
+        foreach ($headingsWithColon as $heading) {
+            $flagged[] = ['signs' => ['colon in a heading'], 'sentence' => $this->plain($heading)];
+        }
+
         return [
-            'words' => $this->wordCount($prose),
+            'words' => $this->wordCount($plainProse),
             'sentences' => count($sentenceLengths),
-            'dashes' => preg_match_all('/[\x{2014}\x{2013}]|(?<=\S) - (?=\S)/u', $prose),
-            'semicolons' => substr_count($prose, ';'),
+            'dashes' => preg_match_all(self::PUNCTUATION_SIGNS['dash used to join clauses'], $plainProse),
+            'semicolons' => substr_count($plainProse, ';'),
             'colon_paragraphs' => $colonParagraphs,
-            'colons_in_headings' => count(array_filter($headings, fn (string $heading): bool => $this->colons($this->plain($heading)) > 0)),
-            'phrases' => $this->phrases($prose, $phrases),
+            'colons_in_headings' => count($headingsWithColon),
+            'phrases' => $this->phrases($plainProse, $phrases),
+            'patterns' => $patternCounts,
+            'flagged' => $flagged,
             'sentence_length_mean' => $this->mean($sentenceLengths),
             'sentence_length_variation' => $this->variation($sentenceLengths),
             'short_endings' => $shortEndings,
         ];
+    }
+
+    /**
+     * Les expressions d'un cote, les tournures de l'autre (plusieurs tournures peuvent porter le meme nom).
+     *
+     * @param  list<string>  $signs
+     * @return array{0: list<string>, 1: list<array{name: string, pattern: string}>}
+     */
+    public function split(array $signs): array
+    {
+        $phrases = [];
+        $patterns = [];
+
+        foreach ($signs as $sign) {
+            if (preg_match('/^~\s*(.+?)\s+=>\s+(.+)$/u', $sign, $match) === 1) {
+                $patterns[] = ['name' => trim($match[2]), 'pattern' => '{'.$match[1].'}iu'];
+            } elseif (trim($sign) !== '') {
+                $phrases[] = trim($sign);
+            }
+        }
+
+        return [$phrases, $patterns];
+    }
+
+    /**
+     * Les signes que porte une phrase : ponctuation, expressions, tournures.
+     *
+     * @param  list<string>  $phrases
+     * @param  list<array{name: string, pattern: string}>  $patterns
+     * @return list<string>
+     */
+    private function signsOf(string $sentence, array $phrases, array $patterns): array
+    {
+        $found = [];
+        $lower = mb_strtolower($sentence);
+
+        foreach (self::PUNCTUATION_SIGNS as $name => $pattern) {
+            if (preg_match($pattern, $sentence) === 1) {
+                $found[] = $name;
+            }
+        }
+
+        foreach ($patterns as $pattern) {
+            if (! in_array($pattern['name'], $found, true) && preg_match($pattern['pattern'], $sentence) === 1) {
+                $found[] = $pattern['name'];
+            }
+        }
+
+        foreach ($phrases as $phrase) {
+            if (preg_match($this->wholeWords($phrase), $lower) === 1) {
+                $found[] = 'word "'.$phrase.'"';
+            }
+        }
+
+        return $found;
     }
 
     /** Le texte sans balisage : liens reduits a leur texte, marques retirees. */
@@ -87,6 +199,11 @@ final class BlogWritingSignalsInspector
         return preg_match_all('/(?<!\d):(?!\d)/', $text);
     }
 
+    private function wholeWords(string $phrase): string
+    {
+        return '/(?<![\p{L}])'.preg_quote(mb_strtolower($phrase), '/').'(?![\p{L}])/u';
+    }
+
     /**
      * @param  list<string>  $phrases
      * @return array<string, int>
@@ -97,7 +214,7 @@ final class BlogWritingSignalsInspector
         $haystack = mb_strtolower($text);
 
         foreach ($phrases as $phrase) {
-            $count = preg_match_all('/(?<![\p{L}])'.preg_quote(mb_strtolower($phrase), '/').'(?![\p{L}])/u', $haystack);
+            $count = preg_match_all($this->wholeWords($phrase), $haystack);
 
             if ($count > 0) {
                 $found[$phrase] = $count;

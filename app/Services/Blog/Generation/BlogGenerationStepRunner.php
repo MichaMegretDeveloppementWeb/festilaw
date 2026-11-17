@@ -34,12 +34,19 @@ final readonly class BlogGenerationStepRunner
     /**
      * @param  Closure(int): GenerationStepContext  $context  le contexte de l'etape, pour un numero d'essai
      * @param  Closure(): bool  $holdLock  prolonge le verrou ; faux si un autre worker a repris la generation
+     * @param  Closure(): bool  $withinBudget  faux quand la generation a deja depense son plafond : aucun essai de plus
      */
-    public function run(int $generationId, GenerationStep $step, int $position, Closure $context, Closure $holdLock): GenerationStepOutcome
+    public function run(int $generationId, GenerationStep $step, int $position, Closure $context, Closure $holdLock, Closure $withinBudget): GenerationStepOutcome
     {
         while (true) {
             if (! $holdLock()) {
                 return GenerationStepOutcome::lockLost();
+            }
+
+            // Verifie avant chaque essai, reprises comprises : une etape qui echoue en boucle ne peut pas
+            // depenser au-dela du plafond. Un essai deja parti va au bout (il est facture de toute facon).
+            if (! $withinBudget()) {
+                return GenerationStepOutcome::overBudget();
             }
 
             $row = $this->recorder->begin($generationId, $step->key(), $position);

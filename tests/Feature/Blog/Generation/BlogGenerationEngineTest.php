@@ -28,6 +28,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Sleep;
+use Tests\Support\BlogAi;
 use Tests\Support\FakeGenerationPipeline;
 
 /*
@@ -356,6 +357,36 @@ it('stops at once when someone stops it during a step, drops the result of that 
         ->and($generation->cost_microusd)->toBe(4_000)
         ->and($pipeline->calls('research'))->toBe(0);
     Mail::assertNothingSent();
+});
+
+it('stops before the next step once the generation has spent its cap per article, without a draft', function () {
+    BlogAi::saveSettings(['article_spend_cap_cents' => 15]);
+    $generation = BlogGeneration::factory()->create();
+    $pipeline = FakeGenerationPipeline::bind()->on('topic', fn (): GenerationStepResult => GenerationStepResult::continue([], new GenerationUsage(model: 'm', costMicrousd: 160_000)));
+
+    generationWorkerPass();
+
+    expect($generation->refresh()->status)->toBe(BlogGenerationStatus::Abandoned)
+        ->and($generation->outcome_reason)->toBe(BlogGenerationOutcomeReason::ArticleSpendCapReached)
+        ->and($generation->cost_microusd)->toBe(160_000)
+        ->and($generation->lock_owner)->toBeNull()
+        ->and($pipeline->calls('writing'))->toBe(0);
+});
+
+it('stops retrying a failing step once the cap per article is spent', function () {
+    BlogAi::saveSettings(['article_spend_cap_cents' => 10]);
+    $generation = BlogGeneration::factory()->create();
+    $pipeline = FakeGenerationPipeline::bind()->on('topic', fn (): GenerationStepResult => throw BlogAiProviderException::callFailed(
+        'topic', new RuntimeException('Unusable answer.'), new GenerationUsage(model: 'm', costMicrousd: 60_000),
+    ));
+
+    generationWorkerPass();
+
+    // Deux essais (0,12 $) puis plus rien : le troisieme aurait depasse le plafond de 0,10 $.
+    expect($generation->refresh()->status)->toBe(BlogGenerationStatus::Abandoned)
+        ->and($generation->outcome_reason)->toBe(BlogGenerationOutcomeReason::ArticleSpendCapReached)
+        ->and($pipeline->calls('topic'))->toBe(2)
+        ->and($generation->cost_microusd)->toBe(120_000);
 });
 
 it('gives the generation back, unfinished, while the site is in maintenance', function () {

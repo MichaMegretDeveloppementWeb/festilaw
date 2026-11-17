@@ -52,11 +52,15 @@
 
         <div class="grid gap-x-16 gap-y-12 lg:grid-cols-2">
             <x-admin.section data-settings-card :title="__('Budget')"
-                :description="__('Une fois ce montant dépensé dans le mois, plus rien ne se lance jusqu\'au mois suivant.')">
-                <div class="pt-6">
+                :description="__('Deux plafonds, en dollars, la monnaie dans laquelle le fournisseur d\'IA facture. Celui du mois bloque tout lancement une fois atteint. Celui par article arrête une génération qui le dépasse.')">
+                <div class="space-y-5 pt-6">
                     <x-ui::form-group :label="__('Plafond de dépense du mois ($)')" for="ai-spend-cap" :error="$errors->first('monthlySpendCap')"
-                        :hint="__('En dollars, la monnaie dans laquelle le fournisseur d\'IA facture. Une génération déjà commencée va au bout.')">
+                        :hint="__('Une fois ce montant dépensé dans le mois, plus rien ne se lance jusqu\'au mois suivant.')">
                         <x-ui::input type="number" step="0.01" min="0" id="ai-spend-cap" wire:model="monthlySpendCap" :error="$errors->has('monthlySpendCap')" />
+                    </x-ui::form-group>
+                    <x-ui::form-group :label="__('Plafond de dépense par article ($)')" for="ai-article-spend-cap" :error="$errors->first('articleSpendCap')"
+                        :hint="__('Une génération qui dépasse ce montant s\'arrête avant son étape suivante, sans brouillon. Ce qui a déjà été dépensé reste dépensé.')">
+                        <x-ui::input type="number" step="0.01" min="0.01" id="ai-article-spend-cap" wire:model="articleSpendCap" :error="$errors->has('articleSpendCap')" />
                     </x-ui::form-group>
                 </div>
             </x-admin.section>

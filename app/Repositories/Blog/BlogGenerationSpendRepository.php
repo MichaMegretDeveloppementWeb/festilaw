@@ -14,6 +14,12 @@ use Carbon\CarbonImmutable;
  */
 final readonly class BlogGenerationSpendRepository
 {
+    /** Ce qu'une generation a deja coute, tous essais compris. */
+    public function costOf(int $generationId): int
+    {
+        return (int) BlogGeneration::query()->whereKey($generationId)->value('cost_microusd');
+    }
+
     /** Depense des generations lancees dans l'intervalle (debut compris, fin exclue). */
     public function spentMicrousdBetween(CarbonImmutable $from, CarbonImmutable $to): int
     {

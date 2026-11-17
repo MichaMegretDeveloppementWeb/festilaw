@@ -16,7 +16,7 @@ use App\Services\Blog\Generation\Editorial\Sources\SourceLinkChecker;
 use Carbon\CarbonImmutable;
 
 /**
- * Etape 2 · la recherche, en deux temps. Un agent cherche sur le web (six recherches au plus) et rend ses notes en
+ * Etape 2 · la recherche, en deux temps. Un agent cherche sur le web (trois recherches au plus) et rend ses notes en
  * texte libre ; un second agent, sans outil, en fait le dossier de faits (deux temps : un modele qui cherche
  * sur le web ignore le format JSON demande, essai reel du 17/11). Une source dont l'adresse n'est ni dans les
  * notes ni dans les pages citees par la recherche est ecartee : une adresse inventee n'entre jamais. Chaque
@@ -27,6 +27,9 @@ use Carbon\CarbonImmutable;
 final class ResearchStep extends EditorialStep
 {
     private const SOURCE_TYPES = ['official', 'professional', 'forum'];
+
+    /** Recherches web des notes (0,01 $ chacune, plus les pages qu'elles chargent) : decision du 17/11. */
+    private const WEB_SEARCHES = 3;
 
     public function __construct(
         BlogAgentCaller $caller,
@@ -60,7 +63,7 @@ final class ResearchStep extends EditorialStep
             $this->block('Instructions from the editor', $context->instructions ?? 'None.'),
         ];
 
-        $researcher = new WebSearchAgent($this->prompts->compose('festilaw-context', 'editorial-guidelines', 'step-research-notes'), searches: 6);
+        $researcher = new WebSearchAgent($this->prompts->compose('festilaw-context', 'editorial-guidelines', 'step-research-notes'), searches: self::WEB_SEARCHES);
         $notes = $this->ask($context, $researcher, implode("\n\n", $request));
         $agent = new ResearchAgent($this->prompts->compose('festilaw-context', 'editorial-guidelines', 'step-research'));
         $reply = $this->ask($context, $agent, spent: $notes->usage, prompt: implode("\n\n", [

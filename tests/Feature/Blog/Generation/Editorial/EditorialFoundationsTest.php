@@ -6,6 +6,7 @@ use App\Models\BlogPostTranslation;
 use App\Repositories\Blog\BlogTopicHistoryRepository;
 use App\Services\Blog\Generation\Editorial\BlogInternalLinkResolver;
 use App\Services\Blog\Generation\Editorial\BlogPromptLibrary;
+use App\Services\Blog\Generation\Editorial\BlogWritingSignalsInspector;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -21,6 +22,26 @@ uses(RefreshDatabase::class);
 it('reads the shared instructions of the agents from their versioned files', function (string $name) {
     expect(app(BlogPromptLibrary::class)->get($name))->not->toBeEmpty();
 })->with(['festilaw-context', 'editorial-guidelines', 'writing-voice-en', 'writing-voice-fr', 'writing-voice-es', 'lexicon-fr', 'lexicon-es', 'signals-en', 'signals-fr', 'signals-es']);
+
+it('only lists signs whose patterns compile, so the check never breaks a generation', function (string $locale) {
+    $inspector = app(BlogWritingSignalsInspector::class);
+    [, $patterns] = $inspector->split(app(BlogPromptLibrary::class)->lines('signals-'.$locale));
+
+    $broken = array_column(array_filter($patterns, static fn (array $pattern): bool => @preg_match($pattern['pattern'], 'A plain sentence.') === false), 'name');
+
+    expect($broken)->toBe([]);
+})->with(['en', 'fr', 'es']);
+
+it('flags the signs of the first real draft and none in the edited examples of the voice rules', function () {
+    $inspector = app(BlogWritingSignalsInspector::class);
+    $signs = app(BlogPromptLibrary::class)->lines('signals-en');
+    $voice = app(BlogPromptLibrary::class)->get('writing-voice-en');
+    preg_match_all('~<generated>(.*?)</generated>~s', $voice, $generated);
+    preg_match_all('~<edited>(.*?)</edited>~s', $voice, $edited);
+
+    expect(count($inspector->inspect(implode("\n\n", $generated[1]), $signs)['flagged']))->toBeGreaterThanOrEqual(6)
+        ->and($inspector->inspect(implode("\n\n", $edited[1]), $signs)['flagged'])->toBe([]);
+});
 
 it('states the decisions of 16/11 in the editorial guidelines, the limits of the company in its context, and forbids invented material', function () {
     $library = app(BlogPromptLibrary::class);

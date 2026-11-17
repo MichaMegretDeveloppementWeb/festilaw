@@ -137,8 +137,13 @@ return [
          | Valeurs de depart des reglages du back-office (cle `blog.ai` de la table settings). Tant que
          | rien n'y est enregistre, ce sont elles qui s'appliquent. La generation automatique est eteinte
          | par defaut : rien ne part sans que quelqu'un l'ait allumee. `notification_email` nul = l'adresse
-         | des notifications internes (festilaw.notification_email). Le plafond de depense est en cents de
-         | dollar : le fournisseur facture en dollars.
+         | des notifications internes (festilaw.notification_email). Les plafonds de depense sont en cents
+         | de dollar : le fournisseur facture en dollars. Celui du mois se verifie au lancement ; celui par
+         | article arrete une generation qui le depasse, avant son etape suivante (15 cents, decision du 17/11).
+         |
+         | Modeles : les moins chers qui savent faire chaque tache (prix au 17/11 : Haiku 5.5 a 0,10 $ et
+         | 0,50 $ par million de jetons, GPT-5 Image Mini a environ 1,3 centime l'image). Au premier essai
+         | reel, Sonnet 5.5 a chaque etape coutait plus d'un dollar l'article.
          */
         'defaults' => [
             'enabled' => false,
@@ -147,15 +152,16 @@ return [
             'articles_per_run' => 1,
             'pending_drafts_cap' => 3,
             'monthly_spend_cap_cents' => 1_000,
+            'article_spend_cap_cents' => 15,
             'priority_topics' => [],
             'avoided_topics' => [],
             'models' => [
-                'topic' => 'anthropic/claude-sonnet-5.5',
-                'research' => 'anthropic/claude-sonnet-5.5',
-                'writing' => 'anthropic/claude-sonnet-5.5',
-                'verification' => 'anthropic/claude-sonnet-5.5',
-                'translation' => 'anthropic/claude-sonnet-5.5',
-                'image' => 'google/gemini-3.1-flash-image',
+                'topic' => 'anthropic/claude-haiku-5.5',
+                'research' => 'anthropic/claude-haiku-5.5',
+                'writing' => 'anthropic/claude-haiku-5.5',
+                'verification' => 'anthropic/claude-haiku-5.5',
+                'translation' => 'anthropic/claude-haiku-5.5',
+                'image' => 'openai/gpt-5-image-mini',
             ],
             'image_mode' => 'stock',
             'max_images' => 1,
@@ -191,9 +197,12 @@ return [
 
         /*
          | Modeles qui generent des images : les seuls proposes pour l'etape des images. Noms releves au
-         | catalogue d'OpenRouter le 16/11/2026. Aucun prix : celui d'une image n'a pas ete releve.
+         | catalogue d'OpenRouter le 16/11/2026. Prix d'une image paysage mesures le 17/11 : GPT-5 Image Mini
+         | environ 1,3 centime (1536 x 1024), Nano Banana 2 de 6,7 a 10 centimes. Gemini 3.1 Flash Lite Image
+         | n'est pas propose : OpenRouter refuse le reglage de resolution que le SDK lui envoie.
          */
         'image_models' => [
+            'openai/gpt-5-image-mini' => ['name' => 'GPT-5 Image Mini', 'provider' => 'OpenAI'],
             'google/gemini-3.1-flash-image' => ['name' => 'Nano Banana 2', 'provider' => 'Google'],
             'google/gemini-nano-banana-2.1' => ['name' => 'Nano Banana 2.1', 'provider' => 'Google'],
             'google/gemini-3-pro-image' => ['name' => 'Nano Banana Pro', 'provider' => 'Google'],
@@ -233,6 +242,15 @@ return [
             'max_attempts' => 3,
             'retry_wait_seconds' => 5,
             'lock_margin_seconds' => 60,
+        ],
+
+        /*
+         | Relecture du style : au-dela de ce nombre de phrases qui portent encore un signe de texte genere
+         | (BlogWritingSignalsInspector, liste signals-en.md), un second passage, cible sur ces phrases, est
+         | demande au modele. Un seul. Au premier essai reel (brouillon 96), 11 phrases sur 55 en portaient.
+         */
+        'style' => [
+            'max_flagged_sentences' => 2,
         ],
 
         /*
