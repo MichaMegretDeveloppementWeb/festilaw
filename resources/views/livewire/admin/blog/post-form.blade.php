@@ -38,6 +38,8 @@
     x-on:input="touched($event)"
     x-on:change="touched($event)"
     x-on:blog-post-saved.window="dirty = false"
+    x-on:post-translation-ready.window="translationReady($event.detail)"
+    x-on:post-translation-failed.window="translation.pending = null"
     x-on:keydown.escape.window="settingsOpen = false"
     x-on:ui-modal-closed.window="modalClosed($event.detail)"
     class="flex min-h-[calc(100svh-6.5rem)] flex-col sm:min-h-[calc(100svh-7.5rem)]"
@@ -97,6 +99,8 @@
 
     @include('livewire.admin.blog.post-form.action-bar')
     @include('livewire.admin.blog.post-form.dialogs')
+
+    <livewire:admin.blog.post-translation :post-id="$postId" />
 
     @assets
         @vite('resources/js/admin/blog-post-form.js')

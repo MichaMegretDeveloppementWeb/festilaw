@@ -8,6 +8,7 @@ use App\Actions\Blog\Generation\Editorial\AssembleGeneratedBlogDraftAction;
 use App\Actions\Blog\Generation\Editorial\GenerateBlogDraftImagesAction;
 use App\Contracts\Blog\Generation\GenerationPipeline;
 use App\Enums\Blog\Generation\BlogGenerationType;
+use App\Services\Blog\Generation\Editorial\Steps\AssistedTranslationStep;
 use App\Services\Blog\Generation\Editorial\Steps\ResearchStep;
 use App\Services\Blog\Generation\Editorial\Steps\StyleStep;
 use App\Services\Blog\Generation\Editorial\Steps\TopicStep;
@@ -20,8 +21,7 @@ use Illuminate\Contracts\Container\Container;
  * Le pipeline editorial (SC6, cahier des charges § 11) : sujet, recherche, redaction, verification, relecture
  * du style, traductions francaise et espagnole, images, assemblage du brouillon. Les etapes de texte sont des
  * Services ; les images et l'assemblage, qui ecrivent, sont des Actions. La traduction assistee d'un article
- * ecrit a la main (type `translation`) arrive a l'etape 4 de SC6 : d'ici la, aucune generation de ce type
- * n'est creee.
+ * ecrit a la main (type `translation`) tient en une etape.
  */
 final readonly class EditorialGenerationPipeline implements GenerationPipeline
 {
@@ -41,7 +41,7 @@ final readonly class EditorialGenerationPipeline implements GenerationPipeline
                 $this->container->make(GenerateBlogDraftImagesAction::class),
                 $this->container->make(AssembleGeneratedBlogDraftAction::class),
             ],
-            BlogGenerationType::Translation => [],
+            BlogGenerationType::Translation => [$this->container->make(AssistedTranslationStep::class)],
         };
     }
 }

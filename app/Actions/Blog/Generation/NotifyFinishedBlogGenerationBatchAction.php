@@ -7,6 +7,7 @@ namespace App\Actions\Blog\Generation;
 use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogGenerationTrigger;
+use App\Enums\Blog\Generation\BlogGenerationType;
 use App\Mail\BlogGenerationBatchFinished;
 use App\Models\BlogGeneration;
 use App\Repositories\Blog\BlogGeneratedDraftRepository;
@@ -47,7 +48,7 @@ final readonly class NotifyFinishedBlogGenerationBatchAction
         $generations = BlogGeneration::query()
             ->where('batch_uuid', $batchUuid)
             ->orderBy('id')
-            ->get(['id', 'trigger', 'status', 'outcome_reason', 'topic_title', 'topic_hint', 'blog_post_id', 'cost_microusd']);
+            ->get(['id', 'type', 'trigger', 'status', 'outcome_reason', 'topic_title', 'topic_hint', 'blog_post_id', 'cost_microusd']);
 
         if ($generations->isEmpty() || $generations->contains(static fn (BlogGeneration $generation): bool => ! $generation->status->isTerminal())) {
             return;
@@ -62,7 +63,8 @@ final readonly class NotifyFinishedBlogGenerationBatchAction
             return;
         }
 
-        if ($generations->every(static fn (BlogGeneration $generation): bool => $generation->outcome_reason === BlogGenerationOutcomeReason::CancelledByUser)) {
+        // Une traduction assistee se suit dans le formulaire qui l'a demandee : pas d'e-mail.
+        if ($generations->every(static fn (BlogGeneration $generation): bool => $generation->outcome_reason === BlogGenerationOutcomeReason::CancelledByUser || $generation->type === BlogGenerationType::Translation)) {
             return;
         }
 

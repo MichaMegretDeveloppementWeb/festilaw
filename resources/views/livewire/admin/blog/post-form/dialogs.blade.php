@@ -218,6 +218,16 @@
     </x-ui::modal>
 @endif
 
+{{-- Traduction assistee : la langue visee a deja du texte. --}}
+<x-ui::modal name="translate-post" variant="confirm" :title="__('Remplacer le texte de cette langue ?')">
+    <p>{{ __('La traduction remplacera le titre, l\'extrait et le texte déjà saisis dans cette langue. Rien n\'est enregistré tant que vous n\'enregistrez pas l\'article.') }}</p>
+
+    <x-slot:actions>
+        <x-ui::button variant="ghost" x-on:click="$dispatch('ui-close-modal', 'translate-post')">{{ __('Annuler') }}</x-ui::button>
+        <x-ui::button x-on:click="requestTranslation()" data-confirm-translation>{{ __('Traduire') }}</x-ui::button>
+    </x-slot:actions>
+</x-ui::modal>
+
 @if ($postId !== null)
     <x-ui::modal name="delete-post" variant="confirm" :title="__('Supprimer cet article ?')">
         @if ($isPublished)

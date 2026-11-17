@@ -25,6 +25,7 @@ final readonly class SimulatedGenerationStep implements GenerationStep
         'writing' => 'writing',
         'verification' => 'verification',
         'style' => 'writing',
+        'translation' => 'translation',
         'translation_fr' => 'translation',
         'translation_es' => 'translation',
         'images' => 'image',
@@ -78,7 +79,7 @@ final readonly class SimulatedGenerationStep implements GenerationStep
         $modelSetting = self::MODEL_SETTING[$this->key] ?? null;
 
         return GenerationStepResult::continue(
-            ['simulated' => true, 'step' => $this->key],
+            $this->key === 'translation' ? $this->markedTranslation($context) : ['simulated' => true, 'step' => $this->key],
             $modelSetting === null ? GenerationUsage::none() : new GenerationUsage(
                 model: $context->settings->modelFor($modelSetting),
                 inputTokens: 1_500,
@@ -88,5 +89,24 @@ final readonly class SimulatedGenerationStep implements GenerationStep
             ),
             self::SUMMARY[$this->key] ?? null,
         );
+    }
+
+    /**
+     * Traduction assistee factice : le texte de depart, titre marque de la langue visee, pour essayer le
+     * formulaire en local sans appeler de modele.
+     *
+     * @return array<string, mixed>
+     */
+    private function markedTranslation(GenerationStepContext $context): array
+    {
+        $request = $context->payload['translation'] ?? [];
+        $article = is_array($request['article'] ?? null) ? $request['article'] : [];
+        $to = (string) ($request['to'] ?? '');
+
+        return [
+            'simulated' => true,
+            'locale' => $to,
+            'article' => [...$article, 'title' => '['.strtoupper($to).'] '.($article['title'] ?? '')],
+        ];
     }
 }

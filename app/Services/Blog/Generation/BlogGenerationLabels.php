@@ -23,6 +23,7 @@ final readonly class BlogGenerationLabels
             'writing' => __('Rédaction'),
             'verification' => __('Vérification'),
             'style' => __('Relecture du style'),
+            'translation' => __('Traduction'),
             'translation_fr' => __('Traduction en français'),
             'translation_es' => __('Traduction en espagnol'),
             'images' => __('Images'),

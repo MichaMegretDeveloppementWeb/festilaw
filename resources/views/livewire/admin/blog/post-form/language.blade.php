@@ -1,4 +1,6 @@
 {{-- Champs d'une langue du formulaire d'article. $locale, $language (nom de la langue en francais). --}}
+@include('livewire.admin.blog.post-form.translate', ['locale' => $locale, 'locales' => $locales])
+
 <div class="relative">
     <x-admin.blog.char-count field="$wire.texts.{{ $locale }}.title" :recommended="60" />
     <x-ui::form-group :label="__('Titre')" for="title-{{ $locale }}" :error="$errors->first('texts.'.$locale.'.title')">

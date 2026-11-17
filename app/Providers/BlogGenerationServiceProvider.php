@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Actions\Blog\Generation\Editorial\GenerateBlogDraftImagesAction;
 use App\Actions\Blog\Generation\ProcessNextBlogGenerationAction;
+use App\Actions\Blog\Generation\RequestBlogTranslationAction;
 use App\Actions\Blog\Generation\RunBlogGenerationAction;
 use App\Contracts\Blog\Generation\GenerationPipeline;
 use App\Contracts\Blog\Generation\HostResolver;
@@ -60,6 +61,7 @@ final class BlogGenerationServiceProvider extends ServiceProvider
 
         $this->app->when(BlogAgentCaller::class)->needs('$provider')->giveConfig('blog.ai.provider');
         $this->app->bind(HostResolver::class, DnsHostResolver::class);
+        $this->app->when(RequestBlogTranslationAction::class)->needs('$locales')->giveConfig('festilaw.supported_locales');
         $this->app->bind(StockImageProvider::class, PixabayStockImageProvider::class);
         $this->app->when(PixabayStockImageProvider::class)->needs('$apiKey')->giveConfig('services.pixabay.key');
         $this->app->when(BlogAiImageGenerator::class)->needs('$provider')->giveConfig('blog.ai.provider');

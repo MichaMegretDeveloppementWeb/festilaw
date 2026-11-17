@@ -67,6 +67,9 @@ const blogPostForm = (config) => ({
     // Change a chaque mouvement du curseur : la barre d'outils relit l'etat des boutons.
     pulse: 0,
     settingsOpen: false,
+    // Traduction assistee : la langue de depart et la langue visee de la demande en cours ; `pending`, la
+    // langue en attente de sa traduction (le bouton le dit), ou null.
+    translation: { from: null, to: null, pending: null },
     wide: window.matchMedia(WIDE).matches,
 
     ...slugField,
@@ -620,6 +623,62 @@ const blogPostForm = (config) => ({
         } finally {
             this.busy = false;
         }
+    },
+
+    // --- Traduction assistee ---------------------------------------------------------------------------
+
+    // « Traduire depuis… » dans l'onglet ouvert : la langue de l'onglet est remplie a partir de `from`. Si elle a
+    // deja du texte, une fenetre demande d'abord confirmation.
+    askTranslation(from) {
+        this.translation = { from, to: this.tab, pending: this.translation.pending };
+
+        if (this.state(this.tab) !== 'empty') {
+            this.$dispatch('ui-open-modal', 'translate-post');
+
+            return;
+        }
+
+        this.requestTranslation();
+    },
+
+    // Le texte de depart part tel qu'il est dans le formulaire, enregistre ou non. Le composant de traduction
+    // le confie au worker, puis rend le resultat par l'evenement `post-translation-ready`.
+    requestTranslation() {
+        const { from, to } = this.translation;
+
+        if (from === null || to === null || this.translation.pending !== null || this.contents === null) {
+            return;
+        }
+
+        this.$dispatch('ui-close-modal', 'translate-post');
+        this.translation.pending = to;
+
+        Livewire.dispatch('request-post-translation', {
+            from,
+            to,
+            source: {
+                title: this.text(from, 'title'),
+                excerpt: this.text(from, 'excerpt'),
+                metaTitle: this.text(from, 'metaTitle'),
+                metaDescription: this.text(from, 'metaDescription'),
+                content: this.contents[from] ?? null,
+            },
+        });
+    },
+
+    // La traduction est prete : les champs et l'editeur de la langue sont remplis, rien n'est enregistre.
+    translationReady({ locale, texts, content }) {
+        this.translation.pending = null;
+
+        for (const [field, value] of Object.entries(texts ?? {})) {
+            this.$wire.texts[locale][field] = value ?? '';
+        }
+
+        this.contents[locale] = content;
+        editors.get(locale)?.commands.setContent(content);
+        this.contents[locale] = content;
+        this.dirty = true;
+        this.suggestSlug(locale);
     },
 
     save() {

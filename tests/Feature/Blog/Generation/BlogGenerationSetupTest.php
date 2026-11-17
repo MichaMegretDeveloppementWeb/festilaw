@@ -148,12 +148,14 @@ it('runs a whole simulated generation: nine steps, a made-up cost, no call to an
     Sleep::assertSleptTimes(9);
 });
 
-it('runs the two steps of a simulated translation', function () {
-    $generation = BlogGeneration::factory()->create(['type' => BlogGenerationType::Translation]);
+it('runs the single step of a simulated assisted translation, which hands back the text marked with its language', function () {
+    $generation = BlogGeneration::factory()->create(['type' => BlogGenerationType::Translation, 'payload' => ['translation' => ['from' => 'en', 'to' => 'fr', 'article' => ['title' => 'Labels', 'body' => 'Text.']]]]);
 
     app(ProcessNextBlogGenerationAction::class)->execute('worker-a');
 
-    expect($generation->refresh()->steps->pluck('step')->all())->toBe(['translation_fr', 'translation_es']);
+    $step = $generation->refresh()->steps->sole();
+    expect($step->step)->toBe('translation')
+        ->and($step->output['article']['title'])->toBe('[FR] Labels');
 });
 
 it('can make a simulated step fail, or find no topic, to try those paths by hand', function () {

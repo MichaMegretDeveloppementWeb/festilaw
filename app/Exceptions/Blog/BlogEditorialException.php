@@ -29,6 +29,22 @@ final class BlogEditorialException extends BaseAppException
         );
     }
 
+    public static function nothingToTranslate(string $from): self
+    {
+        return new self(
+            technicalMessage: "Assisted translation refused: the [{$from}] version has no title and no text.",
+            userMessage: __('La langue de départ n\'a ni titre ni texte à traduire.'),
+        );
+    }
+
+    public static function unsupportedTranslation(string $from, string $to): self
+    {
+        return new self(
+            technicalMessage: "Assisted translation refused from [{$from}] to [{$to}].",
+            userMessage: __('Cette traduction n\'est pas possible.'),
+        );
+    }
+
     public static function imageSourceFailed(string $reason): self
     {
         return new self(

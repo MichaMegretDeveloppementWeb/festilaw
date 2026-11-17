@@ -18,10 +18,9 @@ use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Exceptions\Blog\BlogEditorialException;
 use App\Repositories\Blog\BlogGeneratedDraftRepository;
 use App\Repositories\Blog\BlogTopicHistoryRepository;
-use App\Services\Blog\Content\BlogContentSchema;
-use App\Services\Blog\Content\BlogMarkdownConverter;
 use App\Services\Blog\Generation\Editorial\BlogInternalLinkResolver;
 use App\Services\Blog\Generation\Editorial\BlogTopicSimilarity;
+use App\Services\Blog\Generation\Editorial\EditorialDocumentBuilder;
 use App\Services\Blog\Generation\Editorial\EditorialMarkdown;
 use Throwable;
 
@@ -46,7 +45,7 @@ final readonly class AssembleGeneratedBlogDraftAction implements GenerationStep
         private BlogTopicHistoryRepository $history,
         private BlogTopicSimilarity $similarity,
         private BlogInternalLinkResolver $links,
-        private BlogMarkdownConverter $markdown,
+        private EditorialDocumentBuilder $documents,
     ) {}
 
     public function key(): string
@@ -97,7 +96,7 @@ final readonly class AssembleGeneratedBlogDraftAction implements GenerationStep
                 title: $article->title,
                 slug: null,
                 excerpt: $article->excerpt,
-                content: $this->document($this->links->resolve($article->body, $locale, $postSlugs), $images),
+                content: $this->documents->build($this->links->resolve($article->body, $locale, $postSlugs), array_map(static fn (int $id): array => ['imageId' => $id], $images)),
                 metaTitle: $article->metaTitle ?: null,
                 metaDescription: $article->metaDescription ?: null,
             );
@@ -134,35 +133,6 @@ final readonly class AssembleGeneratedBlogDraftAction implements GenerationStep
             summary: $hasMainImage ? $summary : $summary.' '.__('Il lui manque une image principale, à ajouter avant de publier.'),
             findings: new GenerationFindings(postId: $postId),
         );
-    }
-
-    /**
-     * Le document de l'editeur : le Markdown converti, chaque emplacement d'image remplace par l'image, ou
-     * retire si l'image n'a pas pu etre obtenue.
-     *
-     * @param  array<int, int>  $images  numero de l'emplacement => identifiant de l'image
-     * @return array<string, mixed>
-     */
-    private function document(string $markdown, array $images): array
-    {
-        $document = $this->markdown->toDocument($markdown)->document ?? ['type' => 'doc', 'content' => []];
-        $content = [];
-
-        foreach ($document['content'] ?? [] as $node) {
-            $text = ($node['type'] ?? null) === 'paragraph' && count($node['content'] ?? []) === 1 ? trim((string) ($node['content'][0]['text'] ?? '')) : null;
-
-            if ($text !== null && preg_match('/^'.trim(EditorialMarkdown::IMAGE_PLACEHOLDER, '~').'$/', $text, $match) === 1) {
-                if (isset($images[(int) $match[1]])) {
-                    $content[] = ['type' => BlogContentSchema::IMAGE, 'attrs' => ['imageId' => $images[(int) $match[1]]]];
-                }
-
-                continue;
-            }
-
-            $content[] = $node;
-        }
-
-        return [...$document, 'content' => $content];
     }
 
     /** @return list<int> */
