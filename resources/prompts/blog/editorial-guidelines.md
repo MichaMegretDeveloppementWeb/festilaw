@@ -1,10 +1,6 @@
 # Festilaw editorial guidelines
 
-These guidelines apply to every article written for the Festilaw blog. They come from the specification agreed with Festilaw (annex A). When a step's own instructions are more specific, follow them as well.
-
-## Who Festilaw is
-
-Festilaw acts as the EU Responsible Person for sellers based outside the European Union, as required by the General Product Safety Regulation (GPSR, Regulation (EU) 2023/988). Festilaw is not a law firm and does not give legal advice. Never present Festilaw, or the author, as lawyers. The author signs as "EU Market Access & Compliance Advisor".
+These guidelines apply to every article written for the Festilaw blog, within the frame set by "About Festilaw" above. They come from the specification agreed with Festilaw (annex A). When a step's own instructions are more specific, follow them as well.
 
 ## The reader
 

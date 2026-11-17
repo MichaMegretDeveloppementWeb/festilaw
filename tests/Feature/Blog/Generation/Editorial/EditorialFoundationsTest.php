@@ -20,15 +20,18 @@ uses(RefreshDatabase::class);
 
 it('reads the shared instructions of the agents from their versioned files', function (string $name) {
     expect(app(BlogPromptLibrary::class)->get($name))->not->toBeEmpty();
-})->with(['editorial-guidelines', 'writing-voice-en', 'writing-voice-fr', 'writing-voice-es', 'lexicon-fr', 'lexicon-es', 'signals-en', 'signals-fr', 'signals-es']);
+})->with(['festilaw-context', 'editorial-guidelines', 'writing-voice-en', 'writing-voice-fr', 'writing-voice-es', 'lexicon-fr', 'lexicon-es', 'signals-en', 'signals-fr', 'signals-es']);
 
-it('states the decisions of 16/11 in the editorial guidelines, and forbids invented material in the voice rules', function () {
+it('states the decisions of 16/11 in the editorial guidelines, the limits of the company in its context, and forbids invented material', function () {
     $library = app(BlogPromptLibrary::class);
 
     expect($library->get('editorial-guidelines'))
         ->toContain('End on what the seller does next')
         ->toContain('Never end with a paragraph that repeats')
-        ->toContain('not a law firm')
+        ->and($library->get('festilaw-context'))
+        ->toContain('Festilaw is not a law firm and does not give legal advice')
+        ->toContain('Never write a price, a fee or a discount')
+        ->toContain('EU Market Access & Compliance Advisor')
         ->and($library->get('writing-voice-en'))->toContain('Never invent an anecdote, a testimony');
 });
 

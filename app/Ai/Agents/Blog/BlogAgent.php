@@ -23,6 +23,14 @@ abstract class BlogAgent implements Agent, HasMiddleware
     /** @var list<object> */
     private array $stepMiddleware = [];
 
+    /** @param  string  $instructions  les consignes, composees par l'etape depuis `resources/prompts/blog` */
+    public function __construct(private readonly string $instructions = '') {}
+
+    public function instructions(): string
+    {
+        return $this->instructions;
+    }
+
     /** Remplace les intermediaires de tour : un seul releve par appel. */
     public function observeStepsWith(object ...$middleware): static
     {
