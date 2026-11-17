@@ -70,14 +70,14 @@ final class AssistedTranslationStep extends EditorialStep
         $problems = $this->problems($source, $reply);
 
         if ($problems !== []) {
-            $reply = $this->ask($context, $agent, $prompt."\n\n".$this->block('Your previous answer', $reply->structured())
+            $reply = $this->ask($context, $agent, spent: $usage, prompt: $prompt."\n\n".$this->block('Your previous answer', $reply->structured())
                 ."\n\n".$this->block('Fix these problems and answer again in full', '- '.implode("\n- ", $problems)));
             $usage = $usage->plus($reply->usage);
             $problems = $this->problems($source, $reply);
         }
 
         if ($problems !== []) {
-            throw BlogEditorialException::unusableAnswer($this->key(), implode(' ', $problems));
+            $this->unusable(implode(' ', $problems), $usage);
         }
 
         return GenerationStepResult::continue(

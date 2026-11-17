@@ -42,7 +42,6 @@
 
                 // La phrase qui suit : ce qui s'est passe et ce que la personne peut faire. Jamais la cause technique.
                 $explanation = match (true) {
-                    $generation->isActive() && $generation->cancelRequested => __('Arrêt demandé. La génération s\'arrêtera après l\'étape en cours.'),
                     $generation->isActive() => __('Vous pouvez quitter cette page. Un e-mail vous préviendra quand la génération sera terminée.'),
                     $status === $statuses::Completed && $generation->postId !== null => __('L\'article est enregistré en brouillon. Rien n\'est publié sans votre validation.'),
                     // Mode d'essai (aucun article cree), ou brouillon supprime depuis : on ne promet pas un brouillon qui n'existe pas.
@@ -59,7 +58,7 @@
                     default => 'text-secondary',
                 };
 
-                $hasActions = $generation->postId || $generation->isRetryable() || ($generation->isActive() && ! $generation->cancelRequested);
+                $hasActions = $generation->postId || $generation->isRetryable() || $generation->isActive();
                 $reportIcons = ['topic' => 'light-bulb', 'research' => 'magnifying-glass', 'writing' => 'pencil-square'];
             @endphp
 
@@ -97,7 +96,7 @@
 
                             @if ($generation->isRetryable())
                                 <x-ui::button wire:click="retry" :loading="true" target="retry"><x-ui::icon name="arrow-path" /> {{ __('Relancer') }}</x-ui::button>
-                            @elseif ($generation->isActive() && ! $generation->cancelRequested)
+                            @elseif ($generation->isActive())
                                 <x-ui::button variant="secondary" data-stop-generation x-on:click="$dispatch('ui-open-modal', 'stop-generation')"><x-ui::icon name="stop" /> {{ __('Arrêter') }}</x-ui::button>
                             @endif
                         </div>
@@ -164,7 +163,7 @@
             </x-admin.section>
 
             <x-ui::modal name="stop-generation" variant="confirm" :title="__('Arrêter cette génération ?')">
-                <p>{{ __('Une génération en attente est arrêtée tout de suite. Une génération déjà commencée finit l\'étape en cours, puis s\'arrête. Ce qui a déjà été dépensé reste dépensé.') }}</p>
+                <p>{{ __('La génération s\'arrête tout de suite. Si une étape est en cours, son appel à l\'IA est déjà parti et sera facturé, mais son résultat ne sera pas gardé. Ce qui a déjà été dépensé reste dépensé.') }}</p>
 
                 <x-slot:actions>
                     <x-ui::button variant="ghost" x-on:click="$dispatch('ui-close-modal', 'stop-generation')">{{ __('Continuer la génération') }}</x-ui::button>

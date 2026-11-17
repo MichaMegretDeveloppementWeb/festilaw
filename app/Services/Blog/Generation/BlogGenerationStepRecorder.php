@@ -72,6 +72,26 @@ final readonly class BlogGenerationStepRecorder
     }
 
     /**
+     * Un essai a abouti alors que la generation avait ete arretee ou reprise par un autre worker : son
+     * resultat est abandonne, mais l'appel a ete facture. Son cout s'ajoute a la ligne sans toucher a son
+     * statut (en increments, la ligne a pu changer depuis le debut de l'essai).
+     */
+    public function addAbandonedConsumption(BlogGenerationStep $row, GenerationUsage $usage, int $durationMs): void
+    {
+        BlogGenerationStep::query()->whereKey($row->id)->incrementEach([
+            'input_tokens' => $usage->inputTokens,
+            'output_tokens' => $usage->outputTokens,
+            'cached_tokens' => $usage->cachedTokens,
+            'reasoning_tokens' => $usage->reasoningTokens,
+            'web_searches' => $usage->webSearches,
+            'cost_microusd' => $usage->costMicrousd,
+            'duration_ms' => $durationMs,
+        ]);
+
+        $this->refreshGenerationCost($row->blog_generation_id);
+    }
+
+    /**
      * La consommation de la ligne apres ajout de celle de l'essai qui vient de finir.
      *
      * @return array<string, mixed>

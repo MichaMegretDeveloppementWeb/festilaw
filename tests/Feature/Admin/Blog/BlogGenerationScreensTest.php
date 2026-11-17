@@ -405,13 +405,15 @@ it('restarts a failed generation and stops a waiting one from the history, and k
         ->call('cancel', $waiting->id)
         ->assertDispatched('ui-toast', type: 'success', title: 'Génération arrêtée.')
         ->call('cancel', $running->id)
-        ->assertDispatched('ui-toast', type: 'success', title: 'La génération s\'arrêtera après l\'étape en cours.');
+        ->assertDispatched('ui-toast', type: 'success', title: 'Génération arrêtée.');
 
+    // Une generation deja commencee s'arrete aussi tout de suite, sans attendre la fin de son etape.
     expect($failed->refresh()->status)->toBe(BlogGenerationStatus::Queued)
         ->and($waiting->refresh()->status)->toBe(BlogGenerationStatus::Cancelled)
         ->and($waiting->cancel_requested_by)->toBe($user->id)
         ->and($waiting->cancel_requested_at)->not->toBeNull()
-        ->and($running->refresh()->status)->toBe(BlogGenerationStatus::Running)
+        ->and($running->refresh()->status)->toBe(BlogGenerationStatus::Cancelled)
+        ->and($running->lock_owner)->toBeNull()
         ->and($running->cancel_requested_by)->toBe($user->id);
 });
 
@@ -501,19 +503,15 @@ it('says who stopped a generation, when, and after which step', function () {
         ->assertSee('Étape 3 sur 9')
         ->assertSee('Arrêter')
         ->call('cancel')
-        ->assertDispatched('ui-toast', type: 'success')
-        ->assertSee('Arrêt demandé');
+        ->assertDispatched('ui-toast', type: 'success', title: 'Génération arrêtée.');
 
     $generation->refresh();
 
-    expect($generation->cancel_requested_at)->not->toBeNull()
+    expect($generation->status)->toBe(BlogGenerationStatus::Cancelled)
         ->and($generation->cancel_requested_by)->toBe($user->id);
 
-    // Le worker honore la demande entre deux etapes : la generation est alors arretee.
-    $generation->update(['status' => BlogGenerationStatus::Cancelled, 'outcome_reason' => BlogGenerationOutcomeReason::CancelledByUser, 'finished_at' => now(), 'locked_until' => null]);
-
-    $detail->call('$refresh')
-        ->assertSee('Arrêtée par Alex Martin le '.$generation->cancel_requested_at->format('d/m/Y à H:i').' (UTC), après l\'étape « Recherche ».')
+    // L'arret est immediat : l'ecran le dit aussitot, sans attendre de worker.
+    $detail->assertSee('Arrêtée par Alex Martin le '.$generation->cancel_requested_at->format('d/m/Y à H:i').' (UTC), après l\'étape « Recherche ».')
         ->assertSee('Aucun article n\'a été créé.')
         ->assertDontSee('Arrêtée au back-office')
         ->assertDontSeeHtml('wire:poll');

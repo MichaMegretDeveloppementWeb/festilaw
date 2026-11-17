@@ -97,7 +97,6 @@ final readonly class BlogGenerationDetailService
             inputTokens: (int) $rows->sum('input_tokens'),
             outputTokens: (int) $rows->sum('output_tokens'),
             images: $images === null ? null : $this->presenter->images($images),
-            cancelRequested: $generation->cancel_requested_at !== null,
             postId: $generation->blog_post_id,
             report: $this->report($rows),
             steps: $keys->map(fn (string $key): BlogGenerationStepView => $this->stepView($key, $rows->get($key)))->all(),

@@ -36,6 +36,15 @@ final class BlogAiProviderException extends BaseAppException
         );
     }
 
+    /**
+     * La meme erreur, avec en plus ce que les appels precedents de l'etape ont deja coute : un second appel
+     * qui echoue ne fait pas disparaitre le cout du premier.
+     */
+    public function withEarlierUsage(GenerationUsage $earlier): self
+    {
+        return new self($this->getMessage(), $this->getUserMessage(), $this->creditExhausted, $earlier->plus($this->usage ?? GenerationUsage::none()), $this->getPrevious());
+    }
+
     public static function callFailed(string $step, Throwable $previous, ?GenerationUsage $usage = null): self
     {
         return new self(

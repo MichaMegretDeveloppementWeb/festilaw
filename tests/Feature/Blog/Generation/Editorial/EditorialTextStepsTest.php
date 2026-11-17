@@ -5,10 +5,11 @@ use App\Ai\Agents\Blog\ResearchAgent;
 use App\Ai\Agents\Blog\StyleAgent;
 use App\Ai\Agents\Blog\TopicAgent;
 use App\Ai\Agents\Blog\TranslatorAgent;
+use App\Ai\Agents\Blog\WebSearchAgent;
 use App\Ai\Agents\Blog\WriterAgent;
 use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Enums\Blog\Generation\BlogTopicKind;
-use App\Exceptions\Blog\BlogEditorialException;
+use App\Exceptions\Blog\BlogAiProviderException;
 use App\Models\BlogGeneration;
 use App\Services\Blog\Generation\Editorial\Steps\ResearchStep;
 use App\Services\Blog\Generation\Editorial\Steps\StyleStep;
@@ -16,8 +17,13 @@ use App\Services\Blog\Generation\Editorial\Steps\TopicStep;
 use App\Services\Blog\Generation\Editorial\Steps\TranslationStep;
 use App\Services\Blog\Generation\Editorial\Steps\VerificationStep;
 use App\Services\Blog\Generation\Editorial\Steps\WritingStep;
+use GuzzleHttp\Psr7\Response as Psr7Response;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
+use Laravel\Ai\Responses\Data\Meta;
+use Laravel\Ai\Responses\Data\TextUsage;
+use Laravel\Ai\Responses\TextResponse;
 use Tests\Support\BlogAi;
 use Tests\Support\BlogContent;
 use Tests\Support\EditorialFixtures as Fixtures;
@@ -41,6 +47,7 @@ it('chooses a topic from the settings, the request and every known title, and ke
     BlogAi::saveSettings(['priority_topics' => ['Etsy and the GPSR']]);
     BlogContent::published('label');
     BlogGeneration::factory()->create(['topic_title' => 'Candle warnings', 'topic_rejected_at' => now()]);
+    WebSearchAgent::fake(['Notes from the web scan.']);
     TopicAgent::fake([[...Fixtures::topic(), 'report_fr' => 'Les vendeurs Etsy posent cette question chaque semaine.']])->preventStrayPrompts();
 
     $result = app(TopicStep::class)->execute(Fixtures::context(topicHint: 'Etsy economic operator'));
@@ -54,10 +61,14 @@ it('chooses a topic from the settings, the request and every known title, and ke
     TopicAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Etsy economic operator')
         && $prompt->contains('Etsy and the GPSR')
         && $prompt->contains('Label en')
-        && $prompt->contains('Candle warnings'));
+        && $prompt->contains('Candle warnings')
+        && $prompt->contains('Notes from the web scan.'));
+    // La veille web voit la demande et les priorites, et cherche sans sortie structuree.
+    WebSearchAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Etsy economic operator') && $prompt->contains('Etsy and the GPSR'));
 });
 
 it('writes nothing when no topic is relevant enough', function () {
+    WebSearchAgent::fake(['Notes from the web scan.']);
     TopicAgent::fake([['decision' => 'none', 'reason' => 'Nothing new this week.', 'report_fr' => 'Rien de nouveau cette semaine.']])->preventStrayPrompts();
 
     $result = app(TopicStep::class)->execute(Fixtures::context());
@@ -69,6 +80,7 @@ it('writes nothing when no topic is relevant enough', function () {
 it('turns down a topic that repeats a known title, even when the model did not see it', function () {
     $post = BlogContent::published('label');
     $post->translations()->where('locale', 'en')->update(['title' => 'How to add your economic operator on Etsy']);
+    WebSearchAgent::fake(['Notes from the web scan.']);
     TopicAgent::fake([Fixtures::topic()])->preventStrayPrompts();
 
     $result = app(TopicStep::class)->execute(Fixtures::context());
@@ -79,9 +91,26 @@ it('turns down a topic that repeats a known title, even when the model did not s
 });
 
 it('fails the topic step on an unusable answer, so the engine tries again', function () {
+    WebSearchAgent::fake(['Notes from the web scan.']);
     TopicAgent::fake([['reason' => 'No decision field.']])->preventStrayPrompts();
 
-    expect(fn () => app(TopicStep::class)->execute(Fixtures::context()))->toThrow(BlogEditorialException::class, 'unusable answer');
+    expect(fn () => app(TopicStep::class)->execute(Fixtures::context()))->toThrow(BlogAiProviderException::class, 'unusable answer');
+});
+
+it('keeps the cost of the web scan when the second call of the topic step fails', function () {
+    $raw = new Response(new Psr7Response(200, [], (string) json_encode(['usage' => [
+        'prompt_tokens' => 4_000, 'completion_tokens' => 900, 'cost' => 0.12, 'server_tool_use_details' => ['web_search_requests' => 3],
+    ]])));
+    WebSearchAgent::fake([(new TextResponse('Notes.', new TextUsage(4_000, 900), new Meta('openrouter', 'm')))->withRawResponse($raw)]);
+    TopicAgent::fake(fn () => throw new RuntimeException('Provider returned error'));
+
+    // Le moteur enregistre ce cout sur l'essai qui a echoue : la recherche deja facturee n'est pas perdue.
+    expect(fn () => app(TopicStep::class)->execute(Fixtures::context()))
+        ->toThrow(function (BlogAiProviderException $e): void {
+            expect($e->usage->costMicrousd)->toBe(120_000)
+                ->and($e->usage->webSearches)->toBe(3)
+                ->and($e->creditExhausted)->toBeFalse();
+        });
 });
 
 // --- Recherche
@@ -90,6 +119,7 @@ it('keeps the live sources of the research file and drops a dead link with the f
     $research = Fixtures::research();
     $research['sources'][] = ['id' => 'S3', 'title' => 'Old page', 'url' => 'https://old.example/gone', 'publisher' => 'Blog', 'type' => 'professional', 'date' => null];
     $research['facts'][] = ['id' => 'F3', 'claim' => 'Something from a dead page.', 'source_ids' => ['S3'], 'date' => null];
+    WebSearchAgent::fake([Fixtures::notesCiting($research['sources'])]);
     ResearchAgent::fake([[...$research, 'report_fr' => 'Trois sources consultées.']])->preventStrayPrompts();
     Http::fake(['https://old.example/*' => Http::response('', 404), '*' => Http::response('ok')]);
 
@@ -102,7 +132,21 @@ it('keeps the live sources of the research file and drops a dead link with the f
     ResearchAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Adding an economic operator on Etsy'));
 });
 
+it('leaves out a source whose address the search never met, so an invented address never enters the file', function () {
+    $research = Fixtures::research();
+    WebSearchAgent::fake([Fixtures::notesCiting([$research['sources'][0]])]);
+    ResearchAgent::fake([[...$research, 'report_fr' => 'x']])->preventStrayPrompts();
+    Http::fake(['*' => Http::response('ok')]);
+
+    $result = app(ResearchStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic()]));
+
+    // L'adresse d'Etsy n'etait pas dans les notes : la source sort, et le fait qui ne reposait que sur elle aussi.
+    expect(array_column($result->output['sources'], 'id'))->toBe(['S1'])
+        ->and(array_column($result->output['facts'], 'id'))->toBe(['F1']);
+});
+
 it('stops when no official or professional source is left', function () {
+    WebSearchAgent::fake(['Seen on https://forum.example/t/1']);
     ResearchAgent::fake([[
         'sources' => [['id' => 'S1', 'title' => 'A forum', 'url' => 'https://forum.example/t/1', 'publisher' => 'Forum', 'type' => 'forum']],
         'facts' => [['id' => 'F1', 'claim' => 'Sellers say so.', 'source_ids' => ['S1']]],
@@ -168,7 +212,7 @@ it('fails the writing step when no usable article comes back, even after a corre
     WriterAgent::fake([['title' => '', 'body_markdown' => ''], ['title' => 'Only a title']])->preventStrayPrompts();
 
     expect(fn () => app(WritingStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic(), 'research' => Fixtures::research()])))
-        ->toThrow(BlogEditorialException::class);
+        ->toThrow(BlogAiProviderException::class, 'unusable answer');
 });
 
 // --- Verification
@@ -192,7 +236,7 @@ it('refuses a check that adds a figure, or drops an image', function (string $bo
     FactCheckAgent::fake([[...Fixtures::article(['body_markdown' => $body]), 'removed_claims' => [], 'report_fr' => 'Rien.']])->preventStrayPrompts();
 
     expect(fn () => app(VerificationStep::class)->execute(Fixtures::context(['research' => Fixtures::research(), 'writing' => Fixtures::articleOutput()])))
-        ->toThrow(BlogEditorialException::class);
+        ->toThrow(BlogAiProviderException::class, 'adds material or loses an image');
 })->with([
     'a new figure' => fn () => Fixtures::body().' About 30,000 sellers are concerned.',
     'a lost image' => fn () => str_replace('[[image:1]]', '', Fixtures::body()),
@@ -250,7 +294,7 @@ it('asks once for a correction when a translation loses a link or an image, then
     TranslatorAgent::fake([[...$lost, 'report_fr' => 'x'], [...$lost, 'report_fr' => 'x']])->preventStrayPrompts();
 
     expect(fn () => app()->make(TranslationStep::class, ['locale' => 'es'])->execute(Fixtures::context(['writing' => Fixtures::writingOutput(), 'style' => Fixtures::articleOutput()])))
-        ->toThrow(BlogEditorialException::class, 'image placeholders changed');
+        ->toThrow(BlogAiProviderException::class, 'image placeholders changed');
     TranslatorAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Fix these problems'));
 });
 
@@ -269,8 +313,8 @@ it('gives every agent the company context first, then the editorial rules', func
     };
 
     match ($step) {
-        'topic' => [TopicAgent::fake([['decision' => 'none', 'reason' => 'x', 'report_fr' => 'x']]), app(TopicStep::class)->execute(Fixtures::context())],
-        'research' => [ResearchAgent::fake([[...Fixtures::research(), 'report_fr' => 'x']]), app(ResearchStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic()]))],
+        'topic' => [WebSearchAgent::fake(['Notes.']), TopicAgent::fake([['decision' => 'none', 'reason' => 'x', 'report_fr' => 'x']]), app(TopicStep::class)->execute(Fixtures::context())],
+        'research' => [WebSearchAgent::fake([Fixtures::notesCiting()]), ResearchAgent::fake([[...Fixtures::research(), 'report_fr' => 'x']]), app(ResearchStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic()]))],
         'writing' => [WriterAgent::fake([Fixtures::writerAnswer()]), app(WritingStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic(), 'research' => Fixtures::research()]))],
         'verification' => [FactCheckAgent::fake([[...Fixtures::article(), 'removed_claims' => [], 'report_fr' => 'x']]), app(VerificationStep::class)->execute(Fixtures::context(['research' => Fixtures::research(), 'writing' => Fixtures::articleOutput()]))],
         'style' => [StyleAgent::fake([[...Fixtures::article(), 'report_fr' => 'x']]), app(StyleStep::class)->execute(Fixtures::context(['verification' => Fixtures::articleOutput()]))],

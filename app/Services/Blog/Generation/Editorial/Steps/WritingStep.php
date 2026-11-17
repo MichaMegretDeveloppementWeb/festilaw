@@ -80,7 +80,7 @@ final class WritingStep extends EditorialStep
         $usage = $reply->usage;
 
         if ($draft['problems'] !== []) {
-            $correction = $this->ask($context, $agent, $prompt."\n\n".$this->block('Your previous answer', $reply->structured())
+            $correction = $this->ask($context, $agent, spent: $usage, prompt: $prompt."\n\n".$this->block('Your previous answer', $reply->structured())
                 ."\n\n".$this->block('Fix these problems and answer again in full', '- '.implode("\n- ", $draft['problems'])));
             $usage = $usage->plus($correction->usage);
             $corrected = $this->draft($correction->structured(), $allowed);
@@ -91,7 +91,7 @@ final class WritingStep extends EditorialStep
         }
 
         if ($draft['article']->isEmpty() || $draft['source_ids'] === []) {
-            throw BlogEditorialException::unusableAnswer($this->key(), 'an article without a title, a body or a source of the research file');
+            $this->unusable('an article without a title, a body or a source of the research file', $usage);
         }
 
         return GenerationStepResult::continue(

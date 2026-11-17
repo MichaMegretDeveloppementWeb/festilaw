@@ -80,7 +80,7 @@ final class TranslationStep extends EditorialStep
         $problems = $this->problems($source, $reply);
 
         if ($problems !== []) {
-            $correction = $this->ask($context, $agent, $prompt."\n\n".$this->block('Your previous answer', $reply->structured())
+            $correction = $this->ask($context, $agent, spent: $usage, prompt: $prompt."\n\n".$this->block('Your previous answer', $reply->structured())
                 ."\n\n".$this->block('Fix these problems and answer again in full', '- '.implode("\n- ", $problems)));
             $usage = $usage->plus($correction->usage);
             $reply = $correction;
@@ -88,7 +88,7 @@ final class TranslationStep extends EditorialStep
         }
 
         if ($problems !== []) {
-            throw BlogEditorialException::unusableAnswer($this->key(), implode(' ', $problems));
+            $this->unusable(implode(' ', $problems), $usage);
         }
 
         $translated = EditorialArticle::fromArray($reply->structured());

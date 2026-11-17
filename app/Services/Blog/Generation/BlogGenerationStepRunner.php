@@ -79,9 +79,12 @@ final readonly class BlogGenerationStepRunner
                 continue;
             }
 
-            // L'etape a pu durer plus que son verrou : si un autre worker a repris la generation entre-temps,
-            // son propre essai fait foi et ce resultat-ci n'est pas enregistre.
+            // L'etape a pu durer plus que son verrou, ou la generation a ete arretee pendant l'appel : le
+            // resultat n'est pas enregistre (un autre worker fait foi, ou plus rien ne doit s'ecrire), mais son
+            // cout, deja facture, l'est.
             if (! $holdLock()) {
+                $this->recorder->addAbandonedConsumption($row, $result->usage, $this->elapsedMs($startedAt));
+
                 return GenerationStepOutcome::lockLost();
             }
 

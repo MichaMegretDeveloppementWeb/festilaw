@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Services\Blog\Generation\Editorial\Steps;
 
 use App\Ai\Agents\Blog\TopicAgent;
+use App\Ai\Agents\Blog\WebSearchAgent;
 use App\Data\Blog\Generation\GenerationFindings;
 use App\Data\Blog\Generation\GenerationStepContext;
 use App\Data\Blog\Generation\GenerationStepResult;
 use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Enums\Blog\Generation\BlogTopicKind;
-use App\Exceptions\Blog\BlogEditorialException;
 use App\Repositories\Blog\BlogTopicHistoryRepository;
 use App\Services\Blog\Generation\Editorial\BlogAgentCaller;
 use App\Services\Blog\Generation\Editorial\BlogPromptLibrary;
@@ -18,9 +18,12 @@ use App\Services\Blog\Generation\Editorial\BlogTopicSimilarity;
 use Carbon\CarbonImmutable;
 
 /**
- * Etape 1 · le sujet. L'agent choisit un sujet d'apres les reglages, la demande et la liste complete des
- * titres connus, ou repond qu'aucun n'est assez pertinent : la generation s'arrete alors sans article. Un
- * titre fait des memes mots qu'un titre connu est ecarte en code (doublon), meme si l'agent ne l'a pas vu.
+ * Etape 1 · le sujet, en deux temps. Un agent fait la veille sur le web (actualite reglementaire, questions
+ * des vendeurs) et rend ses notes en texte libre ; un second agent, sans outil, choisit le sujet d'apres ces
+ * notes, les reglages, la demande et la liste complete des titres connus, ou repond qu'aucun n'est assez
+ * pertinent : la generation s'arrete alors sans article. Deux temps, car un modele qui cherche sur le web
+ * ignore le format JSON demande (essai reel du 17/11). Un titre fait des memes mots qu'un titre connu est
+ * ecarte en code (doublon), meme si l'agent ne l'a pas vu.
  */
 final class TopicStep extends EditorialStep
 {
@@ -51,8 +54,7 @@ final class TopicStep extends EditorialStep
     public function execute(GenerationStepContext $context): GenerationStepResult
     {
         $history = $this->history->load(exceptGenerationId: $context->generationId);
-        $agent = new TopicAgent($this->prompts->compose('festilaw-context', 'editorial-guidelines', 'step-topic'));
-        $reply = $this->ask($context, $agent, implode("\n\n", [
+        $request = [
             $this->block('Today', CarbonImmutable::now()->toDateString()),
             $this->block('Request', [
                 'imposed_topic' => $context->topicHint,
@@ -60,22 +62,31 @@ final class TopicStep extends EditorialStep
             ]),
             $this->block('Priority topics', $context->settings->priorityTopics),
             $this->block('Topics to avoid', $context->settings->avoidedTopics),
+        ];
+
+        $scan = $this->ask($context, new WebSearchAgent($this->prompts->compose('festilaw-context', 'step-topic-scan'), searches: 5), implode("\n\n", $request));
+        $agent = new TopicAgent($this->prompts->compose('festilaw-context', 'editorial-guidelines', 'step-topic'));
+        $reply = $this->ask($context, $agent, spent: $scan->usage, prompt: implode("\n\n", [
+            ...$request,
             $this->block('Existing articles', array_map(static fn (array $post): array => ['title' => $post['title'], 'excerpt' => $post['excerpt'], 'status' => $post['status']], $history->posts)),
             $this->block('Topics already proposed', $history->proposedTopics),
+            $this->block('Notes from the web scan', $scan->text() !== '' ? $scan->text() : 'No notes.'),
+            $this->block('Pages cited by the search', $scan->citations()),
         ]));
+        $usage = $scan->usage->plus($reply->usage);
 
         $answer = $reply->structured();
         $decision = $this->text($answer, 'decision');
 
         if (! in_array($decision, ['topic', 'none'], true)) {
-            throw BlogEditorialException::unusableAnswer($this->key(), 'missing or unknown decision');
+            $this->unusable('missing or unknown decision', $usage);
         }
 
         if ($decision === 'none') {
             return GenerationStepResult::stop(
                 BlogGenerationOutcomeReason::NoRelevantTopic,
                 ['decision' => 'none', 'reason' => $this->text($answer, 'reason')],
-                $reply->usage,
+                $usage,
                 $this->report($reply, __('Aucun sujet assez pertinent n\'a été trouvé, donc aucun article n\'a été écrit.')),
             );
         }
@@ -84,7 +95,7 @@ final class TopicStep extends EditorialStep
         $kind = BlogTopicKind::tryFrom($this->text($answer, 'kind'));
 
         if ($title === '' || $kind === null) {
-            throw BlogEditorialException::unusableAnswer($this->key(), 'a topic without a title or a kind');
+            $this->unusable('a topic without a title or a kind', $usage);
         }
 
         $output = [
@@ -95,7 +106,7 @@ final class TopicStep extends EditorialStep
             'reader' => $this->text($answer, 'reader'),
             'keywords' => array_values(array_filter($this->items($answer, 'keywords'), is_string(...))),
             'reason' => $this->text($answer, 'reason'),
-            'citations' => $reply->citations(),
+            'citations' => $scan->citations(),
         ];
         $duplicateOf = $this->similarity->duplicateOf($title, $history->titles());
 
@@ -103,7 +114,7 @@ final class TopicStep extends EditorialStep
             return GenerationStepResult::stop(
                 BlogGenerationOutcomeReason::DuplicateTopic,
                 [...$output, 'duplicate_of' => $duplicateOf],
-                $reply->usage,
+                $usage,
                 __('Le sujet proposé reprenait « :title », déjà traité ou refusé, donc aucun article n\'a été écrit.', ['title' => $duplicateOf]),
                 new GenerationFindings(topicTitle: $title, topicKind: $kind),
             );
@@ -111,7 +122,7 @@ final class TopicStep extends EditorialStep
 
         return GenerationStepResult::continue(
             $output,
-            $reply->usage,
+            $usage,
             $this->report($reply, __('Le sujet retenu est « :title ».', ['title' => $title])),
             new GenerationFindings(topicTitle: $title, topicSummary: $output['angle'] ?: null, topicKind: $kind),
         );

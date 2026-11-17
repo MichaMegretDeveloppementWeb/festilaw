@@ -162,8 +162,9 @@ it('refuses to restart once the monthly spend cap is reached', function () {
 it('stops a waiting generation at once', function () {
     $generation = BlogGeneration::factory()->create();
 
-    expect(app(CancelBlogGenerationAction::class)->execute($generation->id))->toBeTrue()
-        ->and($generation->refresh()->status)->toBe(BlogGenerationStatus::Cancelled)
+    app(CancelBlogGenerationAction::class)->execute($generation->id);
+
+    expect($generation->refresh()->status)->toBe(BlogGenerationStatus::Cancelled)
         ->and($generation->outcome_reason)->toBe(BlogGenerationOutcomeReason::CancelledByUser)
         ->and($generation->finished_at)->not->toBeNull()
         ->and(app(ProcessNextBlogGenerationAction::class)->execute('worker-a'))->toBeFalse()
@@ -188,12 +189,23 @@ it('still sends the message of a batch whose last waiting generation is stopped,
         && $mail->summary() === 'Sur 2 générations, 1 a réussi et 1 n\'a pas donné d\'article.');
 });
 
-it('asks a running generation to stop, without stopping it itself', function () {
-    $generation = BlogGeneration::factory()->running()->create();
+it('stops a running generation at once, frees its lock and closes the step in progress', function () {
+    $generation = BlogGeneration::factory()->running()->create(['current_step' => 'research']);
+    BlogGenerationStep::factory()->for($generation, 'generation')->named('topic', 1)->completed()->create();
+    $running = BlogGenerationStep::factory()->for($generation, 'generation')->named('research', 2)->create(['status' => BlogGenerationStepStatus::Running]);
 
-    expect(app(CancelBlogGenerationAction::class)->execute($generation->id))->toBeFalse()
-        ->and($generation->refresh()->status)->toBe(BlogGenerationStatus::Running)
-        ->and($generation->cancel_requested_at)->not->toBeNull();
+    app(CancelBlogGenerationAction::class)->execute($generation->id);
+
+    // Aucun worker n'a a passer : la generation est arretee, et personne ne la reprendra.
+    expect($generation->refresh()->status)->toBe(BlogGenerationStatus::Cancelled)
+        ->and($generation->outcome_reason)->toBe(BlogGenerationOutcomeReason::CancelledByUser)
+        ->and($generation->lock_owner)->toBeNull()
+        ->and($generation->locked_until)->toBeNull()
+        ->and($generation->current_step)->toBeNull()
+        ->and($generation->finished_at)->not->toBeNull()
+        ->and($running->refresh()->status)->toBe(BlogGenerationStepStatus::Failed)
+        ->and($running->finished_at)->not->toBeNull()
+        ->and(app(ProcessNextBlogGenerationAction::class)->execute('worker-a'))->toBeFalse();
     Mail::assertNothingSent();
 });
 
@@ -318,8 +330,8 @@ it('keeps who stopped a generation and when, whether it was waiting or already r
     $waiting = BlogGeneration::factory()->create();
     $running = BlogGeneration::factory()->running()->create();
 
-    expect(app(CancelBlogGenerationAction::class)->execute($waiting->id, $user->id))->toBeTrue()
-        ->and(app(CancelBlogGenerationAction::class)->execute($running->id, $user->id))->toBeFalse();
+    app(CancelBlogGenerationAction::class)->execute($waiting->id, $user->id);
+    app(CancelBlogGenerationAction::class)->execute($running->id, $user->id);
 
     expect($waiting->refresh()->cancel_requested_by)->toBe($user->id)
         ->and($waiting->cancel_requested_at)->not->toBeNull()

@@ -5,27 +5,17 @@ declare(strict_types=1);
 namespace App\Ai\Agents\Blog;
 
 use Illuminate\Contracts\JsonSchema\JsonSchema;
-use Laravel\Ai\Attributes\MaxSteps;
 use Laravel\Ai\Attributes\MaxTokens;
 use Laravel\Ai\Contracts\HasStructuredOutput;
-use Laravel\Ai\Contracts\HasTools;
-use Laravel\Ai\Providers\Tools\WebFetch;
-use Laravel\Ai\Providers\Tools\WebSearch;
 
 /**
- * Etape « recherche » : constitue le dossier de faits sources du sujet (affirmation, source, date, type de
- * source). C'est le seul agent qui lit des pages : ce qu'il rend n'est qu'un dossier, que le redacteur, sans
- * outil, utilise ensuite.
+ * Etape « recherche », second temps : met en forme le dossier de faits sources (affirmation, source, date,
+ * type de source) a partir des notes de recherche du premier temps (WebSearchAgent), qui seul a cherche sur le web.
+ * Sans outil : une sortie structuree ne tient pas avec la recherche web (essai reel du 17/11).
  */
-#[MaxSteps(12)]
 #[MaxTokens(6000)]
-final class ResearchAgent extends BlogAgent implements HasStructuredOutput, HasTools
+final class ResearchAgent extends BlogAgent implements HasStructuredOutput
 {
-    public function tools(): iterable
-    {
-        return [(new WebSearch)->max(8), (new WebFetch)->max(6)];
-    }
-
     public function schema(JsonSchema $schema): array
     {
         return [

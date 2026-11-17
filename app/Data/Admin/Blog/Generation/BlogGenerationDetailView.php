@@ -36,7 +36,6 @@ final readonly class BlogGenerationDetailView
         public int $inputTokens,
         public int $outputTokens,
         public ?string $images,
-        public bool $cancelRequested,
         public ?int $postId,
         public array $report,
         public array $steps,

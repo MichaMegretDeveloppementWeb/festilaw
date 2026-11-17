@@ -40,11 +40,11 @@ trait CommandsBlogGenerations
         return true;
     }
 
-    /** @return bool vrai si l'arret est pris en compte (tout de suite, ou apres l'etape en cours) */
+    /** @return bool vrai si la generation est arretee */
     protected function stopGeneration(CancelBlogGenerationAction $cancel, int $generationId): bool
     {
         try {
-            $stoppedNow = $cancel->execute($generationId, auth()->id());
+            $cancel->execute($generationId, auth()->id());
         } catch (BaseAppException $e) {
             Log::error($e->getMessage(), ['exception' => $e]);
             $this->dispatch('ui-toast', title: $e->getUserMessage(), type: 'error');
@@ -56,9 +56,7 @@ trait CommandsBlogGenerations
             return false;
         }
 
-        $this->dispatch('ui-toast', type: 'success', title: $stoppedNow
-            ? __('Génération arrêtée.')
-            : __('La génération s\'arrêtera après l\'étape en cours.'));
+        $this->dispatch('ui-toast', type: 'success', title: __('Génération arrêtée.'));
 
         return true;
     }

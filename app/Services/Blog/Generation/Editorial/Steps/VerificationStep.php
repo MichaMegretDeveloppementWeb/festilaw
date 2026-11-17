@@ -58,7 +58,7 @@ final class VerificationStep extends EditorialStep
         $checked = EditorialArticle::fromArray($reply->structured());
 
         if ($checked->isEmpty()) {
-            throw BlogEditorialException::unusableAnswer($this->key(), 'an empty article');
+            $this->unusable('an empty article', $reply->usage);
         }
 
         $added = array_values(array_filter(
@@ -68,7 +68,7 @@ final class VerificationStep extends EditorialStep
         $lostImages = array_diff(EditorialMarkdown::imagePlaceholders($written->body), EditorialMarkdown::imagePlaceholders($checked->body));
 
         if ($added !== [] || $lostImages !== []) {
-            throw BlogEditorialException::unusableAnswer($this->key(), 'the checked article adds material or loses an image: '.implode('; ', $added));
+            $this->unusable('the checked article adds material or loses an image: '.implode('; ', $added), $reply->usage);
         }
 
         $removed = array_values(array_filter(array_map(

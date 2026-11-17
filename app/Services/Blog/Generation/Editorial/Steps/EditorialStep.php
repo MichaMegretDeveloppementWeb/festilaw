@@ -8,6 +8,8 @@ use App\Ai\Agents\Blog\BlogAgent;
 use App\Contracts\Blog\Generation\GenerationStep;
 use App\Data\Blog\Generation\BlogAgentReply;
 use App\Data\Blog\Generation\GenerationStepContext;
+use App\Data\Blog\Generation\GenerationUsage;
+use App\Exceptions\Blog\BlogAiProviderException;
 use App\Exceptions\Blog\BlogEditorialException;
 use App\Services\Blog\Generation\Editorial\BlogAgentCaller;
 use App\Services\Blog\Generation\Editorial\BlogPromptLibrary;
@@ -54,9 +56,25 @@ abstract class EditorialStep implements GenerationStep
         return (string) $model;
     }
 
-    protected function ask(GenerationStepContext $context, BlogAgent $agent, string $prompt): BlogAgentReply
+    /**
+     * @param  GenerationUsage|null  $spent  ce que l'etape a deja depense avant cet appel : garde si l'appel echoue
+     */
+    protected function ask(GenerationStepContext $context, BlogAgent $agent, string $prompt, ?GenerationUsage $spent = null): BlogAgentReply
     {
-        return $this->caller->call($this->key(), $agent, $prompt, $this->model($context), $this->turnTimeoutSeconds());
+        try {
+            return $this->caller->call($this->key(), $agent, $prompt, $this->model($context), $this->turnTimeoutSeconds());
+        } catch (BlogAiProviderException $e) {
+            throw $spent === null ? $e : $e->withEarlierUsage($spent);
+        }
+    }
+
+    /**
+     * La reponse du modele est inutilisable alors que ses appels ont ete factures : l'etape echoue (le moteur la
+     * reessaie) en gardant ce cout au journal.
+     */
+    protected function unusable(string $reason, GenerationUsage $spent): never
+    {
+        throw BlogAiProviderException::callFailed($this->key(), BlogEditorialException::unusableAnswer($this->key(), $reason), $spent);
     }
 
     /** Une partie du message au modele : un titre, puis des donnees en JSON lisible. */

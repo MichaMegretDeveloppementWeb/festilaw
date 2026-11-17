@@ -9,6 +9,7 @@ use App\Ai\Agents\Blog\ResearchAgent;
 use App\Ai\Agents\Blog\StyleAgent;
 use App\Ai\Agents\Blog\TopicAgent;
 use App\Ai\Agents\Blog\TranslatorAgent;
+use App\Ai\Agents\Blog\WebSearchAgent;
 use App\Ai\Agents\Blog\WriterAgent;
 use App\Data\Blog\Generation\GenerationStepContext;
 use App\Enums\Blog\BlogImageCreditSource;
@@ -246,6 +247,7 @@ it('runs the whole editorial pipeline through the worker and delivers a draft to
     config(['blog.ai.pipeline' => 'editorial']);
     fakePixabay();
     $french = str_replace(['What Etsy asks for', 'What to do next'], ['Ce que demande Etsy', 'La suite'], Fixtures::body());
+    WebSearchAgent::fake(['Notes from the web scan.', Fixtures::notesCiting()])->preventStrayPrompts();
     TopicAgent::fake([[...Fixtures::topic(), 'report_fr' => 'Sujet demandé par les vendeurs.']])->preventStrayPrompts();
     ResearchAgent::fake([[...Fixtures::research(), 'report_fr' => 'Deux sources officielles.']])->preventStrayPrompts();
     WriterAgent::fake([Fixtures::writerAnswer()])->preventStrayPrompts();

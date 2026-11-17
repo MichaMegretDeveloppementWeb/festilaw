@@ -33,7 +33,7 @@ These are the habits that mark generated text. One isolated occurrence is not a 
 - Reflex triads: three adjectives, three parallel phrases or three sentences of the same shape. Keep what is true and useful, often one or two items.
 - Punchline endings: a short sentence closing a paragraph that repeats or dramatises the idea ("That's it.", "And that changes everything."). Fragments in a row ("Simple. Fast. Reliable.").
 - Announcements before the point: "Here's what you need to know", "Let's dive in", "It's important to note that", "It's worth noting", "Simply put", "In a nutshell".
-- Text talking about itself: "In this article we will", "As mentioned above", "The table below shows".
+- Text talking about itself or its sources: "In this article we will", "As mentioned above", "The table below shows", "Where those pages stop, this guide stops too", "The pages reviewed here do not say".
 - Participle tails that add an unsupported analysis: "..., ensuring compliance", "..., highlighting the importance of", "..., making it essential to".
 - Rhetorical questions used to open sections ("So what does this mean for you?").
 - A recap at the end, or a paragraph starting with "In conclusion", "Ultimately", "Overall", "To sum up".

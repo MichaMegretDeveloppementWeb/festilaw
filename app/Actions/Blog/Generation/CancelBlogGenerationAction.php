@@ -6,22 +6,29 @@ namespace App\Actions\Blog\Generation;
 
 use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
+use App\Enums\Blog\Generation\BlogGenerationStepStatus;
 use App\Exceptions\Blog\BlogGenerationException;
 use App\Models\BlogGeneration;
+use App\Models\BlogGenerationStep;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
 
 /**
- * Arrete une generation. Encore en attente, elle est arretee tout de suite. Deja prise par un worker, elle
- * recoit une demande d'arret : le worker finit l'etape en cours (un appel deja parti est de toute facon
- * facture), puis s'arrete avant la suivante. Dans les deux cas, la generation garde qui l'a arretee et
- * quand : son ecran le dit.
+ * Arrete une generation tout de suite, qu'elle attende ou qu'elle tourne deja. Elle passe « arretee », son
+ * verrou est libere et l'etape en cours est close. Un worker encore au milieu d'un appel au fournisseur
+ * trouve son verrou repris : il abandonne le resultat (son cout reste inscrit) et ne fait rien d'autre.
+ *
+ * Avant le 17/11, une generation commencee finissait son etape avant de s'arreter : un worker mort ou une
+ * etape bloquee laissait alors la generation « en cours » sans fin, sans moyen de forcer l'arret.
  */
 final readonly class CancelBlogGenerationAction
 {
+    /** Erreur inscrite sur l'etape coupee (journal technique, jamais affichee telle quelle). */
+    private const STEP_STOPPED = 'Stopped by hand while the step was running.';
+
     public function __construct(private NotifyFinishedBlogGenerationBatchAction $notifyBatch) {}
 
-    /** @return bool vrai si la generation est arretee des maintenant, faux si elle s'arretera apres l'etape en cours */
-    public function execute(int $generationId, ?int $cancelledBy = null): bool
+    public function execute(int $generationId, ?int $cancelledBy = null): void
     {
         $generation = BlogGeneration::query()->find($generationId, ['id', 'status', 'batch_uuid']);
 
@@ -35,27 +42,40 @@ final readonly class CancelBlogGenerationAction
 
         $now = CarbonImmutable::now();
 
-        // Conditionnee au statut « en attente » : si un worker vient de la prendre, la mise a jour ne touche
-        // rien et la demande d'arret prend le relais.
-        $stoppedNow = BlogGeneration::query()
-            ->whereKey($generationId)
-            ->where('status', BlogGenerationStatus::Queued->value)
-            ->update([
-                'status' => BlogGenerationStatus::Cancelled->value,
-                'outcome_reason' => BlogGenerationOutcomeReason::CancelledByUser->value,
-                'finished_at' => $now,
-                'cancel_requested_at' => $now,
-                'cancel_requested_by' => $cancelledBy,
-            ]) === 1;
+        $stopped = DB::transaction(function () use ($generationId, $cancelledBy, $now): bool {
+            // Conditionnee aux statuts actifs : une generation qui vient de finir d'elle-meme n'est pas reecrite.
+            $stopped = BlogGeneration::query()
+                ->whereKey($generationId)
+                ->whereIn('status', BlogGenerationStatus::activeValues())
+                ->update([
+                    'status' => BlogGenerationStatus::Cancelled->value,
+                    'outcome_reason' => BlogGenerationOutcomeReason::CancelledByUser->value,
+                    'current_step' => null,
+                    'finished_at' => $now,
+                    'cancel_requested_at' => $now,
+                    'cancel_requested_by' => $cancelledBy,
+                    'locked_until' => null,
+                    'lock_owner' => null,
+                ]) === 1;
 
-        if ($stoppedNow) {
-            $this->notifyBatch->execute($generation->batch_uuid);
+            if ($stopped) {
+                BlogGenerationStep::query()
+                    ->where('blog_generation_id', $generationId)
+                    ->where('status', BlogGenerationStepStatus::Running->value)
+                    ->update([
+                        'status' => BlogGenerationStepStatus::Failed->value,
+                        'error' => self::STEP_STOPPED,
+                        'finished_at' => $now,
+                    ]);
+            }
 
-            return true;
+            return $stopped;
+        });
+
+        if (! $stopped) {
+            throw BlogGenerationException::notCancellable($generationId, BlogGenerationStatus::from((string) BlogGeneration::query()->whereKey($generationId)->value('status')));
         }
 
-        BlogGeneration::query()->whereKey($generationId)->update(['cancel_requested_at' => $now, 'cancel_requested_by' => $cancelledBy]);
-
-        return false;
+        $this->notifyBatch->execute($generation->batch_uuid);
     }
 }

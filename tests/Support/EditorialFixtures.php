@@ -49,6 +49,19 @@ final class EditorialFixtures
         });
     }
 
+    /**
+     * Les notes du premier temps de la recherche, qui citent les adresses des sources donnees (une source
+     * dont l'adresse n'est pas dans les notes est ecartee par l'etape).
+     *
+     * @param  list<array<string, mixed>>|null  $sources
+     */
+    public static function notesCiting(?array $sources = null): string
+    {
+        $sources ??= self::research()['sources'];
+
+        return "Sources found:\n".implode("\n", array_map(static fn (array $source): string => '- '.$source['title'].' ('.$source['url'].')', $sources));
+    }
+
     /** @return array<string, mixed> */
     public static function topic(): array
     {

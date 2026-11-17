@@ -72,7 +72,7 @@
         </div>
 
         <x-ui::modal name="stop-generation" variant="confirm" :title="__('Arrêter cette génération ?')">
-            <p>{{ __('Une génération en attente est arrêtée tout de suite. Une génération déjà commencée finit l\'étape en cours, puis s\'arrête. Ce qui a déjà été dépensé reste dépensé.') }}</p>
+            <p>{{ __('La génération s\'arrête tout de suite. Si une étape est en cours, son appel à l\'IA est déjà parti et sera facturé, mais son résultat ne sera pas gardé. Ce qui a déjà été dépensé reste dépensé.') }}</p>
 
             <x-slot:actions>
                 <x-ui::button variant="ghost" x-on:click="$dispatch('ui-close-modal', 'stop-generation')">{{ __('Continuer la génération') }}</x-ui::button>

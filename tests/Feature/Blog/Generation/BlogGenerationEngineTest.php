@@ -335,20 +335,26 @@ it('drops the result of a step when another worker took the generation over mean
     Mail::assertNothingSent();
 });
 
-it('stops before the next step when someone asked to stop it', function () {
+it('stops at once when someone stops it during a step, drops the result of that step and keeps its cost', function () {
     $generation = BlogGeneration::factory()->create();
     $pipeline = FakeGenerationPipeline::bind()->on('topic', function () use ($generation): GenerationStepResult {
-        expect(app(CancelBlogGenerationAction::class)->execute($generation->id))->toBeFalse();
+        // Arret pendant l'appel au fournisseur : l'appel finit quand meme, et il a ete facture.
+        app(CancelBlogGenerationAction::class)->execute($generation->id);
 
-        return GenerationStepResult::continue();
+        return GenerationStepResult::continue(['title' => 'Late answer'], new GenerationUsage(model: 'm', inputTokens: 1_000, costMicrousd: 4_000));
     });
 
     generationWorkerPass();
 
-    expect($generation->refresh()->status)->toBe(BlogGenerationStatus::Cancelled)
+    $topic = $generation->refresh()->steps->firstWhere('step', 'topic');
+
+    expect($generation->status)->toBe(BlogGenerationStatus::Cancelled)
         ->and($generation->outcome_reason)->toBe(BlogGenerationOutcomeReason::CancelledByUser)
-        ->and($generation->steps->firstWhere('step', 'topic')->status)->toBe(BlogGenerationStepStatus::Completed)
-        ->and($pipeline->calls('writing'))->toBe(0);
+        ->and($topic->status)->toBe(BlogGenerationStepStatus::Failed)
+        ->and($topic->output)->toBeNull()
+        ->and($topic->cost_microusd)->toBe(4_000)
+        ->and($generation->cost_microusd)->toBe(4_000)
+        ->and($pipeline->calls('research'))->toBe(0);
     Mail::assertNothingSent();
 });
 
