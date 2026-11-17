@@ -101,8 +101,8 @@ it('shows the spend of the month against its cap, the automatic rhythm and the d
     BlogPost::factory()->create();
 
     Livewire::test(GenerationDashboard::class)
-        ->assertSee('1,00 $')
-        ->assertSee('sur 4,00 $ de plafond')
+        ->assertSee('1,0000 $')
+        ->assertSee('sur 4,0000 $ de plafond')
         ->assertSee('Activée')
         ->assertSee('2 articles chaque semaine')
         ->assertSee('brouillons générés attendent votre relecture')
@@ -170,7 +170,7 @@ it('lists the five latest generations, newest first, with their outcome and no t
         ->assertDontSee('Simulated provider failure.')
         ->assertSee('Automatique')
         ->assertSee('En échec')
-        ->assertSee('0,26 $')
+        ->assertSee('0,2625 $')
         ->assertSee('Tout l\'historique')
         ->assertSeeHtml('wire:click="retry('.$failed->id.')"')
         ->assertDontSeeHtml('wire:click="retry('.$old->id.')"');
@@ -469,7 +469,10 @@ it('shows a generation step by step, with its model, tokens and cost under each 
         ->assertSee('Vous pouvez relancer la génération. Elle reprendra à l\'étape qui a échoué')
         ->assertSee('contactez l\'assistance technique')
         ->assertDontSee('Provider is down.')
-        ->assertSee('0,04 $')
+        // Le total et le cout de chaque etape, a quatre decimales : 0,0300 $ + 0,0125 $ = 0,0425 $.
+        ->assertSee('0,0425 $')
+        ->assertSee('0,0300 $')
+        ->assertSee('0,0125 $')
         ->assertSee('Banque d\'images, 2 au plus')
         // Le modele sous son nom commercial, les tokens par sens avec le mot « tokens », plus aucune phrase « jetons lus ».
         ->assertSee('Claude Sonnet 5.5')

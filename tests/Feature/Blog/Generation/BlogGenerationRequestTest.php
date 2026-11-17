@@ -232,13 +232,13 @@ it('sends one message when a requested generation is over, to the recipient of t
             'outcome' => 'Terminée',
             'succeeded' => true,
             'failed' => false,
-            'cost' => '0,03 $',
+            'cost' => '0,0300 $',
             'url' => route('admin.blog.generation.show', ['generation' => $generation->id]),
             'draftUrl' => null,
             'excerpt' => null,
             'sources' => null,
         ]]
-        && $mail->totalCost === '0,03 $'
+        && $mail->totalCost === '0,0300 $'
         && $mail->postsUrl === route('admin.blog.posts.index')
         && $mail->generationsUrl === route('admin.blog.generation.index'));
 });

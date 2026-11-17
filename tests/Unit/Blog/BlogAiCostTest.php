@@ -86,15 +86,17 @@ it('adds up two consumptions', function () {
         ->and($total->costIsEstimated)->toBeTrue();
 });
 
-it('shows a cost in dollars, with more decimals under one cent', function (int $microusd, string $expected) {
+it('shows a cost in dollars with four decimals', function (int $microusd, string $expected) {
     expect((new BlogAiCostFormatter)->dollars($microusd))->toBe($expected);
 })->with([
-    [0, '0,00 $'],
-    [3_400, '0,0034 $'],
-    [10_000, '0,01 $'],
-    [262_500, '0,26 $'],
-    [10_000_000, '10,00 $'],
-    [1_234_560_000, '1 234,56 $'],
+    [0, '0,0000 $'],
+    [2_341, '0,0023 $'],
+    [3_460, '0,0035 $'],
+    [12_500, '0,0125 $'],
+    [100_000, '0,1000 $'],
+    [262_500, '0,2625 $'],
+    [10_000_000, '10,0000 $'],
+    [1_234_560_000, '1 234,5600 $'],
 ]);
 
 it('brings stored settings back within their bounds', function () {

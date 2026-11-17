@@ -120,8 +120,8 @@ it('does not queue a batch once the monthly spend cap is reached, writes it once
     Mail::assertSent(BlogSpendLimitReached::class, 1);
     Mail::assertSent(BlogSpendLimitReached::class, fn (BlogSpendLimitReached $mail): bool => ! $mail->creditExhausted
         && $mail->hasTo('owner@example.com')
-        && $mail->spent === '1,00 $'
-        && $mail->cap === '1,00 $');
+        && $mail->spent === '1,0000 $'
+        && $mail->cap === '1,0000 $');
 });
 
 it('queues the batch as soon as the cap allows it again, and writes a later blocking again', function () {

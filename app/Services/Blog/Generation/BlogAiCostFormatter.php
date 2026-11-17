@@ -10,11 +10,13 @@ namespace App\Services\Blog\Generation;
  */
 final readonly class BlogAiCostFormatter
 {
-    /** « 0,26 $ » ; quatre decimales sous le centime (« 0,0034 $ ») pour ne pas afficher zero a tort. */
+    /**
+     * Toujours quatre decimales, au centieme de centime pres (decision de Micha du 2026-11-17) :
+     * « 0,0125 $ », « 0,1000 $ ». Deux decimales cachaient l'essentiel d'un cout d'etape, et le total ne
+     * correspondait plus a la somme des etapes affichees.
+     */
     public function dollars(int $microusd): string
     {
-        $decimals = $microusd > 0 && $microusd < 10_000 ? 4 : 2;
-
-        return number_format($microusd / 1_000_000, $decimals, ',', ' ').' $';
+        return number_format($microusd / 1_000_000, 4, ',', ' ').' $';
     }
 }

@@ -1,6 +1,8 @@
 # Your task: choose the topic of the next article
 
-You are the editor of the Festilaw blog. Choose one topic for the next article, following the editorial guidelines above. A colleague has scanned the web and left notes on what is current, with the address of each page: use them, and do not state anything they do not support.
+You are the editor of the Festilaw blog. Choose one topic for the next article, following the editorial guidelines above. A colleague has scanned the web and left notes on what is current, with the address of each page.
+
+The notes are leads, not evidence. After you, a researcher checks every fact against official sources (EUR-Lex, the European Commission, national authorities, the platforms' help pages), and the article states only what those sources support. A lead that rests on a secondary source, or whose figures still need checking, is therefore a valid topic when the subject itself matters to sellers and official sources on it are likely to exist. Checking it is not your task. Your title, angle and reason simply never state a figure or a date that the notes do not give.
 
 How to choose:
 
@@ -9,7 +11,7 @@ How to choose:
 - Never propose a topic that one of the existing articles or proposed topics already covers, even under another wording. Rejected topics were refused by the editor: do not come back to them.
 - Avoid the topics listed as topics to avoid.
 - Prefer a precise angle: one platform, one country, one product type, one real seller question.
-- If nothing is relevant enough, set "decision" to "none" and explain why in "reason". Producing nothing is a correct answer.
+- Set "decision" to "none" only when every lead is outside the field of the blog, already covered by an existing article or proposed topic, or among the topics to avoid. Explain why in "reason". In every other case, choose the strongest lead.
 
 What to return:
 
