@@ -375,6 +375,54 @@ return [
         'consecutive_failures_alert' => 3,
 
         /*
+         | Banc d'essai des modeles (festilaw:blog-bench, SC7, cahier des charges § 13). Il rejoue le pipeline sur
+         | des sujets fixes et plusieurs configurations de modeles, sans rien creer dans le site. Le sujet et la
+         | recherche sont faits une fois par sujet avec `shared_models`, puis partages : seule l'ecriture change
+         | d'une configuration a l'autre. Une image est generee par sujet, d'apres le premier article ecrit.
+         | Sujets et configurations choisis par Micha le 18/11 : trois de fond et deux d'actualite, au moins un
+         | sur une plateforme et un sur un type de produit. `article_cap_cents` : plafond par article propre a
+         | une configuration (nul : celui des reglages). Sonnet 5.5 reserve 0,765 $ avant un appel de redaction
+         | ou de version (Haiku 5.5 et GPT-6 Luna 0,038 $, DeepSeek 0,016 $) : sous un plafond de 1,20 $, le
+         | dernier appel serait refuse des que l'article aurait coute 0,55 $. Les resultats vont dans
+         | storage/app/private/`directory`.
+         */
+        'bench' => [
+            'directory' => 'blog-bench',
+            'article_words' => 1_000,
+            'shared_models' => [
+                'topic' => 'anthropic/claude-haiku-5.5',
+                'research' => 'anthropic/claude-haiku-5.5',
+            ],
+            'image_model' => 'openai/gpt-5-image-mini',
+            'topics' => [
+                'responsible-person' => ['kind' => 'evergreen', 'topic' => 'Who can be the EU responsible person for a seller established outside the EU'],
+                'amazon-listing' => ['kind' => 'evergreen', 'topic' => 'The product safety information an Amazon listing must show to EU buyers'],
+                'toys' => ['kind' => 'evergreen', 'topic' => 'Selling toys into the EU from outside the EU: CE marking, warnings and contact details'],
+                'marketplace-controls' => ['kind' => 'news', 'topic' => 'The 2026 coordinated controls of online marketplaces by EU product safety authorities, and what they found'],
+                'product-liability' => ['kind' => 'news', 'topic' => 'The new EU product liability rules that apply from 9 December 2026'],
+            ],
+            'configurations' => [
+                'current' => [
+                    'name' => 'Haiku 5.5 + DeepSeek V4.1 Flash',
+                    'models' => ['writing' => 'deepseek/deepseek-v4.1-flash', 'verification' => 'anthropic/claude-haiku-5.5', 'translation' => 'deepseek/deepseek-v4.1-flash'],
+                ],
+                'haiku' => [
+                    'name' => 'Haiku 5.5',
+                    'models' => ['writing' => 'anthropic/claude-haiku-5.5', 'verification' => 'anthropic/claude-haiku-5.5', 'translation' => 'anthropic/claude-haiku-5.5'],
+                ],
+                'luna' => [
+                    'name' => 'Haiku 5.5 + GPT-6 Luna',
+                    'models' => ['writing' => 'openai/gpt-6-luna', 'verification' => 'anthropic/claude-haiku-5.5', 'translation' => 'openai/gpt-6-luna'],
+                ],
+                'sonnet' => [
+                    'name' => 'Haiku 5.5 + Sonnet 5.5',
+                    'models' => ['writing' => 'anthropic/claude-sonnet-5.5', 'verification' => 'anthropic/claude-haiku-5.5', 'translation' => 'anthropic/claude-sonnet-5.5'],
+                    'article_cap_cents' => 150,
+                ],
+            ],
+        ],
+
+        /*
          | Etapes factices (pipeline `simulated`) : duree de chaque etape, cout fictif par etape, et etape
          | a faire echouer ou a faire s'arreter sans sujet, pour essayer la relance et l'abandon a l'ecran.
          */

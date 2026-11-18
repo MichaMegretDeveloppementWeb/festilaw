@@ -39,14 +39,15 @@ final readonly class BlogGenerationCostForecaster
      * prix mesure (la moitie de sa reserve), et en haut toutes les images, a leur reserve.
      *
      * @param  array<string, string>  $models  modele par reglage (sujet, recherche, redaction...)
+     * @param  list<string>|null  $onlySteps  les seules etapes a compter (banc d'essai : la recherche partagee a part) ; nul : toutes
      */
-    public function forecast(array $models, int $words, GenerationImageOptions $images, bool $topicImposed = false): GenerationCostForecast
+    public function forecast(array $models, int $words, GenerationImageOptions $images, bool $topicImposed = false, ?array $onlySteps = null): GenerationCostForecast
     {
         $low = 0;
         $high = 0;
 
         foreach ($this->profile as $step => $profile) {
-            if ($step === 'topic_scan' && $topicImposed) {
+            if (($step === 'topic_scan' && $topicImposed) || ($onlySteps !== null && ! in_array($step, $onlySteps, true))) {
                 continue;
             }
 

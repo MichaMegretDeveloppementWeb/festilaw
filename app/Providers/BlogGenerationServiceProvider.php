@@ -13,8 +13,11 @@ use App\Contracts\Blog\Generation\HostResolver;
 use App\Contracts\Blog\Generation\StockImageProvider;
 use App\Data\Blog\Generation\ArticleLengthRules;
 use App\Data\Blog\Generation\ArticleSpendLimit;
+use App\Data\Blog\Generation\Bench\BlogBenchPlan;
 use App\Exceptions\Blog\BlogGenerationException;
 use App\Services\Admin\Blog\Generation\BlogGenerationOverviewService;
+use App\Services\Blog\Generation\Bench\BlogBenchFileStorage;
+use App\Services\Blog\Generation\Bench\BlogBenchStepRunner;
 use App\Services\Blog\Generation\BlogAiCostEstimator;
 use App\Services\Blog\Generation\BlogAiModelCatalog;
 use App\Services\Blog\Generation\BlogAiSettingsService;
@@ -90,6 +93,11 @@ final class BlogGenerationServiceProvider extends ServiceProvider
         $this->app->when(GenerateBlogDraftImagesAction::class)->needs('$featuredMinHeight')->giveConfig('blog.images.min_featured.height');
         $this->app->when(BlogPromptLibrary::class)->needs('$directory')->giveConfig('blog.ai.prompts_directory');
         $this->app->when(BlogAiCostEstimator::class)->needs('$webSearchMicrousd')->giveConfig('blog.ai.web_search.price_microusd');
+
+        $this->app->bind(BlogBenchPlan::class, static fn (): BlogBenchPlan => BlogBenchPlan::fromConfig((array) config('blog.ai.bench')));
+        $this->app->when(BlogBenchStepRunner::class)->needs('$maxAttempts')->giveConfig('blog.ai.step.max_attempts');
+        $this->app->when(BlogBenchStepRunner::class)->needs('$retryWaitSeconds')->giveConfig('blog.ai.step.retry_wait_seconds');
+        $this->app->when(BlogBenchFileStorage::class)->needs('$directory')->giveConfig('blog.ai.bench.directory');
     }
 
     /**

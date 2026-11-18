@@ -126,6 +126,16 @@ final readonly class BlogAiSettings
     }
 
     /**
+     * Les memes reglages avec d'autres modeles pour certaines etapes (banc d'essai des modeles).
+     *
+     * @param  array<string, string>  $models  modele par reglage, a la place de celui des reglages
+     */
+    public function withModels(array $models): self
+    {
+        return new self(...[...get_object_vars($this), 'models' => [...$this->models, ...$models]]);
+    }
+
+    /**
      * La forme enregistree.
      *
      * @return array<string, mixed>
