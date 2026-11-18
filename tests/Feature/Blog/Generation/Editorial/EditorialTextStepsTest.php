@@ -6,6 +6,7 @@ use App\Ai\Agents\Blog\ResearchAgent;
 use App\Ai\Agents\Blog\StyleAgent;
 use App\Ai\Agents\Blog\TopicAgent;
 use App\Ai\Agents\Blog\TranslatorAgent;
+use App\Ai\Agents\Blog\VersionCheckAgent;
 use App\Ai\Agents\Blog\WebSearchAgent;
 use App\Ai\Agents\Blog\WriterAgent;
 use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
@@ -20,6 +21,7 @@ use App\Services\Blog\Generation\Editorial\Steps\TopicScanStep;
 use App\Services\Blog\Generation\Editorial\Steps\TopicStep;
 use App\Services\Blog\Generation\Editorial\Steps\TranslationStep;
 use App\Services\Blog\Generation\Editorial\Steps\VerificationStep;
+use App\Services\Blog\Generation\Editorial\Steps\VersionCheckStep;
 use App\Services\Blog\Generation\Editorial\Steps\WritingStep;
 use GuzzleHttp\Psr7\Response as Psr7Response;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -311,17 +313,35 @@ it('asks once for a correction when the article breaks the rules, then keeps the
         && $prompt->contains('https://random.example/page is not a source'));
 });
 
-it('asks the writer for the length of the generation, and once for a correction when the body is outside the accepted range', function () {
+it('asks the writer for the length of the generation as a target, and once to use what the file still holds when the body is short, never to invent', function () {
     WriterAgent::fake([Fixtures::writerAnswer(), Fixtures::writerAnswer()])->preventStrayPrompts();
 
     $result = app(WritingStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic(), 'research' => Fixtures::research()], words: 1_000));
 
-    // Au premier article reel, 600 a 800 mots demandes et 522 ecrits : la consigne seule ne tient pas la longueur.
-    WriterAgent::assertPrompted(fn ($prompt): bool => str_contains($prompt->agent->instructions(), 'about 1000 words, between 900 and 1100')
+    // Decision de Micha du 18/11 : la longueur est une indication. Au banc, le remplissage faisait naitre les erreurs graves.
+    WriterAgent::assertPrompted(fn ($prompt): bool => str_contains($prompt->agent->instructions(), 'aim for about 1000 words in the body, between 900 and 1100')
+        && str_contains($prompt->agent->instructions(), 'The length is a target, not an obligation')
         && ! $prompt->contains('Fix these problems'));
-    WriterAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('It must have between 900 and 1100 words'));
+    WriterAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('below the 900 asked')
+        && $prompt->contains('a shorter article is fine, an invented point is not'));
     // La correction reste trop courte : l'article est garde, l'ecart reste au journal de l'etape.
     expect(collect($result->output['warnings'])->contains(fn (string $warning): bool => str_starts_with($warning, 'The body has')))->toBeTrue();
+});
+
+it('keeps every statement of the article with its basis, and sends back a statement without one or citing an unknown fact', function () {
+    // Banc d'essai du 18/11 : les erreurs graves venaient de regles ajoutees pour completer un exemple ou une liste.
+    $claims = [
+        ['statement' => 'Etsy asks for it in the listing settings.', 'basis' => ['F2']],
+        ['statement' => 'The box is read before paying.', 'basis' => []],
+        ['statement' => 'Every importer files a report.', 'basis' => ['F9']],
+    ];
+    WriterAgent::fake([Fixtures::writerAnswer(['claims' => $claims]), Fixtures::writerAnswer()])->preventStrayPrompts();
+
+    $result = app(WritingStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic(), 'research' => Fixtures::research()]));
+
+    WriterAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('The statement "The box is read before paying." has no basis')
+        && $prompt->contains('The statement "Every importer files a report." cites F9, which the research file does not contain.'));
+    expect($result->output['claims'])->toBe(Fixtures::writerAnswer()['claims']);
 });
 
 it('limits the images inside the text to the number set for the generation', function () {
@@ -369,6 +389,17 @@ it('asks the fact-checker to read each rule for whom it binds, when and under wh
     FactCheckAgent::assertPrompted(fn ($prompt): bool => str_contains($prompt->agent->instructions(), 'who it binds, when it applies, and under which condition')
         && str_contains($prompt->agent->instructions(), 'An example must follow the rule it illustrates')
         && str_contains($prompt->agent->instructions(), 'every heading, every list item and every example'));
+});
+
+it('gives the fact-checker each statement of the writer with its basis, and asks for its reasons in French', function () {
+    FactCheckAgent::fake([[...Fixtures::article(), 'removed_claims' => [], 'report_fr' => 'x']])->preventStrayPrompts();
+    $writing = [...Fixtures::writingOutput(), 'claims' => [['statement' => 'Etsy asks for it in the listing settings.', 'basis' => ['F2']]]];
+
+    app(VerificationStep::class)->execute(Fixtures::context(['research' => Fixtures::research(), 'writing' => $writing]));
+
+    FactCheckAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Statements of the article and their basis')
+        && $prompt->contains('"statement": "Etsy asks for it in the listing settings."')
+        && str_contains($prompt->agent->instructions(), 'in one plain French sentence for the editor'));
 });
 
 it('removes the statements the research file does not support, and keeps the trace in the step journal only', function () {
@@ -619,4 +650,31 @@ it('gives the reference of EU product rules to the writer and the fact-checker o
     FactCheckAgent::assertPrompted(fn ($prompt): bool => $withReference($prompt)
         && str_contains($prompt->agent->instructions(), 'Keep a statement only if the research file or the reference supports it.'));
     StyleAgent::assertPrompted(fn ($prompt): bool => ! str_contains($prompt->agent->instructions(), '# Reference of EU product rules'));
+});
+
+// --- Controle des versions
+
+it('corrects a version that changes a fact of the English article, with the model of the verification, and leaves the rest as it is', function () {
+    // Banc d'essai du 18/11 : une version espagnole faisait d'une alternative d'Etsy une double obligation.
+    $added = 'Etsy le demande dans les réglages de la fiche, et aussi dans le champ fabricant.';
+    $version = Fixtures::articleOutput(str_replace('Etsy asks for it in the listing settings.', $added, Fixtures::body()));
+    VersionCheckAgent::fake([[
+        'corrections' => [
+            ['original' => $added, 'corrected' => 'Etsy le demande dans les réglages de la fiche.', 'reason' => 'La version ajoute une obligation que le texte anglais ne pose pas.'],
+            ['original' => 'Un passage introuvable.', 'corrected' => 'Autre chose.', 'reason' => 'x'],
+            ['original' => Fixtures::article()['title'], 'corrected' => Fixtures::article()['title'].' depuis 2031', 'reason' => 'x'],
+        ],
+        'report_fr' => 'Un passage corrigé.',
+    ]])->preventStrayPrompts();
+
+    $result = app()->make(VersionCheckStep::class, ['locale' => 'fr'])->execute(Fixtures::context(['style' => Fixtures::articleOutput(), 'translation_fr' => $version]));
+
+    expect($result->output['article']['body'])->toContain('Etsy le demande dans les réglages de la fiche.')
+        ->not->toContain('champ fabricant')
+        ->and($result->output['article']['title'])->toBe(Fixtures::article()['title'])
+        ->and($result->output['corrections'])->toBe([['original' => $added, 'corrected' => 'Etsy le demande dans les réglages de la fiche.', 'reason' => 'La version ajoute une obligation que le texte anglais ne pose pas.']])
+        ->and(array_column($result->output['set_aside'], 'why'))->toBe(['passage not found once in the version', 'number absent from the English article: 2031']);
+    VersionCheckAgent::assertPrompted(fn ($prompt): bool => $prompt->model === Fixtures::context()->settings->modelFor('verification')
+        && $prompt->contains('French version to check')
+        && str_contains($prompt->agent->instructions(), 'an alternative turned into a cumulation'));
 });

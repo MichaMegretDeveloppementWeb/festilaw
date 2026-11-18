@@ -22,8 +22,9 @@ use App\Services\Blog\Generation\Editorial\EditorialMarkdown;
  * renvoyee une fois avec ce qu'elle ajoute, puis refusee. Un renvoi cible coute moins qu'un nouvel essai a
  * l'aveugle, qui refaisait la meme faute (generation 79 du 18/11, numeros d'articles de la fiche ajoutes
  * trois fois). Les articles du blog que le texte cite lui sont donnes (titre et extrait), pour qu'elle garde la
- * phrase qui les presente (generations 78 a 80). Ce qui a ete retire ne va qu'au journal technique de l'etape,
- * jamais sur le brouillon.
+ * phrase qui les presente (generations 78 a 80). Elle recoit aussi les affirmations du redacteur avec leurs
+ * appuis, et controle chaque paire (banc d'essai du 18/11). Ce qui a ete retire ou corrige va a la sortie de
+ * l'etape, avec sa raison en francais, et la page de la generation le montre ; jamais sur le brouillon.
  */
 final class VerificationStep extends EditorialStep
 {
@@ -60,9 +61,11 @@ final class VerificationStep extends EditorialStep
             static fn (string $token): int => (int) substr($token, strlen('festilaw:post/')),
             array_filter(EditorialMarkdown::linkTokens($written->body), static fn (string $token): bool => str_starts_with($token, 'festilaw:post/')),
         ))));
+        $claims = (array) ($context->output('writing')['claims'] ?? []);
         $prompt = implode("\n\n", array_filter([
             $this->block('Research file', ['sources' => $research['sources'] ?? [], 'facts' => $research['facts'] ?? []]),
             $linked === [] ? null : $this->block('Blog articles the text links to (festilaw:post/ID)', $linked),
+            $claims === [] ? null : $this->block('Statements of the article and their basis, as the writer listed them (RULES: the reference of EU product rules)', $claims),
             $this->block('Article to check', $written->forPrompt()),
         ]));
         $reply = $this->ask($context, $agent, $prompt);

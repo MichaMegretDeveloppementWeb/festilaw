@@ -25,21 +25,21 @@ final readonly class BlogAiCostEstimator
     }
 
     /**
-     * Ce qu'un appel peut couter au plus, a reserver avant de l'envoyer : la part des jetons multipliee par une
-     * marge (le prix change selon le fournisseur qui repond), plus les recherches. Un modele absent de la
-     * table est compte au prix du plus cher de la table.
+     * Ce qu'un appel peut couter au plus, a reserver avant de l'envoyer : la part des jetons au prix reel du
+     * modele, en pour cent du catalogue, plus les recherches. Un modele absent de la table est compte au prix du
+     * plus cher de la table.
      */
-    public function reserveMicrousd(?string $model, int $inputTokens, int $outputTokens, int $webSearches, int $margin): int
+    public function reserveMicrousd(?string $model, int $inputTokens, int $outputTokens, int $webSearches, int $marginPercent): int
     {
         $model = isset($this->prices[(string) $model]) ? $model : $this->mostExpensive();
 
-        return $this->tokensMicrousd($model, $inputTokens, $outputTokens) * max(1, $margin) + $webSearches * $this->webSearchMicrousd;
+        return intdiv($this->tokensMicrousd($model, $inputTokens, $outputTokens) * max(100, $marginPercent), 100) + $webSearches * $this->webSearchMicrousd;
     }
 
     /** Les jetons au prix du catalogue, un modele absent de la table compte comme le plus cher. */
     public function catalogMicrousd(?string $model, int $inputTokens, int $outputTokens): int
     {
-        return $this->reserveMicrousd($model, $inputTokens, $outputTokens, 0, 1);
+        return $this->reserveMicrousd($model, $inputTokens, $outputTokens, 0, 100);
     }
 
     public function webSearchesMicrousd(int $searches): int

@@ -105,7 +105,25 @@ final readonly class BlogGenerationDetailService
             postId: $generation->blog_post_id,
             report: $this->report($rows),
             steps: $keys->map(fn (string $key): BlogGenerationStepView => $this->stepView($key, $rows->get($key)))->all(),
+            review: $generation->status->isTerminal() ? $this->review($generation->id) : [],
         );
+    }
+
+    /**
+     * Ce que la verification et le controle des versions ont retire ou corrige, pour que la relecture commence la
+     * (decision de Micha du 18/11). Lu une fois la generation terminee : le suivi en direct n'en a pas besoin.
+     *
+     * @return list<array{where: string, passage: string, reason: string}>
+     */
+    private function review(int $generationId): array
+    {
+        $where = ['verification' => __('Texte anglais'), 'version_check_fr' => __('Version française'), 'version_check_es' => __('Version espagnole')];
+
+        return array_map(static fn (array $passage): array => [
+            'where' => $where[$passage['step']] ?? $passage['step'],
+            'passage' => $passage['passage'],
+            'reason' => $passage['reason'],
+        ], $this->generations->correctedPassages($generationId));
     }
 
     /** Qui a lance la generation, et quand. Le nom n'est lu que pour l'ecran d'une generation. */

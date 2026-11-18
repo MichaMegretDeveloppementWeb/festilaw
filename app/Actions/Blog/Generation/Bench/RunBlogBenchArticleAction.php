@@ -20,6 +20,7 @@ use App\Services\Blog\Generation\Editorial\Steps\EditorialStep;
 use App\Services\Blog\Generation\Editorial\Steps\StyleStep;
 use App\Services\Blog\Generation\Editorial\Steps\TranslationStep;
 use App\Services\Blog\Generation\Editorial\Steps\VerificationStep;
+use App\Services\Blog\Generation\Editorial\Steps\VersionCheckStep;
 use App\Services\Blog\Generation\Editorial\Steps\WritingStep;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Container\Container;
@@ -42,7 +43,9 @@ final readonly class RunBlogBenchArticleAction
         [VerificationStep::class, []],
         [StyleStep::class, []],
         [TranslationStep::class, ['locale' => 'fr']],
+        [VersionCheckStep::class, ['locale' => 'fr']],
         [TranslationStep::class, ['locale' => 'es']],
+        [VersionCheckStep::class, ['locale' => 'es']],
     ];
 
     public function __construct(

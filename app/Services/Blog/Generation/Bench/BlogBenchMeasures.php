@@ -64,6 +64,10 @@ final readonly class BlogBenchMeasures
                 'fr' => ($outputs['translation_fr']['second_pass'] ?? null) !== null,
                 'es' => ($outputs['translation_es']['second_pass'] ?? null) !== null,
             ],
+            'version_corrections' => [
+                'fr' => count((array) ($outputs['version_check_fr']['corrections'] ?? [])),
+                'es' => count((array) ($outputs['version_check_es']['corrections'] ?? [])),
+            ],
             'number_warnings' => [
                 'fr' => count((array) ($outputs['translation_fr']['number_warnings'] ?? [])),
                 'es' => count((array) ($outputs['translation_es']['number_warnings'] ?? [])),

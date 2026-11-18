@@ -83,7 +83,7 @@ final class BlogGenerationServiceProvider extends ServiceProvider
 
         $this->app->when(BlogAgentCaller::class)->needs('$provider')->giveConfig('blog.ai.provider');
         $this->app->when(BlogAgentCaller::class)->needs('$reasoning')->giveConfig('blog.ai.reasoning');
-        $this->app->when(BlogAgentCaller::class)->needs('$reservationMargin')->giveConfig('blog.ai.reservation_margin');
+        $this->app->when(BlogAgentCaller::class)->needs('$defaultMarginPercent')->giveConfig('blog.ai.forecast.default_price_margin_percent');
         $this->app->when([TopicScanStep::class, ResearchNotesStep::class])->needs('$webSearch')->giveConfig('blog.ai.web_search');
         $this->app->bind(HostResolver::class, DnsHostResolver::class);
         $this->app->when(RequestBlogTranslationAction::class)->needs('$locales')->giveConfig('festilaw.supported_locales');

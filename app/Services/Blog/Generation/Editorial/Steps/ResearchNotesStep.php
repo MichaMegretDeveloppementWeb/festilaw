@@ -55,6 +55,7 @@ final class ResearchNotesStep extends EditorialStep
             $this->block('Today', CarbonImmutable::now()->toDateString()),
             $this->block('Topic', array_intersect_key($topic, array_flip(['kind', 'title', 'angle', 'reader', 'keywords']))),
             $this->block('Instructions from the editor', $context->instructions ?? 'None.'),
+            $this->block('Length of the article', 'About '.($context->length->words ?? $context->settings->articleWords).' words in the body.'),
         ]));
         $notes = trim($reply->text());
 

@@ -9,6 +9,7 @@ use App\Ai\Agents\Blog\ResearchAgent;
 use App\Ai\Agents\Blog\StyleAgent;
 use App\Ai\Agents\Blog\TopicAgent;
 use App\Ai\Agents\Blog\TranslatorAgent;
+use App\Ai\Agents\Blog\VersionCheckAgent;
 use App\Ai\Agents\Blog\WebSearchAgent;
 use App\Ai\Agents\Blog\WriterAgent;
 use App\Contracts\Blog\Generation\StockImageProvider;
@@ -91,6 +92,8 @@ function textOutputs(): array
         'style' => Fixtures::articleOutput(),
         'translation_fr' => ['article' => [...Fixtures::articleOutput($french)['article'], 'title' => 'Ajouter un opérateur économique sur Etsy'], 'image_alts' => ['0' => 'Un colis sur un établi', '1' => 'Une étiquette sur un carton']],
         'translation_es' => ['article' => [...Fixtures::articleOutput()['article'], 'title' => 'Añadir un operador económico en Etsy'], 'image_alts' => ['0' => 'Un paquete sobre un banco']],
+        'version_check_fr' => ['article' => [...Fixtures::articleOutput($french)['article'], 'title' => 'Ajouter un opérateur économique sur Etsy'], 'corrections' => []],
+        'version_check_es' => ['article' => [...Fixtures::articleOutput()['article'], 'title' => 'Añadir un operador económico en Etsy'], 'corrections' => []],
     ];
 }
 
@@ -294,6 +297,7 @@ function fakeWholeEditorialPipeline(): void
     WriterAgent::fake([Fixtures::writerAnswer(), Fixtures::writerAnswer()])->preventStrayPrompts();
     FactCheckAgent::fake([[...Fixtures::article(), 'removed_claims' => [], 'report_fr' => 'Tout est appuyé.']])->preventStrayPrompts();
     StyleAgent::fake([[...Fixtures::article(), 'report_fr' => 'Style relu.']])->preventStrayPrompts();
+    VersionCheckAgent::fake([['corrections' => [], 'report_fr' => 'Version conforme.'], ['corrections' => [], 'report_fr' => 'Versión conforme.']])->preventStrayPrompts();
     TranslatorAgent::fake([
         [...Fixtures::article(['title' => 'Ajouter un opérateur économique sur Etsy', 'body_markdown' => $french]), 'image_alts' => [['number' => 0, 'alt' => 'Un colis']], 'report_fr' => 'Version française.'],
         [...Fixtures::article(['title' => 'Añadir un operador económico en Etsy']), 'image_alts' => [['number' => 0, 'alt' => 'Un paquete']], 'report_fr' => 'Versión española.'],
@@ -309,7 +313,7 @@ it('runs the whole editorial pipeline through the worker and delivers a draft to
     $generation->refresh();
     $post = BlogPost::query()->sole();
     expect($generation->status)->toBe(BlogGenerationStatus::Completed)
-        ->and($generation->steps()->pluck('step')->all())->toBe(['topic_scan', 'topic', 'research_notes', 'research', 'writing', 'verification', 'style', 'translation_fr', 'translation_es', 'images', 'assembly'])
+        ->and($generation->steps()->pluck('step')->all())->toBe(['topic_scan', 'topic', 'research_notes', 'research', 'writing', 'verification', 'style', 'translation_fr', 'version_check_fr', 'translation_es', 'version_check_es', 'images', 'assembly'])
         ->and($generation->topic_title)->toBe('Adding an economic operator on Etsy')
         ->and($generation->blog_post_id)->toBe($post->id)
         ->and($post->generation_id)->toBe($generation->id)

@@ -11,6 +11,7 @@ use App\Data\Blog\Generation\GenerationUsage;
 use App\Exceptions\Blog\BlogAiProviderException;
 use App\Exceptions\Blog\BlogEditorialException;
 use App\Services\Blog\Generation\BlogAiCostEstimator;
+use App\Services\Blog\Generation\BlogAiModelCatalog;
 use App\Services\Blog\Generation\OpenRouterUsageReader;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Log;
@@ -24,7 +25,10 @@ use Throwable;
  * Le seul passage des etapes editoriales vers un modele.
  *
  * La reservation existe parce qu'un seul appel peut couter beaucoup (0,1078 $ pour un essai de recherche
- * le 17/11) : verifier l'arret de securite entre deux essais ne suffit pas. Une reponse structuree vide est la seule
+ * le 17/11) : verifier l'arret de securite entre deux essais ne suffit pas. Elle compte la reponse la plus longue
+ * permise au prix mesure du modele, ou a la marge d'un modele jamais mesure : la triple marge d'avant (prix de
+ * DeepSeek chez Wafer le 17/11) reservait 0,33 $ pour une verification de GPT-6.1 Terra qui en coute 0,016, et
+ * l'arret de securite d'un article ordinaire ne l'aurait jamais laissee partir (banc du 18/11). Une reponse structuree vide est la seule
  * trace d'un JSON rate, le SDK ne leve rien. Le routage au meilleur prix est demande parce qu'un meme modele
  * coute jusqu'a soixante fois plus chez certains fournisseurs. Le cout de chaque tour reste garde quand un
  * appel echoue, car il a ete facture.
@@ -36,8 +40,9 @@ final readonly class BlogAgentCaller
         private OpenRouterUsageReader $usageReader,
         private BlogAiCostEstimator $estimator,
         private string $provider,
+        private BlogAiModelCatalog $models,
         private array $reasoning = [],
-        private int $reservationMargin = 2,
+        private int $defaultMarginPercent = 150,
     ) {}
 
     /**
@@ -104,7 +109,7 @@ final readonly class BlogAgentCaller
         $sent = intdiv(strlen($agent->instructions()) + strlen($prompt), 3);
         $input = $sent * ($searches + 1) + intdiv($perSearch * $searches * ($searches + 1), 2);
 
-        return $this->estimator->reserveMicrousd($model, $input, $agent->maxOutputTokens(), $searches, $this->reservationMargin);
+        return $this->estimator->reserveMicrousd($model, $input, $agent->maxOutputTokens(), $searches, $this->models->priceMarginPercent($model) ?? $this->defaultMarginPercent);
     }
 
     /**

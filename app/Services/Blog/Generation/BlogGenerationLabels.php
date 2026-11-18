@@ -28,6 +28,8 @@ final readonly class BlogGenerationLabels
             'translation' => __('Traduction'),
             'translation_fr' => __('Version française'),
             'translation_es' => __('Version espagnole'),
+            'version_check_fr' => __('Contrôle de la version française'),
+            'version_check_es' => __('Contrôle de la version espagnole'),
             'images' => __('Images'),
             'assembly' => __('Assemblage du brouillon'),
             default => $key,

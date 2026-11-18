@@ -353,6 +353,29 @@ it('shows the cost announced at launch under the real cost of a generation, and 
         ->assertDontSeeHtml('data-generation-announced');
 });
 
+it('lists the passages the checks removed or corrected on a finished generation, and nothing while it runs', function () {
+    // Decision de Micha du 18/11 : la relecture commence la ou le risque etait, le brouillon reste propre.
+    $finished = BlogGeneration::factory()->completed(costMicrousd: 60_000)->create();
+    BlogGenerationStep::factory()->for($finished, 'generation')->named('verification', 6)->completed(4_000)->create([
+        'output' => ['article' => ['body' => 'Long text.'], 'removed_claims' => [['claim' => 'The box is read before paying.', 'reason' => "L'acheteur en ligne ne voit pas la boîte."]]],
+    ]);
+    BlogGenerationStep::factory()->for($finished, 'generation')->named('version_check_es', 11)->completed(1_000)->create([
+        'output' => ['corrections' => [['original' => 'Deben añadir ambos campos.', 'corrected' => 'Deben añadir uno de los campos.', 'reason' => 'La version fait une obligation double.']]],
+    ]);
+    $running = BlogGeneration::factory()->running()->create();
+    BlogGenerationStep::factory()->for($running, 'generation')->named('verification', 6)->completed(4_000)->create([
+        'output' => ['removed_claims' => [['claim' => 'Not shown yet.', 'reason' => 'x']]],
+    ]);
+
+    Livewire::test(GenerationDetail::class, ['generation' => $finished->id])
+        ->assertSeeHtml('data-generation-review')
+        ->assertSeeInOrder(['À relire en priorité', 'Texte anglais', 'The box is read before paying.', "L'acheteur en ligne ne voit pas la boîte.", 'Version espagnole', 'Deben añadir ambos campos.'])
+        ->assertDontSee('Long text.');
+    Livewire::test(GenerationDetail::class, ['generation' => $running->id])
+        ->assertDontSeeHtml('data-generation-review')
+        ->assertDontSee('Not shown yet.');
+});
+
 it('puts the safety stop at twice the high of the estimate', function () {
     expect(app(BlogGenerationPresenter::class)->forecast(new GenerationCostForecast(50_000, 80_000)))->toBe([
         'low' => dollarsText('0,0500 $'),
@@ -502,7 +525,7 @@ it('shows a load failure instead of the history when the data cannot be read', f
 
 // --- Page d'une generation ------------------------------------------------------------------------
 
-it('shows a generation step by step, with its model, tokens and cost under each step, in 2 queries', function () {
+it('shows a generation step by step, with its model, tokens and cost under each step, in 3 queries', function () {
     $user = User::factory()->create(['name' => 'Alex Martin']);
     $generation = BlogGeneration::factory()->failed()->create([
         'topic_hint' => 'Labels on Etsy',
@@ -522,8 +545,9 @@ it('shows a generation step by step, with its model, tokens and cost under each 
     DB::enableQueryLog();
     $detail = Livewire::test(GenerationDetail::class, ['generation' => $generation->id]);
 
-    // La generation avec le nom de qui l'a lancee et de qui l'a arretee (jointures), puis ses etapes.
-    expect(count(DB::getQueryLog()))->toBe(2);
+    // La generation avec le nom de qui l'a lancee et de qui l'a arretee (jointures), ses etapes, puis, la generation
+    // etant terminee, les passages que les controles ont retires ou corriges.
+    expect(count(DB::getQueryLog()))->toBe(3);
 
     $detail->assertSee('Génération n° '.$generation->id.'.')
         ->assertSee('Lancée par Alex Martin le '.$generation->created_at->format('d/m/Y à H:i').' (UTC)')

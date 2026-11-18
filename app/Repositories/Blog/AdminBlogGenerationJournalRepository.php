@@ -4,14 +4,17 @@ declare(strict_types=1);
 
 namespace App\Repositories\Blog;
 
+use App\Enums\Blog\Generation\BlogGenerationStepStatus;
 use App\Models\BlogGeneration;
+use App\Models\BlogGenerationStep;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 /**
  * Generations lues par le back-office : une page de l'historique, les dernieres pour la vue d'ensemble, et
- * une generation avec le nom des personnes qui l'ont lancee et arretee. Les plus recentes d'abord.
+ * une generation avec le nom des personnes qui l'ont lancee et arretee. Les plus recentes d'abord. Pour une
+ * generation terminee, les passages que la verification et le controle des versions ont retires ou corriges.
  */
 final readonly class AdminBlogGenerationJournalRepository
 {
@@ -51,6 +54,37 @@ final readonly class AdminBlogGenerationJournalRepository
                 'blog_generations.cancel_requested_at', 'blog_generations.created_at',
                 'requesters.name as requester_name', 'cancellers.name as canceller_name',
             ]);
+    }
+
+    /**
+     * Les passages retires ou corriges par la verification et par le controle des versions, dans l'ordre des
+     * etapes. Seuls ces deux champs de la sortie sont lus, jamais le texte de l'article.
+     *
+     * @return list<array{step: string, passage: string, reason: string}>
+     */
+    public function correctedPassages(int $generationId): array
+    {
+        $rows = BlogGenerationStep::query()->toBase()
+            ->where('blog_generation_id', $generationId)
+            ->where('status', BlogGenerationStepStatus::Completed->value)
+            ->whereIn('step', ['verification', 'version_check_fr', 'version_check_es'])
+            ->orderBy('position')
+            ->get(['step', 'output->removed_claims as removed_claims', 'output->corrections as corrections']);
+        $passages = [];
+
+        foreach ($rows as $row) {
+            $items = json_decode((string) ($row->removed_claims ?? $row->corrections ?? '[]'), true);
+
+            foreach (is_array($items) ? $items : [] as $item) {
+                $passage = is_array($item) ? trim((string) ($item['claim'] ?? $item['original'] ?? '')) : '';
+
+                if ($passage !== '') {
+                    $passages[] = ['step' => (string) $row->step, 'passage' => $passage, 'reason' => trim((string) ($item['reason'] ?? ''))];
+                }
+            }
+        }
+
+        return $passages;
     }
 
     /** @return Builder<BlogGeneration> */

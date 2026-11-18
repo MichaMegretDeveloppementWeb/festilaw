@@ -1,7 +1,9 @@
 <?php
 
+use App\Ai\Agents\Blog\FactCheckAgent;
 use App\Ai\Agents\Blog\TopicAgent;
 use App\Ai\Agents\Blog\WebSearchAgent;
+use App\Data\Blog\Generation\BlogAgentReply;
 use App\Exceptions\Blog\BlogAiProviderException;
 use App\Services\Blog\Generation\Editorial\BlogAgentCaller;
 use GuzzleHttp\Psr7\Response as Psr7Response;
@@ -16,6 +18,7 @@ use Laravel\Ai\Responses\Data\ToolCall;
 use Laravel\Ai\Responses\Data\UrlCitation;
 use Laravel\Ai\Responses\StructuredTextResponse;
 use Laravel\Ai\Responses\TextResponse;
+use Tests\Support\EditorialFixtures;
 use Tests\Support\EditorialFixtures as Fixtures;
 use Tests\Support\TestBlogAgent;
 
@@ -195,6 +198,18 @@ it('does not send a call whose maximum cost does not fit before the safety stop'
     expect(fn () => app(BlogAgentCaller::class)->call('research_notes', new WebSearchAgent('Search.', 3, config('blog.ai.web_search')), 'Search.', 'anthropic/claude-haiku-5.5', 90, budgetLeftMicrousd: 10_000))
         ->toThrow(fn (BlogAiProviderException $e) => expect($e->overBudget)->toBeTrue()->and($e->getMessage())->toContain('not sent'));
     Http::assertNothingSent();
+});
+
+it('reserves the longest answer at the measured price of the model, and at one and a half times the catalog for a model never measured', function () {
+    // Banc du 18/11 : la triple marge reservait 0,33 $ pour une verification de Terra qui en coute 0,016.
+    config(['blog.ai.models' => [...config('blog.ai.models'), 'test/never-measured' => ['name' => 'Never measured', 'provider' => 'Test', 'input' => 100, 'output' => 500]]]);
+    FactCheckAgent::fake([[...EditorialFixtures::article(), 'removed_claims' => [], 'report_fr' => 'x']])->preventStrayPrompts();
+    $call = static fn (string $model): BlogAgentReply => app(BlogAgentCaller::class)->call('verification', new FactCheckAgent('Check.', 1_200), 'Text.', $model, 90, budgetLeftMicrousd: 150_000);
+
+    // Terra, mesure au prix du catalogue : 20 000 jetons de reponse au plus, environ 0,10 $, sous les 0,15 $ restants.
+    expect($call('openai/gpt-6.1-terra')->structured())->not->toBe([]);
+    // Le meme prix sans mesure compte une fois et demie : environ 0,15 $, au-dela de ce qui reste.
+    expect(fn () => $call('test/never-measured'))->toThrow(fn (BlogAiProviderException $e) => expect($e->overBudget)->toBeTrue());
 });
 
 it('reports any other provider error as a failed call of the step, which the engine retries', function () {

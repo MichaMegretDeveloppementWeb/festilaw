@@ -29,7 +29,7 @@ final class FactCheckAgent extends BlogAgent implements HasStructuredOutput
             ...WriterAgent::articleSchema($schema),
             'removed_claims' => $schema->array()->items($schema->object([
                 'claim' => $schema->string()->required(),
-                'reason' => $schema->string()->required(),
+                'reason' => $schema->string()->description('Why, in one plain French sentence for the editor.')->required(),
             ]))->required(),
             'report_fr' => $schema->string()->required(),
         ];

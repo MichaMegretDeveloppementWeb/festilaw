@@ -23,7 +23,7 @@ final readonly class BlogBenchForecaster
 {
     private const SHARED_STEPS = ['topic', 'research_notes', 'research'];
 
-    private const ARTICLE_STEPS = ['writing', 'verification', 'style', 'translation_fr', 'translation_es'];
+    private const ARTICLE_STEPS = ['writing', 'verification', 'style', 'translation_fr', 'version_check_fr', 'translation_es', 'version_check_es'];
 
     public function __construct(
         private BlogGenerationCostForecaster $forecaster,

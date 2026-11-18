@@ -5,6 +5,7 @@ use App\Ai\Agents\Blog\ResearchAgent;
 use App\Ai\Agents\Blog\StyleAgent;
 use App\Ai\Agents\Blog\TopicAgent;
 use App\Ai\Agents\Blog\TranslatorAgent;
+use App\Ai\Agents\Blog\VersionCheckAgent;
 use App\Ai\Agents\Blog\WebSearchAgent;
 use App\Ai\Agents\Blog\WriterAgent;
 use App\Data\Blog\Generation\GenerationImageOptions;
@@ -73,6 +74,7 @@ function fakeBenchAgents(?Closure $beforeWriting = null): ArrayObject
     }))->preventStrayPrompts();
     FactCheckAgent::fake($answer('verification', [...Fixtures::article(), 'removed_claims' => [['claim' => 'An unsupported date.', 'reason' => 'Not in the file.']], 'report_fr' => 'Une affirmation retiree.']))->preventStrayPrompts();
     StyleAgent::fake($answer('style', [...Fixtures::article(), 'report_fr' => 'Style relu.']))->preventStrayPrompts();
+    VersionCheckAgent::fake($answer('version_check', ['corrections' => [], 'report_fr' => 'Version conforme.']))->preventStrayPrompts();
     TranslatorAgent::fake($answer('translation', [...Fixtures::article(['title' => 'Ajouter un opérateur économique sur Etsy']), 'image_alts' => [['number' => 0, 'alt' => 'Un colis']], 'report_fr' => 'Version.']))->preventStrayPrompts();
 
     return $calls;
@@ -175,7 +177,7 @@ it('splits the estimate into shared research and writing without losing a step',
 
     $whole = $forecaster->forecast($models, 1_000, $none, true);
     $shared = $forecaster->forecast($models, 1_000, $none, true, ['topic', 'research_notes', 'research']);
-    $writing = $forecaster->forecast($models, 1_000, $none, true, ['writing', 'verification', 'style', 'translation_fr', 'translation_es']);
+    $writing = $forecaster->forecast($models, 1_000, $none, true, ['writing', 'verification', 'style', 'translation_fr', 'version_check_fr', 'translation_es', 'version_check_es']);
 
     expect([$shared->lowMicrousd + $writing->lowMicrousd, $shared->highMicrousd + $writing->highMicrousd])->toBe([$whole->lowMicrousd, $whole->highMicrousd])
         ->and($shared->lowMicrousd)->toBeGreaterThan(0)

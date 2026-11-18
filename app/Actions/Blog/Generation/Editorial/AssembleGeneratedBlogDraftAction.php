@@ -37,7 +37,8 @@ use Throwable;
  */
 final readonly class AssembleGeneratedBlogDraftAction implements GenerationStep
 {
-    private const LOCALES = ['en' => 'style', 'fr' => 'translation_fr', 'es' => 'translation_es'];
+    /** Les versions viennent de leur controle contre le texte anglais, qui les rend corrigees. */
+    private const LOCALES = ['en' => 'style', 'fr' => 'version_check_fr', 'es' => 'version_check_es'];
 
     public function __construct(
         private SaveBlogPostAction $savePost,

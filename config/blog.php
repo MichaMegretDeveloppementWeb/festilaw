@@ -213,7 +213,7 @@ return [
             'anthropic/claude-sonnet-5.5' => ['name' => 'Claude Sonnet 5.5', 'provider' => 'Anthropic', 'input' => 200, 'output' => 1_000, 'price_margin_percent' => 100, 'token_factor_percent' => 145, 'reasoning_tokens' => [0, 0]],
             'anthropic/claude-haiku-5.5' => ['name' => 'Claude Haiku 5.5', 'provider' => 'Anthropic', 'input' => 10, 'output' => 50, 'price_margin_percent' => 100, 'token_factor_percent' => 145],
             'openai/gpt-6.1-sol' => ['name' => 'GPT-6.1 Sol', 'provider' => 'OpenAI', 'input' => 200, 'output' => 1_000],
-            'openai/gpt-6.1-terra' => ['name' => 'GPT-6.1 Terra', 'provider' => 'OpenAI', 'input' => 100, 'output' => 500],
+            'openai/gpt-6.1-terra' => ['name' => 'GPT-6.1 Terra', 'provider' => 'OpenAI', 'input' => 100, 'output' => 500, 'price_margin_percent' => 100, 'reasoning_tokens' => [30, 200]],
             'openai/gpt-6-luna' => ['name' => 'GPT-6 Luna', 'provider' => 'OpenAI', 'input' => 10, 'output' => 50, 'price_margin_percent' => 114, 'reasoning_tokens' => [0, 300]],
             'google/gemini-4-carbon' => ['name' => 'Gemini 4 Carbon', 'provider' => 'Google', 'input' => 200, 'output' => 1_000],
             'google/gemini-4-hydrogen' => ['name' => 'Gemini 4 Hydrogen', 'provider' => 'Google', 'input' => 150, 'output' => 750],
@@ -271,15 +271,6 @@ return [
         ],
 
         /*
-         | Arret de securite : avant chaque appel, son cout maximal (texte envoye, extraits de recherche,
-         | longueur maximale de la reponse, prix des recherches) doit tenir dans ce qui reste. La part des
-         | jetons est multipliee par cette marge : le prix d'un modele change selon le fournisseur qui repond
-         | (le 17/11, DeepSeek V4.1 Flash facture 0,567 $ le million de jetons ecrits chez Wafer, pour 0,20 $
-         | au catalogue).
-         */
-        'reservation_margin' => 3,
-
-        /*
          | Le plafond du mois avertit (ecran et e-mail) quand la depense en atteint ce pourcentage, puis
          | une fois qu'elle le depasse. Chaque e-mail part une fois par mois.
          */
@@ -333,6 +324,8 @@ return [
                 'verification' => ['setting' => 'verification', 'input' => 6_700, 'input_per_1000_words' => 1_500, 'output_per_1000_words' => 1_680, 'reasoning' => [300, 4_400], 'calls' => [1, 2]],
                 'style' => ['setting' => 'writing', 'input' => 5_700, 'input_per_1000_words' => 1_500, 'output_per_1000_words' => 1_350, 'reasoning' => [400, 1_400], 'calls' => [2, 2]],
                 'translation_fr' => ['setting' => 'translation', 'input' => 8_300, 'input_per_1000_words' => 1_500, 'output_per_1000_words' => 1_800, 'reasoning' => [1_000, 5_000], 'calls' => [2, 2]],
+                'version_check_fr' => ['setting' => 'verification', 'input' => 2_200, 'input_per_1000_words' => 3_300, 'output' => 300, 'reasoning' => [300, 2_000], 'calls' => [1, 1]],
+                'version_check_es' => ['setting' => 'verification', 'input' => 2_200, 'input_per_1000_words' => 3_300, 'output' => 300, 'reasoning' => [300, 2_000], 'calls' => [1, 1]],
                 'translation_es' => ['setting' => 'translation', 'input' => 7_700, 'input_per_1000_words' => 1_500, 'output_per_1000_words' => 1_750, 'reasoning' => [1_000, 5_000], 'calls' => [2, 2]],
             ],
         ],
@@ -422,6 +415,11 @@ return [
                 'luna' => [
                     'name' => 'Haiku 5.5 + GPT-6 Luna',
                     'models' => ['writing' => 'openai/gpt-6-luna', 'verification' => 'anthropic/claude-haiku-5.5', 'translation' => 'openai/gpt-6-luna'],
+                ],
+                // Configuration retenue apres le banc du 18/11 : DeepSeek ecrit, GPT-6.1 Terra verifie et controle les versions.
+                'recommended' => [
+                    'name' => 'Haiku 5.5 + DeepSeek V4.1 Flash + GPT-6.1 Terra',
+                    'models' => ['writing' => 'deepseek/deepseek-v4.1-flash', 'verification' => 'openai/gpt-6.1-terra', 'translation' => 'deepseek/deepseek-v4.1-flash'],
                 ],
                 'sonnet' => [
                     'name' => 'Haiku 5.5 + Sonnet 5.5',

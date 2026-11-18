@@ -16,13 +16,14 @@ use App\Services\Blog\Generation\Editorial\Steps\TopicScanStep;
 use App\Services\Blog\Generation\Editorial\Steps\TopicStep;
 use App\Services\Blog\Generation\Editorial\Steps\TranslationStep;
 use App\Services\Blog\Generation\Editorial\Steps\VerificationStep;
+use App\Services\Blog\Generation\Editorial\Steps\VersionCheckStep;
 use App\Services\Blog\Generation\Editorial\Steps\WritingStep;
 use Illuminate\Contracts\Container\Container;
 
 /**
  * Le pipeline editorial (SC6, cahier des charges § 11) : veille de l'actualite, choix du sujet, recherche sur
- * le web, dossier de faits, redaction, verification, relecture du style, traductions francaise et espagnole,
- * images, assemblage du brouillon. Chaque recherche web est une etape a elle seule : enregistree des qu'elle
+ * le web, dossier de faits, redaction, verification, relecture du style, versions francaise et espagnole,
+ * chacune controlee contre le texte anglais, images, assemblage du brouillon. Chaque recherche web est une etape a elle seule : enregistree des qu'elle
  * finit, elle n'est jamais refaite par un nouvel essai de l'etape qui la met en forme. Les etapes de texte
  * sont des Services ; les images et l'assemblage, qui ecrivent, sont des Actions. La traduction assistee d'un
  * article ecrit a la main (type `translation`) tient en une etape.
@@ -43,7 +44,9 @@ final readonly class EditorialGenerationPipeline implements GenerationPipeline
                 $this->container->make(VerificationStep::class),
                 $this->container->make(StyleStep::class),
                 $this->container->make(TranslationStep::class, ['locale' => 'fr']),
+                $this->container->make(VersionCheckStep::class, ['locale' => 'fr']),
                 $this->container->make(TranslationStep::class, ['locale' => 'es']),
+                $this->container->make(VersionCheckStep::class, ['locale' => 'es']),
                 $this->container->make(GenerateBlogDraftImagesAction::class),
                 $this->container->make(AssembleGeneratedBlogDraftAction::class),
             ],

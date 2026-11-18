@@ -33,6 +33,8 @@ abstract class EditorialStep implements GenerationStep
         'translation_en' => 'translation',
         'translation_fr' => 'translation',
         'translation_es' => 'translation',
+        'version_check_fr' => 'verification',
+        'version_check_es' => 'verification',
     ];
 
     public function __construct(

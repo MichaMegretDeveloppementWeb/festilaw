@@ -141,6 +141,23 @@
                 @endif
             </x-admin.section>
 
+            {{-- Les passages retires ou corriges par les controles : la relecture commence la. --}}
+            @if ($generation->review !== [])
+                <x-admin.section class="mt-12" :title="__('À relire en priorité')" :description="__('Les passages que la vérification a retirés ou corrigés avant d\'écrire le brouillon. Relisez d\'abord ces endroits.')" data-generation-review>
+                    <div class="-mx-4 divide-y divide-[var(--ui-border)] sm:-mx-5">
+                        @foreach ($generation->review as $item)
+                            <section class="px-4 py-5 sm:px-5">
+                                <p class="text-[11px] font-semibold uppercase tracking-wide text-muted">{{ $item['where'] }}</p>
+                                <p class="mt-1.5 max-w-3xl text-[14px] leading-[1.7] text-primary">« {{ $item['passage'] }} »</p>
+                                @if ($item['reason'] !== '')
+                                    <p class="mt-1 max-w-3xl text-[13px] leading-[1.6] text-secondary">{{ $item['reason'] }}</p>
+                                @endif
+                            </section>
+                        @endforeach
+                    </div>
+                </x-admin.section>
+            @endif
+
             {{-- 3. Ce que l'IA a fait. --}}
             @if ($generation->report !== [])
                 <x-admin.section class="mt-12" :title="__('Compte rendu de l\'IA')" :description="__('Les choix faits par l\'IA pour cet article, expliqués par elle.')" data-generation-report>

@@ -37,10 +37,11 @@ function stockImage(): GenerationImageOptions
 }
 
 it('brackets what each article of the model bench cost, the high staying under one and a half times the low', function (array $models, array $realCosts, float $width) {
-    // Banc d'essai du 18/11 : sujet impose, 1 000 mots, sujet prepare compris, image a part.
+    // Banc d'essai du 18/11 : sujet impose, 1 000 mots, sujet prepare compris, image a part, et les etapes que le
+    // banc jouait alors (le controle des versions est venu ensuite).
     $forecast = app(BlogGenerationCostForecaster::class)->forecast([
         'topic' => 'anthropic/claude-haiku-5.5', 'research' => 'anthropic/claude-haiku-5.5', 'verification' => 'anthropic/claude-haiku-5.5', ...$models,
-    ], 1_000, new GenerationImageOptions(BlogAiImageMode::None, 1), topicImposed: true);
+    ], 1_000, new GenerationImageOptions(BlogAiImageMode::None, 1), topicImposed: true, onlySteps: ['topic', 'research_notes', 'research', 'writing', 'verification', 'style', 'translation_fr', 'translation_es']);
 
     expect($forecast->lowMicrousd)->toBeLessThanOrEqual(min($realCosts))
         ->and($forecast->highMicrousd)->toBeGreaterThanOrEqual(max($realCosts))

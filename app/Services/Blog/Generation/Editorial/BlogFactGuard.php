@@ -31,8 +31,12 @@ final class BlogFactGuard
         return $differences;
     }
 
-    /** @return list<string> */
-    private function numbers(string $text): array
+    /**
+     * Les nombres d'un texte, ramenes a leurs seuls chiffres (1 700, 1,700 et 1.700 se valent).
+     *
+     * @return list<string>
+     */
+    public function numbers(string $text): array
     {
         // Liens et reperes retires d'abord : leurs chiffres sont compares a part.
         $text = (string) preg_replace(['/\]\([^)]*\)/', EditorialMarkdown::IMAGE_PLACEHOLDER], [']', ''], $text);

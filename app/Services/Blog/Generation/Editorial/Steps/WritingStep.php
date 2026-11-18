@@ -35,6 +35,9 @@ final class WritingStep extends EditorialStep
 {
     private const SOURCE_RANKS = ['official' => 0, 'professional' => 1, 'forum' => 2];
 
+    /** L'appui d'une affirmation tiree de la fiche des regles de l'UE, qui n'a pas d'identifiant de fait. */
+    public const RULES_BASIS = 'RULES';
+
     public function __construct(
         BlogAgentCaller $caller,
         BlogPromptLibrary $prompts,
@@ -93,6 +96,7 @@ final class WritingStep extends EditorialStep
             'max_inline' => $maxInline,
             'kind' => $topic['kind'] ?? 'evergreen',
             'length' => $context->length,
+            'facts' => array_values(array_filter(array_column(array_filter($research['facts'] ?? [], is_array(...)), 'id'), is_string(...))),
         ];
 
         $reply = $this->ask($context, $agent, $prompt);
@@ -123,6 +127,7 @@ final class WritingStep extends EditorialStep
                 'source_ids' => $shown,
                 'set_aside_source_ids' => $setAside,
                 'extra_sources_reason' => $reason === '' ? null : $reason,
+                'claims' => $draft['claims'],
                 'category_id' => $draft['category_id'],
                 'related_post_ids' => $draft['related_post_ids'],
                 'featured_image' => $draft['featured_image'],
@@ -171,8 +176,8 @@ final class WritingStep extends EditorialStep
      * La reponse du redacteur, nettoyee, et la liste de ce qui ne respecte pas les consignes.
      *
      * @param  array<string, mixed>  $answer
-     * @param  array{sources: array<string, string>, categories: list<int>, posts: list<int>, max_inline: int, kind: string, length: GenerationLength|null}  $allowed
-     * @return array{article: EditorialArticle, source_ids: list<string>, category_id: int|null, related_post_ids: list<int>, featured_image: array<string, string>, inline_images: list<array<string, mixed>>, problems: list<string>}
+     * @param  array{sources: array<string, string>, categories: list<int>, posts: list<int>, max_inline: int, kind: string, length: GenerationLength|null, facts: list<string>}  $allowed
+     * @return array{article: EditorialArticle, source_ids: list<string>, claims: list<array{statement: string, basis: list<string>}>, category_id: int|null, related_post_ids: list<int>, featured_image: array<string, string>, inline_images: list<array<string, mixed>>, problems: list<string>}
      */
     private function draft(array $answer, array $allowed): array
     {
@@ -217,8 +222,13 @@ final class WritingStep extends EditorialStep
         $words = $this->inspector->words($article->body);
 
         if ($length !== null && $article->body !== '' && ! $length->accepts($words)) {
-            $problems[] = "The body has {$words} words. It must have between {$length->askedMin} and {$length->askedMax} words, without padding.";
+            $problems[] = $words > $length->acceptedMax
+                ? "The body has {$words} words. Shorten it to between {$length->askedMin} and {$length->askedMax} words."
+                : "The body has {$words} words, below the {$length->askedMin} asked. Use material of the research file or the reference you have not used yet. If there is none, keep the article as it is: a shorter article is fine, an invented point is not.";
         }
+
+        [$claims, $claimProblems] = $this->claims($answer, $allowed['facts']);
+        array_push($problems, ...$claimProblems);
 
         $tokens = EditorialMarkdown::linkTokens($article->body);
 
@@ -262,11 +272,52 @@ final class WritingStep extends EditorialStep
         return [
             'article' => $article,
             'source_ids' => $sourceIds,
+            'claims' => $claims,
             'category_id' => $categoryId,
             'related_post_ids' => $related,
             'featured_image' => $featured,
             'inline_images' => array_values(array_filter($inline, static fn (array $image): bool => in_array($image['number'], $placeholders, true))),
             'problems' => array_values(array_unique($problems)),
         ];
+    }
+
+    /**
+     * Les affirmations du redacteur et leurs appuis : des faits du dossier, ou RULES pour la fiche des regles de
+     * l'UE. Une affirmation sans appui, ou qui cite un fait absent du dossier, lui est renvoyee (banc d'essai du
+     * 18/11 : les erreurs graves venaient de regles ajoutees pour completer un exemple ou une liste).
+     *
+     * @param  array<string, mixed>  $answer
+     * @param  list<string>  $facts  les identifiants des faits du dossier
+     * @return array{0: list<array{statement: string, basis: list<string>}>, 1: list<string>}
+     */
+    private function claims(array $answer, array $facts): array
+    {
+        $claims = [];
+        $problems = [];
+
+        foreach ($this->items($answer, 'claims') as $claim) {
+            if (! is_array($claim) || $this->text($claim, 'statement') === '') {
+                continue;
+            }
+
+            $statement = $this->text($claim, 'statement');
+            $basis = array_values(array_unique(array_filter(array_map(static fn ($id): string => is_string($id) ? trim($id) : '', $this->items($claim, 'basis')))));
+            $unknown = array_values(array_diff($basis, [...$facts, self::RULES_BASIS]));
+            $quoted = mb_strimwidth($statement, 0, 160, '...');
+
+            if ($basis === []) {
+                $problems[] = "The statement \"{$quoted}\" has no basis. Give the ids of the facts that support it, or RULES, or remove it from the article.";
+            } elseif ($unknown !== []) {
+                $problems[] = "The statement \"{$quoted}\" cites ".implode(', ', $unknown).', which the research file does not contain.';
+            }
+
+            $claims[] = ['statement' => $statement, 'basis' => $basis];
+        }
+
+        if ($claims === []) {
+            $problems[] = 'claims must list every legal or factual statement of the article, each with its basis.';
+        }
+
+        return [$claims, $problems];
     }
 }
