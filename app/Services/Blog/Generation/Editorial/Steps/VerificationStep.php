@@ -9,6 +9,7 @@ use App\Data\Blog\Generation\EditorialArticle;
 use App\Data\Blog\Generation\GenerationStepContext;
 use App\Data\Blog\Generation\GenerationStepResult;
 use App\Exceptions\Blog\BlogEditorialException;
+use App\Repositories\Blog\BlogEditorialContextRepository;
 use App\Services\Blog\Generation\Editorial\BlogAgentCaller;
 use App\Services\Blog\Generation\Editorial\BlogFactGuard;
 use App\Services\Blog\Generation\Editorial\BlogPromptLibrary;
@@ -20,7 +21,9 @@ use App\Services\Blog\Generation\Editorial\EditorialMarkdown;
  * un chiffre, un lien ou un jeton absent du texte de depart, ou qui perd un emplacement d'image, lui est
  * renvoyee une fois avec ce qu'elle ajoute, puis refusee. Un renvoi cible coute moins qu'un nouvel essai a
  * l'aveugle, qui refaisait la meme faute (generation 79 du 18/11, numeros d'articles de la fiche ajoutes
- * trois fois). Ce qui a ete retire ne va qu'au journal technique de l'etape, jamais sur le brouillon.
+ * trois fois). Les articles du blog que le texte cite lui sont donnes (titre et extrait), pour qu'elle garde la
+ * phrase qui les presente (generations 78 a 80). Ce qui a ete retire ne va qu'au journal technique de l'etape,
+ * jamais sur le brouillon.
  */
 final class VerificationStep extends EditorialStep
 {
@@ -28,6 +31,7 @@ final class VerificationStep extends EditorialStep
         BlogAgentCaller $caller,
         BlogPromptLibrary $prompts,
         private readonly BlogFactGuard $guard,
+        private readonly BlogEditorialContextRepository $blog,
     ) {
         parent::__construct($caller, $prompts);
     }
@@ -52,10 +56,15 @@ final class VerificationStep extends EditorialStep
         }
 
         $agent = new FactCheckAgent($this->prompts->compose('festilaw-context', 'eu-product-rules', 'editorial-guidelines', 'step-verification'), $context->length?->acceptedMax);
-        $prompt = implode("\n\n", [
+        $linked = $this->blog->publishedPostsAmong(array_values(array_unique(array_map(
+            static fn (string $token): int => (int) substr($token, strlen('festilaw:post/')),
+            array_filter(EditorialMarkdown::linkTokens($written->body), static fn (string $token): bool => str_starts_with($token, 'festilaw:post/')),
+        ))));
+        $prompt = implode("\n\n", array_filter([
             $this->block('Research file', ['sources' => $research['sources'] ?? [], 'facts' => $research['facts'] ?? []]),
+            $linked === [] ? null : $this->block('Blog articles the text links to (festilaw:post/ID)', $linked),
             $this->block('Article to check', $written->forPrompt()),
-        ]);
+        ]));
         $reply = $this->ask($context, $agent, $prompt);
         $checked = EditorialArticle::fromArray($reply->structured());
         $problems = $this->problems($written, $checked);

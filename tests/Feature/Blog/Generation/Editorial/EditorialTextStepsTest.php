@@ -333,6 +333,20 @@ it('fails the writing step when no usable article comes back, even after a corre
 
 // --- Verification
 
+it('gives the fact-checker the blog articles the text links to, so it keeps the sentence that presents them', function () {
+    // Generations 78 a 80 du 18/11 : la phrase qui presentait un article lie etait retiree, faute de le connaitre.
+    $linked = BlogContent::published('label');
+    BlogContent::published('recall');
+    $body = Fixtures::body()."\n\nThe [label checklist](festilaw:post/{$linked->id}) goes through a label line by line.";
+    FactCheckAgent::fake([[...Fixtures::article(['body_markdown' => $body]), 'removed_claims' => [], 'report_fr' => 'x']])->preventStrayPrompts();
+
+    app(VerificationStep::class)->execute(Fixtures::context(['research' => Fixtures::research(), 'writing' => ['article' => Fixtures::articleOutput($body)['article']]]));
+
+    FactCheckAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Blog articles the text links to')
+        && $prompt->contains('Label en')
+        && ! $prompt->contains('Recall en'));
+});
+
 it('removes the statements the research file does not support, and keeps the trace in the step journal only', function () {
     $written = Fixtures::body()."\n\nFines reach 4% of turnover.";
     FactCheckAgent::fake([[
