@@ -175,6 +175,8 @@ it('searches the web for the chosen topic with three bounded searches, and keeps
         ->and($result->output['cut_off'])->toBeFalse();
     WebSearchAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Adding an economic operator on Etsy')
         && str_contains($prompt->agent->instructions(), 'at most 3 web searches')
+        // Decision de Micha du 18/11 : la recherche trouve assez de sources, puis s'arrete.
+        && str_contains($prompt->agent->instructions(), 'Know when you have enough.')
         && collect($prompt->agent->tools())->sole()->maxSearches === 3
         && collect($prompt->agent->tools())->sole()->providerOptions('openrouter')['engine'] === 'exa');
 });
@@ -249,6 +251,36 @@ it('writes the English article from the research file, with sources, category an
         ->and($result->output['warnings'])->toBe([]);
     WriterAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Platforms en') && $prompt->contains('Label en') && $prompt->contains('The GPSR applies since 13 December 2024.'));
 });
+
+it('shows three sources under the article, official first, and five at most when the writer says why', function (?string $reason, array $shown, array $setAside) {
+    // Decision de Micha du 18/11 : les articles 77 a 80 affichaient jusqu'a 13 sources, trois suffisent.
+    $research = Fixtures::research();
+    $research['sources'] = [
+        ['id' => 'S1', 'title' => 'Seller forum', 'url' => 'https://community.example/thread', 'publisher' => 'Forum', 'type' => 'forum', 'date' => null],
+        ['id' => 'S2', 'title' => 'Trade press', 'url' => 'https://press.example/a', 'publisher' => 'Press', 'type' => 'professional', 'date' => null],
+        $research['sources'][0],
+        ['id' => 'S4', 'title' => 'Compliance blog', 'url' => 'https://blog.example/b', 'publisher' => 'Blog', 'type' => 'professional', 'date' => null],
+        ['id' => 'S5', 'title' => 'Commission page', 'url' => 'https://commission.europa.eu/gpsr', 'publisher' => 'European Commission', 'type' => 'official', 'date' => null],
+        ['id' => 'S6', 'title' => 'Etsy help', 'url' => 'https://help.etsy.com/hc/en-gb/articles/economic-operator', 'publisher' => 'Etsy', 'type' => 'official', 'date' => null],
+    ];
+    $research['sources'][2]['id'] = 'S3';
+    $research['facts'] = [
+        ['id' => 'F1', 'claim' => 'The GPSR applies since 13 December 2024.', 'source_ids' => ['S3', 'S5'], 'date' => '2024-12-13'],
+        ['id' => 'F2', 'claim' => 'Etsy asks for an economic operator in the listing settings.', 'source_ids' => ['S6', 'S4'], 'date' => null],
+        ['id' => 'F3', 'claim' => 'Many sellers fill the field late.', 'source_ids' => ['S4', 'S2'], 'date' => null],
+        ['id' => 'F4', 'claim' => 'Sellers ask where the field is.', 'source_ids' => ['S1'], 'date' => null],
+    ];
+    WriterAgent::fake([Fixtures::writerAnswer(['source_ids' => ['S1', 'S2', 'S3', 'S4', 'S5', 'S6'], 'extra_sources_reason' => $reason])])->preventStrayPrompts();
+
+    $result = app(WritingStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic(), 'research' => $research]));
+
+    expect($result->output['source_ids'])->toBe($shown)
+        ->and($result->output['set_aside_source_ids'])->toBe($setAside)
+        ->and($result->output['extra_sources_reason'])->toBe($reason);
+})->with([
+    'no reason, the three official sources' => [null, ['S3', 'S5', 'S6'], ['S1', 'S2', 'S4']],
+    'a reason, five, the forum left out' => ['F3 rests only on two professional sources.', ['S2', 'S3', 'S4', 'S5', 'S6'], ['S1']],
+]);
 
 it('asks once for a correction when the article breaks the rules, then keeps the corrected one', function () {
     WriterAgent::fake([

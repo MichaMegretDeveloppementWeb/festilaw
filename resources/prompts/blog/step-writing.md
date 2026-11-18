@@ -27,7 +27,7 @@ Images:
 Other fields:
 
 - "title" about 60 characters, "meta_title" up to 60 characters, "meta_description" 140 to 160 characters, "excerpt" two or three sentences for the blog cards.
-- "source_ids": the ids of the sources the article relies on.
+- "source_ids": the sources shown to the reader under the article. Give the three most credible sources the article relies on, official first. Add a fourth or a fifth only when a key fact of the article rests on it and none of the first three supports that fact, and then say why in "extra_sources_reason". Otherwise leave "extra_sources_reason" empty.
 - "category_id": the id of the most fitting category below, or null if none fits.
 - "related_post_ids": up to three published articles worth reading next, from the list below.
 - "report_fr": one or two sentences in French for the editor, saying how the article was treated (angle, structure, what it leaves out). Plain French, full sentences, no colon used to join two ideas, no dash.

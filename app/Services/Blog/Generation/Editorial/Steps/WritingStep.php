@@ -26,15 +26,23 @@ use App\Services\Blog\Generation\Editorial\EditorialMarkdown;
  * liens externes du dossier seulement), emplacements d'images dans la limite reglee, sources du dossier. Un
  * ecart donne lieu a une seule demande de correction. Ce qui reste ensuite est garde au journal ; seul un
  * article vide ou sans source fait echouer l'etape, que le moteur reessaie.
+ *
+ * Les sources citees (`source_ids`) sont celles affichees sous l'article : trois au plus, cinq quand le
+ * redacteur dit pourquoi (decision de Micha du 18/11, les articles 77 a 80 en affichaient jusqu'a 13). Au-dela,
+ * l'etape garde les mieux classees sans nouvel appel, et note les autres au journal.
  */
 final class WritingStep extends EditorialStep
 {
+    private const SOURCE_RANKS = ['official' => 0, 'professional' => 1, 'forum' => 2];
+
     public function __construct(
         BlogAgentCaller $caller,
         BlogPromptLibrary $prompts,
         private readonly BlogEditorialContextRepository $blog,
         private readonly BlogWritingSignalsInspector $inspector,
         private readonly ArticleLengthRules $lengthRules,
+        private readonly int $maxSources = 3,
+        private readonly int $maxJustifiedSources = 5,
     ) {
         parent::__construct($caller, $prompts);
     }
@@ -106,10 +114,15 @@ final class WritingStep extends EditorialStep
             $this->unusable('an article without a title, a body or a source of the research file', $usage);
         }
 
+        $reason = $this->text($reply->structured(), 'extra_sources_reason');
+        [$shown, $setAside] = $this->shownSources($draft['source_ids'], $research, $reason);
+
         return GenerationStepResult::continue(
             [
                 'article' => $draft['article']->toArray(),
-                'source_ids' => $draft['source_ids'],
+                'source_ids' => $shown,
+                'set_aside_source_ids' => $setAside,
+                'extra_sources_reason' => $reason === '' ? null : $reason,
                 'category_id' => $draft['category_id'],
                 'related_post_ids' => $draft['related_post_ids'],
                 'featured_image' => $draft['featured_image'],
@@ -119,6 +132,39 @@ final class WritingStep extends EditorialStep
             $usage,
             $this->report($reply, __('L\'article a été rédigé en anglais à partir du dossier de recherche.')),
         );
+    }
+
+    /**
+     * Les sources affichees sous l'article, dans l'ordre ou le redacteur les a donnees, et celles ecartees. Au-dela
+     * du nombre permis, l'etape garde les officielles, puis les professionnelles, puis les forums, et a rang
+     * egal celles qui portent le plus de faits du dossier.
+     *
+     * @param  list<string>  $ids
+     * @param  array<string, mixed>  $research
+     * @return array{0: list<string>, 1: list<string>}
+     */
+    private function shownSources(array $ids, array $research, string $reason): array
+    {
+        $allowed = $reason === '' ? $this->maxSources : $this->maxJustifiedSources;
+
+        if (count($ids) <= $allowed) {
+            return [$ids, []];
+        }
+
+        $types = array_column($research['sources'] ?? [], 'type', 'id');
+        $facts = array_count_values(array_merge(...array_map(
+            static fn (array $fact): array => array_values(array_filter((array) ($fact['source_ids'] ?? []), is_string(...))),
+            array_values(array_filter($research['facts'] ?? [], is_array(...))),
+        )));
+        $ranked = $ids;
+        usort($ranked, static fn (string $a, string $b): int => [self::SOURCE_RANKS[$types[$a] ?? ''] ?? 3, -($facts[$a] ?? 0), array_search($a, $ids, true)]
+            <=> [self::SOURCE_RANKS[$types[$b] ?? ''] ?? 3, -($facts[$b] ?? 0), array_search($b, $ids, true)]);
+        $kept = array_slice($ranked, 0, $allowed);
+
+        return [
+            array_values(array_filter($ids, static fn (string $id): bool => in_array($id, $kept, true))),
+            array_values(array_filter($ids, static fn (string $id): bool => ! in_array($id, $kept, true))),
+        ];
     }
 
     /**

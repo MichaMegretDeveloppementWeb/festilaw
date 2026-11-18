@@ -289,6 +289,16 @@ return [
         'article_spend_tolerance_percent' => 10,
 
         /*
+         | Sources affichees sous un article (decision de Micha du 18/11) : les trois plus credibles, au plus
+         | cinq quand le redacteur dit pourquoi une quatrieme ou une cinquieme est necessaire. Les articles
+         | 77 a 80 en affichaient de 5 a 13. La recherche, elle, n'est pas plafonnee.
+         */
+        'displayed_sources' => [
+            'max' => 3,
+            'max_justified' => 5,
+        ],
+
+        /*
          | Cout estime d'un article (BlogGenerationCostForecaster), affiche avant le lancement. Profil de
          | chaque etape, par appel, cale sur la generation 77 du 17/11 (journal « Blog AI call. », brouillon
          | 97 de 522 mots), puis sur la 78 du 18/11 (brouillon 98, 929 mots rediges) : jetons lus (fixes, et

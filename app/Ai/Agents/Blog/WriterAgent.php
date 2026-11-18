@@ -33,7 +33,8 @@ final class WriterAgent extends BlogAgent implements HasStructuredOutput
 
         return [
             ...self::articleSchema($schema),
-            'source_ids' => $schema->array()->items($schema->string())->required(),
+            'source_ids' => $schema->array()->items($schema->string())->description('The sources shown under the article, three most credible, official first.')->required(),
+            'extra_sources_reason' => $schema->string()->description('Why a fourth or fifth source is needed. Empty otherwise.')->nullable(),
             'category_id' => $schema->integer()->nullable(),
             'related_post_ids' => $schema->array()->items($schema->integer()),
             'featured_image' => $image($schema)->required(),
