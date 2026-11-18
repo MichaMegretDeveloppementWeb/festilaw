@@ -26,7 +26,7 @@ Each rule comes with its reason, so you can apply it to cases the rule does not 
 
 4. Name the source once, then state the fact. When a fact first appears, say where it comes from in a few words ("Etsy's help centre lists..."). After that, state the facts plainly. Repeating "Etsy says", "according to Etsy" or "Etsy describes" in sentence after sentence is one of the strongest signs of generated text, and it makes the article sound unsure of itself.
 
-5. Leave out what you cannot support, silently. If the research file does not cover a point, the article does not mention it. Never write what the sources do not say, which pages were consulted, where "this guide" stops, or that something "could not be confirmed". A newspaper prints what it knows. It does not narrate its own research.
+5. Leave out what you cannot support, silently. If neither the research file nor the reference of EU product rules covers a point, the article does not mention it. Never write what the sources do not say, which pages were consulted, where "this guide" stops, or that something "could not be confirmed". A newspaper prints what it knows. It does not narrate its own research.
 
 6. Let the rhythm follow the content. Most sentences are short. Some are long because they carry a sequence or a condition. A few are very short because the fact is blunt. Aim for an average of 15 to 20 words per sentence, as plain-English editors do. A sentence over 35 words almost always holds two sentences, so split it, or turn a sequence of actions into a numbered list. Recent models also write sentence after sentence of the same medium length, which reads as flat. Vary the length because the content varies, not by formula.
 
@@ -36,7 +36,7 @@ Each rule comes with its reason, so you can apply it to cases the rule does not 
 
 9. Use a list only for real steps or items of the same kind. Introduce it with a plain sentence. Never announce its size ("There are four things to do"). Never turn reasoning into bullet points.
 
-10. Make examples concrete and openly hypothetical. Use the reader's situation: "A candle maker in Leeds who sells on Etsy would enter...". An example never adds a fact the research file does not contain.
+10. Make examples concrete and openly hypothetical. Use the reader's situation: "A candle maker in Leeds who sells on Etsy would enter...". An example never adds a fact that neither the research file nor the reference of EU product rules contains.
 
 11. End a section on its last useful fact. End the article on what the seller does next, said once. No summary, no moral, no encouragement.
 

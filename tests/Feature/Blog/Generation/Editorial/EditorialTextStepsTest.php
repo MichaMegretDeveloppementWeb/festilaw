@@ -477,3 +477,25 @@ it('gives every agent the company context first, then the editorial rules', func
     $agent::assertPrompted(fn ($prompt): bool => str_starts_with($prompt->agent->instructions(), '# About Festilaw, the company you work for')
         && str_contains($prompt->agent->instructions(), '# Festilaw editorial guidelines'));
 })->with(['topic', 'research', 'writing', 'verification', 'style', 'translation']);
+
+it('gives the reference of EU product rules to the writer and the fact-checker only, who may rely on it', function () {
+    // Generation 78 du 18/11 : la verification retirait des regles exactes absentes du dossier de faits
+    // (marquage CE des jouets, role de la personne responsable), et le texte perdait 160 mots.
+    Http::fake(['*' => Http::response('ok')]);
+    WriterAgent::fake([Fixtures::writerAnswer()]);
+    FactCheckAgent::fake([[...Fixtures::article(), 'removed_claims' => [], 'report_fr' => 'x']]);
+    StyleAgent::fake([[...Fixtures::article(), 'report_fr' => 'x']]);
+
+    app(WritingStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic(), 'research' => Fixtures::research()]));
+    app(VerificationStep::class)->execute(Fixtures::context(['research' => Fixtures::research(), 'writing' => Fixtures::articleOutput()]));
+    app(StyleStep::class)->execute(Fixtures::context(['verification' => Fixtures::articleOutput()]));
+
+    $withReference = fn ($prompt): bool => str_contains($prompt->agent->instructions(), '# Reference of EU product rules')
+        && str_contains($prompt->agent->instructions(), 'toys made available on the market bear the CE marking (Article 16(1))');
+
+    WriterAgent::assertPrompted(fn ($prompt): bool => $withReference($prompt)
+        && str_contains($prompt->agent->instructions(), 'Use only facts from the research file and from the reference of EU product rules.'));
+    FactCheckAgent::assertPrompted(fn ($prompt): bool => $withReference($prompt)
+        && str_contains($prompt->agent->instructions(), 'Keep a statement only if the research file or the reference supports it.'));
+    StyleAgent::assertPrompted(fn ($prompt): bool => ! str_contains($prompt->agent->instructions(), '# Reference of EU product rules'));
+});

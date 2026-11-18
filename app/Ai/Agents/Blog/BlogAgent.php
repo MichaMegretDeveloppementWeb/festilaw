@@ -84,12 +84,13 @@ abstract class BlogAgent implements Agent, HasMiddleware, HasProviderOptions
     }
 
     /**
-     * Limite d'une reponse qui porte l'article : la reflexion, que DeepSeek V4.1 Flash pousse jusqu'a 9 000
-     * jetons quel que soit l'effort demande (17/11, generation 77), plus deux fois la reponse visible, a
-     * environ 2,5 jetons par mot, JSON compris. Sans longueur connue, 16 000 jetons.
+     * Limite d'une reponse qui porte l'article : la reflexion, que DeepSeek V4.1 Flash pousse jusqu'a 11 200
+     * jetons quel que soit l'effort demande (generation 78 du 18/11), avec une marge, plus deux fois la reponse
+     * visible, a environ 2,5 jetons par mot, JSON compris. Sans longueur connue, celle de l'article le plus long
+     * qu'on puisse demander (2 000 mots). Une limite haute ne coute que si le modele s'en sert.
      */
     protected static function tokensForArticle(?int $words): int
     {
-        return $words === null ? 16_000 : 10_000 + 5 * $words;
+        return 14_000 + 5 * ($words ?? 2_000);
     }
 }

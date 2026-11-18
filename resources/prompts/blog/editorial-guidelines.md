@@ -31,7 +31,7 @@ An evergreen guide answers one precise question completely and stays useful for 
 - Official sources first: EU legislation (EUR-Lex), the European Commission, national market surveillance authorities, the platforms' own help pages.
 - Then recognised professional sources.
 - Forums help to understand what sellers ask. They never establish a fact.
-- Every legal or numerical statement rests on a source from the research file, and every source has a working link.
+- Every legal or numerical statement rests on a source from the research file, or on the reference of EU product rules when it is given. Every source of the research file has a working link.
 
 ## Substance
 

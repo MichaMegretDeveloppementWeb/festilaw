@@ -49,7 +49,7 @@ final class VerificationStep extends EditorialStep
             throw BlogEditorialException::missingInput($this->key(), 'the written article');
         }
 
-        $agent = new FactCheckAgent($this->prompts->compose('festilaw-context', 'editorial-guidelines', 'step-verification'), $context->length?->acceptedMax);
+        $agent = new FactCheckAgent($this->prompts->compose('festilaw-context', 'eu-product-rules', 'editorial-guidelines', 'step-verification'), $context->length?->acceptedMax);
         $reply = $this->ask($context, $agent, implode("\n\n", [
             $this->block('Research file', ['sources' => $research['sources'] ?? [], 'facts' => $research['facts'] ?? []]),
             $this->block('Article to check', $written->forPrompt()),

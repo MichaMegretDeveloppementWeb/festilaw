@@ -199,7 +199,8 @@ return [
          | Deux mesures facultatives, pour le cout estime d'un article (generation 77 du 17/11) :
          | `price_margin_percent`, ce que le modele coute vraiment par rapport au catalogue (Haiku 5.5 au prix
          | du catalogue, DeepSeek V4.1 Flash 2,8 fois plus cher en ecriture chez Wafer), et `reasoning_tokens`,
-         | la reflexion d'un modele qui ignore l'effort demande (DeepSeek, de 1 800 a 9 000 jetons par appel).
+         | la reflexion d'un modele qui ignore l'effort demande (DeepSeek, de 1 800 a 11 200 jetons par appel
+         | aux generations 77 et 78, comptee jusqu'a 12 000).
          */
         'models' => [
             'anthropic/claude-opus-5.5' => ['name' => 'Claude Opus 5.5', 'provider' => 'Anthropic', 'input' => 400, 'output' => 2_000],
@@ -213,7 +214,7 @@ return [
             'google/gemini-3.1-flash-lite' => ['name' => 'Gemini 3.1 Flash Lite', 'provider' => 'Google', 'input' => 25, 'output' => 150],
             'x-ai/grok-4.7' => ['name' => 'Grok 4.7', 'provider' => 'SpaceXAI', 'input' => 200, 'output' => 600],
             'mistralai/mistral-large-4-0' => ['name' => 'Mistral Large 4', 'provider' => 'Mistral', 'input' => 70, 'output' => 210],
-            'deepseek/deepseek-v4.1-flash' => ['name' => 'DeepSeek V4.1 Flash', 'provider' => 'DeepSeek', 'input' => 5, 'output' => 20, 'price_margin_percent' => 300, 'reasoning_tokens' => [1_800, 9_000]],
+            'deepseek/deepseek-v4.1-flash' => ['name' => 'DeepSeek V4.1 Flash', 'provider' => 'DeepSeek', 'input' => 5, 'output' => 20, 'price_margin_percent' => 300, 'reasoning_tokens' => [1_800, 12_000]],
         ],
 
         /*
@@ -280,9 +281,12 @@ return [
         /*
          | Cout estime d'un article (BlogGenerationCostForecaster), affiche avant le lancement. Profil de
          | chaque etape, par appel, cale sur la generation 77 du 17/11 (journal « Blog AI call. », brouillon
-         | 97 de 522 mots) : jetons lus (fixes, et par millier de mots du texte), jetons visibles ecrits,
-         | reflexion basse et haute, nombre d'appels bas et haut (correction, second passage ; les nouveaux
-         | essais, des incidents, ne comptent pas), recherches web. Un appel apres le premier relit en plus
+         | 97 de 522 mots), puis sur la 78 du 18/11 (brouillon 98, 929 mots rediges) : jetons lus (fixes, et
+         | par millier de mots du texte), jetons visibles ecrits, reflexion basse et haute, nombre d'appels
+         | bas et haut (correction, second passage ; les nouveaux essais, des incidents, ne comptent pas),
+         | recherches web. La reflexion haute de la verification vient de la 78 (5 200 jetons, Haiku 5.5
+         | compris). Les jetons lus de la redaction et de la verification comptent la fiche des regles de
+         | l'UE (`resources/prompts/blog/eu-product-rules.md`, environ 1 700 jetons). Un appel apres le premier relit en plus
          | la reponse precedente. La reflexion de chaque etape est celle d'un modele qui respecte l'effort
          | demande (Haiku 5.5) ; un modele qui l'ignore porte la sienne au catalogue (`reasoning_tokens`).
          | Les jetons sont comptes au prix mesure du modele (`price_margin_percent` du catalogue) ; un modele
@@ -295,8 +299,8 @@ return [
                 'topic' => ['setting' => 'topic', 'input' => 7_900, 'output' => 500, 'reasoning' => [0, 0], 'calls' => [1, 1]],
                 'research_notes' => ['setting' => 'research', 'input' => 22_800, 'output' => 2_800, 'reasoning' => [250, 1_000], 'calls' => [1, 1], 'searches' => 3],
                 'research' => ['setting' => 'research', 'input' => 8_500, 'output' => 2_650, 'reasoning' => [0, 0], 'calls' => [1, 1]],
-                'writing' => ['setting' => 'writing', 'input' => 9_700, 'output_per_1000_words' => 2_100, 'reasoning' => [1_000, 3_000], 'calls' => [1, 2]],
-                'verification' => ['setting' => 'verification', 'input' => 7_000, 'input_per_1000_words' => 2_100, 'output_per_1000_words' => 3_100, 'reasoning' => [1_500, 3_000], 'calls' => [1, 1]],
+                'writing' => ['setting' => 'writing', 'input' => 11_400, 'output_per_1000_words' => 2_100, 'reasoning' => [1_000, 3_000], 'calls' => [1, 2]],
+                'verification' => ['setting' => 'verification', 'input' => 8_700, 'input_per_1000_words' => 2_100, 'output_per_1000_words' => 3_100, 'reasoning' => [1_500, 5_500], 'calls' => [1, 1]],
                 'style' => ['setting' => 'writing', 'input' => 5_300, 'input_per_1000_words' => 2_100, 'output_per_1000_words' => 1_750, 'reasoning' => [1_000, 3_000], 'calls' => [1, 2]],
                 'translation_fr' => ['setting' => 'translation', 'input' => 5_500, 'input_per_1000_words' => 2_100, 'output_per_1000_words' => 2_700, 'reasoning' => [1_000, 3_000], 'calls' => [1, 3]],
                 'translation_es' => ['setting' => 'translation', 'input' => 5_500, 'input_per_1000_words' => 2_100, 'output_per_1000_words' => 2_400, 'reasoning' => [1_000, 3_000], 'calls' => [1, 3]],

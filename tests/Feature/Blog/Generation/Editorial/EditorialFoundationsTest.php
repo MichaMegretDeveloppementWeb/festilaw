@@ -21,7 +21,7 @@ uses(RefreshDatabase::class);
 
 it('reads the shared instructions of the agents from their versioned files', function (string $name) {
     expect(app(BlogPromptLibrary::class)->get($name))->not->toBeEmpty();
-})->with(['festilaw-context', 'editorial-guidelines', 'writing-voice-en', 'writing-voice-fr', 'writing-voice-es', 'lexicon-fr', 'lexicon-es', 'signals-en', 'signals-fr', 'signals-es']);
+})->with(['festilaw-context', 'eu-product-rules', 'editorial-guidelines', 'writing-voice-en', 'writing-voice-fr', 'writing-voice-es', 'lexicon-fr', 'lexicon-es', 'signals-en', 'signals-fr', 'signals-es']);
 
 it('only lists signs whose patterns compile, so the check never breaks a generation', function (string $locale) {
     $inspector = app(BlogWritingSignalsInspector::class);

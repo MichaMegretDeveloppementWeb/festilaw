@@ -36,13 +36,17 @@ function stockImage(): GenerationImageOptions
     return new GenerationImageOptions(BlogAiImageMode::Stock, 1);
 }
 
-it('brackets what the first real article cost, retries left aside', function () {
-    $forecast = app(BlogGenerationCostForecaster::class)->forecast(trialModels(), 522, stockImage());
+it('brackets what the first real articles cost, retries left aside', function () {
+    $forecaster = app(BlogGenerationCostForecaster::class);
+    $first = $forecaster->forecast(trialModels(), 522, stockImage());
+    $second = $forecaster->forecast(trialModels(), 1_000, stockImage());
 
     // Generation 77 (522 mots) : 0,0694 $ pour les appels qui ont abouti, 0,0929 $ avec trois nouveaux essais.
-    expect($forecast->lowMicrousd)->toBeLessThan(69_390)
-        ->and($forecast->highMicrousd)->toBeGreaterThan(69_390)
-        ->and($forecast->highMicrousd)->toBeGreaterThanOrEqual($forecast->lowMicrousd);
+    // Generation 78 (1 000 mots demandes) : 0,0743 $ sans la verification rejetee, 0,0792 $ avec.
+    expect($first->lowMicrousd)->toBeLessThan(69_390)
+        ->and($first->highMicrousd)->toBeGreaterThan(69_390)
+        ->and($second->lowMicrousd)->toBeLessThan(74_297)
+        ->and($second->highMicrousd)->toBeGreaterThan(79_183);
 });
 
 it('costs more for a longer article and with generated images, and nothing more for stock photos', function () {
@@ -93,9 +97,10 @@ it('counts a model never measured at its catalog price at the bottom, and with a
 });
 
 it('gives the agents that write the article a token limit that grows with its length', function () {
-    // DeepSeek a reflechi jusqu'a 9 000 jetons le 17/11 : la limite garde cette place, plus deux fois la reponse.
-    expect((new WriterAgent('', 1_200))->maxOutputTokens())->toBe(16_000)
-        ->and((new StyleAgent('', 2_400))->maxOutputTokens())->toBe(22_000)
-        ->and((new FactCheckAgent('', 480))->maxOutputTokens())->toBe(12_400)
-        ->and((new TranslatorAgent)->maxOutputTokens())->toBe(16_000);
+    // DeepSeek a reflechi jusqu'a 11 200 jetons le 18/11 : la limite garde 14 000 jetons, plus deux fois la
+    // reponse. Sans longueur connue, celle de l'article le plus long (2 000 mots).
+    expect((new WriterAgent('', 1_200))->maxOutputTokens())->toBe(20_000)
+        ->and((new StyleAgent('', 2_400))->maxOutputTokens())->toBe(26_000)
+        ->and((new FactCheckAgent('', 480))->maxOutputTokens())->toBe(16_400)
+        ->and((new TranslatorAgent)->maxOutputTokens())->toBe(24_000);
 });

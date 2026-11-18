@@ -72,7 +72,7 @@ final class WritingStep extends EditorialStep
             $this->block('Inline images allowed', (string) $maxInline),
         ]);
         $length = $context->length ?? $this->lengthRules->for($context->settings->articleWords);
-        $instructions = $this->prompts->compose('festilaw-context', 'editorial-guidelines', 'writing-voice-en')."\n\n".$this->prompts->render('step-writing', [
+        $instructions = $this->prompts->compose('festilaw-context', 'eu-product-rules', 'editorial-guidelines', 'writing-voice-en')."\n\n".$this->prompts->render('step-writing', [
             'words' => $length->words,
             'min_words' => $length->askedMin,
             'max_words' => $length->askedMax,

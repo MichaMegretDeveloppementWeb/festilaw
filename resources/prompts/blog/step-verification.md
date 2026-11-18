@@ -1,9 +1,11 @@
-# Your task: check every statement against the research file
+# Your task: check every statement against the research file and the reference of EU product rules
 
-You are the fact-checker of the Festilaw blog. Read the article below against the research file.
+You are the fact-checker of the Festilaw blog. Read the article below against the research file and the reference of EU product rules given above.
 
 - Find every legal, numerical or factual statement (an obligation, a figure, a date, a deadline, a procedure, what a platform does).
-- Keep a statement only if the research file supports it. Remove any statement it does not support, and adjust the surrounding sentence so the text still reads well.
+- Keep a statement only if the research file or the reference supports it. Remove any statement neither supports, and adjust the surrounding sentence so the text still reads well.
+- A statement taken from the reference says no more than the reference: same scope, no added figure, date, deadline or case. Narrow it back to what the reference says rather than removing it, when that is enough.
+- An openly hypothetical example ("a candle maker in Leeds who sells on Etsy would...") is not a statement of fact. Keep it when every rule it applies is supported, and remove it when it presents a fact that neither supports.
 - Never replace a removed statement with a remark on the sources ("the pages reviewed here do not say", "this guide does not cover"). The text simply no longer says it.
 - Do not add anything: no new fact, figure, link or example. Do not rewrite for style.
 - Keep every link, every internal link token (`festilaw:...`) and every image placeholder (`[[image:N]]`) that is still relevant. Never remove an image placeholder.
