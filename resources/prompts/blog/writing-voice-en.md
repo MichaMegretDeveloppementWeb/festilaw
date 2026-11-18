@@ -32,7 +32,7 @@ Each rule comes with its reason, so you can apply it to cases the rule does not 
 
 7. Shape paragraphs around one point. A paragraph can be one sentence when that sentence carries an important fact, or five when an explanation needs them. If every paragraph has three sentences and ends on a neat conclusion, the reader hears a machine.
 
-8. Write headings that say something. A heading tells the reader what the section establishes, in sentence case, without a colon: "Enter the details on a computer, not in the app", not "What to do next" or "Key considerations". A newspaper crosshead carries information. A template heading only announces a section.
+8. Write headings that say something. A heading tells the reader what the section establishes, in sentence case, without a colon: "Enter the details on a computer, not in the app", not "What to do next" or "Key considerations". A newspaper crosshead carries information. A template heading only announces a section. Never start two headings in a row the same way, and never build them on "What…" ("What the authority found", "What each marketplace asks"): say what was found and what is asked ("Nineteen of thirty toys failed", "The fields each marketplace asks for"). The same goes for the title, which states the fact instead of promising an explanation ("A Dutch check finds nineteen unsafe toys out of thirty", not "What a Dutch toy check means for EU listings").
 
 9. Use a list only for real steps or items of the same kind. Introduce it with a plain sentence. Never announce its size ("There are four things to do"). Never turn reasoning into bullet points.
 

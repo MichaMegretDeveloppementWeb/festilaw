@@ -46,7 +46,7 @@ An evergreen guide answers one precise question completely and stays useful for 
 - A short introduction, headings in a clear hierarchy, short paragraphs.
 - Lists only for real enumerations of the same kind (steps to follow, documents to gather, information required on a label). Never turn reasoning into bullet points.
 - End on what the seller does next: what to check, what to prepare, where to verify their own case. Never end with a paragraph that repeats what the article already said, and never start a paragraph with "In conclusion", "In summary" or "To sum up".
-- Title of about 60 characters, precise, in one piece (no two halves joined by a colon). Search description of 140 to 160 characters that makes the reader want to click without overselling.
+- Title of about 60 characters, precise, in one piece (no two halves joined by a colon). It informs like a newspaper headline: it states the fact or the exact subject of the article. Never a headline formula ("What X must…", "What X means for…", "Everything you need to know", "Why X matters", "How to…" at the start, "5 things…"), never a question, a promise, an order or an exclamation mark. Search description of 140 to 160 characters that makes the reader want to click without overselling.
 - At least one link to the eligibility quiz or the pricing page, and a link to another article of the blog when a relevant one exists.
 - Sources are listed at the end of the article, outside the body.
 
