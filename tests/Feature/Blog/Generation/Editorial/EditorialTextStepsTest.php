@@ -130,6 +130,19 @@ it('turns down a topic that repeats a known title, even when the model did not s
         ->and($result->findings->topicTitle)->toBe('Adding an economic operator on Etsy');
 });
 
+it('keeps an imposed topic even when its title repeats a known one', function () {
+    // Banc d'essai du 18/11 : un sujet impose a ete refuse comme deja traite. La personne qui l'impose le veut.
+    $post = BlogContent::published('label');
+    $post->translations()->where('locale', 'en')->update(['title' => 'How to add your economic operator on Etsy']);
+    TopicAgent::fake([Fixtures::topic()])->preventStrayPrompts();
+
+    $result = app(TopicStep::class)->execute(Fixtures::context(topicHint: 'Etsy economic operator'));
+
+    expect($result->stopsGeneration())->toBeFalse()
+        ->and($result->output['title'])->toBe('Adding an economic operator on Etsy');
+    TopicAgent::assertPrompted(fn ($prompt): bool => str_contains($prompt->agent->instructions(), 'An imposed topic is never refused because an existing article or proposed topic is close to it'));
+});
+
 it('fails the topic step on an unusable answer, so the engine tries again', function () {
     WebSearchAgent::fake(['Notes from the web scan.']);
     TopicAgent::fake([['reason' => 'No decision field.']])->preventStrayPrompts();

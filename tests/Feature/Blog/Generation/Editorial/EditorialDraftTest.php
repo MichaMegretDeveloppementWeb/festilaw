@@ -249,6 +249,18 @@ it('creates no draft when the final title repeats a known article', function () 
         ->and(BlogPost::query()->count())->toBe(1);
 });
 
+it('creates the draft of an imposed topic even when its final title repeats a known article', function () {
+    $existing = BlogContent::published('label');
+    $existing->translations()->where('locale', 'en')->update(['title' => 'Adding an economic operator on Etsy']);
+    $generation = BlogGeneration::factory()->running()->create(['topic_hint' => 'Etsy economic operator']);
+    $context = new GenerationStepContext($generation->id, BlogGenerationType::Article, 'Etsy economic operator', null, Fixtures::context()->settings, textOutputs(), [], 1);
+
+    $result = app(AssembleGeneratedBlogDraftAction::class)->execute($context);
+
+    expect($result->stopsGeneration())->toBeFalse()
+        ->and(BlogPost::query()->count())->toBe(2);
+});
+
 // --- Suppression d'un brouillon genere
 
 it('marks the topic as rejected when a generated draft is deleted, and only then', function () {

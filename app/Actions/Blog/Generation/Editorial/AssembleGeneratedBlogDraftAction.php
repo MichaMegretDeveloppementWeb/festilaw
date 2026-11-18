@@ -33,7 +33,7 @@ use Throwable;
  *
  * Rejouable : si la generation a deja son brouillon (etape rejouee apres un verrou perdu ou une erreur
  * survenue apres l'enregistrement), il est rendu tel quel, sans second brouillon. Un second controle des
- * doublons porte sur le titre final.
+ * doublons porte sur le titre final, sauf pour un sujet impose, toujours traite (decision du 18/11).
  */
 final readonly class AssembleGeneratedBlogDraftAction implements GenerationStep
 {
@@ -76,7 +76,7 @@ final readonly class AssembleGeneratedBlogDraftAction implements GenerationStep
             }
         }
 
-        $duplicateOf = $this->similarity->duplicateOf($articles['en']->title, $this->history->load(exceptGenerationId: $context->generationId)->titles());
+        $duplicateOf = filled($context->topicHint) ? null : $this->similarity->duplicateOf($articles['en']->title, $this->history->load(exceptGenerationId: $context->generationId)->titles());
 
         if ($duplicateOf !== null) {
             return GenerationStepResult::stop(

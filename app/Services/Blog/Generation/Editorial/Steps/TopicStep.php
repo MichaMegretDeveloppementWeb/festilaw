@@ -19,7 +19,9 @@ use Carbon\CarbonImmutable;
 /**
  * Choisit le sujet d'apres les notes de la veille, ou repond qu'aucun n'est assez pertinent : la generation
  * s'arrete alors sans article. L'agent ne cherche pas lui-meme, la veille est une etape a part. Un titre fait
- * des memes mots qu'un titre connu est ecarte en code, car l'agent peut ne pas le voir.
+ * des memes mots qu'un titre connu est ecarte en code, car l'agent peut ne pas le voir. Un sujet impose ne
+ * l'est jamais : la personne qui l'impose le veut, et l'agent en choisit un angle que les articles existants
+ * ne prennent pas (decision de Micha du 18/11, apres un sujet impose refuse par le banc d'essai).
  */
 final class TopicStep extends EditorialStep
 {
@@ -108,7 +110,7 @@ final class TopicStep extends EditorialStep
             'reason' => $this->text($answer, 'reason'),
             'citations' => $citations,
         ];
-        $duplicateOf = $this->similarity->duplicateOf($title, $history->titles());
+        $duplicateOf = filled($context->topicHint) ? null : $this->similarity->duplicateOf($title, $history->titles());
 
         if ($duplicateOf !== null) {
             return GenerationStepResult::stop(

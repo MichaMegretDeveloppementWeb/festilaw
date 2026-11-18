@@ -9,7 +9,6 @@ use App\Data\Blog\Generation\Bench\BlogBenchPlan;
 use App\Data\Blog\Generation\Bench\BlogBenchStepRun;
 use App\Data\Blog\Generation\Bench\BlogBenchTopic;
 use App\Data\Blog\Generation\BlogAiSettings;
-use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Exceptions\Blog\BlogBenchException;
 use App\Services\Blog\Generation\Bench\BlogBenchFileStorage;
 use App\Services\Blog\Generation\Bench\BlogBenchStepRunner;
@@ -27,8 +26,7 @@ use Illuminate\Support\Facades\Log;
  * l'ecriture change d'une configuration a l'autre, et une reprise ne repaie pas une recherche deja faite.
  *
  * La nature du sujet (fond ou actualite) est celle du banc, pas celle que choisit le modele : le cahier des
- * charges demande trois sujets de fond et deux d'actualite. Un sujet que le blog a deja traite est garde, car
- * le banc ne publie rien.
+ * charges demande trois sujets de fond et deux d'actualite.
  */
 final readonly class PrepareBlogBenchTopicAction
 {
@@ -98,7 +96,7 @@ final readonly class PrepareBlogBenchTopicAction
             $done->creditExhausted => BlogBenchException::creditExhausted($done->error),
             $done->overBudget => BlogBenchException::overBudget($topic->key, $key),
             ! $done->succeeded() => BlogBenchException::stepFailed($topic->key, $key, $done->error),
-            $done->result->stopsGeneration() && $done->result->stopReason !== BlogGenerationOutcomeReason::DuplicateTopic => BlogBenchException::stoppedWithoutArticle($topic->key, $key, $done->result->stopReason?->value),
+            $done->result->stopsGeneration() => BlogBenchException::stoppedWithoutArticle($topic->key, $key, $done->result->stopReason?->value),
             default => null,
         };
 
