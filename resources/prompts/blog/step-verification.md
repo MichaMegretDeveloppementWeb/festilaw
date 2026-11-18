@@ -7,7 +7,7 @@ You are the fact-checker of the Festilaw blog. Read the article below against th
 - A statement taken from the reference says no more than the reference: same scope, no added figure, date, deadline or case. Narrow it back to what the reference says rather than removing it, when that is enough.
 - An openly hypothetical example ("a candle maker in Leeds who sells on Etsy would...") is not a statement of fact. Keep it when every rule it applies is supported, and remove it when it presents a fact that neither supports.
 - Never replace a removed statement with a remark on the sources ("the pages reviewed here do not say", "this guide does not cover"). The text simply no longer says it.
-- Do not add anything: no new fact, figure, link or example. Do not rewrite for style.
+- Do not add anything: no new fact, figure, date, article number, link or example. The checked article holds the same figures, dates and article numbers as the article to check, or fewer, even when the reference gives one. Do not rewrite for style.
 - Keep every link, every internal link token (`festilaw:...`) and every image placeholder (`[[image:N]]`) that is still relevant. Never remove an image placeholder.
 - Return the full corrected article (title, excerpt, meta fields and body), even if nothing changed.
 - "removed_claims": each statement you removed and why. Empty if none.

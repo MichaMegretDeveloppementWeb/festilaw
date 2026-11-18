@@ -316,15 +316,32 @@ it('removes the statements the research file does not support, and keeps the tra
         ->and($result->summary)->toBe('Une affirmation non appuyée a été retirée.');
 });
 
-it('refuses a check that adds a figure, or drops an image', function (string $body) {
-    FactCheckAgent::fake([[...Fixtures::article(['body_markdown' => $body]), 'removed_claims' => [], 'report_fr' => 'Rien.']])->preventStrayPrompts();
+it('sends back once a check that adds a figure or drops an image, then refuses it', function (string $body) {
+    $answer = [...Fixtures::article(['body_markdown' => $body]), 'removed_claims' => [], 'report_fr' => 'Rien.'];
+    FactCheckAgent::fake([$answer, $answer])->preventStrayPrompts();
 
     expect(fn () => app(VerificationStep::class)->execute(Fixtures::context(['research' => Fixtures::research(), 'writing' => Fixtures::articleOutput()])))
         ->toThrow(BlogAiProviderException::class, 'adds material or loses an image');
+    FactCheckAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Your answer added material the article to check does not contain'));
 })->with([
     'a new figure' => fn () => Fixtures::body().' About 30,000 sellers are concerned.',
     'a lost image' => fn () => str_replace('[[image:1]]', '', Fixtures::body()),
 ]);
+
+it('keeps the check corrected after being told what it added', function () {
+    // Generation 79 du 18/11 : la verification ajoutait les numeros d'articles de la fiche des regles de l'UE,
+    // et trois nouveaux essais a l'aveugle ont refait la meme faute.
+    FactCheckAgent::fake([
+        [...Fixtures::article(['body_markdown' => Fixtures::body().' Article 19 of the GPSR applies.']), 'removed_claims' => [], 'report_fr' => 'x'],
+        [...Fixtures::article(), 'removed_claims' => [], 'report_fr' => 'Rien à retirer.'],
+    ])->preventStrayPrompts();
+
+    $result = app(VerificationStep::class)->execute(Fixtures::context(['research' => Fixtures::research(), 'writing' => Fixtures::articleOutput()]));
+
+    expect($result->output['article']['body'])->toBe(Fixtures::body())
+        ->and($result->summary)->toBe('Rien à retirer.');
+    FactCheckAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('numbers changed: missing [], added [19]'));
+});
 
 // --- Style
 
