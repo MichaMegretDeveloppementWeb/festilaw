@@ -21,6 +21,7 @@ Use these terms consistently. When a platform shows a label in English to seller
 | technical documentation | documentación técnica |
 | risk analysis | análisis de riesgos |
 | safety information, warnings | información de seguridad, advertencias |
+| the word "Warning" or "Warnings" that must precede a toy warning (Directive 2009/48/EC, Article 11) | la palabra «Advertencia» o «Advertencias», según el caso, como impone la versión española de la directiva. Never keep "Warning" in English |
 | product identifier (batch, serial number) | identificador del producto (número de lote, número de serie) |
 | label, labelling | etiqueta, etiquetado |
 | recall | recuperación del producto |

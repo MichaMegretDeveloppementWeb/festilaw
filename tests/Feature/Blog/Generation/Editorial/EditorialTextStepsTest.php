@@ -360,6 +360,17 @@ it('gives the fact-checker the blog articles the text links to, so it keeps the 
         && ! $prompt->contains('Recall en'));
 });
 
+it('asks the fact-checker to read each rule for whom it binds, when and under which condition, headings and examples included', function () {
+    // Banc d'essai du 18/11 : des conditions inversees et un exemple contraire a la regle avaient passe la verification.
+    FactCheckAgent::fake([[...Fixtures::article(), 'removed_claims' => [], 'report_fr' => 'x']])->preventStrayPrompts();
+
+    app(VerificationStep::class)->execute(Fixtures::context(['research' => Fixtures::research(), 'writing' => Fixtures::articleOutput()]));
+
+    FactCheckAgent::assertPrompted(fn ($prompt): bool => str_contains($prompt->agent->instructions(), 'who it binds, when it applies, and under which condition')
+        && str_contains($prompt->agent->instructions(), 'An example must follow the rule it illustrates')
+        && str_contains($prompt->agent->instructions(), 'every heading, every list item and every example'));
+});
+
 it('removes the statements the research file does not support, and keeps the trace in the step journal only', function () {
     $written = Fixtures::body()."\n\nFines reach 4% of turnover.";
     FactCheckAgent::fake([[
@@ -539,6 +550,18 @@ it('has the French version written from the English material with the French pre
         && ! str_contains($prompt->agent->instructions(), 'Your task: write the'));
     TranslatorAgent::assertPrompted(fn ($prompt): bool => $prompt->contains("- Ce qu'un acheteur UE doit voir sur Etsy (formule de titre « Ce que… », « UE » employe comme adjectif (calque))"));
 });
+
+it('gives each version the word the toy directive imposes before a warning, in its language', function (string $locale, string $word) {
+    // Banc d'essai du 18/11 : « Warning » restait en anglais, ou devenait « Avertissement ». Mots lus sur EUR-Lex (directive 2009/48/CE, article 11).
+    TranslatorAgent::fake([[...Fixtures::article(), 'image_alts' => [], 'report_fr' => 'x']])->preventStrayPrompts();
+
+    app()->make(TranslationStep::class, ['locale' => $locale])->execute(Fixtures::context(['writing' => Fixtures::writingOutput(), 'style' => Fixtures::articleOutput()]));
+
+    TranslatorAgent::assertPrompted(fn ($prompt): bool => str_contains($prompt->agent->instructions(), $word));
+})->with([
+    'francais' => ['fr', 'le mot « Attention »'],
+    'espagnol' => ['es', 'la palabra «Advertencia» o «Advertencias»'],
+]);
 
 it('asks once for a correction when a translation loses a link or an image, then fails if it still does', function () {
     $lost = Fixtures::article(['body_markdown' => str_replace(['[[image:1]]', '(festilaw:page/quiz)'], ['', '(/quiz)'], Fixtures::body())]);

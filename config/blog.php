@@ -330,7 +330,7 @@ return [
                 'research_notes' => ['setting' => 'research', 'input' => 10_550, 'output' => 1_800, 'reasoning' => [250, 600], 'calls' => [1, 1], 'searches' => 3],
                 'research' => ['setting' => 'research', 'input' => 6_000, 'output' => 1_800, 'reasoning' => [0, 0], 'calls' => [1, 1]],
                 'writing' => ['setting' => 'writing', 'input' => 11_400, 'output_per_1000_words' => 1_700, 'reasoning' => [1_200, 3_200], 'calls' => [1, 2]],
-                'verification' => ['setting' => 'verification', 'input' => 6_400, 'input_per_1000_words' => 1_500, 'output_per_1000_words' => 1_680, 'reasoning' => [300, 4_400], 'calls' => [1, 2]],
+                'verification' => ['setting' => 'verification', 'input' => 6_700, 'input_per_1000_words' => 1_500, 'output_per_1000_words' => 1_680, 'reasoning' => [300, 4_400], 'calls' => [1, 2]],
                 'style' => ['setting' => 'writing', 'input' => 5_700, 'input_per_1000_words' => 1_500, 'output_per_1000_words' => 1_350, 'reasoning' => [400, 1_400], 'calls' => [2, 2]],
                 'translation_fr' => ['setting' => 'translation', 'input' => 8_300, 'input_per_1000_words' => 1_500, 'output_per_1000_words' => 1_800, 'reasoning' => [1_000, 5_000], 'calls' => [2, 2]],
                 'translation_es' => ['setting' => 'translation', 'input' => 7_700, 'input_per_1000_words' => 1_500, 'output_per_1000_words' => 1_750, 'reasoning' => [1_000, 5_000], 'calls' => [2, 2]],
