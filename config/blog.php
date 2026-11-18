@@ -286,8 +286,9 @@ return [
          | bas et haut (correction, second passage ; les nouveaux essais, des incidents, ne comptent pas),
          | recherches web. La reflexion haute de la verification vient de la 78 (5 200 jetons, Haiku 5.5
          | compris). Les jetons lus de la redaction et de la verification comptent la fiche des regles de
-         | l'UE (`resources/prompts/blog/eu-product-rules.md`, environ 1 700 jetons). Un appel apres le premier relit en plus
-         | la reponse precedente. La reflexion de chaque etape est celle d'un modele qui respecte l'effort
+         | l'UE (`resources/prompts/blog/eu-product-rules.md`, environ 1 700 jetons), ceux des versions
+         | francaise et espagnole les chartes de presse du 18/11 (environ 1 900 et 1 600 jetons de plus).
+         | Un appel apres le premier relit en plus la reponse precedente. La reflexion de chaque etape est celle d'un modele qui respecte l'effort
          | demande (Haiku 5.5) ; un modele qui l'ignore porte la sienne au catalogue (`reasoning_tokens`).
          | Les jetons sont comptes au prix mesure du modele (`price_margin_percent` du catalogue) ; un modele
          | jamais mesure compte au catalogue en bas et a `default_price_margin_percent` en haut.
@@ -302,8 +303,8 @@ return [
                 'writing' => ['setting' => 'writing', 'input' => 11_400, 'output_per_1000_words' => 2_100, 'reasoning' => [1_000, 3_000], 'calls' => [1, 2]],
                 'verification' => ['setting' => 'verification', 'input' => 8_700, 'input_per_1000_words' => 2_100, 'output_per_1000_words' => 3_100, 'reasoning' => [1_500, 5_500], 'calls' => [1, 2]],
                 'style' => ['setting' => 'writing', 'input' => 5_300, 'input_per_1000_words' => 2_100, 'output_per_1000_words' => 1_750, 'reasoning' => [1_000, 3_000], 'calls' => [1, 2]],
-                'translation_fr' => ['setting' => 'translation', 'input' => 5_500, 'input_per_1000_words' => 2_100, 'output_per_1000_words' => 2_700, 'reasoning' => [1_000, 3_000], 'calls' => [1, 3]],
-                'translation_es' => ['setting' => 'translation', 'input' => 5_500, 'input_per_1000_words' => 2_100, 'output_per_1000_words' => 2_400, 'reasoning' => [1_000, 3_000], 'calls' => [1, 3]],
+                'translation_fr' => ['setting' => 'translation', 'input' => 7_400, 'input_per_1000_words' => 2_100, 'output_per_1000_words' => 2_700, 'reasoning' => [1_000, 3_000], 'calls' => [1, 3]],
+                'translation_es' => ['setting' => 'translation', 'input' => 7_100, 'input_per_1000_words' => 2_100, 'output_per_1000_words' => 2_400, 'reasoning' => [1_000, 3_000], 'calls' => [1, 3]],
             ],
         ],
 

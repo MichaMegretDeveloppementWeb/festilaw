@@ -3,6 +3,7 @@
 # Une ligne qui commence par "~" est une tournure : une expression reguliere (sans casse), puis " => " et son nom.
 # Une ligne qui commence par "~+" est une tournure toleree une fois par texte, relevee des sa deuxieme phrase.
 # Les tournures se testent phrase par phrase : "^" est le debut d'une phrase.
+# Une ligne qui commence par "~#" est une tournure testee seulement sur le titre et les intertitres.
 
 # Mots et expressions qu'abusent les modeles
 crucial
@@ -75,3 +76,24 @@ n'hésitez pas
 ~ \b(?:pourrait|pourraient) (?:potentiellement|éventuellement)\b => precautions empilees
 ~+ \b(?:etsy|amazon|ebay|shopify|tiktok shop|la commission(?: européenne)?|le règlement|le gpsr)\s+(?:(?:aussi|également|encore|clairement|seulement)\s+)?(?:indique|précise|explique|décrit|mentionne|souligne|affirme|considère|estime|définit)\b => attribution repetee
 ~+ \bselon (?:etsy|amazon|ebay|shopify|la commission|le règlement|le centre d['’]aide)\b => attribution repetee
+
+# Titres et intertitres (charte du 18/11, writing-voice-fr.md « Le titre » et « Les intertitres »)
+~# ^ce qu(?:e|['’]) => formule de titre « Ce que… »
+~# ^(?:tout savoir|tout ce qu|ce qu['’]il faut savoir) => formule de titre « Tout savoir »
+~# ^(?:pourquoi|comment)\b => titre ou intertitre en « Pourquoi » ou « Comment »
+~# ^(?:quel|quelle|quels|quelles)\b => intertitre en question
+~# \?\s*$ => titre ou intertitre en question
+~# !\s*$ => point d'exclamation dans un titre
+~# ^\d+ (?:erreurs|choses|étapes|conseils|raisons|points|astuces)\b => titre en liste chiffree
+~# \b(?:acheteurs?|vendeurs?|fiches?|marchés?|clients?|consommateurs?|offres?|annonces?|produits?) (?:UE|EU)\b => « UE » employe comme adjectif (calque)
+
+# Calques releves dans les brouillons 98 et 99
+~ \b(?:acheteurs?|vendeurs?|fiches?|marchés?|clients?|consommateurs?|offres?|annonces?|produits?) (?:UE|EU)\b => « UE » employe comme adjectif (calque)
+~ \bhors (?:UE|EU)\b => « hors UE » (ecrire « hors de l'Union européenne »)
+~ \bpages? partenaires?\b => « pages partenaires » (calque de partner pages)
+~ \braisons? commerciales?\b => « raison commerciale » (terme inexact)
+~ \bl['’][bcdfghjklmnpqrstvwxz]{3,}\b => elision devant un sigle epele
+~ \bimpact(?:er|e|ent|é|és|ée|ées|ait|aient)\b => « impacter » (calque)
+~ \ben charge de\b => « en charge de » (calque)
+~ \bfaire sens\b => « faire sens » (calque)
+~ \badress(?:er|e|ent|é|ée)\s+(?:un|le|ce|les|ces|des)\s+problèmes?\b => « adresser un problème » (calque)

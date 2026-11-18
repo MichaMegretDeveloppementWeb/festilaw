@@ -422,7 +422,7 @@ it('discards a style edit that changed a figure or a link, and keeps the checked
 
 it('writes the French version with the same links and images, and the image descriptions in French', function () {
     $french = "Depuis le 13 décembre 2024, chaque produit vendu dans l'UE a besoin d'un opérateur économique. [Lire le règlement](https://eur-lex.europa.eu/eli/reg/2023/988/oj).\n\n"
-        ."## Ce que demande Etsy\n\nEtsy le demande dans les réglages de l'annonce. [Vérifier votre cas](festilaw:page/quiz).\n\n[[image:1]]\n\n"
+        ."## Les informations demandées par Etsy\n\nEtsy le demande dans les réglages de l'annonce. [Vérifier votre cas](festilaw:page/quiz).\n\n[[image:1]]\n\n"
         ."## La suite\n\nRassemblez les informations avant de modifier vos annonces. [Voir nos tarifs](festilaw:page/pricing).";
     TranslatorAgent::fake([[
         ...Fixtures::article(['title' => 'Ajouter un opérateur économique sur Etsy', 'body_markdown' => $french]),
@@ -442,7 +442,7 @@ it('writes the French version with the same links and images, and the image desc
 
 it('sends the French sentences that still show signs back once, and keeps that second pass when links and images are intact', function () {
     $french = "Depuis le 13 décembre 2024, chaque produit vendu dans l'UE a besoin d'un opérateur économique. [Lire le règlement](https://eur-lex.europa.eu/eli/reg/2023/988/oj).\n\n"
-        ."## Ce que demande Etsy\n\nEtsy le demande dans les réglages de l'annonce. [Vérifier votre cas](festilaw:page/quiz).\n\n[[image:1]]\n\n"
+        ."## Les informations demandées par Etsy\n\nEtsy le demande dans les réglages de l'annonce. [Vérifier votre cas](festilaw:page/quiz).\n\n[[image:1]]\n\n"
         ."## La suite\n\nRassemblez les informations avant de modifier vos annonces. [Voir nos tarifs](festilaw:page/pricing).";
     $marked = str_replace('Rassemblez les informations', 'Voici la suite. Il y a trois choses à faire. Rassemblez les informations', $french);
     TranslatorAgent::fake([
@@ -457,6 +457,28 @@ it('sends the French sentences that still show signs back once, and keeps that s
         ->and($result->output['signals']['flagged'])->toBe([]);
     TranslatorAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Sentences that still show signs of generated text')
         && $prompt->contains('- Il y a trois choses à faire. (liste annoncee par son nombre)'));
+});
+
+it('has the French version written from the English material with the French press charter, sends a formula title back, and sets French typography', function () {
+    // Brouillon 99 du 18/11 : une traduction gardait le squelette anglais (titre « Ce qu'un acheteur UE… »).
+    $body = "Depuis le 13 décembre 2024, chaque offre vise un opérateur économique. [Lire le règlement](https://eur-lex.europa.eu/eli/reg/2023/988/oj).\n\n"
+        ."## Les informations demandées par Etsy\n\nEtsy demande le champ \"economic operator\". [Vérifier votre cas](festilaw:page/quiz).\n\n[[image:1]]\n\n"
+        ."## La suite\n\nRassemblez les informations avant de modifier vos annonces. [Voir nos tarifs](festilaw:page/pricing).";
+    TranslatorAgent::fake([
+        [...Fixtures::article(['title' => "Ce qu'un acheteur UE doit voir sur Etsy", 'body_markdown' => $body]), 'report_fr' => 'x'],
+        [...Fixtures::article(['title' => 'Les mentions obligatoires des annonces Etsy en Europe', 'body_markdown' => $body]), 'report_fr' => 'Titre repris.'],
+    ])->preventStrayPrompts();
+
+    $result = app()->make(TranslationStep::class, ['locale' => 'fr'])->execute(Fixtures::context(['writing' => Fixtures::writingOutput(), 'style' => Fixtures::articleOutput()]));
+
+    expect($result->output['article']['title'])->toBe('Les mentions obligatoires des annonces Etsy en Europe')
+        ->and($result->output['second_pass']['applied'])->toBeTrue()
+        ->and($result->output['article']['body'])->toContain("le champ «\u{00A0}economic operator\u{00A0}»")
+        ->and($result->output['article']['body'])->toContain('(festilaw:page/quiz)');
+    TranslatorAgent::assertPrompted(fn ($prompt): bool => str_contains($prompt->agent->instructions(), "# Votre tâche, l'article en français")
+        && str_contains($prompt->agent->instructions(), '## Le titre')
+        && ! str_contains($prompt->agent->instructions(), 'Your task: write the'));
+    TranslatorAgent::assertPrompted(fn ($prompt): bool => $prompt->contains("- Ce qu'un acheteur UE doit voir sur Etsy (formule de titre « Ce que… », « UE » employe comme adjectif (calque))"));
 });
 
 it('asks once for a correction when a translation loses a link or an image, then fails if it still does', function () {

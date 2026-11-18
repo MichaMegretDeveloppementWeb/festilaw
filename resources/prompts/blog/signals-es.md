@@ -3,6 +3,7 @@
 # Una linea que empieza por "~" es un giro : una expresion regular (sin mayusculas), luego " => " y su nombre.
 # Una linea que empieza por "~+" es un giro tolerado una vez por texto, senalado desde su segunda frase.
 # Los giros se prueban frase por frase : "^" es el comienzo de una frase.
+# Una linea que empieza por "~#" es un giro probado solo en el titulo y los intertitulos.
 
 # Palabras y expresiones que abusan los modelos
 crucial
@@ -58,3 +59,22 @@ no dude en
 ~ \b(?:podría|podrían) (?:potencialmente|eventualmente)\b => precauciones apiladas
 ~+ \b(?:etsy|amazon|ebay|shopify|tiktok shop|la comisión(?: europea)?|el reglamento|el gpsr)\s+(?:(?:también|además|claramente|solo)\s+)?(?:indica|precisa|explica|describe|menciona|señala|subraya|afirma|considera|define)\b => atribucion repetida
 ~+ \bsegún (?:etsy|amazon|ebay|shopify|la comisión|el reglamento|el centro de ayuda)\b => atribucion repetida
+
+# Titulos e intertitulos (carta del 18/11, writing-voice-es.md « El título » y « Los intertítulos »)
+~# ^lo que\b => formula de titulo «Lo que…»
+~# ^qu[eé]\b => titulo o intertitulo en «Qué…»
+~# ^(?:todo lo que|lo que debe saber) => formula de titulo «Todo lo que…»
+~# ^(?:por qu[eé]|c[oó]mo)\b => titulo o intertitulo en «Por qué» o «Cómo»
+~# [¿?] => titulo o intertitulo en pregunta
+~# [¡!] => exclamacion en un titulo
+~# ^\d+ (?:errores|cosas|pasos|consejos|claves|razones)\b => titulo en lista numerada
+~# \b(?:compradore?s?|vendedore?s?|anuncios?|mercados?|consumidore?s?|productos?|ofertas?) (?:UE|EU)\b => «UE» como adjetivo (calco)
+
+# Calcos encontrados en los borradores 98 y 99, y desaconsejados por el Diccionario panhispanico de dudas
+~ \b(?:compradore?s?|vendedore?s?|anuncios?|mercados?|consumidore?s?|productos?|ofertas?) (?:UE|EU)\b => «UE» como adjetivo (calco)
+~ \bpartners?\b => «partner» (anglicismo, escribir «socio»)
+~ \ba nivel de\b => «a nivel de» (revisar el sentido)
+~ \ben base a\b => «en base a» (menos recomendable)
+~ \baplicar para\b => «aplicar para» (calco de apply for)
+~ \bchequea\w*\b => «chequear» (escribir «comprobar»)
+~ \brequerimientos?\b => «requerimiento» por «requisito»

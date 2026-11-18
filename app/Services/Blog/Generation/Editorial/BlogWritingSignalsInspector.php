@@ -48,7 +48,9 @@ final class BlogWritingSignalsInspector
      */
     public function inspect(string $markdown, array $signs): array
     {
-        [$phrases, $patterns] = $this->split($signs);
+        [$phrases, $allPatterns] = $this->split($signs);
+        $patterns = array_values(array_filter($allPatterns, static fn (array $pattern): bool => ! $pattern['heading']));
+        $headingPatterns = array_values(array_filter($allPatterns, static fn (array $pattern): bool => $pattern['heading']));
 
         $blocks = array_values(array_filter(array_map(trim(...), preg_split('/\n\s*\n/', str_replace("\r\n", "\n", $markdown)) ?: [])));
         $headings = array_values(array_filter($blocks, static fn (string $block): bool => str_starts_with($block, '#')));
@@ -119,8 +121,20 @@ final class BlogWritingSignalsInspector
 
         $headingsWithColon = array_values(array_filter($headings, fn (string $heading): bool => $this->colons($this->plain($heading)) > 0));
 
-        foreach ($headingsWithColon as $heading) {
-            $flagged[] = ['signs' => ['colon in a heading'], 'sentence' => $this->plain($heading)];
+        foreach ($headings as $heading) {
+            $text = trim($this->plain($heading));
+            $found = $this->colons($text) > 0 ? ['colon in a heading'] : [];
+
+            foreach ($headingPatterns as $pattern) {
+                if (! in_array($pattern['name'], $found, true) && preg_match($pattern['pattern'], $text) === 1) {
+                    $found[] = $pattern['name'];
+                    $patternCounts[$pattern['name']] = ($patternCounts[$pattern['name']] ?? 0) + 1;
+                }
+            }
+
+            if ($found !== []) {
+                $flagged[] = ['signs' => $found, 'sentence' => $text];
+            }
         }
 
         return [
@@ -140,10 +154,12 @@ final class BlogWritingSignalsInspector
     }
 
     /**
-     * Les expressions d'un cote, les tournures de l'autre (plusieurs tournures peuvent porter le meme nom).
+     * Les expressions d'un cote, les tournures de l'autre (plusieurs tournures peuvent porter le meme nom). Une
+     * tournure « ~# » ne se teste que sur le titre et les intertitres : les formules de titre (« Ce que… »,
+     * « What… ») sont naturelles dans une phrase du texte.
      *
      * @param  list<string>  $signs
-     * @return array{0: list<string>, 1: list<array{name: string, pattern: string, tolerated_once: bool}>}
+     * @return array{0: list<string>, 1: list<array{name: string, pattern: string, tolerated_once: bool, heading: bool}>}
      */
     public function split(array $signs): array
     {
@@ -151,8 +167,8 @@ final class BlogWritingSignalsInspector
         $patterns = [];
 
         foreach ($signs as $sign) {
-            if (preg_match('/^~(\+?)\s*(.+?)\s+=>\s+(.+)$/u', $sign, $match) === 1) {
-                $patterns[] = ['name' => trim($match[3]), 'pattern' => '{'.$match[2].'}iu', 'tolerated_once' => $match[1] === '+'];
+            if (preg_match('/^~(\+?)(#?)\s*(.+?)\s+=>\s+(.+)$/u', $sign, $match) === 1) {
+                $patterns[] = ['name' => trim($match[4]), 'pattern' => '{'.$match[3].'}iu', 'tolerated_once' => $match[1] === '+', 'heading' => $match[2] === '#'];
             } elseif (trim($sign) !== '') {
                 $phrases[] = trim($sign);
             }

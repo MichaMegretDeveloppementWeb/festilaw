@@ -14,30 +14,35 @@ use App\Services\Blog\Generation\Editorial\BlogAgentCaller;
 use App\Services\Blog\Generation\Editorial\BlogFactGuard;
 use App\Services\Blog\Generation\Editorial\BlogPromptLibrary;
 use App\Services\Blog\Generation\Editorial\BlogWritingSignalsInspector;
+use App\Services\Blog\Generation\Editorial\EditorialTypography;
 
 /**
- * Etapes 8 et 9 · la version francaise ou espagnole, redigee dans la langue avec ses regles d'ecriture et le
- * lexique du domaine (annexe A.8, A.12 point 4). Les memes jetons de liens et emplacements d'images que
- * l'anglais sont exiges : sinon une demande de correction, puis l'echec de l'etape, que le moteur reessaie.
- * Un nombre ecrit autrement ne bloque rien mais reste au journal.
+ * Etapes 8 et 9 · la version francaise ou espagnole. Depuis le 18/11, l'article anglais verifie sert de
+ * matiere a un secretaire de redaction de la langue, qui ecrit lui-meme titre, chapo et intertitres d'apres
+ * la charte de sa presse (writing-voice-xx.md, consigne step-adaptation-xx.md, ecrite dans la langue) : une
+ * simple traduction gardait le squelette anglais (brouillon 99, relu par Micha). Les memes jetons de liens et
+ * emplacements d'images que l'anglais sont exiges : sinon une demande de correction, puis l'echec de
+ * l'etape, que le moteur reessaie. Un nombre ecrit autrement ne bloque rien mais reste au journal.
  *
- * Comme la relecture du style en anglais, le controle des signes de la langue releve les phrases qui en
- * portent encore. Au-dela du seuil (config blog.ai.style.max_flagged_sentences), elles sont renvoyees au
- * modele pour un second passage, un seul, garde seulement s'il respecte les memes liens, jetons et images.
+ * Le controle des signes de la langue releve les phrases, titres et intertitres qui en portent encore
+ * (formules de titre et calques compris). Au-dela du seuil (config blog.ai.style.max_flagged_sentences), ils
+ * sont renvoyes au modele pour un second passage, un seul, garde seulement s'il respecte les memes liens,
+ * jetons et images. La typographie de la langue est posee ensuite en code (EditorialTypography).
  */
 final class TranslationStep extends EditorialStep
 {
-    private const LANGUAGES = ['fr' => 'French', 'es' => 'Spanish'];
+    private const LOCALES = ['fr', 'es'];
 
     public function __construct(
         BlogAgentCaller $caller,
         BlogPromptLibrary $prompts,
         private readonly BlogFactGuard $guard,
         private readonly BlogWritingSignalsInspector $signals,
+        private readonly EditorialTypography $typography,
         private readonly string $locale,
         private readonly int $maxFlaggedSentences = 0,
     ) {
-        if (! isset(self::LANGUAGES[$locale])) {
+        if (! in_array($locale, self::LOCALES, true)) {
             throw new \InvalidArgumentException("No translation step for locale [{$locale}].");
         }
 
@@ -73,13 +78,12 @@ final class TranslationStep extends EditorialStep
             static fn (array $image): array => ['number' => $image['number'], 'description' => $image['description'] ?? ''],
             $writing['inline_images'] ?? [],
         )];
-        $language = self::LANGUAGES[$this->locale];
         $agent = new TranslatorAgent(implode("\n\n", [
             $this->prompts->get('festilaw-context'),
             $this->prompts->get('editorial-guidelines'),
             $this->prompts->get('writing-voice-'.$this->locale),
             $this->prompts->get('lexicon-'.$this->locale),
-            $this->prompts->render('step-translation', ['language' => $language]),
+            $this->prompts->get('step-adaptation-'.$this->locale),
         ]), $this->translatedWords($context));
         $prompt = implode("\n\n", [
             $this->block('Article', $source->forPrompt()),
@@ -124,11 +128,12 @@ final class TranslationStep extends EditorialStep
             }
         }
 
+        $translated = $this->typography->article($translated, $this->locale);
         $alts = [];
 
         foreach ($this->items($reply->structured(), 'image_alts') as $alt) {
             if (is_array($alt) && is_int($alt['number'] ?? null) && $this->text($alt, 'alt') !== '') {
-                $alts[(string) $alt['number']] = $this->text($alt, 'alt');
+                $alts[(string) $alt['number']] = $this->typography->apply($this->text($alt, 'alt'), $this->locale);
             }
         }
 
@@ -146,8 +151,8 @@ final class TranslationStep extends EditorialStep
             ],
             $usage,
             $this->report($reply, $this->locale === 'fr'
-                ? __('La version française a été rédigée dans la langue, avec le lexique du domaine.')
-                : __('La version espagnole a été rédigée dans la langue, avec le lexique du domaine.')),
+                ? __('La version française a été écrite d\'après la charte de la presse française, avec le lexique du domaine.')
+                : __('La version espagnole a été écrite d\'après la charte de la presse espagnole, avec le lexique du domaine.')),
         );
     }
 

@@ -110,8 +110,8 @@ final class EditorialFixtures
     public static function body(): string
     {
         return "Since 13 December 2024, every product you sell to the EU needs an economic operator. [Read the regulation](https://eur-lex.europa.eu/eli/reg/2023/988/oj).\n\n"
-            ."## What Etsy asks for\n\nEtsy asks for it in the listing settings. [Check your case](festilaw:page/quiz).\n\n[[image:1]]\n\n"
-            ."## What to do next\n\nGather the details before you edit your listings. [See our prices](festilaw:page/pricing).";
+            ."## The details Etsy asks for\n\nEtsy asks for it in the listing settings. [Check your case](festilaw:page/quiz).\n\n[[image:1]]\n\n"
+            ."## Gather the details first\n\nGather the details before you edit your listings. [See our prices](festilaw:page/pricing).";
     }
 
     /** @return array<string, mixed> */

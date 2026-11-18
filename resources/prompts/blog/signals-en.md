@@ -3,6 +3,7 @@
 # A line starting with "~" is a pattern: a regular expression (case ignored), then " => " and its name.
 # A line starting with "~+" is a pattern tolerated once per text: it is flagged from its second sentence on.
 # Patterns are tested sentence by sentence, so "^" is the start of a sentence.
+# A line starting with "~#" is a pattern tested only on the title and the headings.
 
 # Words and expressions models over-use
 delve
@@ -93,3 +94,12 @@ ultimately
 ~+ \b(?:etsy|amazon|ebay|shopify|tiktok shop|the (?:european )?commission|the regulation|the gpsr)(?:'s|’s)?\s+(?:(?:help (?:page|centre|center)|seller handbook|handbook|guidance|wording|guide|page|instruction)s?\s+)?(?:(?:also|only|now|still|clearly|explicitly|simply)\s+)?(?:says?|states?|describes?|explains?|notes?|treats?|uses?|covers?|directs?|suggests?|mentions?|specifies|defines?|lists?|frames?)\b => repeated attribution
 ~+ \baccording to\b => repeated attribution
 ~ \b(?:may|might|could) (?:potentially|possibly)\b => stacked hedge
+
+# Titles and headings (rules of 18/11, editorial-guidelines.md and writing-voice-en.md rule 8)
+~# ^what\b => title or heading built on "What…"
+~# ^(?:everything you need to know|all you need to know)\b => headline formula
+~# ^why\b.*\bmatters?\b => headline formula "Why X matters"
+~# ^how to\b => headline formula "How to…"
+~# \?\s*$ => question in a title or heading
+~# !\s*$ => exclamation mark in a title
+~# ^\d+ (?:things|ways|steps|mistakes|tips|reasons)\b => numbered-list headline

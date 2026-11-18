@@ -82,7 +82,7 @@ function fakePixabay(): void
 /** Les sorties des etapes de texte, comme le journal les garde a l'arrivee des images. */
 function textOutputs(): array
 {
-    $french = str_replace(['What Etsy asks for', 'What to do next'], ['Ce que demande Etsy', 'La suite'], Fixtures::body());
+    $french = str_replace(['The details Etsy asks for', 'Gather the details first'], ['Les informations demandées par Etsy', 'Les informations à rassembler'], Fixtures::body());
 
     return [
         'topic' => Fixtures::topic(),
@@ -274,7 +274,7 @@ function fakeWholeEditorialPipeline(): void
 {
     config(['blog.ai.pipeline' => 'editorial']);
     fakePixabay();
-    $french = str_replace(['What Etsy asks for', 'What to do next'], ['Ce que demande Etsy', 'La suite'], Fixtures::body());
+    $french = str_replace(['The details Etsy asks for', 'Gather the details first'], ['Les informations demandées par Etsy', 'Les informations à rassembler'], Fixtures::body());
     WebSearchAgent::fake(['Notes from the web scan.', Fixtures::notesCiting()])->preventStrayPrompts();
     TopicAgent::fake([[...Fixtures::topic(), 'report_fr' => 'Sujet demandé par les vendeurs.']])->preventStrayPrompts();
     ResearchAgent::fake([[...Fixtures::research(), 'report_fr' => 'Deux sources officielles.']])->preventStrayPrompts();

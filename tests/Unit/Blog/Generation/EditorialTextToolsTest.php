@@ -85,6 +85,29 @@ it('points at each sentence that carries a sign of generated text, with the name
     ])->and($signals['patterns'])->toBe(['list announced by its count' => 1, 'staged "what X is"' => 1, 'remark on the sources' => 1, 'X, not Y' => 1]);
 });
 
+it('tests the title and heading patterns on the title and the headings only', function () {
+    // Brouillon 99 du 18/11 : titre et intertitres calques de l'anglais (« What… » devenu « Ce que… »).
+    $markdown = "# Ce qu'un acheteur UE doit voir sur une fiche TikTok Shop\n\n"
+        ."Ce que demande TikTok tient en quatre champs, remplis par un acheteur UE.\n\n"
+        ."## Quelles coordonnées une offre doit-elle porter ?\n\nLe fabricant figure sur la fiche.\n\n"
+        ."## Les champs à remplir chez TikTok\n\nLa fiche nomme la personne responsable.";
+    $signs = [
+        "~# ^ce qu(?:e|['’]) => formule de titre",
+        '~# \\?\\s*$ => titre en question',
+        '~# \\b(?:acheteurs?|fiches?) (?:UE|EU)\\b => « UE » adjectif',
+        '~ \\b(?:acheteurs?|fiches?) (?:UE|EU)\\b => « UE » adjectif',
+    ];
+
+    $signals = (new BlogWritingSignalsInspector)->inspect($markdown, $signs);
+
+    // La phrase du texte qui commence par « Ce que » n'est relevee que pour son calque, pas comme un titre.
+    expect($signals['flagged'])->toBe([
+        ['signs' => ['« UE » adjectif'], 'sentence' => 'Ce que demande TikTok tient en quatre champs, remplis par un acheteur UE.'],
+        ['signs' => ['formule de titre', '« UE » adjectif'], 'sentence' => "Ce qu'un acheteur UE doit voir sur une fiche TikTok Shop"],
+        ['signs' => ['titre en question'], 'sentence' => 'Quelles coordonnées une offre doit-elle porter ?'],
+    ]);
+});
+
 it('accepts the semicolon that ends a list item in French, and still flags one that joins two clauses', function () {
     $markdown = "L'offre doit indiquer :\n\n- le nom du fabricant ;\n- l'adresse de la personne responsable.\n\nLa fiche est complète ; le vendeur peut publier.";
 
