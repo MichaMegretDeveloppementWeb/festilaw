@@ -58,11 +58,9 @@ class GenerationLauncher extends Component
     #[Locked]
     public int $capMicrousd = 0;
 
+    /** @var list<int> les paliers de longueur proposes */
     #[Locked]
-    public int $minWords = 0;
-
-    #[Locked]
-    public int $maxWords = 0;
+    public array $wordOptions = [];
 
     #[Locked]
     public int $spentThisMonthMicrousd = 0;
@@ -88,11 +86,10 @@ class GenerationLauncher extends Component
 
         $this->imageMode = $current->imageMode->value;
         $this->maxImages = (string) $current->maxImages;
-        $this->articleWords = (string) $current->articleWords;
+        $this->articleWords = (string) $length->clamp($current->articleWords);
         $this->models = $current->models;
         $this->capMicrousd = $current->articleSpendCapMicrousd();
-        $this->minWords = $length->minWords;
-        $this->maxWords = $length->maxWords;
+        $this->wordOptions = $length->options();
         $this->prepared = true;
     }
 
@@ -104,7 +101,7 @@ class GenerationLauncher extends Component
             'instructions' => ['nullable', 'string', 'max:2000'],
             'imageMode' => ['required', Rule::enum(BlogAiImageMode::class)],
             'maxImages' => ['required', 'integer', 'min:1', 'max:'.BlogAiSettings::MAX_IMAGES],
-            'articleWords' => ['required', 'integer', 'min:'.$this->minWords, 'max:'.$this->maxWords],
+            'articleWords' => ['required', Rule::in($this->wordOptions)],
         ];
     }
 
@@ -120,10 +117,8 @@ class GenerationLauncher extends Component
             'maxImages.integer' => __('Choisissez le nombre d\'images.'),
             'maxImages.min' => __('Choisissez le nombre d\'images.'),
             'maxImages.max' => __('Choisissez le nombre d\'images.'),
-            'articleWords.required' => __('Indiquez la longueur du texte.'),
-            'articleWords.integer' => __('La longueur est un nombre entier de mots.'),
-            'articleWords.min' => __('Le texte compte au moins :min mots.', ['min' => $this->minWords]),
-            'articleWords.max' => __('Le texte compte :max mots au plus.', ['max' => number_format($this->maxWords, 0, ',', ' ')]),
+            'articleWords.required' => __('Choisissez la longueur du texte.'),
+            'articleWords.in' => __('Choisissez une longueur dans la liste.'),
         ];
     }
 
@@ -175,6 +170,8 @@ class GenerationLauncher extends Component
                 $this->monthlyCapMicrousd,
             ) : null,
             'imageModes' => collect(BlogAiImageMode::cases())->mapWithKeys(fn (BlogAiImageMode $mode): array => [$mode->value => $mode->label()])->all(),
+            'lengthOptions' => $presenter->lengthOptions($this->wordOptions),
+            'minWords' => $this->wordOptions[0] ?? 0,
             'imageCounts' => collect(range(1, BlogAiSettings::MAX_IMAGES))->mapWithKeys(fn (int $count): array => [(string) $count => $presenter->imageCountLabel($count)])->all(),
         ]);
     }

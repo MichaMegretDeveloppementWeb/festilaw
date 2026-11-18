@@ -129,8 +129,8 @@ it('holds back the batch when an article could cost more than the cap per articl
     expect(BlogGeneration::query()->where('trigger', BlogGenerationTrigger::Scheduled)->count())->toBe(1);
     Mail::assertSent(BlogForecastAboveCap::class, 1);
     Mail::assertSent(BlogForecastAboveCap::class, fn (BlogForecastAboveCap $mail): bool => $mail->hasTo('owner@example.com')
-        && $mail->cap === '0,0100 $'
-        && $mail->limit === '0,0110 $'
+        && $mail->cap === dollarsText('0,0100 $')
+        && $mail->limit === dollarsText('0,0110 $')
         && str_contains($mail->settingsUrl, '/admin/blog/generation/settings'));
 
     // Le plafond releve, le lot part au passage suivant.

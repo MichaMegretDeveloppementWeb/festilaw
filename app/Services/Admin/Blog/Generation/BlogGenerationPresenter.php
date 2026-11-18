@@ -158,6 +158,20 @@ final readonly class BlogGenerationPresenter
         ]);
     }
 
+    /**
+     * Les paliers de longueur pour une liste de choix : « 1 000 mots, environ 6 000 caractères ».
+     *
+     * @param  list<int>  $options
+     * @return array<string, string>
+     */
+    public function lengthOptions(array $options): array
+    {
+        return collect($options)->mapWithKeys(static fn (int $words): array => [(string) $words => __(':words mots, environ :characters caractères', [
+            'words' => number_format($words, 0, ',', "\u{00A0}"),
+            'characters' => number_format($words * 6, 0, ',', "\u{00A0}"),
+        ])])->all();
+    }
+
     /** Libelle d'un nombre d'images au plus, pour les listes de choix. Ce nombre comprend l'image principale. */
     public function imageCountLabel(int $count): string
     {

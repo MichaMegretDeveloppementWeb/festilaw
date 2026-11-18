@@ -13,10 +13,11 @@ final readonly class BlogAiCostFormatter
     /**
      * Toujours quatre decimales, au centieme de centime pres (decision de Micha du 2026-11-17) :
      * « 0,0125 $ », « 0,1000 $ ». Deux decimales cachaient l'essentiel d'un cout d'etape, et le total ne
-     * correspondait plus a la somme des etapes affichees.
+     * correspondait plus a la somme des etapes affichees. Les espaces sont insecables : dans un bloc etroit,
+     * « 0,2200 $ » se coupait avant le symbole (decision de Micha du 18/11).
      */
     public function dollars(int $microusd): string
     {
-        return number_format($microusd / 1_000_000, 4, ',', ' ').' $';
+        return number_format($microusd / 1_000_000, 4, ',', "\u{00A0}")."\u{00A0}$";
     }
 }

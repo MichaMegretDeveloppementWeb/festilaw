@@ -76,11 +76,9 @@ class GenerationSettings extends Component
     /** Longueur par defaut du texte, en mots (saisie). */
     public string $articleWords = '';
 
+    /** @var list<int> les paliers de longueur proposes */
     #[Locked]
-    public int $minWords = 0;
-
-    #[Locked]
-    public int $maxWords = 0;
+    public array $wordOptions = [];
 
     public string $notificationEmail = '';
 
@@ -96,9 +94,8 @@ class GenerationSettings extends Component
         $current = $settings->current();
         $this->spentThisMonthMicrousd = $budget->spentThisMonthMicrousd();
 
-        $this->minWords = $length->minWords;
-        $this->maxWords = $length->maxWords;
-        $this->articleWords = (string) $current->articleWords;
+        $this->wordOptions = $length->options();
+        $this->articleWords = (string) $length->clamp($current->articleWords);
 
         $this->enabled = $current->enabled;
         $this->periodCount = (string) $current->periodCount;
@@ -133,7 +130,7 @@ class GenerationSettings extends Component
             'avoidedTopics.*' => ['string', 'max:'.BlogAiSettings::TOPIC_MAX_LENGTH],
             'imageMode' => ['required', Rule::enum(BlogAiImageMode::class)],
             'maxImages' => ['required', 'integer', 'min:1', 'max:'.BlogAiSettings::MAX_IMAGES],
-            'articleWords' => ['required', 'integer', 'min:'.$this->minWords, 'max:'.$this->maxWords],
+            'articleWords' => ['required', Rule::in($this->wordOptions)],
             'notificationEmail' => ['required', 'email', 'max:180'],
             'transparencyNotice.*' => ['nullable', 'string', 'max:500'],
         ];
@@ -193,10 +190,8 @@ class GenerationSettings extends Component
             'maxImages.integer' => __('Choisissez le nombre d\'images.'),
             'maxImages.min' => __('Choisissez le nombre d\'images.'),
             'maxImages.max' => __('Choisissez le nombre d\'images.'),
-            'articleWords.required' => __('Indiquez la longueur du texte.'),
-            'articleWords.integer' => __('La longueur est un nombre entier de mots.'),
-            'articleWords.min' => __('Le texte compte au moins :min mots.', ['min' => $this->minWords]),
-            'articleWords.max' => __('Le texte compte :max mots au plus.', ['max' => number_format($this->maxWords, 0, ',', ' ')]),
+            'articleWords.required' => __('Choisissez la longueur du texte.'),
+            'articleWords.in' => __('Choisissez une longueur dans la liste.'),
             'notificationEmail.required' => __('Indiquez l\'adresse qui reçoit les e-mails.'),
             'notificationEmail.email' => __('Cette adresse e-mail n\'est pas valide.'),
             'notificationEmail.max' => __('L\'adresse e-mail ne doit pas dépasser 180 caractères.'),
@@ -262,6 +257,7 @@ class GenerationSettings extends Component
                 $monthlyCap,
             ),
             'warningPercent' => $budget->warningPercent(),
+            'lengthOptions' => $presenter->lengthOptions($this->wordOptions),
             'modelLabels' => $steps->mapWithKeys(fn (string $step): array => [$step => $presenter->modelSettingLabel($step)])->all(),
             // Un modele enregistre qui n'est plus dans la liste reste visible, pour dire qu'il faut en choisir un autre.
             'modelOptions' => $steps->mapWithKeys(function (string $step) use ($catalog): array {

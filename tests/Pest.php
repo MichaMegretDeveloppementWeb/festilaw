@@ -48,3 +48,13 @@ function something()
 {
     // ..
 }
+
+/**
+ * Le texte attendu avec les espaces insecables que BlogAiCostFormatter pose dans un montant et avant « $ »
+ * (decision de Micha du 18/11 : « 0,2200 $ » ne se coupe plus avant le symbole). Les tests ecrivent les
+ * montants avec des espaces ordinaires, lisibles.
+ */
+function dollarsText(string $text): string
+{
+    return (string) preg_replace('/(?<=\d) (?=\d|\$)/u', "\u{00A0}", $text);
+}

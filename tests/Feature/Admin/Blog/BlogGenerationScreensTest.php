@@ -101,8 +101,8 @@ it('shows the spend of the month against its cap, the automatic rhythm and the d
     BlogPost::factory()->create();
 
     Livewire::test(GenerationDashboard::class)
-        ->assertSee('1,0000 $')
-        ->assertSee('sur 4,0000 $ de plafond')
+        ->assertSee(dollarsText('1,0000 $'))
+        ->assertSee(dollarsText('sur 4,0000 $ de plafond'))
         ->assertSee('Activée')
         ->assertSee('2 articles chaque semaine')
         ->assertSee('brouillons générés attendent votre relecture')
@@ -170,7 +170,7 @@ it('lists the five latest generations, newest first, with their outcome and no t
         ->assertDontSee('Simulated provider failure.')
         ->assertSee('Automatique')
         ->assertSee('En échec')
-        ->assertSee('0,2625 $')
+        ->assertSee(dollarsText('0,2625 $'))
         ->assertSee('Tout l\'historique')
         ->assertSeeHtml('wire:click="retry('.$failed->id.')"')
         ->assertDontSeeHtml('wire:click="retry('.$old->id.')"');
@@ -390,7 +390,7 @@ it('warns as the spend of the month nears its cap, then passes it, and still lau
 
     Livewire::test(GenerationDashboard::class)
         ->assertSee('La dépense du mois approche du plafond')
-        ->assertSee('soit 85 % du plafond de 1,0000 $')
+        ->assertSee(dollarsText('soit 85 % du plafond de 1,0000 $'))
         ->assertSeeHtml('data-monthly-warning="near"')
         ->assertSeeHtml('ui:bg-amber-500');
 
@@ -515,9 +515,9 @@ it('shows a generation step by step, with its model, tokens and cost under each 
         ->assertSee('contactez l\'assistance technique')
         ->assertDontSee('Provider is down.')
         // Le total et le cout de chaque etape, a quatre decimales : 0,0300 $ + 0,0125 $ = 0,0425 $.
-        ->assertSee('0,0425 $')
-        ->assertSee('0,0300 $')
-        ->assertSee('0,0125 $')
+        ->assertSee(dollarsText('0,0425 $'))
+        ->assertSee(dollarsText('0,0300 $'))
+        ->assertSee(dollarsText('0,0125 $'))
         ->assertSee('Banque d\'images, 2 au plus')
         ->assertSee('Environ 1 200 mots (7 200 caractères)')
         // Le modele sous son nom commercial, les tokens par sens avec le mot « tokens », plus aucune phrase « jetons lus ».
@@ -649,6 +649,21 @@ it('opens the settings on their current values, in 2 queries with the spend of t
         ->assertDontSee('à raison d\'un sujet par ligne');
 });
 
+it('groups the settings by what they apply to, and offers the length as a list of steps', function () {
+    // Decision de Micha du 18/11 : on ne savait plus ce qui valait pour chaque article, ce qui n'etait qu'une
+    // valeur par defaut et ce qui ne concernait que la generation automatique.
+    Livewire::test(GenerationSettings::class)
+        ->assertSeeInOrder([
+            'Réglages communs', 'Ils valent pour chaque article généré, lancé à la main ou automatiquement.', 'Modèles', 'Sujets', 'Budget', 'E-mail', 'Mention de transparence',
+            'Valeurs par défaut', 'La génération automatique les reprend.', 'Longueur et images', 'Coût estimé d\'un article',
+            'Génération automatique', 'Elle ne concerne que les lots lancés sans vous.', 'Activation et rythme', 'Brouillons en attente',
+        ])
+        ->assertSeeHtml('<option value="400"')
+        ->assertSeeHtml('<option value="2000"')
+        ->assertSee(dollarsText('1 000 mots, environ 6 000 caractères'))
+        ->assertDontSeeHtml('id="ai-article-words" type="number"');
+});
+
 it('offers only image models for the image step, and only text models for the others', function () {
     $html = Livewire::test(GenerationSettings::class)->html();
 
@@ -673,7 +688,7 @@ it('saves the settings', function () {
         ->set('models.image', 'openai/gpt-5.4-image-2')
         ->set('imageMode', 'generated')
         ->set('maxImages', '3')
-        ->set('articleWords', '1500')
+        ->set('articleWords', '1600')
         ->set('notificationEmail', 'owner@example.com')
         ->set('transparencyNotice.fr', 'Article rédigé avec l\'aide d\'une IA.')
         ->call('save')
@@ -698,7 +713,7 @@ it('saves the settings', function () {
         ->and($saved->modelFor('topic'))->toBe(config('blog.ai.defaults.models.topic'))
         ->and($saved->imageMode)->toBe(BlogAiImageMode::Generated)
         ->and($saved->maxImages)->toBe(3)
-        ->and($saved->articleWords)->toBe(1_500)
+        ->and($saved->articleWords)->toBe(1_600)
         ->and($saved->notificationEmail)->toBe('owner@example.com')
         ->and($saved->transparencyNotice['fr'])->toBe('Article rédigé avec l\'aide d\'une IA.');
 });
@@ -710,7 +725,7 @@ it('shows the estimated cost of an article in the settings, warns as soon as it 
         ->assertSee('Coût estimé d\'un article')
         ->assertSeeHtml('data-forecast-range')
         ->assertSee('Estimation tirée des articles déjà générés. Le coût réel peut en sortir.')
-        ->assertSee('Un article ne dépasse jamais 0,1650 $, soit ce plafond augmenté de 10 %.')
+        ->assertSee(dollarsText('Un article ne dépasse jamais 0,1650 $, soit ce plafond augmenté de 10 %.'))
         ->assertDontSeeHtml('data-forecast-above-cap');
 
     // Les valeurs a l'ecran comptent avant l'enregistrement : un plafond baisse fait paraitre l'alerte.
@@ -753,7 +768,7 @@ it('refuses settings that make no sense, each with its own message', function ()
         ->set('notificationEmail', 'not-an-email')
         ->call('save')
         ->assertHasErrors(['periodCount', 'periodUnit', 'articlesPerRun', 'pendingDraftsCap', 'monthlySpendCap', 'articleSpendCap', 'models.writing', 'models.image', 'priorityTopics.0', 'imageMode', 'maxImages', 'articleWords', 'notificationEmail'])
-        ->assertSee('Le texte compte 2 000 mots au plus.')
+        ->assertSee('Choisissez une longueur dans la liste.')
         ->assertSee('La période est d\'au moins 1.')
         ->assertSee('Un lot compte 10 articles au plus.')
         ->assertSee('Le plafond de dépense ne peut pas être négatif.')

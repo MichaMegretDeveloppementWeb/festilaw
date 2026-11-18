@@ -19,9 +19,8 @@
                 <x-ui::textarea id="generation-instructions" wire:model="instructions" rows="3" maxlength="2000" :error="$errors->has('instructions')" />
             </x-ui::form-group>
 
-            <x-ui::form-group :label="__('Longueur du texte (mots)')" for="generation-article-words" :error="$errors->first('articleWords')"
-                :hint="__('De :min à :max mots, environ 6 caractères par mot.', ['min' => $minWords, 'max' => number_format($maxWords, 0, ',', ' ')])">
-                <x-ui::input type="number" step="50" :min="$minWords" :max="$maxWords" id="generation-article-words" wire:model.live.debounce.500ms="articleWords" :error="$errors->has('articleWords')" />
+            <x-ui::form-group :label="__('Longueur du texte')" for="generation-article-words" :error="$errors->first('articleWords')">
+                <x-ui::select id="generation-article-words" wire:model.live="articleWords" :options="$lengthOptions" :error="$errors->has('articleWords')" />
             </x-ui::form-group>
 
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">

@@ -81,7 +81,7 @@ it('refuses an article that could cost more than the cap per article, and says w
 
     expect(fn () => app(QueueBlogGenerationAction::class)->execute(new QueueBlogGenerationData(articleWords: 400)))
         ->toThrow(function (BlogGenerationException $e): void {
-            expect($e->getUserMessage())->toContain('au-delà de 0,0110 $, soit le plafond de 0,0100 $ par article augmenté de 10 %')
+            expect($e->getUserMessage())->toContain(dollarsText('au-delà de 0,0110 $, soit le plafond de 0,0100 $ par article augmenté de 10 %'))
                 ->toContain('Baissez la longueur');
         });
 
@@ -265,13 +265,13 @@ it('sends one message when a requested generation is over, to the recipient of t
             'outcome' => 'Terminée',
             'succeeded' => true,
             'failed' => false,
-            'cost' => '0,0300 $',
+            'cost' => dollarsText('0,0300 $'),
             'url' => route('admin.blog.generation.show', ['generation' => $generation->id]),
             'draftUrl' => null,
             'excerpt' => null,
             'sources' => null,
         ]]
-        && $mail->totalCost === '0,0300 $'
+        && $mail->totalCost === dollarsText('0,0300 $')
         && $mail->postsUrl === route('admin.blog.posts.index')
         && $mail->generationsUrl === route('admin.blog.generation.index'));
 });

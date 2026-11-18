@@ -90,14 +90,14 @@ it('adds up two consumptions', function () {
 it('shows a cost in dollars with four decimals', function (int $microusd, string $expected) {
     expect((new BlogAiCostFormatter)->dollars($microusd))->toBe($expected);
 })->with([
-    [0, '0,0000 $'],
-    [2_341, '0,0023 $'],
-    [3_460, '0,0035 $'],
-    [12_500, '0,0125 $'],
-    [100_000, '0,1000 $'],
-    [262_500, '0,2625 $'],
-    [10_000_000, '10,0000 $'],
-    [1_234_560_000, '1 234,5600 $'],
+    [0, dollarsText('0,0000 $')],
+    [2_341, dollarsText('0,0023 $')],
+    [3_460, dollarsText('0,0035 $')],
+    [12_500, dollarsText('0,0125 $')],
+    [100_000, dollarsText('0,1000 $')],
+    [262_500, dollarsText('0,2625 $')],
+    [10_000_000, dollarsText('10,0000 $')],
+    [1_234_560_000, dollarsText('1 234,5600 $')],
 ]);
 
 it('brings stored settings back within their bounds', function () {

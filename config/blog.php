@@ -178,10 +178,12 @@ return [
          | 2 000 mots, 1 000 par defaut). Les consignes demandent la cible a `asked_tolerance_percent` pres ;
          | la redaction accepte un ecart de `accepted_tolerance_percent`, et demande une correction au-dela.
          | Au premier article reel, les consignes demandaient 600 a 800 mots et le modele en a ecrit 522.
+         | La longueur se choisit par paliers de `step_words` (decision de Micha du 18/11).
          */
         'article_length' => [
             'min_words' => 400,
             'max_words' => 2_000,
+            'step_words' => 200,
             'asked_tolerance_percent' => 10,
             'accepted_tolerance_percent' => 20,
         ],

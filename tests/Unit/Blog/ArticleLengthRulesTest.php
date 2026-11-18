@@ -13,13 +13,20 @@ function lengthRules(): ArticleLengthRules
     return new ArticleLengthRules(minWords: 400, maxWords: 2_000, askedTolerancePercent: 10, acceptedTolerancePercent: 20);
 }
 
-it('keeps a length within the bounds of the setting', function (int $asked, int $kept) {
+it('keeps a length within the bounds of the setting, on the nearest step', function (int $asked, int $kept) {
     expect(lengthRules()->clamp($asked))->toBe($kept);
 })->with([
     'too short' => [100, 400],
     'within' => [1_000, 1_000],
     'too long' => [9_000, 2_000],
+    // Une longueur enregistree avant les paliers du 18/11 revient au palier le plus proche.
+    'between two steps' => [950, 1_000],
+    'just above a step' => [1_250, 1_200],
 ]);
+
+it('offers the lengths by steps of 200 words, from 400 to 2 000', function () {
+    expect(lengthRules()->options())->toBe([400, 600, 800, 1_000, 1_200, 1_400, 1_600, 1_800, 2_000]);
+});
 
 it('works out the range asked to the model and the wider range the writing step accepts', function () {
     $length = lengthRules()->for(1_000);

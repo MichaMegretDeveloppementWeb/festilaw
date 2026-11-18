@@ -110,14 +110,14 @@ it('warns once a month as the spend nears the monthly cap, then once more when i
     Mail::assertSent(BlogMonthlySpendWarning::class, 1);
     Mail::assertSent(BlogMonthlySpendWarning::class, fn (BlogMonthlySpendWarning $mail): bool => ! $mail->over
         && $mail->percent === 85
-        && $mail->spent === '0,8500 $'
+        && $mail->spent === dollarsText('0,8500 $')
         && $mail->hasTo('owner@example.com'));
 
     $spent->update(['cost_microusd' => 1_200_000]);
     $alerts->monthlySpend($settings);
     $alerts->monthlySpend($settings);
     Mail::assertSent(BlogMonthlySpendWarning::class, 2);
-    Mail::assertSent(BlogMonthlySpendWarning::class, fn (BlogMonthlySpendWarning $mail): bool => $mail->over && $mail->cap === '1,0000 $');
+    Mail::assertSent(BlogMonthlySpendWarning::class, fn (BlogMonthlySpendWarning $mail): bool => $mail->over && $mail->cap === dollarsText('1,0000 $'));
 
     // Le mois suivant, la depense repart de zero, et chaque seuil peut de nouveau avertir une fois.
     $this->travelTo('2026-12-01 10:00:00');
