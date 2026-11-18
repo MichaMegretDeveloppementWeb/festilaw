@@ -58,8 +58,10 @@ final readonly class BlogGenerationCostForecaster
     }
 
     /**
-     * Un sujet impose se passe de veille. Une image generee compte en bas la seule image principale, a son
-     * prix mesure (la moitie de sa reserve), et en haut toutes les images, a leur reserve.
+     * Un sujet impose se passe de veille. Une image generee compte en bas la seule image principale, a son prix
+     * mesure le plus bas, et en haut toutes les images, a leur prix mesure le plus haut. Les jetons du profil
+     * sont ceux de DeepSeek et de GPT-6 Luna ; un modele qui en compte plus pour le meme texte (Anthropic) les
+     * multiplie par son facteur.
      *
      * @param  array<string, string>  $models  modele par reglage (sujet, recherche, redaction...)
      * @param  list<string>|null  $onlySteps  les seules etapes a compter (banc d'essai : la recherche partagee a part) ; nul : toutes
@@ -75,8 +77,9 @@ final readonly class BlogGenerationCostForecaster
             }
 
             $model = $models[(string) $profile['setting']] ?? null;
-            $input = (int) ($profile['input'] ?? 0) + intdiv((int) ($profile['input_per_1000_words'] ?? 0) * $words, 1_000);
-            $visible = (int) ($profile['output'] ?? 0) + intdiv((int) ($profile['output_per_1000_words'] ?? 0) * $words, 1_000);
+            $factor = $this->models->tokenFactorPercent($model);
+            $input = intdiv(((int) ($profile['input'] ?? 0) + intdiv((int) ($profile['input_per_1000_words'] ?? 0) * $words, 1_000)) * $factor, 100);
+            $visible = intdiv(((int) ($profile['output'] ?? 0) + intdiv((int) ($profile['output_per_1000_words'] ?? 0) * $words, 1_000)) * $factor, 100);
             [$lowReasoning, $highReasoning] = $this->reasoning($model, $profile['reasoning'] ?? [0, 0]);
             [$lowCalls, $highCalls] = $profile['calls'] ?? [1, 1];
             $measured = $this->models->priceMarginPercent($model);
@@ -87,9 +90,9 @@ final readonly class BlogGenerationCostForecaster
         }
 
         if ($images->mode === BlogAiImageMode::Generated) {
-            $reserve = $this->models->imageReserveMicrousd((string) ($models[BlogAiModelCatalog::IMAGE_SETTING] ?? ''));
-            $low += intdiv($reserve, 2);
-            $high += $reserve * $images->maxImages;
+            [$imageLow, $imageHigh] = $this->models->imagePriceMicrousd((string) ($models[BlogAiModelCatalog::IMAGE_SETTING] ?? ''));
+            $low += $imageLow;
+            $high += $imageHigh * $images->maxImages;
         }
 
         return new GenerationCostForecast($low, $high);

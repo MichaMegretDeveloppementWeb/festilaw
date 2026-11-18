@@ -196,40 +196,47 @@ return [
          | pas le cout reel (l'etape est alors marquee « cout estime »). La qualite de ces modeles n'est pas
          | presumee : le banc d'essai tranche, et resserrera cette liste.
          |
-         | Deux mesures facultatives, pour le cout estime d'un article (generation 77 du 17/11) :
-         | `price_margin_percent`, ce que le modele coute vraiment par rapport au catalogue (Haiku 5.5 au prix
-         | du catalogue, DeepSeek V4.1 Flash 2,8 fois plus cher en ecriture chez Wafer), et `reasoning_tokens`,
-         | la reflexion d'un modele qui ignore l'effort demande (DeepSeek, de 1 800 a 11 200 jetons par appel
-         | aux generations 77 et 78, comptee jusqu'a 12 000).
+         | Trois mesures facultatives, pour le cout estime d'un article, relevees sur les 17 articles du banc
+         | d'essai du 18/11 (storage/app/private/blog-bench/2026-11-18-sc7 et journal « Blog AI call. ») :
+         | - `price_margin_percent`, ce que le modele coute vraiment par rapport au catalogue : Haiku 5.5,
+         |   Sonnet 5.5 et DeepSeek V4.1 Flash au prix du catalogue, GPT-6 Luna 14 % au-dessus. DeepSeek
+         |   coutait 2,8 fois son catalogue chez Wafer le 17/11 ; le routage au meilleur prix l'a ramene au
+         |   catalogue ;
+         | - `token_factor_percent`, combien de jetons le modele compte pour un meme texte, par rapport a
+         |   DeepSeek et a GPT-6 Luna : environ une fois et demie plus pour Anthropic, en lecture comme en
+         |   ecriture ;
+         | - `reasoning_tokens`, la reflexion par appel d'un modele qui ignore l'effort demande : DeepSeek de
+         |   2 200 a 8 500 jetons, Luna presque aucune, Sonnet aucune.
          */
         'models' => [
-            'anthropic/claude-opus-5.5' => ['name' => 'Claude Opus 5.5', 'provider' => 'Anthropic', 'input' => 400, 'output' => 2_000],
-            'anthropic/claude-sonnet-5.5' => ['name' => 'Claude Sonnet 5.5', 'provider' => 'Anthropic', 'input' => 200, 'output' => 1_000],
-            'anthropic/claude-haiku-5.5' => ['name' => 'Claude Haiku 5.5', 'provider' => 'Anthropic', 'input' => 10, 'output' => 50, 'price_margin_percent' => 100],
+            'anthropic/claude-opus-5.5' => ['name' => 'Claude Opus 5.5', 'provider' => 'Anthropic', 'input' => 400, 'output' => 2_000, 'token_factor_percent' => 145],
+            'anthropic/claude-sonnet-5.5' => ['name' => 'Claude Sonnet 5.5', 'provider' => 'Anthropic', 'input' => 200, 'output' => 1_000, 'price_margin_percent' => 100, 'token_factor_percent' => 145, 'reasoning_tokens' => [0, 0]],
+            'anthropic/claude-haiku-5.5' => ['name' => 'Claude Haiku 5.5', 'provider' => 'Anthropic', 'input' => 10, 'output' => 50, 'price_margin_percent' => 100, 'token_factor_percent' => 145],
             'openai/gpt-6.1-sol' => ['name' => 'GPT-6.1 Sol', 'provider' => 'OpenAI', 'input' => 200, 'output' => 1_000],
             'openai/gpt-6.1-terra' => ['name' => 'GPT-6.1 Terra', 'provider' => 'OpenAI', 'input' => 100, 'output' => 500],
-            'openai/gpt-6-luna' => ['name' => 'GPT-6 Luna', 'provider' => 'OpenAI', 'input' => 10, 'output' => 50],
+            'openai/gpt-6-luna' => ['name' => 'GPT-6 Luna', 'provider' => 'OpenAI', 'input' => 10, 'output' => 50, 'price_margin_percent' => 114, 'reasoning_tokens' => [0, 300]],
             'google/gemini-4-carbon' => ['name' => 'Gemini 4 Carbon', 'provider' => 'Google', 'input' => 200, 'output' => 1_000],
             'google/gemini-4-hydrogen' => ['name' => 'Gemini 4 Hydrogen', 'provider' => 'Google', 'input' => 150, 'output' => 750],
             'google/gemini-3.1-flash-lite' => ['name' => 'Gemini 3.1 Flash Lite', 'provider' => 'Google', 'input' => 25, 'output' => 150],
             'x-ai/grok-4.7' => ['name' => 'Grok 4.7', 'provider' => 'SpaceXAI', 'input' => 200, 'output' => 600],
             'mistralai/mistral-large-4-0' => ['name' => 'Mistral Large 4', 'provider' => 'Mistral', 'input' => 70, 'output' => 210],
-            'deepseek/deepseek-v4.1-flash' => ['name' => 'DeepSeek V4.1 Flash', 'provider' => 'DeepSeek', 'input' => 5, 'output' => 20, 'price_margin_percent' => 300, 'reasoning_tokens' => [1_800, 12_000]],
+            'deepseek/deepseek-v4.1-flash' => ['name' => 'DeepSeek V4.1 Flash', 'provider' => 'DeepSeek', 'input' => 5, 'output' => 20, 'price_margin_percent' => 100, 'reasoning_tokens' => [2_200, 8_500]],
         ],
 
         /*
          | Modeles qui generent des images : les seuls proposes pour l'etape des images. Noms releves au
-         | catalogue d'OpenRouter le 16/11/2026. Prix d'une image paysage mesures le 17/11 : GPT-5 Image Mini
-         | environ 1,3 centime (1536 x 1024), Nano Banana 2 de 6,7 a 10 centimes. Gemini 3.1 Flash Lite Image
-         | n'est pas propose : OpenRouter refuse le reglage de resolution que le SDK lui envoie.
+         | catalogue d'OpenRouter le 16/11/2026. Gemini 3.1 Flash Lite Image n'est pas propose : OpenRouter
+         | refuse le reglage de resolution que le SDK lui envoie.
          |
-         | `reserve_microusd` : ce qu'on reserve sur le plafond par article avant de demander une image (une
-         | image ne part que si ce montant tient dans ce qui reste). Mesure du 17/11 doublee pour GPT-5 Image
-         | Mini et Nano Banana 2 ; pour les trois autres, deduit du prix public d'un jeton d'image (17/11)
-         | rapporte a ces deux mesures.
+         | `price_microusd` : le prix d'une image paysage, bas et haut, tel qu'on l'a mesure. Il sert a
+         | l'estimation. GPT-5 Image Mini a coute 0,0127 $ ou 0,0498 $ pour la meme taille (banc du 18/11).
+         | `reserve_microusd` : ce qu'il doit rester avant l'arret de securite pour demander une image. Pour
+         | Nano Banana 2, mesure du 17/11 (6,7 a 10 centimes) doublee. Pour les trois autres, deduit du prix
+         | public d'un jeton d'image (17/11) rapporte a ces mesures. Sans prix mesure, l'estimation compte la
+         | moitie de la reserve en bas et la reserve en haut.
          */
         'image_models' => [
-            'openai/gpt-5-image-mini' => ['name' => 'GPT-5 Image Mini', 'provider' => 'OpenAI', 'reserve_microusd' => 30_000],
+            'openai/gpt-5-image-mini' => ['name' => 'GPT-5 Image Mini', 'provider' => 'OpenAI', 'price_microusd' => [12_700, 49_800], 'reserve_microusd' => 50_000],
             'google/gemini-3.1-flash-image' => ['name' => 'Nano Banana 2', 'provider' => 'Google', 'reserve_microusd' => 120_000],
             'google/gemini-nano-banana-2.1' => ['name' => 'Nano Banana 2.1', 'provider' => 'Google', 'reserve_microusd' => 60_000],
             'google/gemini-3-pro-image' => ['name' => 'Nano Banana Pro', 'provider' => 'Google', 'reserve_microusd' => 240_000],
@@ -298,32 +305,35 @@ return [
         ],
 
         /*
-         | Cout estime d'un article (BlogGenerationCostForecaster), affiche avant le lancement. Profil de
-         | chaque etape, par appel, cale sur la generation 77 du 17/11 (journal « Blog AI call. », brouillon
-         | 97 de 522 mots), puis sur la 78 du 18/11 (brouillon 98, 929 mots rediges) : jetons lus (fixes, et
-         | par millier de mots du texte), jetons visibles ecrits, reflexion basse et haute, nombre d'appels
-         | bas et haut (correction, second passage ; les nouveaux essais, des incidents, ne comptent pas),
-         | recherches web. La reflexion haute de la verification vient de la 78 (5 200 jetons, Haiku 5.5
-         | compris). Les jetons lus de la redaction et de la verification comptent la fiche des regles de
-         | l'UE (`resources/prompts/blog/eu-product-rules.md`, environ 1 700 jetons), ceux des versions
-         | francaise et espagnole les chartes de presse du 18/11 (environ 1 900 et 1 600 jetons de plus).
-         | Un appel apres le premier relit en plus la reponse precedente. La reflexion de chaque etape est celle d'un modele qui respecte l'effort
-         | demande (Haiku 5.5) ; un modele qui l'ignore porte la sienne au catalogue (`reasoning_tokens`).
-         | Les jetons sont comptes au prix mesure du modele (`price_margin_percent` du catalogue) ; un modele
-         | jamais mesure compte au catalogue en bas et a `default_price_margin_percent` en haut.
+         | Cout estime d'un article (BlogGenerationCostForecaster), annonce avant le lancement et garde sur la
+         | generation. Profil de chaque etape, par appel, cale sur les 17 articles du banc d'essai du 18/11
+         | (quatre configurations, journal « Blog AI call. ») : jetons lus (fixes, et par millier de mots du
+         | texte), jetons visibles ecrits, reflexion basse et haute, nombre d'appels bas et haut (correction,
+         | second passage ; les nouveaux essais, des incidents, ne comptent pas), recherches web. Les jetons
+         | sont comptes a la facon de DeepSeek et de GPT-6 Luna ; un modele d'Anthropic les multiplie par son
+         | `token_factor_percent`. La relecture du style et les deux versions font toujours deux appels, car
+         | le second passage part des qu'une phrase garde un signe de texte genere. Un appel apres le premier
+         | relit en plus la reponse precedente. La reflexion de chaque etape est celle d'un modele qui respecte
+         | l'effort demande (Haiku 5.5) ; un modele qui l'ignore porte la sienne au catalogue
+         | (`reasoning_tokens`). Les jetons sont comptes au prix mesure du modele (`price_margin_percent`) ; un
+         | modele jamais mesure compte au catalogue en bas et a `default_price_margin_percent` en haut. Avec
+         | ce profil, chacun des 17 articles du banc tombe dans la fourchette de sa configuration, et le haut
+         | ne depasse pas une fois et demie le bas (BlogGenerationCostForecastTest). La veille (`topic_scan`),
+         | absente du banc ou les sujets etaient imposes, garde la mesure de la generation 77 ramenee aux
+         | jetons de ce profil.
          */
         'forecast' => [
             'default_price_margin_percent' => 150,
             'steps' => [
-                'topic_scan' => ['setting' => 'topic', 'input' => 9_500, 'output' => 1_400, 'reasoning' => [200, 1_000], 'calls' => [1, 1], 'searches' => 2],
-                'topic' => ['setting' => 'topic', 'input' => 7_900, 'output' => 500, 'reasoning' => [0, 0], 'calls' => [1, 1]],
-                'research_notes' => ['setting' => 'research', 'input' => 22_800, 'output' => 2_800, 'reasoning' => [250, 1_000], 'calls' => [1, 1], 'searches' => 3],
-                'research' => ['setting' => 'research', 'input' => 8_500, 'output' => 2_650, 'reasoning' => [0, 0], 'calls' => [1, 1]],
-                'writing' => ['setting' => 'writing', 'input' => 11_400, 'output_per_1000_words' => 2_100, 'reasoning' => [1_000, 3_000], 'calls' => [1, 2]],
-                'verification' => ['setting' => 'verification', 'input' => 8_700, 'input_per_1000_words' => 2_100, 'output_per_1000_words' => 3_100, 'reasoning' => [1_500, 5_500], 'calls' => [1, 2]],
-                'style' => ['setting' => 'writing', 'input' => 5_300, 'input_per_1000_words' => 2_100, 'output_per_1000_words' => 1_750, 'reasoning' => [1_000, 3_000], 'calls' => [1, 2]],
-                'translation_fr' => ['setting' => 'translation', 'input' => 7_400, 'input_per_1000_words' => 2_100, 'output_per_1000_words' => 2_700, 'reasoning' => [1_000, 3_000], 'calls' => [1, 3]],
-                'translation_es' => ['setting' => 'translation', 'input' => 7_100, 'input_per_1000_words' => 2_100, 'output_per_1000_words' => 2_400, 'reasoning' => [1_000, 3_000], 'calls' => [1, 3]],
+                'topic_scan' => ['setting' => 'topic', 'input' => 6_550, 'output' => 1_000, 'reasoning' => [200, 1_000], 'calls' => [1, 1], 'searches' => 2],
+                'topic' => ['setting' => 'topic', 'input' => 4_750, 'output' => 450, 'reasoning' => [0, 0], 'calls' => [1, 1]],
+                'research_notes' => ['setting' => 'research', 'input' => 10_550, 'output' => 1_800, 'reasoning' => [250, 600], 'calls' => [1, 1], 'searches' => 3],
+                'research' => ['setting' => 'research', 'input' => 6_000, 'output' => 1_800, 'reasoning' => [0, 0], 'calls' => [1, 1]],
+                'writing' => ['setting' => 'writing', 'input' => 11_400, 'output_per_1000_words' => 1_700, 'reasoning' => [1_200, 3_200], 'calls' => [1, 2]],
+                'verification' => ['setting' => 'verification', 'input' => 6_400, 'input_per_1000_words' => 1_500, 'output_per_1000_words' => 1_680, 'reasoning' => [300, 4_400], 'calls' => [1, 2]],
+                'style' => ['setting' => 'writing', 'input' => 5_700, 'input_per_1000_words' => 1_500, 'output_per_1000_words' => 1_350, 'reasoning' => [400, 1_400], 'calls' => [2, 2]],
+                'translation_fr' => ['setting' => 'translation', 'input' => 8_300, 'input_per_1000_words' => 1_500, 'output_per_1000_words' => 1_800, 'reasoning' => [1_000, 5_000], 'calls' => [2, 2]],
+                'translation_es' => ['setting' => 'translation', 'input' => 7_700, 'input_per_1000_words' => 1_500, 'output_per_1000_words' => 1_750, 'reasoning' => [1_000, 5_000], 'calls' => [2, 2]],
             ],
         ],
 

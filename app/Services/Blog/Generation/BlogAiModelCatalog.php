@@ -15,8 +15,8 @@ final readonly class BlogAiModelCatalog
     public const IMAGE_SETTING = 'image';
 
     /**
-     * @param  array<string, array{name?: string, provider?: string, input?: int, output?: int, price_margin_percent?: int, reasoning_tokens?: array{0: int, 1: int}}>  $textModels
-     * @param  array<string, array{name?: string, provider?: string, reserve_microusd?: int}>  $imageModels
+     * @param  array<string, array{name?: string, provider?: string, input?: int, output?: int, price_margin_percent?: int, token_factor_percent?: int, reasoning_tokens?: array{0: int, 1: int}}>  $textModels
+     * @param  array<string, array{name?: string, provider?: string, reserve_microusd?: int, price_microusd?: array{0: int, 1: int}}>  $imageModels
      */
     public function __construct(
         private array $textModels,
@@ -41,6 +41,37 @@ final readonly class BlogAiModelCatalog
         $tokens = $this->textModels[(string) $id]['reasoning_tokens'] ?? null;
 
         return is_array($tokens) && count($tokens) === 2 ? [(int) $tokens[0], (int) $tokens[1]] : null;
+    }
+
+    /**
+     * Combien de jetons le modele compte pour un meme texte, en pour cent de ceux du profil de l'estimation
+     * (compte de DeepSeek et de GPT-6 Luna). Les modeles d'Anthropic en comptent environ une fois et demie plus
+     * (banc d'essai du 18/11, a texte egal). 100 pour un modele jamais mesure.
+     */
+    public function tokenFactorPercent(?string $id): int
+    {
+        $factor = $this->textModels[(string) $id]['token_factor_percent'] ?? null;
+
+        return is_int($factor) ? $factor : 100;
+    }
+
+    /**
+     * Le prix d'une image de ce modele, bas et haut, tel qu'on l'a mesure ; a defaut, la moitie de sa reserve et
+     * sa reserve.
+     *
+     * @return array{0: int, 1: int}
+     */
+    public function imagePriceMicrousd(string $id): array
+    {
+        $price = $this->imageModels[$id]['price_microusd'] ?? null;
+
+        if (is_array($price) && count($price) === 2) {
+            return [(int) $price[0], (int) $price[1]];
+        }
+
+        $reserve = $this->imageReserveMicrousd($id);
+
+        return [intdiv($reserve, 2), $reserve];
     }
 
     /**

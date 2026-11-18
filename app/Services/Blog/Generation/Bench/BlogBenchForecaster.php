@@ -89,9 +89,9 @@ final readonly class BlogBenchForecaster
 
     private function image(BlogBenchPlan $plan): GenerationCostForecast
     {
-        $reserve = $this->catalog->imageReserveMicrousd($plan->imageModel);
+        [$low, $high] = $this->catalog->imagePriceMicrousd($plan->imageModel);
 
-        return new GenerationCostForecast(intdiv($reserve, 2), $reserve);
+        return new GenerationCostForecast($low, $high);
     }
 
     private function noImage(): GenerationImageOptions

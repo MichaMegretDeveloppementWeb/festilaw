@@ -12,8 +12,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 /*
  | Fourchette de cout d'un article, avant tout lancement : modeles choisis, longueur et images. Calcul pur
- | sur le profil `blog.ai.forecast`, cale sur la generation 77 du 17/11. Aucun appel ; la base ne sert qu'a
- | lire les reglages par defaut.
+ | sur le profil `blog.ai.forecast`, cale sur les 17 articles du banc d'essai du 18/11. Aucun appel ; la base
+ | ne sert qu'a lire les reglages par defaut.
  */
 
 uses(RefreshDatabase::class);
@@ -36,18 +36,21 @@ function stockImage(): GenerationImageOptions
     return new GenerationImageOptions(BlogAiImageMode::Stock, 1);
 }
 
-it('brackets what the first real articles cost, retries left aside', function () {
-    $forecaster = app(BlogGenerationCostForecaster::class);
-    $first = $forecaster->forecast(trialModels(), 522, stockImage());
-    $second = $forecaster->forecast(trialModels(), 1_000, stockImage());
+it('brackets what each article of the model bench cost, the high staying under one and a half times the low', function (array $models, array $realCosts, float $width) {
+    // Banc d'essai du 18/11 : sujet impose, 1 000 mots, sujet prepare compris, image a part.
+    $forecast = app(BlogGenerationCostForecaster::class)->forecast([
+        'topic' => 'anthropic/claude-haiku-5.5', 'research' => 'anthropic/claude-haiku-5.5', 'verification' => 'anthropic/claude-haiku-5.5', ...$models,
+    ], 1_000, new GenerationImageOptions(BlogAiImageMode::None, 1), topicImposed: true);
 
-    // Generation 77 (522 mots) : 0,0694 $ pour les appels qui ont abouti, 0,0929 $ avec trois nouveaux essais.
-    // Generation 78 (1 000 mots demandes) : 0,0743 $ sans la verification rejetee, 0,0792 $ avec.
-    expect($first->lowMicrousd)->toBeLessThan(69_390)
-        ->and($first->highMicrousd)->toBeGreaterThan(69_390)
-        ->and($second->lowMicrousd)->toBeLessThan(74_297)
-        ->and($second->highMicrousd)->toBeGreaterThan(79_183);
-});
+    expect($forecast->lowMicrousd)->toBeLessThanOrEqual(min($realCosts))
+        ->and($forecast->highMicrousd)->toBeGreaterThanOrEqual(max($realCosts))
+        ->and($forecast->highMicrousd)->toBeLessThanOrEqual((int) ($forecast->lowMicrousd * $width));
+})->with([
+    'Haiku + DeepSeek' => [['writing' => 'deepseek/deepseek-v4.1-flash', 'translation' => 'deepseek/deepseek-v4.1-flash'], [38_829, 42_477, 44_470, 44_579, 49_306], 1.5],
+    'Haiku seul' => [['writing' => 'anthropic/claude-haiku-5.5', 'translation' => 'anthropic/claude-haiku-5.5'], [54_921, 57_277, 58_460, 59_380, 60_773], 1.5],
+    'Haiku + Luna' => [['writing' => 'openai/gpt-6-luna', 'translation' => 'openai/gpt-6-luna'], [44_176, 44_677, 45_502, 45_830, 48_410], 1.5],
+    'Haiku + Sonnet' => [['writing' => 'anthropic/claude-sonnet-5.5', 'translation' => 'anthropic/claude-sonnet-5.5'], [426_158, 434_544], 1.5],
+]);
 
 it('costs more for a longer article and with generated images, and nothing more for stock photos', function () {
     $forecaster = app(BlogGenerationCostForecaster::class);
@@ -59,9 +62,9 @@ it('costs more for a longer article and with generated images, and nothing more 
     expect($long->lowMicrousd)->toBeGreaterThan($short->lowMicrousd)
         ->and($long->highMicrousd)->toBeGreaterThan($short->highMicrousd)
         ->and($none->highMicrousd)->toBe($short->highMicrousd)
-        // GPT-5 Image Mini : la moitie de sa reserve en bas (l'image principale), trois reserves en haut.
-        ->and($generated->lowMicrousd - $short->lowMicrousd)->toBe(15_000)
-        ->and($generated->highMicrousd - $short->highMicrousd)->toBe(90_000);
+        // GPT-5 Image Mini, prix mesures le 18/11 : l'image principale a 0,0127 $ en bas, trois images a 0,0498 $ en haut.
+        ->and($generated->lowMicrousd - $short->lowMicrousd)->toBe(12_700)
+        ->and($generated->highMicrousd - $short->highMicrousd)->toBe(149_400);
 });
 
 it('follows the price of the models chosen, and leaves the web scan out when the topic is imposed', function () {
@@ -85,13 +88,34 @@ it('keeps the default settings at a few cents an article, a model billed at its 
 });
 
 it('counts a model never measured at its catalog price at the bottom, and with a margin at the top', function () {
+    config(['blog.ai.models' => [
+        ...config('blog.ai.models'),
+        'test/measured' => ['name' => 'Measured', 'provider' => 'Test', 'input' => 10, 'output' => 50, 'price_margin_percent' => 100],
+        'test/never-measured' => ['name' => 'Never measured', 'provider' => 'Test', 'input' => 10, 'output' => 50],
+    ]]);
     $forecaster = app(BlogGenerationCostForecaster::class);
-    $luna = $forecaster->forecast([...trialModels(), 'writing' => 'openai/gpt-6-luna', 'translation' => 'openai/gpt-6-luna'], 1_000, stockImage());
-    $haiku = $forecaster->forecast([...trialModels(), 'writing' => 'anthropic/claude-haiku-5.5', 'translation' => 'anthropic/claude-haiku-5.5'], 1_000, stockImage());
+    $never = $forecaster->forecast([...trialModels(), 'writing' => 'test/never-measured', 'translation' => 'test/never-measured'], 1_000, stockImage());
+    $measured = $forecaster->forecast([...trialModels(), 'writing' => 'test/measured', 'translation' => 'test/measured'], 1_000, stockImage());
 
-    // Meme prix au catalogue : seule la borne haute de Luna, jamais mesure, porte une marge.
-    expect($luna->lowMicrousd)->toBe($haiku->lowMicrousd)
-        ->and($luna->highMicrousd)->toBeGreaterThan($haiku->highMicrousd);
+    // Meme prix au catalogue : seule la borne haute du modele jamais mesure porte une marge.
+    expect($never->lowMicrousd)->toBe($measured->lowMicrousd)
+        ->and($never->highMicrousd)->toBeGreaterThan($measured->highMicrousd);
+});
+
+it('counts the tokens of an Anthropic model one and a half times, as the bench measured them', function () {
+    config(['blog.ai.models' => [
+        ...config('blog.ai.models'),
+        'test/reference' => ['name' => 'Reference', 'provider' => 'Test', 'input' => 10, 'output' => 50, 'price_margin_percent' => 100],
+        'test/anthropic-like' => ['name' => 'Anthropic like', 'provider' => 'Test', 'input' => 10, 'output' => 50, 'price_margin_percent' => 100, 'token_factor_percent' => 145],
+    ]]);
+    $forecaster = app(BlogGenerationCostForecaster::class);
+    $models = static fn (string $model): array => ['topic' => $model, 'research' => $model, 'writing' => $model, 'verification' => $model, 'translation' => $model];
+
+    $reference = $forecaster->forecast($models('test/reference'), 1_000, new GenerationImageOptions(BlogAiImageMode::None, 1), topicImposed: true, onlySteps: ['research']);
+    $anthropic = $forecaster->forecast($models('test/anthropic-like'), 1_000, new GenerationImageOptions(BlogAiImageMode::None, 1), topicImposed: true, onlySteps: ['research']);
+
+    // L'etape du dossier de faits ne reflechit pas : son cout suit les seuls jetons.
+    expect($anthropic->lowMicrousd)->toBe(intdiv($reference->lowMicrousd * 145, 100));
 });
 
 it('gives the agents that write the article a token limit that grows with its length', function () {
