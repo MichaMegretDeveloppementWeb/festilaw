@@ -7,6 +7,7 @@ namespace App\Actions\Blog\Generation;
 use App\Contracts\Blog\Generation\GenerationPipeline;
 use App\Contracts\Blog\Generation\GenerationStep;
 use App\Data\Blog\Generation\ArticleLengthRules;
+use App\Data\Blog\Generation\ArticleSpendLimit;
 use App\Data\Blog\Generation\BlogAiSettings;
 use App\Data\Blog\Generation\GenerationLength;
 use App\Data\Blog\Generation\GenerationStepContext;
@@ -46,6 +47,7 @@ final readonly class RunBlogGenerationAction
         private BlogGenerationLockRepository $locks,
         private BlogGenerationSpendRepository $spend,
         private ArticleLengthRules $length,
+        private ArticleSpendLimit $spendLimit,
         private BlogAiSettingsService $settings,
         private BlogGenerationAlertService $alerts,
         private NotifyFinishedBlogGenerationBatchAction $notifyBatch,
@@ -178,10 +180,13 @@ final readonly class RunBlogGenerationAction
         );
     }
 
-    /** Seul le plafond par article arrete une generation ; celui du mois ne fait qu'avertir (decision du 17/11). */
+    /**
+     * Seul le plafond par article arrete une generation, avec la meme marge qu'au lancement (decision du 18/11) ;
+     * celui du mois ne fait qu'avertir (decision du 17/11).
+     */
     private function budgetLeft(int $generationId, BlogAiSettings $settings): int
     {
-        return $settings->articleSpendCapMicrousd() - $this->spend->costOf($generationId);
+        return $this->spendLimit->limit($settings->articleSpendCapMicrousd()) - $this->spend->costOf($generationId);
     }
 
     private function holdLock(int $generationId, string $owner, GenerationStep $step): bool

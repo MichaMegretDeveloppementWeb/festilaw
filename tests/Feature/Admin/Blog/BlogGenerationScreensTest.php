@@ -704,9 +704,13 @@ it('saves the settings', function () {
 });
 
 it('shows the estimated cost of an article in the settings, warns as soon as it goes above the cap, and still saves', function () {
+    // Decision de Micha du 18/11 : la fourchette se dit estimation, et la limite garantie (plafond de 0,15 $
+    // par defaut, plus 10 %) est affichee.
     $settings = Livewire::test(GenerationSettings::class)
         ->assertSee('Coût estimé d\'un article')
         ->assertSeeHtml('data-forecast-range')
+        ->assertSee('Estimation tirée des articles déjà générés. Le coût réel peut en sortir.')
+        ->assertSee('Un article ne dépasse jamais 0,1650 $, soit ce plafond augmenté de 10 %.')
         ->assertDontSeeHtml('data-forecast-above-cap');
 
     // Les valeurs a l'ecran comptent avant l'enregistrement : un plafond baisse fait paraitre l'alerte.

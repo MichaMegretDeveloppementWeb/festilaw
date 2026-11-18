@@ -63,7 +63,7 @@
                     <x-ui::input type="number" step="0.01" min="0" id="ai-spend-cap" wire:model.live.debounce.500ms="monthlySpendCap" :error="$errors->has('monthlySpendCap')" />
                 </x-ui::form-group>
                 <x-ui::form-group :label="__('Plafond de dépense par article ($)')" for="ai-article-spend-cap" :error="$errors->first('articleSpendCap')"
-                    :hint="__('Un article ne se lance que si le haut de sa fourchette de coût tient sous ce montant. Pendant la génération, aucun appel à l\'IA ne part s\'il risque de le dépasser.')">
+                    :hint="__('Un article ne se lance que si le haut de son coût estimé tient sous ce montant augmenté de :percent %. Pendant la génération, aucun appel à l\'IA ne part s\'il risque de dépasser cette même limite.', ['percent' => $forecast['percent']])">
                     <x-ui::input type="number" step="0.01" min="0.01" id="ai-article-spend-cap" wire:model.live.debounce.500ms="articleSpendCap" :error="$errors->has('articleSpendCap')" />
                 </x-ui::form-group>
             </div>
@@ -113,11 +113,11 @@
         </x-admin.section>
 
         <x-admin.section data-settings-card data-cost-forecast :title="__('Coût estimé d\'un article')"
-            :description="__('Calculé d\'après la longueur, les images et les modèles choisis plus haut, et recalculé à chaque changement. Un article ne se lance, à la main ou automatiquement, que si le haut de la fourchette tient sous le plafond par article.')">
+            :description="__('Calculé d\'après la longueur, les images et les modèles choisis, et recalculé à chaque changement. Un article ne se lance, à la main ou automatiquement, que si le haut de la fourchette tient sous le plafond par article augmenté de :percent %.', ['percent' => $forecast['percent']])">
             <div class="space-y-5 pt-6">
                 @include('livewire.admin.blog.generation.cost-forecast', [
                     'forecast' => $forecast,
-                    'advice' => __('Un article peut coûter jusqu\'à :high, au-dessus du plafond de :cap. Avec ces réglages, aucun article ne partira, ni à la main ni automatiquement. Baissez la longueur, choisissez des modèles moins chers ou relevez le plafond par article.', ['high' => $forecast['high'], 'cap' => $forecast['cap']]),
+                    'advice' => __('Selon l\'estimation, un article peut coûter jusqu\'à :high, au-delà de :limit. Avec ces réglages, aucun article ne partira, ni à la main ni automatiquement. Baissez la longueur, choisissez des modèles moins chers ou relevez le plafond par article.', ['high' => $forecast['high'], 'limit' => $forecast['limit']]),
                 ])
             </div>
         </x-admin.section>

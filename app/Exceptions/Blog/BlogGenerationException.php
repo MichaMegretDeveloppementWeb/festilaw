@@ -22,14 +22,14 @@ final class BlogGenerationException extends BaseAppException
     }
 
     /**
-     * @param  string  $high  la borne haute du cout estime, deja ecrite en dollars
-     * @param  string  $cap  le plafond par article, deja ecrit en dollars
+     * @param  int  $limitMicrousd  le plafond par article augmente de la marge (ArticleSpendLimit)
+     * @param  array{high: string, cap: string, limit: string, percent: int}  $shown  les montants deja ecrits en dollars, et la marge
      */
-    public static function forecastAboveArticleCap(int $highMicrousd, int $capMicrousd, string $high, string $cap): self
+    public static function forecastAboveArticleCap(int $highMicrousd, int $limitMicrousd, array $shown): self
     {
         return new self(
-            technicalMessage: "Blog generation refused: estimated cost up to {$highMicrousd} micro-USD is above the article cap of {$capMicrousd}.",
-            userMessage: __('Cet article peut coûter jusqu\'à :high, au-dessus du plafond de :cap par article. Baissez la longueur, ou choisissez d\'autres modèles ou un plafond plus haut dans les réglages.', ['high' => $high, 'cap' => $cap]),
+            technicalMessage: "Blog generation refused: estimated cost up to {$highMicrousd} micro-USD is above the article limit of {$limitMicrousd} (cap plus tolerance).",
+            userMessage: __('Le coût estimé de cet article va jusqu\'à :high, au-delà de :limit, soit le plafond de :cap par article augmenté de :percent %. Baissez la longueur, ou choisissez d\'autres modèles ou un plafond plus haut dans les réglages.', $shown),
         );
     }
 

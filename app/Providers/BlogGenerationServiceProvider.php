@@ -12,6 +12,7 @@ use App\Contracts\Blog\Generation\GenerationPipeline;
 use App\Contracts\Blog\Generation\HostResolver;
 use App\Contracts\Blog\Generation\StockImageProvider;
 use App\Data\Blog\Generation\ArticleLengthRules;
+use App\Data\Blog\Generation\ArticleSpendLimit;
 use App\Exceptions\Blog\BlogGenerationException;
 use App\Services\Admin\Blog\Generation\BlogGenerationOverviewService;
 use App\Services\Blog\Generation\BlogAiCostEstimator;
@@ -47,6 +48,7 @@ final class BlogGenerationServiceProvider extends ServiceProvider
     {
         $this->app->bind(GenerationPipeline::class, fn (Application $app): GenerationPipeline => $this->pipeline($app));
         $this->app->singleton(ArticleLengthRules::class, static fn (): ArticleLengthRules => ArticleLengthRules::fromConfig((array) config('blog.ai.article_length')));
+        $this->app->singleton(ArticleSpendLimit::class, static fn (): ArticleSpendLimit => new ArticleSpendLimit((int) config('blog.ai.article_spend_tolerance_percent')));
         $this->app->when(BlogGenerationBudget::class)->needs('$warningPercent')->giveConfig('blog.ai.monthly_warning_percent');
         $this->app->when(BlogGenerationCostForecaster::class)->needs('$profile')->giveConfig('blog.ai.forecast.steps');
         $this->app->when(BlogGenerationCostForecaster::class)->needs('$defaultMarginPercent')->giveConfig('blog.ai.forecast.default_price_margin_percent');

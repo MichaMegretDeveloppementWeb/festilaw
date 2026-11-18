@@ -358,18 +358,30 @@ it('stops at once when someone stops it during a step, drops the result of that 
     Mail::assertNothingSent();
 });
 
-it('stops before the next step once the generation has spent its cap per article, without a draft', function () {
+it('stops before the next step once the generation has spent its cap per article plus its margin, without a draft', function () {
+    // Plafond de 0,15 $ et marge de 10 % (decision de Micha du 18/11) : la limite est de 0,165 $.
+    BlogAi::saveSettings(['article_spend_cap_cents' => 15]);
+    $generation = BlogGeneration::factory()->create();
+    $pipeline = FakeGenerationPipeline::bind()->on('topic', fn (): GenerationStepResult => GenerationStepResult::continue([], new GenerationUsage(model: 'm', costMicrousd: 170_000)));
+
+    generationWorkerPass();
+
+    expect($generation->refresh()->status)->toBe(BlogGenerationStatus::Abandoned)
+        ->and($generation->outcome_reason)->toBe(BlogGenerationOutcomeReason::ArticleSpendCapReached)
+        ->and($generation->cost_microusd)->toBe(170_000)
+        ->and($generation->lock_owner)->toBeNull()
+        ->and($pipeline->calls('writing'))->toBe(0);
+});
+
+it('goes on past the cap per article while the spend stays within its margin', function () {
     BlogAi::saveSettings(['article_spend_cap_cents' => 15]);
     $generation = BlogGeneration::factory()->create();
     $pipeline = FakeGenerationPipeline::bind()->on('topic', fn (): GenerationStepResult => GenerationStepResult::continue([], new GenerationUsage(model: 'm', costMicrousd: 160_000)));
 
     generationWorkerPass();
 
-    expect($generation->refresh()->status)->toBe(BlogGenerationStatus::Abandoned)
-        ->and($generation->outcome_reason)->toBe(BlogGenerationOutcomeReason::ArticleSpendCapReached)
-        ->and($generation->cost_microusd)->toBe(160_000)
-        ->and($generation->lock_owner)->toBeNull()
-        ->and($pipeline->calls('writing'))->toBe(0);
+    // 0,16 $ depasse le plafond de 0,15 $ mais tient dans la limite de 0,165 $ : l'etape suivante part.
+    expect($pipeline->calls('writing'))->toBe(1);
 });
 
 it('stops retrying a failing step once the cap per article is spent', function () {

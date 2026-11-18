@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Blog\Generation;
 
 use App\Contracts\Blog\Generation\GenerationPipeline;
+use App\Data\Blog\Generation\ArticleSpendLimit;
 use App\Data\Blog\Generation\BlogAiSettings;
 use App\Data\Blog\Generation\GenerationImageOptions;
 use App\Data\Blog\Generation\GenerationLength;
@@ -28,8 +29,9 @@ use Illuminate\Support\Str;
  * la tache planifiee ; elle ne fait rien tant que la periode reglee n'est pas echue depuis le dernier lot
  * lance. Un lot du mais retenu est inscrit au journal (une ligne « non lancee », sans jamais repeter deux fois
  * de suite la meme raison), et sera lance des que la raison tombe. Deux raisons le retiennent : le cout estime
- * d'un article, borne haute, au-dessus du plafond par article, et trop de brouillons en attente. Le plafond
- * du mois ne retient rien, il avertit (decisions de Micha du 17/11).
+ * d'un article, borne haute, au-dessus du plafond par article augmente de sa marge (ArticleSpendLimit), et
+ * trop de brouillons en attente. Le plafond du mois ne retient rien, il avertit (decisions de Micha du 17/11
+ * et du 18/11).
  *
  * Rejouable : relancee le meme jour apres avoir lance un lot, elle ne trouve plus rien de du.
  */
@@ -42,6 +44,7 @@ final readonly class PlanScheduledBlogGenerationsAction
         private ScheduledBlogGenerationRepository $scheduled,
         private BlogGenerationAlertService $alerts,
         private BlogGenerationCostForecaster $forecaster,
+        private ArticleSpendLimit $spendLimit,
     ) {}
 
     /** @param  bool  $dryRun  dit ce qui serait fait, sans rien ecrire ni envoyer */
@@ -61,7 +64,7 @@ final readonly class PlanScheduledBlogGenerationsAction
 
         $this->pipeline->steps(BlogGenerationType::Article);
 
-        if ($this->forecaster->forSettings($settings)->exceeds($settings->articleSpendCapMicrousd())) {
+        if ($this->forecaster->forSettings($settings)->exceeds($this->spendLimit->limit($settings->articleSpendCapMicrousd()))) {
             return $this->block(BlogGenerationOutcomeReason::ForecastAboveArticleCap, $settings, $dryRun);
         }
 

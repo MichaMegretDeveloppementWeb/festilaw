@@ -130,6 +130,7 @@ it('holds back the batch when an article could cost more than the cap per articl
     Mail::assertSent(BlogForecastAboveCap::class, 1);
     Mail::assertSent(BlogForecastAboveCap::class, fn (BlogForecastAboveCap $mail): bool => $mail->hasTo('owner@example.com')
         && $mail->cap === '0,0100 $'
+        && $mail->limit === '0,0110 $'
         && str_contains($mail->settingsUrl, '/admin/blog/generation/settings'));
 
     // Le plafond releve, le lot part au passage suivant.
@@ -139,11 +140,11 @@ it('holds back the batch when an article could cost more than the cap per articl
 });
 
 it('renders the message about a batch held back by the estimated cost, with what to change', function () {
-    $html = (new BlogForecastAboveCap('0,0567 $', '0,0844 $', '0,0500 $', 'https://example.test/admin/blog/generation/settings'))->render();
+    $html = (new BlogForecastAboveCap('0,0567 $', '0,0844 $', '0,0500 $', '0,0550 $', 10, 'https://example.test/admin/blog/generation/settings'))->render();
 
     expect($html)->toContain('Génération automatique retenue')
         ->toContain('0,0844 $')
-        ->toContain('0,0500 $')
+        ->toContain('au-delà de <strong>0,0550 $</strong>, soit le plafond par article de 0,0500 $ augmenté de 10 %')
         ->toContain('baissez la longueur des articles')
         ->toContain('Rien n\'a été dépensé');
 });

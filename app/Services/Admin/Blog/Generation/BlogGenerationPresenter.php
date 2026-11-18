@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Admin\Blog\Generation;
 
+use App\Data\Blog\Generation\ArticleSpendLimit;
 use App\Data\Blog\Generation\GenerationCostForecast;
 use App\Data\Blog\Generation\GenerationImageOptions;
 use App\Enums\Blog\Generation\BlogAiImageMode;
@@ -19,21 +20,28 @@ use Carbon\CarbonImmutable;
  */
 final readonly class BlogGenerationPresenter
 {
-    public function __construct(private BlogAiCostFormatter $costs) {}
+    public function __construct(
+        private BlogAiCostFormatter $costs,
+        private ArticleSpendLimit $spendLimit,
+    ) {}
 
     /**
-     * La fourchette de cout d'un article telle que les ecrans l'affichent, et si son haut depasse le plafond.
-     * Sans plafond lisible (saisie en cours), rien n'est dit du depassement.
+     * La fourchette de cout d'un article telle que les ecrans l'affichent, et si son haut depasse le plafond
+     * augmente de sa marge. Sans plafond lisible (saisie en cours), rien n'est dit du depassement.
      *
-     * @return array{low: string, high: string, cap: string|null, exceeds: bool}
+     * @return array{low: string, high: string, cap: string|null, limit: string|null, percent: int, exceeds: bool}
      */
     public function forecast(GenerationCostForecast $forecast, ?int $capMicrousd): array
     {
+        $limit = $capMicrousd === null ? null : $this->spendLimit->limit($capMicrousd);
+
         return [
             'low' => $this->costs->dollars($forecast->lowMicrousd),
             'high' => $this->costs->dollars($forecast->highMicrousd),
             'cap' => $capMicrousd === null ? null : $this->costs->dollars($capMicrousd),
-            'exceeds' => $capMicrousd !== null && $forecast->exceeds($capMicrousd),
+            'limit' => $limit === null ? null : $this->costs->dollars($limit),
+            'percent' => $this->spendLimit->percent,
+            'exceeds' => $limit !== null && $forecast->exceeds($limit),
         ];
     }
 

@@ -10,7 +10,7 @@ use Illuminate\Mail\Mailables\Envelope;
 
 /**
  * Message interne (francophone) : la generation automatique n'a pas lance son lot, parce qu'avec les reglages
- * en vigueur un article peut couter plus que le plafond par article. Envoye quand le blocage commence, pas a
+ * en vigueur le cout estime d'un article depasse le plafond par article augmente de sa marge. Envoye quand le blocage commence, pas a
  * chaque passage de la tache planifiee.
  */
 final class BlogForecastAboveCap extends Mailable
@@ -19,6 +19,8 @@ final class BlogForecastAboveCap extends Mailable
         public string $low,
         public string $high,
         public string $cap,
+        public string $limit,
+        public int $percent,
         public string $settingsUrl,
     ) {}
 

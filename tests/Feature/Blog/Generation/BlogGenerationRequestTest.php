@@ -22,6 +22,7 @@ use App\Models\BlogGenerationStep;
 use App\Models\BlogPost;
 use App\Models\User;
 use App\Services\Blog\Generation\BlogGenerationBudget;
+use App\Services\Blog\Generation\BlogGenerationCostForecaster;
 use App\Services\Blog\Generation\UnavailableGenerationPipeline;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -80,7 +81,7 @@ it('refuses an article that could cost more than the cap per article, and says w
 
     expect(fn () => app(QueueBlogGenerationAction::class)->execute(new QueueBlogGenerationData(articleWords: 400)))
         ->toThrow(function (BlogGenerationException $e): void {
-            expect($e->getUserMessage())->toContain('au-dessus du plafond de 0,0100 $ par article')
+            expect($e->getUserMessage())->toContain('au-delà de 0,0110 $, soit le plafond de 0,0100 $ par article augmenté de 10 %')
                 ->toContain('Baissez la longueur');
         });
 
@@ -88,6 +89,18 @@ it('refuses an article that could cost more than the cap per article, and says w
     app(QueueBlogGenerationAction::class)->execute(new QueueBlogGenerationData(type: BlogGenerationType::Translation, payload: ['translation' => []]));
 
     expect(BlogGeneration::query()->pluck('type')->all())->toBe([BlogGenerationType::Translation]);
+});
+
+it('launches an article whose estimated cost passes the cap per article by less than its margin', function () {
+    // Decision de Micha du 18/11 : pas de blocage pour un ecart de moins de 10 % sur une estimation.
+    $high = app(BlogGenerationCostForecaster::class)->forSettings(BlogAi::saveSettings([]), 400)->highMicrousd;
+    $capCents = (int) ceil($high / 1.1 / 10_000);
+    BlogAi::saveSettings(['article_spend_cap_cents' => $capCents]);
+
+    app(QueueBlogGenerationAction::class)->execute(new QueueBlogGenerationData(articleWords: 400));
+
+    expect($capCents * 10_000)->toBeLessThan($high)
+        ->and(BlogGeneration::count())->toBe(1);
 });
 
 it('does not hold a manual request back because generated drafts are waiting', function () {

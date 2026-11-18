@@ -6,7 +6,8 @@ namespace App\Data\Blog\Generation;
 
 /**
  * La fourchette de cout estimee d'un article, en millioniemes de dollar. La borne haute decide : un article
- * dont elle depasse le plafond par article ne part pas (decision de Micha du 17/11, sans tolerance).
+ * dont elle depasse la limite (le plafond par article augmente de sa marge, ArticleSpendLimit) ne part pas.
+ * Ce n'est qu'une estimation, et le cout reel peut en sortir. Seule la limite est garantie, appel par appel.
  */
 final readonly class GenerationCostForecast
 {
@@ -15,8 +16,8 @@ final readonly class GenerationCostForecast
         public int $highMicrousd,
     ) {}
 
-    public function exceeds(int $capMicrousd): bool
+    public function exceeds(int $limitMicrousd): bool
     {
-        return $this->highMicrousd > $capMicrousd;
+        return $this->highMicrousd > $limitMicrousd;
     }
 }

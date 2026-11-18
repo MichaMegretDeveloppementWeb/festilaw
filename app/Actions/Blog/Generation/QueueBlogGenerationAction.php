@@ -6,6 +6,7 @@ namespace App\Actions\Blog\Generation;
 
 use App\Contracts\Blog\Generation\GenerationPipeline;
 use App\Data\Blog\Generation\ArticleLengthRules;
+use App\Data\Blog\Generation\ArticleSpendLimit;
 use App\Data\Blog\Generation\GenerationImageOptions;
 use App\Data\Blog\Generation\GenerationLength;
 use App\Data\Blog\Generation\QueueBlogGenerationData;
@@ -21,8 +22,9 @@ use Illuminate\Support\Str;
 
 /**
  * Met en file une generation demandee par une personne. Elle n'execute rien : le worker la prend dans les
- * secondes qui suivent. Refusee quand le cout estime d'un article peut depasser le plafond par article (le
- * bouton de la fenetre ne suffit pas : la commande en ligne passe aussi par ici), ou quand la configuration
+ * secondes qui suivent. Refusee quand le cout estime d'un article peut depasser le plafond par article augmente
+ * de sa marge (ArticleSpendLimit ; le bouton de la fenetre ne suffit pas : la commande en ligne passe aussi
+ * par ici), ou quand la configuration
  * du pipeline ne permet pas de generer (mieux vaut le dire au clic qu'a la premiere etape). Le plafond du
  * mois ne refuse rien : il avertit (decision de Micha du 17/11).
  *
@@ -36,6 +38,7 @@ final readonly class QueueBlogGenerationAction
         private ArticleLengthRules $length,
         private BlogGenerationCostForecaster $forecaster,
         private BlogAiCostFormatter $costs,
+        private ArticleSpendLimit $spendLimit,
     ) {}
 
     /** @return int l'identifiant de la generation creee */
@@ -52,13 +55,16 @@ final readonly class QueueBlogGenerationAction
         if ($data->type === BlogGenerationType::Article) {
             $forecast = $this->forecaster->forSettings($settings, $words, $images, topicImposed: $topicHint !== '');
 
-            if ($forecast->exceeds($settings->articleSpendCapMicrousd())) {
-                throw BlogGenerationException::forecastAboveArticleCap(
-                    $forecast->highMicrousd,
-                    $settings->articleSpendCapMicrousd(),
-                    $this->costs->dollars($forecast->highMicrousd),
-                    $this->costs->dollars($settings->articleSpendCapMicrousd()),
-                );
+            $cap = $settings->articleSpendCapMicrousd();
+            $limit = $this->spendLimit->limit($cap);
+
+            if ($forecast->exceeds($limit)) {
+                throw BlogGenerationException::forecastAboveArticleCap($forecast->highMicrousd, $limit, [
+                    'high' => $this->costs->dollars($forecast->highMicrousd),
+                    'cap' => $this->costs->dollars($cap),
+                    'limit' => $this->costs->dollars($limit),
+                    'percent' => $this->spendLimit->percent,
+                ]);
             }
         }
 

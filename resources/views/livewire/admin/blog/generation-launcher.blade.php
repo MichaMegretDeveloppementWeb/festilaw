@@ -40,7 +40,7 @@
                 <div class="space-y-4" data-launch-forecast>
                     @include('livewire.admin.blog.generation.cost-forecast', [
                         'forecast' => $forecast,
-                        'advice' => __('Un article peut coûter jusqu\'à :high, au-dessus du plafond de :cap. Baissez la longueur. Si même :min mots ne passent pas, choisissez d\'autres modèles ou relevez le plafond par article dans les réglages.', ['high' => $forecast['high'], 'cap' => $forecast['cap'], 'min' => $minWords]),
+                        'advice' => __('Selon l\'estimation, cet article peut coûter jusqu\'à :high, au-delà de :limit. Baissez la longueur. Si même :min mots ne passent pas, choisissez d\'autres modèles ou relevez le plafond par article dans les réglages.', ['high' => $forecast['high'], 'limit' => $forecast['limit'], 'min' => $minWords]),
                     ])
                 </div>
             @endif
