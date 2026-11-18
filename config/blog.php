@@ -395,6 +395,8 @@ return [
          */
         'bench' => [
             'directory' => 'blog-bench',
+            // Plafond d'une verification rejouee par festilaw:blog-bench-verify (reserve de GPT-6.1 Terra : environ 0,33 $).
+            'verification_cap_cents' => 50,
             'article_words' => 1_000,
             'shared_models' => [
                 'topic' => 'anthropic/claude-haiku-5.5',

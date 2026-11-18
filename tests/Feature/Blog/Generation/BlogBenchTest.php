@@ -192,6 +192,53 @@ it('refuses a topic or a configuration that the bench does not know', function (
     expect($calls->getArrayCopy())->toBe([]);
 });
 
+it('replays the verification of a written article with each model asked, one file per model, nothing created in the site', function () {
+    seedWrittenBench();
+    $models = new ArrayObject;
+    FactCheckAgent::fake(function ($prompt, $attachments, $provider, string $model) use ($models): array {
+        $models[] = $model;
+
+        return [...Fixtures::article(), 'removed_claims' => [['claim' => 'An unsupported date.', 'reason' => 'Not in the file.']], 'report_fr' => 'x'];
+    })->preventStrayPrompts();
+
+    $this->artisan('festilaw:blog-bench-verify', ['run' => 'test', '--model' => ['openai/gpt-6-luna', 'anthropic/claude-haiku-5.5']])->assertSuccessful();
+
+    expect($models->getArrayCopy())->toBe(['openai/gpt-6-luna', 'anthropic/claude-haiku-5.5'])
+        ->and(BlogGeneration::query()->count())->toBe(0);
+    expect(benchFile('verifications/etsy--current--openai_gpt-6-luna.json'))
+        ->model->toBe('openai/gpt-6-luna')
+        ->removed_claims->toHaveCount(1);
+    Storage::disk('local')->assertExists('blog-bench/test/verifications/etsy--current--anthropic_claude-haiku-5.5.json');
+
+    // Une reprise ne repaie pas une verification deja ecrite.
+    $this->artisan('festilaw:blog-bench-verify', ['run' => 'test', '--model' => ['openai/gpt-6-luna']])->assertSuccessful();
+
+    expect($models)->toHaveCount(2);
+});
+
+it('gives the cost of a verification bench without calling any model, and refuses an article the bench does not have', function () {
+    seedWrittenBench();
+    FactCheckAgent::fake()->preventStrayPrompts();
+
+    $this->artisan('festilaw:blog-bench-verify', ['run' => 'test', '--model' => ['openai/gpt-6-luna'], '--dry' => true])
+        ->expectsOutputToContain('1 article(s), 1 modele(s)')
+        ->assertSuccessful();
+    $this->artisan('festilaw:blog-bench-verify', ['run' => 'test', '--model' => ['openai/gpt-6-luna'], '--article' => ['nope--current']])
+        ->expectsOutputToContain('Sujet ou configuration inconnu : nope--current.')
+        ->assertFailed();
+
+    FactCheckAgent::assertNeverPrompted();
+});
+
+/** Un banc deja joue, reduit a ce que la verification relit : le sujet prepare et le texte redige d'un article. */
+function seedWrittenBench(): void
+{
+    Storage::fake('local');
+    $topic = ['key' => 'etsy', 'kind' => 'news', 'topic' => 'Adding an economic operator on Etsy'];
+    Storage::disk('local')->put('blog-bench/test/topics/etsy.json', json_encode(['topic' => $topic, 'cost_microusd' => 0, 'outputs' => ['topic' => Fixtures::topic(), 'research' => Fixtures::research()]]));
+    Storage::disk('local')->put('blog-bench/test/articles/etsy--current.json', json_encode(['topic' => $topic, 'words_asked' => 1_000, 'outputs' => ['writing' => Fixtures::writingOutput()]]));
+}
+
 /**
  * Un article deja ecrit, reduit a ce que la commande relit.
  *

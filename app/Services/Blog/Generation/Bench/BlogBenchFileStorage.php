@@ -46,6 +46,37 @@ final readonly class BlogBenchFileStorage
         $this->write($this->path($run, "articles/{$topicKey}--{$configurationKey}.json"), $this->json($record));
     }
 
+    /**
+     * Les articles ecrits d'un banc (`{sujet}--{configuration}`), dans l'ordre du nom.
+     *
+     * @return list<string>
+     */
+    public function articleKeys(string $run): array
+    {
+        $keys = array_map(static fn (string $path): string => basename($path, '.json'), $this->disk()->files($this->path($run, 'articles')));
+        sort($keys);
+
+        return array_values(array_filter($keys, static fn (string $key): bool => str_contains($key, '--')));
+    }
+
+    /** @return array<string, mixed>|null */
+    public function articleByKey(string $run, string $articleKey): ?array
+    {
+        return $this->read($this->path($run, "articles/{$articleKey}.json"));
+    }
+
+    /** @return array<string, mixed>|null */
+    public function verification(string $run, string $articleKey, string $model): ?array
+    {
+        return $this->read($this->path($run, 'verifications/'.$this->verificationName($articleKey, $model)));
+    }
+
+    /** @param  array<string, mixed>  $record */
+    public function saveVerification(string $run, string $articleKey, string $model, array $record): void
+    {
+        $this->write($this->path($run, 'verifications/'.$this->verificationName($articleKey, $model)), $this->json($record));
+    }
+
     /** L'image deja generee pour ce sujet (chemin relatif au disque), ou nul. */
     public function image(string $run, string $topicKey): ?string
     {
@@ -82,6 +113,11 @@ final readonly class BlogBenchFileStorage
     public function location(string $run): string
     {
         return $this->disk()->path($this->path($run, ''));
+    }
+
+    private function verificationName(string $articleKey, string $model): string
+    {
+        return $articleKey.'--'.str_replace('/', '_', $model).'.json';
     }
 
     private function path(string $run, string $file): string

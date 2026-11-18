@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Actions\Blog\Generation\Bench\RunBlogBenchVerificationAction;
 use App\Actions\Blog\Generation\Editorial\GenerateBlogDraftImagesAction;
 use App\Actions\Blog\Generation\ProcessNextBlogGenerationAction;
 use App\Actions\Blog\Generation\RequestBlogTranslationAction;
@@ -98,6 +99,7 @@ final class BlogGenerationServiceProvider extends ServiceProvider
         $this->app->when(BlogBenchStepRunner::class)->needs('$maxAttempts')->giveConfig('blog.ai.step.max_attempts');
         $this->app->when(BlogBenchStepRunner::class)->needs('$retryWaitSeconds')->giveConfig('blog.ai.step.retry_wait_seconds');
         $this->app->when(BlogBenchFileStorage::class)->needs('$directory')->giveConfig('blog.ai.bench.directory');
+        $this->app->when(RunBlogBenchVerificationAction::class)->needs('$capCents')->giveConfig('blog.ai.bench.verification_cap_cents');
     }
 
     /**
