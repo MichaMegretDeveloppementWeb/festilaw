@@ -46,7 +46,8 @@ final readonly class AdminBlogGenerationJournalRepository
                 'blog_generations.id', 'blog_generations.type', 'blog_generations.trigger', 'blog_generations.status',
                 'blog_generations.outcome_reason', 'blog_generations.topic_title', 'blog_generations.topic_hint',
                 'blog_generations.instructions', 'blog_generations.blog_post_id', 'blog_generations.payload',
-                'blog_generations.cost_microusd', 'blog_generations.started_at', 'blog_generations.finished_at',
+                'blog_generations.cost_microusd', 'blog_generations.forecast_low_microusd', 'blog_generations.forecast_high_microusd',
+                'blog_generations.started_at', 'blog_generations.finished_at',
                 'blog_generations.cancel_requested_at', 'blog_generations.created_at',
                 'requesters.name as requester_name', 'cancellers.name as canceller_name',
             ]);

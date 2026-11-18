@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\Actions\Blog\Generation\Bench;
 
-use App\Data\Blog\Generation\ArticleSpendLimit;
 use App\Data\Blog\Generation\Bench\BlogBenchPlan;
 use App\Data\Blog\Generation\Bench\BlogBenchStepRun;
 use App\Data\Blog\Generation\Bench\BlogBenchTopic;
 use App\Data\Blog\Generation\BlogAiSettings;
+use App\Data\Blog\Generation\GenerationSafetyStop;
 use App\Exceptions\Blog\BlogBenchException;
 use App\Services\Blog\Generation\Bench\BlogBenchFileStorage;
+use App\Services\Blog\Generation\Bench\BlogBenchForecaster;
 use App\Services\Blog\Generation\Bench\BlogBenchStepRunner;
 use App\Services\Blog\Generation\Editorial\Steps\EditorialStep;
 use App\Services\Blog\Generation\Editorial\Steps\ResearchNotesStep;
@@ -35,7 +36,8 @@ final readonly class PrepareBlogBenchTopicAction
     public function __construct(
         private BlogBenchStepRunner $runner,
         private BlogBenchFileStorage $storage,
-        private ArticleSpendLimit $spendLimit,
+        private BlogBenchForecaster $forecaster,
+        private GenerationSafetyStop $safetyStop,
         private Container $container,
     ) {}
 
@@ -53,7 +55,7 @@ final readonly class PrepareBlogBenchTopicAction
         }
 
         $settings = $settings->withModels($plan->sharedModels);
-        $limit = $this->spendLimit->limit($settings->articleSpendCapMicrousd());
+        $limit = $this->safetyStop->ceiling($this->forecaster->shared($plan)->highMicrousd);
         $outputs = [];
         $steps = [];
         $cost = 0;

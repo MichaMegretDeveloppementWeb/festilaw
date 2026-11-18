@@ -60,7 +60,7 @@ final class RunBlogBench extends Command
         $settings = $settingsService->current();
 
         if ($this->option('dry')) {
-            $this->showForecast($forecaster->forecast($plan, $settings), count($plan->topics), $dollars);
+            $this->showForecast($forecaster->forecast($plan), count($plan->topics), $dollars);
 
             return self::SUCCESS;
         }
@@ -151,9 +151,9 @@ final class RunBlogBench extends Command
 
         $this->line("Recherche partagee, par sujet : {$range($forecast['shared'])}. Image, par sujet : {$range($forecast['image'])}.");
         $this->table(
-            ['Configuration', 'Un article (recherche et image comprises)', 'Plafond, marge comprise', 'Depasse ?'],
+            ['Configuration', 'Un article (recherche et image comprises)', 'Arret de securite'],
             array_map(static fn (array $row): array => [
-                $row['configuration']->name, $range($row['article']), $dollars->dollars($row['limit_microusd']), $row['exceeds'] ? 'oui' : 'non',
+                $row['configuration']->name, $range($row['article']), $dollars->dollars($row['stop_microusd']),
             ], $forecast['configurations']),
         );
         $this->info("Banc complet ({$topics} sujet(s)) : {$range($forecast['total'])}.");

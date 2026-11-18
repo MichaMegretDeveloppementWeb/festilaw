@@ -19,6 +19,7 @@ final readonly class BlogGenerationDetailView
      * @param  string  $launched  qui a lance la generation et quand, en une phrase
      * @param  string|null  $images  d'ou viennent les images et combien au plus (nul pour une generation anterieure a ce choix)
      * @param  string|null  $length  la longueur demandee du texte (nulle pour une generation anterieure a ce choix)
+     * @param  string|null  $announced  le cout annonce au lancement (nul pour une generation anterieure a cette annonce)
      * @param  list<array{key: string, label: string, text: string}>  $report  compte rendu de l'IA, point par point (`key` : l'etape qui l'a ecrit)
      * @param  list<BlogGenerationStepView>  $steps  dans l'ordre du pipeline
      */
@@ -34,6 +35,7 @@ final readonly class BlogGenerationDetailView
         public ?string $instructions,
         public ?string $duration,
         public string $cost,
+        public ?string $announced,
         public int $inputTokens,
         public int $outputTokens,
         public ?string $images,

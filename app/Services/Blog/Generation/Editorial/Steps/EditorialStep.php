@@ -59,7 +59,7 @@ abstract class EditorialStep implements GenerationStep
     }
 
     /**
-     * L'appel ne part que si son cout maximal tient dans ce qui reste sous le plafond, deduction faite de ce
+     * L'appel ne part que si son cout maximal tient dans ce qui reste avant l'arret de securite, deduction faite de ce
      * que l'etape a deja depense pendant cet essai.
      *
      * @param  GenerationUsage|null  $spent  ce que l'etape a deja depense avant cet appel : garde si l'appel echoue

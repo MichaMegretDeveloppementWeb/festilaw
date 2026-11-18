@@ -37,7 +37,8 @@ final readonly class BlogGenerationDetailService
 {
     private const ACTIVE_COLUMNS = [
         'id', 'type', 'trigger', 'status', 'outcome_reason', 'topic_title', 'topic_hint', 'instructions',
-        'blog_post_id', 'payload', 'cost_microusd', 'started_at', 'finished_at', 'cancel_requested_at', 'created_at',
+        'blog_post_id', 'payload', 'cost_microusd', 'forecast_low_microusd', 'forecast_high_microusd', 'started_at',
+        'finished_at', 'cancel_requested_at', 'created_at',
     ];
 
     private const STEP_COLUMNS = [
@@ -96,6 +97,7 @@ final readonly class BlogGenerationDetailService
             instructions: $generation->instructions,
             duration: $this->presenter->elapsed($generation->started_at, $generation->finished_at),
             cost: $this->costs->dollars($generation->cost_microusd),
+            announced: $this->presenter->announced($generation->forecast_low_microusd, $generation->forecast_high_microusd),
             inputTokens: (int) $rows->sum('input_tokens'),
             outputTokens: (int) $rows->sum('output_tokens'),
             images: $images === null ? null : $this->presenter->images($images),

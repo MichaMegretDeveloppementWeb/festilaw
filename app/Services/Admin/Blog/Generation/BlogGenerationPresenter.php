@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Services\Admin\Blog\Generation;
 
-use App\Data\Blog\Generation\ArticleSpendLimit;
 use App\Data\Blog\Generation\GenerationCostForecast;
 use App\Data\Blog\Generation\GenerationImageOptions;
+use App\Data\Blog\Generation\GenerationSafetyStop;
 use App\Enums\Blog\Generation\BlogAiImageMode;
 use App\Enums\Blog\Generation\BlogAiPeriodUnit;
 use App\Enums\Blog\Generation\MonthlySpendLevel;
@@ -22,27 +22,31 @@ final readonly class BlogGenerationPresenter
 {
     public function __construct(
         private BlogAiCostFormatter $costs,
-        private ArticleSpendLimit $spendLimit,
+        private GenerationSafetyStop $safetyStop,
     ) {}
 
     /**
-     * La fourchette de cout d'un article telle que les ecrans l'affichent, et si son haut depasse le plafond
-     * augmente de sa marge. Sans plafond lisible (saisie en cours), rien n'est dit du depassement.
+     * La fourchette de cout d'un article telle que les ecrans l'annoncent, et le montant de son arret de securite.
      *
-     * @return array{low: string, high: string, cap: string|null, limit: string|null, percent: int, exceeds: bool}
+     * @return array{low: string, high: string, stop: string}
      */
-    public function forecast(GenerationCostForecast $forecast, ?int $capMicrousd): array
+    public function forecast(GenerationCostForecast $forecast): array
     {
-        $limit = $capMicrousd === null ? null : $this->spendLimit->limit($capMicrousd);
-
         return [
             'low' => $this->costs->dollars($forecast->lowMicrousd),
             'high' => $this->costs->dollars($forecast->highMicrousd),
-            'cap' => $capMicrousd === null ? null : $this->costs->dollars($capMicrousd),
-            'limit' => $limit === null ? null : $this->costs->dollars($limit),
-            'percent' => $this->spendLimit->percent,
-            'exceeds' => $limit !== null && $forecast->exceeds($limit),
+            'stop' => $this->costs->dollars($this->safetyStop->ceiling($forecast->highMicrousd)),
         ];
+    }
+
+    /** Le cout annonce au lancement d'une generation, ou nul pour une generation anterieure a cette annonce. */
+    public function announced(?int $lowMicrousd, ?int $highMicrousd): ?string
+    {
+        if ($lowMicrousd === null || $highMicrousd === null) {
+            return null;
+        }
+
+        return __('Annoncé entre :low et :high', ['low' => $this->costs->dollars($lowMicrousd), 'high' => $this->costs->dollars($highMicrousd)]);
     }
 
     /**

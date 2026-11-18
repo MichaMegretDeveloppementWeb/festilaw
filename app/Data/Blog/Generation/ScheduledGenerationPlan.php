@@ -9,7 +9,7 @@ use Carbon\CarbonImmutable;
 
 /**
  * Ce que la tache planifiee a decide pour aujourd'hui : rien (generation eteinte, ou periode pas encore
- * echue), un lot lance, ou un lot du mais bloque par un plafond.
+ * echue), un lot lance, ou un lot du mais retenu par le plafond de brouillons en attente.
  */
 final readonly class ScheduledGenerationPlan
 {

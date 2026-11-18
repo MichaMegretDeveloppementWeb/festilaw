@@ -76,31 +76,30 @@ it('still accepts a request above the monthly spend cap, which only warns', func
     expect(BlogGeneration::count())->toBe(2);
 });
 
-it('refuses an article that could cost more than the cap per article, and says what to change', function () {
-    BlogAi::saveSettings(['article_spend_cap_cents' => 1]);
+it('launches an article whatever its estimated cost, and keeps the cost announced in the launch window', function () {
+    // Decision de Micha du 18/11 : plus de plafond par article. Trois images generees et 2 000 mots partent aussi.
+    $settings = BlogAi::saveSettings(['models' => ['writing' => 'anthropic/claude-sonnet-5.5']]);
+    $images = new GenerationImageOptions(BlogAiImageMode::Generated, 3);
 
-    expect(fn () => app(QueueBlogGenerationAction::class)->execute(new QueueBlogGenerationData(articleWords: 400)))
-        ->toThrow(function (BlogGenerationException $e): void {
-            expect($e->getUserMessage())->toContain(dollarsText('au-delà de 0,0110 $, soit le plafond de 0,0100 $ par article augmenté de 10 %'))
-                ->toContain('Baissez la longueur');
-        });
+    $id = app(QueueBlogGenerationAction::class)->execute(new QueueBlogGenerationData(images: $images, articleWords: 2_000));
 
-    // Une traduction assistee n'est pas un article : elle ne passe pas par cette estimation.
-    app(QueueBlogGenerationAction::class)->execute(new QueueBlogGenerationData(type: BlogGenerationType::Translation, payload: ['translation' => []]));
-
-    expect(BlogGeneration::query()->pluck('type')->all())->toBe([BlogGenerationType::Translation]);
+    $announced = app(BlogGenerationCostForecaster::class)->forSettings($settings, 2_000, $images);
+    expect(BlogGeneration::query()->findOrFail($id))
+        ->forecast_low_microusd->toBe($announced->lowMicrousd)
+        ->forecast_high_microusd->toBe($announced->highMicrousd);
 });
 
-it('launches an article whose estimated cost passes the cap per article by less than its margin', function () {
-    // Decision de Micha du 18/11 : pas de blocage pour un ecart de moins de 10 % sur une estimation.
-    $high = app(BlogGenerationCostForecaster::class)->forSettings(BlogAi::saveSettings([]), 400)->highMicrousd;
-    $capCents = (int) ceil($high / 1.1 / 10_000);
-    BlogAi::saveSettings(['article_spend_cap_cents' => $capCents]);
+it('announces an assisted translation from the length of the text to translate', function () {
+    $translation = static fn (int $words): int => app(QueueBlogGenerationAction::class)->execute(new QueueBlogGenerationData(
+        type: BlogGenerationType::Translation,
+        payload: ['translation' => ['article' => ['title' => 'Title', 'body' => str_repeat('word ', $words)]]],
+    ));
 
-    app(QueueBlogGenerationAction::class)->execute(new QueueBlogGenerationData(articleWords: 400));
+    $short = BlogGeneration::query()->findOrFail($translation(200));
+    $long = BlogGeneration::query()->findOrFail($translation(2_000));
 
-    expect($capCents * 10_000)->toBeLessThan($high)
-        ->and(BlogGeneration::count())->toBe(1);
+    expect($short->forecast_high_microusd)->toBeGreaterThan(0)
+        ->and($long->forecast_high_microusd)->toBeGreaterThan($short->forecast_high_microusd);
 });
 
 it('does not hold a manual request back because generated drafts are waiting', function () {
@@ -343,8 +342,7 @@ it('renders the message of a finished batch: how many succeeded, where the other
 });
 
 it('gives a requested generation its own images and length, or the default ones of the settings', function () {
-    // Trois images generees et 1 200 mots montent au-dessus des 15 centimes par defaut : le plafond suit.
-    BlogAi::saveSettings(['image_mode' => 'generated', 'max_images' => 3, 'article_words' => 1_200, 'article_spend_cap_cents' => 50]);
+    BlogAi::saveSettings(['image_mode' => 'generated', 'max_images' => 3, 'article_words' => 1_200]);
 
     $withDefaults = app(QueueBlogGenerationAction::class)->execute(new QueueBlogGenerationData);
     $withItsOwn = app(QueueBlogGenerationAction::class)->execute(new QueueBlogGenerationData(

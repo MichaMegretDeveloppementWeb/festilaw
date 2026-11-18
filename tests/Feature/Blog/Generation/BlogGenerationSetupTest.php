@@ -3,6 +3,7 @@
 use App\Actions\Blog\Generation\ProcessNextBlogGenerationAction;
 use App\Actions\Blog\Generation\QueueBlogGenerationAction;
 use App\Contracts\Blog\Generation\GenerationPipeline;
+use App\Data\Blog\Generation\GenerationSafetyStop;
 use App\Data\Blog\Generation\QueueBlogGenerationData;
 use App\Enums\Blog\Generation\BlogAiImageMode;
 use App\Enums\Blog\Generation\BlogAiPeriodUnit;
@@ -47,9 +48,6 @@ it('starts from safe defaults: nothing is generated until someone switches it on
         ->and($settings->pendingDraftsCap)->toBe(3)
         ->and($settings->monthlySpendCapCents)->toBe(1_000)
         ->and($settings->monthlySpendCapMicrousd())->toBe(10_000_000)
-        // 15 centimes par article (decision du 17/11) : une generation qui les depasse s'arrete.
-        ->and($settings->articleSpendCapCents)->toBe(15)
-        ->and($settings->articleSpendCapMicrousd())->toBe(150_000)
         ->and($settings->imageMode)->toBe(BlogAiImageMode::Stock)
         ->and($settings->maxImages)->toBe(1)
         ->and($settings->notificationEmail)->toBe('team@example.com')
@@ -57,6 +55,8 @@ it('starts from safe defaults: nothing is generated until someone switches it on
         ->and(array_keys($settings->models))->toBe(['topic', 'research', 'writing', 'verification', 'translation', 'image'])
         ->and($settings->modelFor('writing'))->toBe(config('blog.ai.defaults.models.writing'))
         ->and($settings->modelFor('unknown'))->toBeNull();
+    // Plus de plafond par article (decision du 18/11) : une generation s'arrete au double du haut annonce.
+    expect(app(GenerationSafetyStop::class)->ceiling(100_000))->toBe(200_000);
 });
 
 it('saves the settings in a single row and reads them back', function () {

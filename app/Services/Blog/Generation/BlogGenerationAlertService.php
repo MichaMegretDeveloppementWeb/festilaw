@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace App\Services\Blog\Generation;
 
-use App\Data\Blog\Generation\ArticleSpendLimit;
 use App\Data\Blog\Generation\BlogAiSettings;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\MonthlySpendLevel;
-use App\Mail\BlogForecastAboveCap;
 use App\Mail\BlogGenerationFailuresAlert;
 use App\Mail\BlogMonthlySpendWarning;
 use App\Mail\BlogSpendLimitReached;
@@ -26,8 +24,7 @@ use Throwable;
 /**
  * Alertes de la generation par IA : une serie d'echecs (au prestataire technique), et au destinataire des
  * notifications les raisons d'argent. Ce sont le credit epuise chez le fournisseur, l'approche puis le
- * depassement du plafond du mois (une fois par mois et par cause), et le lot automatique retenu par le cout
- * estime. Envoi au mieux : un e-mail qui ne part pas est journalise, jamais leve, pour ne pas faire echouer la
+ * depassement du plafond du mois (une fois par mois et par cause). Envoi au mieux : un e-mail qui ne part pas est journalise, jamais leve, pour ne pas faire echouer la
  * generation elle-meme. Aucun de ces e-mails ne porte la cause technique d'un echec : elle n'est ecrite qu'au
  * journal du serveur.
  */
@@ -40,8 +37,6 @@ final readonly class BlogGenerationAlertService
         private BlogGenerationBudget $budget,
         private BlogAiCostFormatter $costs,
         private BlogGenerationLabels $labels,
-        private BlogGenerationCostForecaster $forecaster,
-        private ArticleSpendLimit $spendLimit,
         private FailedBlogGenerationStepRepository $failedSteps,
         private UrlGenerator $url,
         private int $failuresThreshold,
@@ -150,26 +145,6 @@ final readonly class BlogGenerationAlertService
         $this->settings->put($key, $month);
 
         return true;
-    }
-
-    /** La generation automatique retient son lot : un article peut couter plus que le plafond par article augmente de sa marge. */
-    public function forecastAboveArticleCap(BlogAiSettings $settings): void
-    {
-        $forecast = $this->forecaster->forSettings($settings);
-        $cap = $settings->articleSpendCapMicrousd();
-
-        $this->send(
-            $settings->notificationEmail,
-            new BlogForecastAboveCap(
-                $this->costs->dollars($forecast->lowMicrousd),
-                $this->costs->dollars($forecast->highMicrousd),
-                $this->costs->dollars($cap),
-                $this->costs->dollars($this->spendLimit->limit($cap)),
-                $this->spendLimit->percent,
-                $this->url->route('admin.blog.generation.settings'),
-            ),
-            'Blog forecast above cap message failed to send.',
-        );
     }
 
     private function send(string $recipient, Mailable $mail, string $failureMessage): void

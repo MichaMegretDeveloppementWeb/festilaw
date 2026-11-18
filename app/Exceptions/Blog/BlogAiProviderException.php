@@ -12,7 +12,7 @@ use Throwable;
  * Echec d'un appel au fournisseur d'IA pendant une etape. Porte ce qui a deja ete consomme (un appel qui
  * echoue peut avoir ete facture) pour que le moteur l'enregistre. Un credit epuise n'est pas reessaye :
  * recommencer ne changerait rien tant que le compte n'est pas recharge. Un appel refuse par la reservation
- * (son cout maximal ne tient plus dans le plafond) n'est pas parti : le moteur arrete la generation.
+ * (son cout maximal ne tient plus avant l'arret de securite) n'est pas parti : le moteur arrete la generation.
  */
 final class BlogAiProviderException extends BaseAppException
 {
@@ -30,8 +30,8 @@ final class BlogAiProviderException extends BaseAppException
     public static function overBudget(string $step, int $reservedMicrousd, int $leftMicrousd, ?GenerationUsage $usage = null): self
     {
         return new self(
-            technicalMessage: "AI call of step [{$step}] not sent: it may cost up to {$reservedMicrousd} microusd and only {$leftMicrousd} are left under the spend cap.",
-            userMessage: __('Le plafond de dépense ne permettait pas l\'appel suivant à l\'IA.'),
+            technicalMessage: "AI call of step [{$step}] not sent: it may cost up to {$reservedMicrousd} microusd and only {$leftMicrousd} are left before the safety stop.",
+            userMessage: __('L\'appel suivant à l\'IA aurait pu dépasser l\'arrêt de sécurité de la génération.'),
             creditExhausted: false,
             usage: $usage,
             previous: null,

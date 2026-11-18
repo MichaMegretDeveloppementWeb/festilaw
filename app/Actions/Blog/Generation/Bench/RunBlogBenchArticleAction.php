@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace App\Actions\Blog\Generation\Bench;
 
-use App\Data\Blog\Generation\ArticleSpendLimit;
 use App\Data\Blog\Generation\Bench\BlogBenchConfiguration;
 use App\Data\Blog\Generation\Bench\BlogBenchPlan;
 use App\Data\Blog\Generation\Bench\BlogBenchStepRun;
 use App\Data\Blog\Generation\Bench\BlogBenchTopic;
 use App\Data\Blog\Generation\BlogAiSettings;
+use App\Data\Blog\Generation\GenerationSafetyStop;
 use App\Exceptions\Blog\BlogBenchException;
 use App\Services\Blog\Generation\Bench\BlogBenchFileStorage;
+use App\Services\Blog\Generation\Bench\BlogBenchForecaster;
 use App\Services\Blog\Generation\Bench\BlogBenchMeasures;
 use App\Services\Blog\Generation\Bench\BlogBenchStepRunner;
 use App\Services\Blog\Generation\BlogAiModelCatalog;
@@ -30,8 +31,8 @@ use Illuminate\Support\Facades\Log;
  * quelles. Le premier article d'un sujet en fait aussi generer l'image. Le resultat (textes de chaque etape,
  * releves, mesures) est ecrit une fois ; une reprise saute un article deja ecrit.
  *
- * Le plafond par article est celui de la configuration, ou celui des reglages, avec la marge du pipeline. Le
- * cout du sujet prepare en est deduit, comme dans une vraie generation ou la recherche fait partie de l'article.
+ * L'arret de securite est le double du haut annonce pour la configuration, recherche et image comprises. Le cout
+ * du sujet prepare en est deduit, comme dans une vraie generation ou la recherche fait partie de l'article.
  */
 final readonly class RunBlogBenchArticleAction
 {
@@ -49,7 +50,8 @@ final readonly class RunBlogBenchArticleAction
         private BlogBenchFileStorage $storage,
         private BlogBenchMeasures $measures,
         private GenerateBlogBenchImageAction $image,
-        private ArticleSpendLimit $spendLimit,
+        private BlogBenchForecaster $forecaster,
+        private GenerationSafetyStop $safetyStop,
         private Container $container,
     ) {}
 
@@ -68,7 +70,7 @@ final readonly class RunBlogBenchArticleAction
         }
 
         $settings = $settings->withModels([...$plan->sharedModels, ...$configuration->models, BlogAiModelCatalog::IMAGE_SETTING => $plan->imageModel]);
-        $limit = $this->spendLimit->limit($configuration->articleCapCents === null ? $settings->articleSpendCapMicrousd() : $configuration->articleCapCents * 10_000);
+        $limit = $this->safetyStop->ceiling($this->forecaster->article($plan, $configuration)->highMicrousd);
         $scope = "{$topic->key} / {$configuration->key}";
         $preparationCost = (int) ($prepared['cost_microusd'] ?? 0);
         $outputs = (array) ($prepared['outputs'] ?? []);

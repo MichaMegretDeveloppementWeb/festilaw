@@ -9,7 +9,7 @@ use Throwable;
 /**
  * Comment s'est finie l'execution d'une etape, tous essais faits : reussie (avec son resultat), en echec
  * (avec l'erreur du dernier essai), interrompue parce qu'un autre worker a repris la generation, ou pas
- * tentee parce que la generation a deja depasse son plafond de depense.
+ * tentee parce que la generation a deja atteint son arret de securite.
  */
 final readonly class GenerationStepOutcome
 {

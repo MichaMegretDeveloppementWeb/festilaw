@@ -8,7 +8,7 @@ use App\Enums\Blog\Generation\BlogGenerationType;
 
 /**
  * Ce qu'une etape recoit pour travailler : la demande (sujet et consignes eventuels), les reglages en
- * vigueur, ce que les etapes deja terminees ont produit, et ce qui reste sous le plafond par article au
+ * vigueur, ce que les etapes deja terminees ont produit, et ce qui reste avant l'arret de securite au
  * debut de l'essai.
  */
 final readonly class GenerationStepContext
@@ -16,7 +16,7 @@ final readonly class GenerationStepContext
     /**
      * @param  array<string, array<string, mixed>>  $outputs  resultat de chaque etape terminee, par cle d'etape
      * @param  array<string, mixed>  $payload  donnees propres a la demande (par exemple l'article a traduire)
-     * @param  int|null  $budgetLeftMicrousd  ce qui reste sous le plafond par article ; nul : aucun
+     * @param  int|null  $budgetLeftMicrousd  ce qui reste avant l'arret de securite ; nul : aucun
      * @param  GenerationLength|null  $length  la longueur demandee du texte ; nulle : aucune exigence
      */
     public function __construct(

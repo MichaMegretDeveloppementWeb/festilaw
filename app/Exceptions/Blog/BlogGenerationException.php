@@ -8,7 +8,7 @@ use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Exceptions\BaseAppException;
 
 /**
- * Refus et incoherences autour d'une generation par IA : lancement refuse par un plafond, relance ou arret
+ * Refus et incoherences autour d'une generation par IA : relance ou arret
  * impossible dans l'etat courant, configuration du pipeline. Message utilisateur en francais (back-office).
  */
 final class BlogGenerationException extends BaseAppException
@@ -18,18 +18,6 @@ final class BlogGenerationException extends BaseAppException
         return new self(
             technicalMessage: "Blog generation {$generationId} not found.",
             userMessage: __('Cette génération est introuvable.'),
-        );
-    }
-
-    /**
-     * @param  int  $limitMicrousd  le plafond par article augmente de la marge (ArticleSpendLimit)
-     * @param  array{high: string, cap: string, limit: string, percent: int}  $shown  les montants deja ecrits en dollars, et la marge
-     */
-    public static function forecastAboveArticleCap(int $highMicrousd, int $limitMicrousd, array $shown): self
-    {
-        return new self(
-            technicalMessage: "Blog generation refused: estimated cost up to {$highMicrousd} micro-USD is above the article limit of {$limitMicrousd} (cap plus tolerance).",
-            userMessage: __('Le coût estimé de cet article va jusqu\'à :high, au-delà de :limit, soit le plafond de :cap par article augmenté de :percent %. Baissez la longueur, ou choisissez d\'autres modèles ou un plafond plus haut dans les réglages.', $shown),
         );
     }
 

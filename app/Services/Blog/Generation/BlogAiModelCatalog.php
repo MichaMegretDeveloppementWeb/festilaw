@@ -44,7 +44,7 @@ final readonly class BlogAiModelCatalog
     }
 
     /**
-     * Ce qu'on reserve sur le plafond avant de demander une image a ce modele. Un modele sans reserve connue
+     * Ce qu'on reserve avant l'arret de securite pour demander une image a ce modele. Un modele sans reserve connue
      * reserve la plus forte de la liste : on ne demande pas une image dont on ignore le prix.
      */
     public function imageReserveMicrousd(string $id): int

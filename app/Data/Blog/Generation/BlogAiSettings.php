@@ -34,7 +34,6 @@ final readonly class BlogAiSettings
         public int $articlesPerRun,
         public int $pendingDraftsCap,
         public int $monthlySpendCapCents,
-        public int $articleSpendCapCents,
         public array $priorityTopics,
         public array $avoidedTopics,
         public array $models,
@@ -74,7 +73,6 @@ final readonly class BlogAiSettings
             articlesPerRun: max(1, (int) $value('articles_per_run')),
             pendingDraftsCap: max(1, (int) $value('pending_drafts_cap')),
             monthlySpendCapCents: max(0, (int) $value('monthly_spend_cap_cents')),
-            articleSpendCapCents: max(1, (int) $value('article_spend_cap_cents')),
             priorityTopics: self::topics($value('priority_topics')),
             avoidedTopics: self::topics($value('avoided_topics')),
             models: $models,
@@ -114,12 +112,6 @@ final readonly class BlogAiSettings
         return $this->monthlySpendCapCents * 10_000;
     }
 
-    /** Plafond de depense d'une generation, dans l'unite des couts enregistres (millioniemes de dollar). */
-    public function articleSpendCapMicrousd(): int
-    {
-        return $this->articleSpendCapCents * 10_000;
-    }
-
     public function modelFor(string $step): ?string
     {
         return $this->models[$step] ?? null;
@@ -149,7 +141,6 @@ final readonly class BlogAiSettings
             'articles_per_run' => $this->articlesPerRun,
             'pending_drafts_cap' => $this->pendingDraftsCap,
             'monthly_spend_cap_cents' => $this->monthlySpendCapCents,
-            'article_spend_cap_cents' => $this->articleSpendCapCents,
             'priority_topics' => $this->priorityTopics,
             'avoided_topics' => $this->avoidedTopics,
             'models' => $this->models,

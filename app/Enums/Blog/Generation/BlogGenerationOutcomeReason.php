@@ -16,12 +16,16 @@ enum BlogGenerationOutcomeReason: string
     case InsufficientSources = 'insufficient_sources';
     /** Plus ecrite depuis le 17/11, le plafond du mois ne bloquant plus rien ; gardee pour les lignes deja en base. */
     case SpendCapReached = 'spend_cap_reached';
+    /** Plus ecrite depuis le 18/11, le plafond par article ayant disparu ; gardee pour les lignes deja en base. */
     case ArticleSpendCapReached = 'article_spend_cap_reached';
     case PendingDraftsCapReached = 'pending_drafts_cap_reached';
     case CreditExhausted = 'credit_exhausted';
     case StepFailed = 'step_failed';
     case CancelledByUser = 'cancelled_by_user';
+    /** Plus ecrite depuis le 18/11, aucun lot n'etant plus retenu par son cout estime ; gardee pour les lignes deja en base. */
     case ForecastAboveArticleCap = 'forecast_above_article_cap';
+    /** Le cout allait depasser le double du haut annonce au lancement (decision de Micha du 18/11). */
+    case SafetyStop = 'safety_stop';
 
     public function label(): string
     {
@@ -36,6 +40,7 @@ enum BlogGenerationOutcomeReason: string
             self::StepFailed => __('Une étape a échoué après plusieurs essais'),
             self::CancelledByUser => __('Arrêtée avant la fin'),
             self::ForecastAboveArticleCap => __('Coût estimé au-dessus du plafond par article'),
+            self::SafetyStop => __('Arrêtée par sécurité, coût bien au-delà de l\'estimation'),
         };
     }
 }

@@ -188,7 +188,7 @@ it('keeps free notes cut off at their length limit, marked as such, since they w
         ->and($reply->cutOff)->toBeTrue();
 });
 
-it('does not send a call whose maximum cost does not fit under the spend cap', function () {
+it('does not send a call whose maximum cost does not fit before the safety stop', function () {
     Http::fake();
 
     // Trois recherches a 0,007 $ depassent a elles seules les 0,01 $ qui restent.

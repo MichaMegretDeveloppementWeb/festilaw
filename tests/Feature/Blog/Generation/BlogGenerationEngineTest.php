@@ -28,7 +28,6 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Sleep;
-use Tests\Support\BlogAi;
 use Tests\Support\FakeGenerationPipeline;
 
 /*
@@ -358,46 +357,57 @@ it('stops at once when someone stops it during a step, drops the result of that 
     Mail::assertNothingSent();
 });
 
-it('stops before the next step once the generation has spent its cap per article plus its margin, without a draft', function () {
-    // Plafond de 0,15 $ et marge de 10 % (decision de Micha du 18/11) : la limite est de 0,165 $.
-    BlogAi::saveSettings(['article_spend_cap_cents' => 15]);
-    $generation = BlogGeneration::factory()->create();
+it('stops by safety before the next step once the cost passes twice the announced high, without a draft', function () {
+    // Haut annonce de 0,08 $ : l'arret de securite est a 0,16 $ (double, decision de Micha du 18/11).
+    $generation = BlogGeneration::factory()->create(['forecast_low_microusd' => 50_000, 'forecast_high_microusd' => 80_000]);
     $pipeline = FakeGenerationPipeline::bind()->on('topic', fn (): GenerationStepResult => GenerationStepResult::continue([], new GenerationUsage(model: 'm', costMicrousd: 170_000)));
 
     generationWorkerPass();
 
     expect($generation->refresh()->status)->toBe(BlogGenerationStatus::Abandoned)
-        ->and($generation->outcome_reason)->toBe(BlogGenerationOutcomeReason::ArticleSpendCapReached)
+        ->and($generation->outcome_reason)->toBe(BlogGenerationOutcomeReason::SafetyStop)
         ->and($generation->cost_microusd)->toBe(170_000)
         ->and($generation->lock_owner)->toBeNull()
         ->and($pipeline->calls('writing'))->toBe(0);
 });
 
-it('goes on past the cap per article while the spend stays within its margin', function () {
-    BlogAi::saveSettings(['article_spend_cap_cents' => 15]);
-    $generation = BlogGeneration::factory()->create();
-    $pipeline = FakeGenerationPipeline::bind()->on('topic', fn (): GenerationStepResult => GenerationStepResult::continue([], new GenerationUsage(model: 'm', costMicrousd: 160_000)));
+it('goes on past the announced cost while the spend stays under twice its high', function () {
+    $generation = BlogGeneration::factory()->create(['forecast_low_microusd' => 50_000, 'forecast_high_microusd' => 80_000]);
+    $pipeline = FakeGenerationPipeline::bind()->on('topic', fn (): GenerationStepResult => GenerationStepResult::continue([], new GenerationUsage(model: 'm', costMicrousd: 120_000)));
 
     generationWorkerPass();
 
-    // 0,16 $ depasse le plafond de 0,15 $ mais tient dans la limite de 0,165 $ : l'etape suivante part.
-    expect($pipeline->calls('writing'))->toBe(1);
+    // 0,12 $ depasse l'annonce de 0,08 $, et les etapes suivantes restent sous l'arret de securite de 0,16 $ : la
+    // generation va au bout.
+    expect($pipeline->calls('writing'))->toBe(1)
+        ->and($generation->refresh()->status)->toBe(BlogGenerationStatus::Completed);
 });
 
-it('stops retrying a failing step once the cap per article is spent', function () {
-    BlogAi::saveSettings(['article_spend_cap_cents' => 10]);
-    $generation = BlogGeneration::factory()->create();
+it('stops retrying a failing step once twice the announced high is spent', function () {
+    $generation = BlogGeneration::factory()->create(['forecast_low_microusd' => 30_000, 'forecast_high_microusd' => 50_000]);
     $pipeline = FakeGenerationPipeline::bind()->on('topic', fn (): GenerationStepResult => throw BlogAiProviderException::callFailed(
         'topic', new RuntimeException('Unusable answer.'), new GenerationUsage(model: 'm', costMicrousd: 60_000),
     ));
 
     generationWorkerPass();
 
-    // Deux essais (0,12 $) puis plus rien : le troisieme aurait depasse le plafond de 0,10 $.
+    // Deux essais (0,12 $) puis plus rien : le troisieme aurait depasse l'arret de securite de 0,10 $.
     expect($generation->refresh()->status)->toBe(BlogGenerationStatus::Abandoned)
-        ->and($generation->outcome_reason)->toBe(BlogGenerationOutcomeReason::ArticleSpendCapReached)
+        ->and($generation->outcome_reason)->toBe(BlogGenerationOutcomeReason::SafetyStop)
         ->and($pipeline->calls('topic'))->toBe(2)
         ->and($generation->cost_microusd)->toBe(120_000);
+});
+
+it('works out and keeps the announced cost of a generation launched before the announcement existed', function () {
+    $generation = BlogGeneration::factory()->create(['forecast_low_microusd' => null, 'forecast_high_microusd' => null]);
+    FakeGenerationPipeline::bind();
+
+    generationWorkerPass();
+
+    $generation->refresh();
+    expect($generation->status)->toBe(BlogGenerationStatus::Completed)
+        ->and($generation->forecast_low_microusd)->toBeGreaterThan(0)
+        ->and($generation->forecast_high_microusd)->toBeGreaterThan($generation->forecast_low_microusd);
 });
 
 it('gives the generation back, unfinished, while the site is in maintenance', function () {

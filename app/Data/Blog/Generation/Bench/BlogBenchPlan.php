@@ -39,7 +39,6 @@ final readonly class BlogBenchPlan
                 (string) $key,
                 (string) $configuration['name'],
                 array_map(strval(...), (array) $configuration['models']),
-                isset($configuration['article_cap_cents']) ? (int) $configuration['article_cap_cents'] : null,
             );
         }
 

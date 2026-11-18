@@ -71,19 +71,17 @@ it('follows the price of the models chosen, and leaves the web scan out when the
     $imposed = $forecaster->forecast(trialModels(), 1_000, stockImage(), topicImposed: true);
 
     expect($dear->highMicrousd)->toBeGreaterThan($cheap->highMicrousd)
-        ->and($imposed->lowMicrousd)->toBeLessThan($cheap->lowMicrousd)
-        ->and($forecaster->forecast(trialModels(), 1_000, stockImage())->exceeds($cheap->highMicrousd))->toBeFalse()
-        ->and($cheap->exceeds($cheap->highMicrousd - 1))->toBeTrue();
+        ->and($imposed->lowMicrousd)->toBeLessThan($cheap->lowMicrousd);
 });
 
-it('keeps the default settings under the default cap per article, a model billed at its catalog price counting at that price', function () {
+it('keeps the default settings at a few cents an article, a model billed at its catalog price counting at that price', function () {
     $settings = app(BlogAiSettingsService::class)->current();
     $forecast = app(BlogGenerationCostForecaster::class)->forSettings($settings);
 
     // Une premiere version appliquait a tous les modeles l'ecart de prix mesure sur DeepSeek (2,8 fois le
-    // catalogue) : les reglages par defaut, tout en Haiku, depassaient alors les 15 centimes.
+    // catalogue) : les reglages par defaut, tout en Haiku, depassaient alors 15 centimes.
     expect($settings->articleWords)->toBe(1_000)
-        ->and($forecast->exceeds($settings->articleSpendCapMicrousd()))->toBeFalse();
+        ->and($forecast->highMicrousd)->toBeLessThan(150_000);
 });
 
 it('counts a model never measured at its catalog price at the bottom, and with a margin at the top', function () {

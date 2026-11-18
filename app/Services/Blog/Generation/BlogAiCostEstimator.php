@@ -9,7 +9,7 @@ namespace App\Services\Blog\Generation;
  * par la table de tarifs de config/blog.php (cents de dollar par million de jetons), plus les recherches
  * web. Calcul pur, en entiers ; le resultat est en millioniemes de dollar. Un modele absent de la table ne
  * coute que ses recherches : le cout est de toute facon marque « estime ». Sert aussi a la reservation : ce
- * qu'un appel peut couter au plus, verifie contre le plafond avant de l'envoyer.
+ * qu'un appel peut couter au plus, verifie contre l'arret de securite avant de l'envoyer.
  */
 final readonly class BlogAiCostEstimator
 {

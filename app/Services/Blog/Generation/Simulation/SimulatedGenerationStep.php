@@ -14,7 +14,7 @@ use RuntimeException;
 
 /**
  * Etape factice : elle attend quelques secondes et rend une consommation fictive, sans appeler aucun modele
- * ni rien ecrire. Sert a essayer le moteur, la reprise, les plafonds et les ecrans sans depenser un centime.
+ * ni rien ecrire. Sert a essayer le moteur, la reprise, l'arret de securite et les ecrans sans depenser un centime.
  */
 final readonly class SimulatedGenerationStep implements GenerationStep
 {

@@ -165,7 +165,7 @@ it('generates the images with the image model of the settings when the generatio
     Image::assertGenerated(fn ($prompt): bool => $prompt->contains('A parcel on a wooden workbench.') && $prompt->contains('No identifiable person'));
 });
 
-it('does not ask for a generated image whose reserve no longer fits under the spend cap, and delivers the draft without it', function () {
+it('does not ask for a generated image whose reserve no longer fits before the safety stop, and delivers the draft without it', function () {
     Image::fake()->preventStrayImages();
 
     // GPT-5 Image Mini reserve 0,03 $ ; il n'en reste que 0,02 $.
@@ -321,18 +321,17 @@ it('runs the whole editorial pipeline through the worker and delivers a draft to
         && $mail->rows[0]['subject'] === 'Adding an economic operator on Etsy');
 });
 
-it('stops before a call that could exceed the article cap, without sending it', function () {
+it('stops by safety before a call that could pass twice the announced cost, without sending it', function () {
     config(['blog.ai.pipeline' => 'editorial']);
-    BlogAi::saveSettings(['article_spend_cap_cents' => 1]);
     WebSearchAgent::fake()->preventStrayPrompts();
-    $generation = BlogGeneration::factory()->create();
+    $generation = BlogGeneration::factory()->create(['forecast_low_microusd' => 3_000, 'forecast_high_microusd' => 5_000]);
 
     app(ProcessNextBlogGenerationAction::class)->execute('worker-test');
 
-    // La veille reserve deux recherches a 0,007 $ : plus que le centime du plafond. Au 17/11, le plafond ne se
-    // verifiait qu'entre deux essais, et un seul essai de recherche a coute 0,1078 $.
+    // La veille reserve deux recherches a 0,007 $ : plus que l'arret de securite de 0,01 $. Au 17/11, la limite ne
+    // se verifiait qu'entre deux essais, et un seul essai de recherche a coute 0,1078 $.
     expect($generation->refresh()->status)->toBe(BlogGenerationStatus::Abandoned)
-        ->and($generation->outcome_reason)->toBe(BlogGenerationOutcomeReason::ArticleSpendCapReached)
+        ->and($generation->outcome_reason)->toBe(BlogGenerationOutcomeReason::SafetyStop)
         ->and($generation->cost_microusd)->toBe(0);
     WebSearchAgent::assertNeverPrompted();
 });

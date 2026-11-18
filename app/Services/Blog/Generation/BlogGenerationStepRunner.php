@@ -34,7 +34,7 @@ final readonly class BlogGenerationStepRunner
     /**
      * @param  Closure(int): GenerationStepContext  $context  le contexte de l'etape, pour un numero d'essai
      * @param  Closure(): bool  $holdLock  prolonge le verrou ; faux si un autre worker a repris la generation
-     * @param  Closure(): bool  $withinBudget  faux quand un plafond est deja atteint : aucun essai de plus
+     * @param  Closure(): bool  $withinBudget  faux quand l'arret de securite est atteint : aucun essai de plus
      */
     public function run(int $generationId, GenerationStep $step, int $position, Closure $context, Closure $holdLock, Closure $withinBudget): GenerationStepOutcome
     {
@@ -44,7 +44,7 @@ final readonly class BlogGenerationStepRunner
             }
 
             // Verifie avant chaque essai, reprises comprises ; pendant l'essai, chaque appel a l'IA reserve
-            // son cout maximal et ne part pas s'il risque de depasser le plafond.
+            // son cout maximal et ne part pas s'il risque de depasser l'arret de securite.
             if (! $withinBudget()) {
                 return GenerationStepOutcome::overBudget();
             }

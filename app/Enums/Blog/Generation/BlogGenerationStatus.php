@@ -8,7 +8,7 @@ namespace App\Enums\Blog\Generation;
  * Statut d'une generation. ATTENTION : la colonne blog_generations.status porte une contrainte CHECK en
  * production ; ajouter un cas ici exige une migration de rafraichissement de la contrainte.
  *
- * `Abandoned` : arretee sans erreur et sans article (aucun sujet pertinent, plafond atteint, lot non lance).
+ * `Abandoned` : arretee sans erreur et sans article (aucun sujet pertinent, arret de securite, lot non lance).
  * `Failed` : une etape a echoue apres tous ses essais. `Cancelled` : arretee a la demande d'une personne.
  */
 enum BlogGenerationStatus: string

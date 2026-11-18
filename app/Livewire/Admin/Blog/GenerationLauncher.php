@@ -55,9 +55,6 @@ class GenerationLauncher extends Component
     #[Locked]
     public array $models = [];
 
-    #[Locked]
-    public int $capMicrousd = 0;
-
     /** @var list<int> les paliers de longueur proposes */
     #[Locked]
     public array $wordOptions = [];
@@ -88,7 +85,6 @@ class GenerationLauncher extends Component
         $this->maxImages = (string) $current->maxImages;
         $this->articleWords = (string) $length->clamp($current->articleWords);
         $this->models = $current->models;
-        $this->capMicrousd = $current->articleSpendCapMicrousd();
         $this->wordOptions = $length->options();
         $this->prepared = true;
     }
@@ -160,7 +156,7 @@ class GenerationLauncher extends Component
             $length->clamp((int) $this->articleWords),
             new GenerationImageOptions(BlogAiImageMode::tryFrom($this->imageMode) ?? BlogAiImageMode::Stock, min(BlogAiSettings::MAX_IMAGES, max(1, (int) $this->maxImages))),
             topicImposed: trim($this->topicHint) !== '',
-        ), $this->capMicrousd) : null;
+        )) : null;
 
         return view('livewire.admin.blog.generation-launcher', [
             'forecast' => $forecast,
@@ -171,7 +167,6 @@ class GenerationLauncher extends Component
             ) : null,
             'imageModes' => collect(BlogAiImageMode::cases())->mapWithKeys(fn (BlogAiImageMode $mode): array => [$mode->value => $mode->label()])->all(),
             'lengthOptions' => $presenter->lengthOptions($this->wordOptions),
-            'minWords' => $this->wordOptions[0] ?? 0,
             'imageCounts' => collect(range(1, BlogAiSettings::MAX_IMAGES))->mapWithKeys(fn (int $count): array => [(string) $count => $presenter->imageCountLabel($count)])->all(),
         ]);
     }

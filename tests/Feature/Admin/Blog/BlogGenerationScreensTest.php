@@ -1,5 +1,6 @@
 <?php
 
+use App\Data\Blog\Generation\GenerationCostForecast;
 use App\Enums\Blog\BlogPostOrigin;
 use App\Enums\Blog\Generation\BlogAiImageMode;
 use App\Enums\Blog\Generation\BlogAiPeriodUnit;
@@ -16,6 +17,7 @@ use App\Models\BlogGenerationStep;
 use App\Models\BlogPost;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\Admin\Blog\Generation\BlogGenerationPresenter;
 use App\Services\Blog\Generation\BlogAiSettingsService;
 use App\Services\Blog\Generation\BlogGenerationWorkerRegistry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -315,7 +317,7 @@ it('shows the estimated cost of the article in the launch window, and follows it
         ->assertSet('articleWords', '1000')
         ->assertSeeHtml('data-forecast-range')
         ->assertSee('Entre ')
-        ->assertDontSeeHtml('data-forecast-above-cap');
+        ->assertSeeHtml('data-forecast-stop');
 
     $short = $launcher->viewData('forecast')['high'];
     $launcher->set('articleWords', '2000');
@@ -324,22 +326,39 @@ it('shows the estimated cost of the article in the launch window, and follows it
     expect($launcher->html())->not->toMatch('/<button(?=[^>]*data-confirm-launch)(?=[^>]*\sdisabled[\s>])[^>]*>/');
 });
 
-it('disables the launch button when the article could cost more than the cap per article, and refuses it on the server too', function () {
-    BlogAi::saveSettings(['article_spend_cap_cents' => 1]);
+it('launches whatever the estimated cost, and shows the safety stop next to the estimate', function () {
+    // Decision de Micha du 18/11 : plus de plafond par article. Sonnet et trois images generees partent aussi.
+    BlogAi::saveSettings(['models' => ['writing' => 'anthropic/claude-sonnet-5.5'], 'image_mode' => 'generated', 'max_images' => 3]);
 
     $launcher = Livewire::test(GenerationLauncher::class)
         ->call('prepare')
-        ->assertSeeHtml('data-forecast-above-cap')
-        ->assertSee('Si même 400 mots ne passent pas');
+        ->assertSeeHtml('data-forecast-stop')
+        ->assertSee('Arrêt de sécurité');
 
-    expect($launcher->html())->toMatch('/<button(?=[^>]*data-confirm-launch)(?=[^>]*\sdisabled[\s>])[^>]*>/');
+    expect($launcher->html())->not->toMatch('/<button(?=[^>]*data-confirm-launch)(?=[^>]*\sdisabled[\s>])[^>]*>/');
 
-    // Le bouton desactive ne suffit pas : l'appel direct est refuse, et la raison est dite.
-    $launcher->call('launch')
-        ->assertDispatched('ui-toast', type: 'error')
-        ->assertNoRedirect();
+    $launcher->call('launch')->assertHasNoErrors();
 
-    expect(BlogGeneration::count())->toBe(0);
+    expect(BlogGeneration::query()->sole()->forecast_high_microusd)->toBeGreaterThan(0);
+});
+
+it('shows the cost announced at launch under the real cost of a generation, and nothing for an older one', function () {
+    $announced = BlogGeneration::factory()->completed(costMicrousd: 61_000)->create(['forecast_low_microusd' => 55_000, 'forecast_high_microusd' => 90_000]);
+    $older = BlogGeneration::factory()->completed(costMicrousd: 61_000)->create(['forecast_low_microusd' => null, 'forecast_high_microusd' => null]);
+
+    Livewire::test(GenerationDetail::class, ['generation' => $announced->id])
+        ->assertSee(dollarsText('0,0610 $'))
+        ->assertSee(dollarsText('Annoncé entre 0,0550 $ et 0,0900 $'));
+    Livewire::test(GenerationDetail::class, ['generation' => $older->id])
+        ->assertDontSeeHtml('data-generation-announced');
+});
+
+it('puts the safety stop at twice the high of the estimate', function () {
+    expect(app(BlogGenerationPresenter::class)->forecast(new GenerationCostForecast(50_000, 80_000)))->toBe([
+        'low' => dollarsText('0,0500 $'),
+        'high' => dollarsText('0,0800 $'),
+        'stop' => dollarsText('0,1600 $'),
+    ]);
 });
 
 it('queues a generation with its topic, its instructions and its own images, then opens its page', function () {
@@ -622,7 +641,7 @@ it('says a generation cannot be found', function () {
 
 it('opens the settings on their current values, in 2 queries with the spend of the month', function () {
     BlogAi::saveSettings([
-        'enabled' => true, 'period_count' => 2, 'period_unit' => 'month', 'monthly_spend_cap_cents' => 2_550, 'article_spend_cap_cents' => 20,
+        'enabled' => true, 'period_count' => 2, 'period_unit' => 'month', 'monthly_spend_cap_cents' => 2_550,
         'priority_topics' => ['Etsy', 'Amazon'], 'notification_email' => 'owner@example.com',
     ]);
 
@@ -634,7 +653,6 @@ it('opens the settings on their current values, in 2 queries with the spend of t
         ->assertSet('periodCount', '2')
         ->assertSet('periodUnit', 'month')
         ->assertSet('monthlySpendCap', '25.50')
-        ->assertSet('articleSpendCap', '0.20')
         ->assertSet('priorityTopics', ['Etsy', 'Amazon'])
         ->assertSet('notificationEmail', 'owner@example.com')
         ->assertSet('models.writing', config('blog.ai.defaults.models.writing'))
@@ -681,7 +699,6 @@ it('saves the settings', function () {
         ->set('articlesPerRun', '2')
         ->set('pendingDraftsCap', '5')
         ->set('monthlySpendCap', '12.5')
-        ->set('articleSpendCap', '0.08')
         ->set('priorityTopics', ['Etsy', ' Amazon ', 'etsy', ''])
         ->set('avoidedTopics', ['Crypto'])
         ->set('models.writing', 'openai/gpt-6.1-terra')
@@ -705,7 +722,6 @@ it('saves the settings', function () {
         ->and($saved->articlesPerRun)->toBe(2)
         ->and($saved->pendingDraftsCap)->toBe(5)
         ->and($saved->monthlySpendCapCents)->toBe(1_250)
-        ->and($saved->articleSpendCapCents)->toBe(8)
         ->and($saved->priorityTopics)->toBe(['Etsy', 'Amazon'])
         ->and($saved->avoidedTopics)->toBe(['Crypto'])
         ->and($saved->modelFor('writing'))->toBe('openai/gpt-6.1-terra')
@@ -718,24 +734,20 @@ it('saves the settings', function () {
         ->and($saved->transparencyNotice['fr'])->toBe('Article rédigé avec l\'aide d\'une IA.');
 });
 
-it('shows the estimated cost of an article in the settings, warns as soon as it goes above the cap, and still saves', function () {
-    // Decision de Micha du 18/11 : la fourchette se dit estimation, et la limite garantie (plafond de 0,15 $
-    // par defaut, plus 10 %) est affichee.
+it('shows the estimated cost of an article and its safety stop in the settings, following the values on screen', function () {
+    // Decision de Micha du 18/11 : la fourchette se dit estimation, et l'arret de securite est affiche a cote.
     $settings = Livewire::test(GenerationSettings::class)
         ->assertSee('Coût estimé d\'un article')
         ->assertSeeHtml('data-forecast-range')
         ->assertSee('Estimation tirée des articles déjà générés. Le coût réel peut en sortir.')
-        ->assertSee(dollarsText('Un article ne dépasse jamais 0,1650 $, soit ce plafond augmenté de 10 %.'))
-        ->assertDontSeeHtml('data-forecast-above-cap');
+        ->assertSeeHtml('data-forecast-stop')
+        ->assertDontSee('Plafond de dépense par article');
 
-    // Les valeurs a l'ecran comptent avant l'enregistrement : un plafond baisse fait paraitre l'alerte.
-    $settings->set('articleSpendCap', '0.01')
-        ->assertSeeHtml('data-forecast-above-cap')
-        ->assertSee('aucun article ne partira, ni à la main ni automatiquement')
-        ->call('save')
-        ->assertHasNoErrors();
+    // Les valeurs a l'ecran comptent avant l'enregistrement : un article plus long coute plus.
+    $short = $settings->viewData('forecast')['stop'];
+    $settings->set('articleWords', '2000');
 
-    expect(app(BlogAiSettingsService::class)->current()->articleSpendCapCents)->toBe(1);
+    expect($settings->viewData('forecast')['stop'])->not->toBe($short);
 });
 
 it('warns next to the monthly cap in the settings, following the cap typed, without blocking anything', function () {
@@ -757,7 +769,6 @@ it('refuses settings that make no sense, each with its own message', function ()
         ->set('articlesPerRun', '11')
         ->set('pendingDraftsCap', '')
         ->set('monthlySpendCap', '-1')
-        ->set('articleSpendCap', '0')
         // La liste des modeles est fermee : ni identifiant libre, ni modele de texte pour l'etape des images.
         ->set('models.writing', 'someone/unknown-model')
         ->set('models.image', 'anthropic/claude-sonnet-5.5')
@@ -767,12 +778,11 @@ it('refuses settings that make no sense, each with its own message', function ()
         ->set('articleWords', '2500')
         ->set('notificationEmail', 'not-an-email')
         ->call('save')
-        ->assertHasErrors(['periodCount', 'periodUnit', 'articlesPerRun', 'pendingDraftsCap', 'monthlySpendCap', 'articleSpendCap', 'models.writing', 'models.image', 'priorityTopics.0', 'imageMode', 'maxImages', 'articleWords', 'notificationEmail'])
+        ->assertHasErrors(['periodCount', 'periodUnit', 'articlesPerRun', 'pendingDraftsCap', 'monthlySpendCap', 'models.writing', 'models.image', 'priorityTopics.0', 'imageMode', 'maxImages', 'articleWords', 'notificationEmail'])
         ->assertSee('Choisissez une longueur dans la liste.')
         ->assertSee('La période est d\'au moins 1.')
         ->assertSee('Un lot compte 10 articles au plus.')
         ->assertSee('Le plafond de dépense ne peut pas être négatif.')
-        ->assertSee('Le plafond par article est d\'au moins 0,01 $.')
         ->assertSee('Choisissez un modèle dans la liste.')
         ->assertSee('Un sujet ne doit pas dépasser 120 caractères.')
         ->assertSee('Cette adresse e-mail n\'est pas valide.')

@@ -37,10 +37,7 @@
 
             @if ($forecast !== null)
                 <div class="space-y-4" data-launch-forecast>
-                    @include('livewire.admin.blog.generation.cost-forecast', [
-                        'forecast' => $forecast,
-                        'advice' => __('Selon l\'estimation, cet article peut coûter jusqu\'à :high, au-delà de :limit. Baissez la longueur. Si même :min mots ne passent pas, choisissez d\'autres modèles ou relevez le plafond par article dans les réglages.', ['high' => $forecast['high'], 'limit' => $forecast['limit'], 'min' => $minWords]),
-                    ])
+                    @include('livewire.admin.blog.generation.cost-forecast', ['forecast' => $forecast])
                 </div>
             @endif
 
@@ -53,7 +50,7 @@
 
         <x-slot:footer>
             <x-ui::button variant="ghost" x-on:click="$dispatch('ui-close-modal', 'launch-generation')">{{ __('Annuler') }}</x-ui::button>
-            <x-ui::button type="submit" form="launch-generation-form" :loading="true" target="launch" data-confirm-launch :disabled="$forecast['exceeds'] ?? false">
+            <x-ui::button type="submit" form="launch-generation-form" :loading="true" target="launch" data-confirm-launch>
                 <x-ui::icon name="sparkles" /> {{ __('Lancer la génération') }}
             </x-ui::button>
         </x-slot:footer>

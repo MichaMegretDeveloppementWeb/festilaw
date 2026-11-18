@@ -40,15 +40,11 @@
             </x-admin.section>
 
             <x-admin.section data-settings-card :title="__('Budget')"
-                :description="__('Deux plafonds, en dollars, la monnaie dans laquelle le fournisseur d\'IA facture. Celui par article retient tout article dont le coût estimé dépasse ce plafond augmenté de :percent %. Celui du mois ne fait qu\'avertir.', ['percent' => $forecast['percent']])">
+                :description="__('Le plafond du mois se règle en dollars, la monnaie dans laquelle le fournisseur d\'IA facture. Il ne fait qu\'avertir, et le coût de chaque article est annoncé avant son lancement.')">
                 <div class="grid grid-cols-1 gap-5 pt-6 sm:grid-cols-2">
                     <x-ui::form-group :label="__('Plafond de dépense du mois ($)')" for="ai-spend-cap" :error="$errors->first('monthlySpendCap')"
                         :hint="__('Ce plafond ne bloque rien. Vous êtes averti à l\'écran et par e-mail quand la dépense du mois en atteint :percent %, puis quand elle le dépasse.', ['percent' => $warningPercent])">
                         <x-ui::input type="number" step="0.01" min="0" id="ai-spend-cap" wire:model.live.debounce.500ms="monthlySpendCap" :error="$errors->has('monthlySpendCap')" />
-                    </x-ui::form-group>
-                    <x-ui::form-group :label="__('Plafond de dépense par article ($)')" for="ai-article-spend-cap" :error="$errors->first('articleSpendCap')"
-                        :hint="__('Un article ne se lance que si le haut de son coût estimé tient sous ce montant augmenté de :percent %. Pendant la génération, aucun appel à l\'IA ne part s\'il risque de dépasser cette même limite.', ['percent' => $forecast['percent']])">
-                        <x-ui::input type="number" step="0.01" min="0.01" id="ai-article-spend-cap" wire:model.live.debounce.500ms="articleSpendCap" :error="$errors->has('articleSpendCap')" />
                     </x-ui::form-group>
                 </div>
 
@@ -101,12 +97,9 @@
             </x-admin.section>
 
             <x-admin.section data-settings-card data-cost-forecast :title="__('Coût estimé d\'un article')"
-                :description="__('Calculé d\'après la longueur, les images et les modèles choisis, et recalculé à chaque changement. Un article ne se lance, à la main ou automatiquement, que si le haut de la fourchette tient sous le plafond par article augmenté de :percent %.', ['percent' => $forecast['percent']])">
+                :description="__('Calculé d\'après la longueur, les images et les modèles choisis, et recalculé à chaque changement. Il est annoncé avant chaque lancement et gardé sur la génération, qui affiche ensuite son coût réel à côté.')">
                 <div class="space-y-5 pt-6">
-                    @include('livewire.admin.blog.generation.cost-forecast', [
-                        'forecast' => $forecast,
-                        'advice' => __('Selon l\'estimation, un article peut coûter jusqu\'à :high, au-delà de :limit. Avec ces réglages, aucun article ne partira, ni à la main ni automatiquement. Baissez la longueur, choisissez des modèles moins chers ou relevez le plafond par article.', ['high' => $forecast['high'], 'limit' => $forecast['limit']]),
-                    ])
+                    @include('livewire.admin.blog.generation.cost-forecast', ['forecast' => $forecast])
                 </div>
             </x-admin.section>
         </x-admin.section-group>

@@ -6,27 +6,23 @@ namespace App\Actions\Blog\Generation;
 
 use App\Contracts\Blog\Generation\GenerationPipeline;
 use App\Data\Blog\Generation\ArticleLengthRules;
-use App\Data\Blog\Generation\ArticleSpendLimit;
 use App\Data\Blog\Generation\GenerationImageOptions;
 use App\Data\Blog\Generation\GenerationLength;
 use App\Data\Blog\Generation\QueueBlogGenerationData;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogGenerationTrigger;
 use App\Enums\Blog\Generation\BlogGenerationType;
-use App\Exceptions\Blog\BlogGenerationException;
 use App\Models\BlogGeneration;
-use App\Services\Blog\Generation\BlogAiCostFormatter;
 use App\Services\Blog\Generation\BlogAiSettingsService;
 use App\Services\Blog\Generation\BlogGenerationCostForecaster;
 use Illuminate\Support\Str;
 
 /**
  * Met en file une generation demandee par une personne. Elle n'execute rien : le worker la prend dans les
- * secondes qui suivent. Refusee quand le cout estime d'un article peut depasser le plafond par article augmente
- * de sa marge (ArticleSpendLimit ; le bouton de la fenetre ne suffit pas : la commande en ligne passe aussi
- * par ici), ou quand la configuration
- * du pipeline ne permet pas de generer (mieux vaut le dire au clic qu'a la premiere etape). Le plafond du
- * mois ne refuse rien : il avertit (decision de Micha du 17/11).
+ * secondes qui suivent. Refusee seulement quand la configuration du pipeline ne permet pas de generer (mieux
+ * vaut le dire au clic qu'a la premiere etape). Le cout ne refuse rien (decision de Micha du 18/11) : son
+ * estimation est annoncee avant le clic et gardee sur la generation, qui s'arrete par securite au double du
+ * haut annonce. Le plafond du mois ne fait qu'avertir (decision du 17/11).
  *
  * Le plafond de brouillons en attente ne s'applique pas ici : il ne suspend que la generation automatique.
  */
@@ -37,8 +33,6 @@ final readonly class QueueBlogGenerationAction
         private BlogAiSettingsService $settings,
         private ArticleLengthRules $length,
         private BlogGenerationCostForecaster $forecaster,
-        private BlogAiCostFormatter $costs,
-        private ArticleSpendLimit $spendLimit,
     ) {}
 
     /** @return int l'identifiant de la generation creee */
@@ -51,22 +45,13 @@ final readonly class QueueBlogGenerationAction
         $instructions = trim((string) $data->instructions);
         $images = $data->images ?? GenerationImageOptions::fromSettings($settings);
         $words = $this->length->clamp($data->articleWords ?? $settings->articleWords);
-
-        if ($data->type === BlogGenerationType::Article) {
-            $forecast = $this->forecaster->forSettings($settings, $words, $images, topicImposed: $topicHint !== '');
-
-            $cap = $settings->articleSpendCapMicrousd();
-            $limit = $this->spendLimit->limit($cap);
-
-            if ($forecast->exceeds($limit)) {
-                throw BlogGenerationException::forecastAboveArticleCap($forecast->highMicrousd, $limit, [
-                    'high' => $this->costs->dollars($forecast->highMicrousd),
-                    'cap' => $this->costs->dollars($cap),
-                    'limit' => $this->costs->dollars($limit),
-                    'percent' => $this->spendLimit->percent,
-                ]);
-            }
-        }
+        // Les images et la longueur sont celles de CETTE generation : le pipeline ne lira pas les reglages du moment.
+        $payload = [
+            ...$data->payload,
+            GenerationImageOptions::PAYLOAD_KEY => $images->toPayload(),
+            ...($data->type === BlogGenerationType::Article ? [GenerationLength::PAYLOAD_KEY => GenerationLength::payloadFor($words)] : []),
+        ];
+        $forecast = $this->forecaster->forGeneration($settings, $data->type, $payload, topicImposed: $topicHint !== '');
 
         return BlogGeneration::query()->create([
             'type' => $data->type,
@@ -76,12 +61,9 @@ final readonly class QueueBlogGenerationAction
             'batch_uuid' => (string) Str::uuid(),
             'topic_hint' => $topicHint !== '' ? $topicHint : null,
             'instructions' => $instructions !== '' ? $instructions : null,
-            // Les images et la longueur sont celles de CETTE generation : le pipeline ne lira pas les reglages du moment.
-            'payload' => [
-                ...$data->payload,
-                GenerationImageOptions::PAYLOAD_KEY => $images->toPayload(),
-                ...($data->type === BlogGenerationType::Article ? [GenerationLength::PAYLOAD_KEY => GenerationLength::payloadFor($words)] : []),
-            ],
+            'payload' => $payload,
+            'forecast_low_microusd' => $forecast->lowMicrousd,
+            'forecast_high_microusd' => $forecast->highMicrousd,
         ])->id;
     }
 }

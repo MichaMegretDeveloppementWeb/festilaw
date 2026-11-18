@@ -137,12 +137,10 @@ return [
          | Valeurs de depart des reglages du back-office (cle `blog.ai` de la table settings). Tant que
          | rien n'y est enregistre, ce sont elles qui s'appliquent. La generation automatique est eteinte
          | par defaut : rien ne part sans que quelqu'un l'ait allumee. `notification_email` nul = l'adresse
-         | des notifications internes (festilaw.notification_email). Les plafonds de depense sont en cents
-         | de dollar : le fournisseur facture en dollars. Celui par article bloque, avec la marge de
-         | `article_spend_tolerance_percent`. Un article ne se lance que si son cout estime tient dessous, et
-         | chaque appel a l'IA reserve son cout maximal (voir `reservation_margin`). Plafond par article de
-         | 15 cents, decision du 17/11. Celui du mois ne bloque
-         | rien, il avertit a `monthly_warning_percent` puis une fois depasse (decision de Micha du 17/11).
+         | des notifications internes (festilaw.notification_email). Le plafond du mois est en cents de
+         | dollar, la monnaie du fournisseur. Il ne bloque rien : il avertit a `monthly_warning_percent` puis
+         | une fois depasse (decision de Micha du 17/11). Il n'y a plus de plafond par article (decision du
+         | 18/11) : voir `safety_stop_percent`.
          |
          | Modeles : les moins chers qui savent faire chaque tache (prix au 17/11 : Haiku 5.5 a 0,10 $ et
          | 0,50 $ par million de jetons, GPT-5 Image Mini a environ 1,3 centime l'image). Au premier essai
@@ -155,7 +153,6 @@ return [
             'articles_per_run' => 1,
             'pending_drafts_cap' => 3,
             'monthly_spend_cap_cents' => 1_000,
-            'article_spend_cap_cents' => 15,
             'priority_topics' => [],
             'avoided_topics' => [],
             'models' => [
@@ -267,7 +264,7 @@ return [
         ],
 
         /*
-         | Plafond par article : avant chaque appel, son cout maximal (texte envoye, extraits de recherche,
+         | Arret de securite : avant chaque appel, son cout maximal (texte envoye, extraits de recherche,
          | longueur maximale de la reponse, prix des recherches) doit tenir dans ce qui reste. La part des
          | jetons est multipliee par cette marge : le prix d'un modele change selon le fournisseur qui repond
          | (le 17/11, DeepSeek V4.1 Flash facture 0,567 $ le million de jetons ecrits chez Wafer, pour 0,20 $
@@ -282,11 +279,13 @@ return [
         'monthly_warning_percent' => 80,
 
         /*
-         | Marge accordee au plafond par article, avant le lancement comme pendant la generation
-         | (ArticleSpendLimit, decision de Micha du 18/11). Avec un plafond de 0,20 $, un article ne depasse
-         | jamais 0,22 $.
+         | Arret de securite d'une generation, en pourcentage du haut de son cout annonce au lancement
+         | (decision de Micha du 18/11). Rien ne refuse plus un lancement : l'estimation dit ce que l'article
+         | coutera, et la generation ne s'arrete que si son cout allait depasser ce seuil, contre une derive
+         | grave (« pas une estimation a 30 centimes qui coute 3 dollars »). Le plafond par article, qu'elle
+         | remplace, bloquait sans proteger : une image a coute 0,0498 $ pour une reserve de 0,03 $.
          */
-        'article_spend_tolerance_percent' => 10,
+        'safety_stop_percent' => 200,
 
         /*
          | Sources affichees sous un article (decision de Micha du 18/11) : les trois plus credibles, au plus
@@ -380,10 +379,8 @@ return [
          | recherche sont faits une fois par sujet avec `shared_models`, puis partages : seule l'ecriture change
          | d'une configuration a l'autre. Une image est generee par sujet, d'apres le premier article ecrit.
          | Sujets et configurations choisis par Micha le 18/11 : trois de fond et deux d'actualite, au moins un
-         | sur une plateforme et un sur un type de produit. `article_cap_cents` : plafond par article propre a
-         | une configuration (nul : celui des reglages). Sonnet 5.5 reserve 0,765 $ avant un appel de redaction
-         | ou de version (Haiku 5.5 et GPT-6 Luna 0,038 $, DeepSeek 0,016 $) : sous un plafond de 1,20 $, le
-         | dernier appel serait refuse des que l'article aurait coute 0,55 $. Les resultats vont dans
+         | sur une plateforme et un sur un type de produit. Chaque article s'arrete par securite, comme une vraie
+         | generation, au double du haut annonce pour sa configuration. Les resultats vont dans
          | storage/app/private/`directory`.
          */
         'bench' => [
@@ -417,7 +414,6 @@ return [
                 'sonnet' => [
                     'name' => 'Haiku 5.5 + Sonnet 5.5',
                     'models' => ['writing' => 'anthropic/claude-sonnet-5.5', 'verification' => 'anthropic/claude-haiku-5.5', 'translation' => 'anthropic/claude-sonnet-5.5'],
-                    'article_cap_cents' => 150,
                 ],
             ],
         ],

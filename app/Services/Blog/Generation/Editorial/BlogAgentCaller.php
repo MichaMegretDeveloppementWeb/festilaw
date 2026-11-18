@@ -23,8 +23,8 @@ use Throwable;
 /**
  * Le seul passage des etapes editoriales vers un modele.
  *
- * La reservation existe parce qu'un seul appel peut depasser le plafond (0,1078 $ pour un essai de recherche
- * le 17/11) : verifier le plafond entre deux essais ne suffit pas. Une reponse structuree vide est la seule
+ * La reservation existe parce qu'un seul appel peut couter beaucoup (0,1078 $ pour un essai de recherche
+ * le 17/11) : verifier l'arret de securite entre deux essais ne suffit pas. Une reponse structuree vide est la seule
  * trace d'un JSON rate, le SDK ne leve rien. Le routage au meilleur prix est demande parce qu'un meme modele
  * coute jusqu'a soixante fois plus chez certains fournisseurs. Le cout de chaque tour reste garde quand un
  * appel echoue, car il a ete facture.
@@ -42,7 +42,7 @@ final readonly class BlogAgentCaller
 
     /**
      * @param  int  $timeoutSeconds  delai d'une requete au fournisseur, pas de l'appel entier
-     * @param  int|null  $budgetLeftMicrousd  nul : aucun plafond
+     * @param  int|null  $budgetLeftMicrousd  nul : aucun arret de securite
      *
      * @throws BlogAiProviderException
      */

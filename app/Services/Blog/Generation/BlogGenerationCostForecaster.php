@@ -7,7 +7,10 @@ namespace App\Services\Blog\Generation;
 use App\Data\Blog\Generation\BlogAiSettings;
 use App\Data\Blog\Generation\GenerationCostForecast;
 use App\Data\Blog\Generation\GenerationImageOptions;
+use App\Data\Blog\Generation\GenerationLength;
 use App\Enums\Blog\Generation\BlogAiImageMode;
+use App\Enums\Blog\Generation\BlogGenerationType;
+use App\Services\Blog\Generation\Editorial\BlogWritingSignalsInspector;
 
 /**
  * La fourchette de cout d'un article, avant de le lancer : la somme, etape par etape, de ce que coutent les
@@ -27,11 +30,31 @@ final readonly class BlogGenerationCostForecaster
         private BlogAiModelCatalog $models,
         private array $profile,
         private int $defaultMarginPercent,
+        private BlogWritingSignalsInspector $words,
     ) {}
 
     public function forSettings(BlogAiSettings $settings, ?int $words = null, ?GenerationImageOptions $images = null, bool $topicImposed = false): GenerationCostForecast
     {
         return $this->forecast($settings->models, $words ?? $settings->articleWords, $images ?? GenerationImageOptions::fromSettings($settings), $topicImposed);
+    }
+
+    /**
+     * Le cout annonce d'une generation, d'apres ce qu'elle porte : la longueur et les images d'un article, ou le
+     * texte d'une traduction assistee, comptee comme l'etape de version francaise. Fige au lancement, il fixe
+     * son arret de securite.
+     *
+     * @param  array<string, mixed>|null  $payload
+     */
+    public function forGeneration(BlogAiSettings $settings, BlogGenerationType $type, ?array $payload, bool $topicImposed): GenerationCostForecast
+    {
+        if ($type === BlogGenerationType::Translation) {
+            $article = (array) ($payload['translation']['article'] ?? []);
+            $words = $this->words->words(trim((string) ($article['title'] ?? '')."\n\n".(string) ($article['body'] ?? '')));
+
+            return $this->forecast($settings->models, $words, new GenerationImageOptions(BlogAiImageMode::None, 1), true, ['translation_fr']);
+        }
+
+        return $this->forSettings($settings, GenerationLength::wordsFromPayload($payload), GenerationImageOptions::fromPayload($payload), $topicImposed);
     }
 
     /**

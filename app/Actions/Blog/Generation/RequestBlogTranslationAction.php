@@ -17,7 +17,7 @@ use App\Services\Blog\Content\BlogDocumentMarkdownWriter;
  * Traduction assistee d'un article (tache 6.14) : le texte d'une langue du formulaire part en generation de
  * type `translation`, traitee par le worker comme toute generation (jamais dans la requete web). Le texte est
  * donne au modele en Markdown, ses images en emplacements numerotes avec leurs attributs gardes a part. Son
- * appel reserve son cout sous le plafond par article. Rien n'est enregistre sur l'article : le resultat
+ * appel reserve son cout sous son arret de securite. Rien n'est enregistre sur l'article : le resultat
  * revient dans le formulaire.
  */
 final readonly class RequestBlogTranslationAction

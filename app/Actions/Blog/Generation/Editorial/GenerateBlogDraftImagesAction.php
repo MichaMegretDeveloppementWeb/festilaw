@@ -31,7 +31,7 @@ use Throwable;
  * langues ; elle reste en attente jusqu'a l'assemblage, et part au menage si la generation n'aboutit pas.
  *
  * Une image introuvable ne fait pas echouer la generation : le brouillon arrive sans elle, et le journal le
- * dit. Il en va de meme d'une image generee dont la reserve ne tient plus sous le plafond : elle n'est pas
+ * dit. Il en va de meme d'une image generee dont la reserve ne tient plus sous l'arret de securite : elle n'est pas
  * demandee. Seul un credit epuise chez le fournisseur arrete tout.
  *
  * C'est une Action, comme l'assemblage : elle ecrit (images) et appelle StoreBlogImageAction.
@@ -92,7 +92,7 @@ final readonly class GenerateBlogDraftImagesAction implements GenerationStep
             $left = $context->budgetLeftAfter($usage);
 
             if ($model !== null && $left !== null && $this->models->imageReserveMicrousd($model) > $left) {
-                Log::warning('Blog generation image not requested: it could exceed the spend cap.', ['generation' => $context->generationId, 'image' => $number, 'left_microusd' => $left]);
+                Log::warning('Blog generation image not requested: it could pass the safety stop.', ['generation' => $context->generationId, 'image' => $number, 'left_microusd' => $left]);
                 $warnings[] = $number === 0 ? 'no main image' : "no image {$number}";
 
                 continue;

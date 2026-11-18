@@ -104,7 +104,12 @@
                 </div>
 
                 <x-admin.stats class="mt-7" :columns="3" data-generation-facts>
-                    <x-admin.stats.item icon="currency-dollar" :label="__('Coût')"><span data-generation-cost>{{ $generation->cost }}</span></x-admin.stats.item>
+                    <x-admin.stats.item icon="currency-dollar" :label="__('Coût')">
+                        <span data-generation-cost>{{ $generation->cost }}</span>
+                        @if ($generation->announced)
+                            <x-slot:extra><span data-generation-announced>{{ $generation->announced }}</span></x-slot:extra>
+                        @endif
+                    </x-admin.stats.item>
                     <x-admin.stats.item icon="clock" :label="$generation->isActive() ? __('En cours depuis') : __('Durée')">{{ $generation->duration ?? '–' }}</x-admin.stats.item>
                     <x-admin.stats.item icon="circle-stack" :label="__('Tokens')">
                         <x-admin.blog.tokens class="text-[22px] leading-none" :input="$generation->inputTokens" :output="$generation->outputTokens" />

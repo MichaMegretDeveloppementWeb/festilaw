@@ -7,9 +7,9 @@ namespace App\Actions\Blog\Generation;
 use App\Contracts\Blog\Generation\GenerationPipeline;
 use App\Contracts\Blog\Generation\GenerationStep;
 use App\Data\Blog\Generation\ArticleLengthRules;
-use App\Data\Blog\Generation\ArticleSpendLimit;
 use App\Data\Blog\Generation\BlogAiSettings;
 use App\Data\Blog\Generation\GenerationLength;
+use App\Data\Blog\Generation\GenerationSafetyStop;
 use App\Data\Blog\Generation\GenerationStepContext;
 use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
@@ -20,6 +20,7 @@ use App\Repositories\Blog\BlogGenerationLockRepository;
 use App\Repositories\Blog\BlogGenerationSpendRepository;
 use App\Services\Blog\Generation\BlogAiSettingsService;
 use App\Services\Blog\Generation\BlogGenerationAlertService;
+use App\Services\Blog\Generation\BlogGenerationCostForecaster;
 use App\Services\Blog\Generation\BlogGenerationStepRunner;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Foundation\Application;
@@ -36,7 +37,11 @@ use Throwable;
  * avance meme si la releve tarde.
  *
  * Pas de transaction d'ensemble : le traitement dure plusieurs minutes et chaque etape est enregistree des
- * qu'elle finit. L'issue est une seule ecriture, conditionnee a la detention du verrou : si un autre worker
+ * qu'elle finit.
+ *
+ * Le seul frein de la depense est l'arret de securite : le double du haut du cout annonce au lancement
+ * (GenerationSafetyStop, decision de Micha du 18/11). Une generation lancee avant cette decision n'a pas
+ * d'annonce : elle la calcule et la garde au debut de son traitement. L'issue est une seule ecriture, conditionnee a la detention du verrou : si un autre worker
  * a repris la generation entre-temps, c'est lui qui la terminera.
  */
 final readonly class RunBlogGenerationAction
@@ -47,7 +52,8 @@ final readonly class RunBlogGenerationAction
         private BlogGenerationLockRepository $locks,
         private BlogGenerationSpendRepository $spend,
         private ArticleLengthRules $length,
-        private ArticleSpendLimit $spendLimit,
+        private GenerationSafetyStop $safetyStop,
+        private BlogGenerationCostForecaster $forecaster,
         private BlogAiSettingsService $settings,
         private BlogGenerationAlertService $alerts,
         private NotifyFinishedBlogGenerationBatchAction $notifyBatch,
@@ -67,7 +73,8 @@ final readonly class RunBlogGenerationAction
         $settings = $this->settings->current();
 
         try {
-            $this->runSteps($generation, $owner, $settings, $handOverAt);
+            $ceiling = $this->safetyStop->ceiling($this->announcedHigh($generation, $settings));
+            $this->runSteps($generation, $owner, $settings, $ceiling, $handOverAt);
         } catch (Throwable $e) {
             // Dernier filet du traitement : une erreur hors d'une etape (configuration du pipeline, base) ne
             // doit pas laisser la generation « en cours » etre reprise en boucle.
@@ -77,7 +84,8 @@ final readonly class RunBlogGenerationAction
         }
     }
 
-    private function runSteps(BlogGeneration $generation, string $owner, BlogAiSettings $settings, ?CarbonImmutable $handOverAt): void
+    /** @param  int  $ceiling  l'arret de securite de la generation, en millioniemes de dollar */
+    private function runSteps(BlogGeneration $generation, string $owner, BlogAiSettings $settings, int $ceiling, ?CarbonImmutable $handOverAt): void
     {
         $stepsRun = 0;
 
@@ -117,9 +125,9 @@ final readonly class RunBlogGenerationAction
                 $generation->id,
                 $step,
                 $index + 1,
-                fn (int $attempt): GenerationStepContext => $this->context($generation, $settings, $outputs, $attempt),
+                fn (int $attempt): GenerationStepContext => $this->context($generation, $settings, $outputs, $attempt, $ceiling),
                 fn (): bool => $this->holdLock($generation->id, $owner, $step),
-                fn (): bool => $this->budgetLeft($generation->id, $settings) > 0,
+                fn (): bool => $this->budgetLeft($generation->id, $ceiling) > 0,
             );
 
             if ($outcome->lockLost) {
@@ -127,13 +135,14 @@ final readonly class RunBlogGenerationAction
             }
 
             if ($outcome->overBudget) {
-                Log::warning('Blog generation stopped before exceeding the article spend cap.', [
+                Log::warning('Blog generation stopped by its safety stop, twice its announced cost.', [
                     'generation_id' => $generation->id,
                     'step' => $step->key(),
-                    'left_microusd' => $this->budgetLeft($generation->id, $settings),
+                    'ceiling_microusd' => $ceiling,
+                    'left_microusd' => $this->budgetLeft($generation->id, $ceiling),
                 ]);
 
-                $this->finish($generation, $owner, $settings, BlogGenerationStatus::Abandoned, BlogGenerationOutcomeReason::ArticleSpendCapReached, null);
+                $this->finish($generation, $owner, $settings, BlogGenerationStatus::Abandoned, BlogGenerationOutcomeReason::SafetyStop, null);
 
                 return;
             }
@@ -164,7 +173,7 @@ final readonly class RunBlogGenerationAction
     }
 
     /** @param  array<string, array<string, mixed>>  $outputs */
-    private function context(BlogGeneration $generation, BlogAiSettings $settings, array $outputs, int $attempt): GenerationStepContext
+    private function context(BlogGeneration $generation, BlogAiSettings $settings, array $outputs, int $attempt, int $ceiling): GenerationStepContext
     {
         return new GenerationStepContext(
             generationId: $generation->id,
@@ -175,18 +184,31 @@ final readonly class RunBlogGenerationAction
             outputs: $outputs,
             payload: $generation->payload ?? [],
             attempt: $attempt,
-            budgetLeftMicrousd: $this->budgetLeft($generation->id, $settings),
+            budgetLeftMicrousd: $this->budgetLeft($generation->id, $ceiling),
             length: $this->length->for(GenerationLength::wordsFromPayload($generation->payload) ?? $settings->articleWords),
         );
     }
 
-    /**
-     * Seul le plafond par article arrete une generation, avec la meme marge qu'au lancement (decision du 18/11) ;
-     * celui du mois ne fait qu'avertir (decision du 17/11).
-     */
-    private function budgetLeft(int $generationId, BlogAiSettings $settings): int
+    /** Ce qui reste avant l'arret de securite ; le plafond du mois ne fait qu'avertir (decision du 17/11). */
+    private function budgetLeft(int $generationId, int $ceiling): int
     {
-        return $this->spendLimit->limit($settings->articleSpendCapMicrousd()) - $this->spend->costOf($generationId);
+        return $ceiling - $this->spend->costOf($generationId);
+    }
+
+    /** Le haut du cout annonce, calcule et garde pour une generation lancee avant que l'annonce existe. */
+    private function announcedHigh(BlogGeneration $generation, BlogAiSettings $settings): int
+    {
+        if ($generation->forecast_high_microusd !== null) {
+            return $generation->forecast_high_microusd;
+        }
+
+        $forecast = $this->forecaster->forGeneration($settings, $generation->type, $generation->payload, topicImposed: filled($generation->topic_hint));
+        BlogGeneration::query()->whereKey($generation->id)->update([
+            'forecast_low_microusd' => $forecast->lowMicrousd,
+            'forecast_high_microusd' => $forecast->highMicrousd,
+        ]);
+
+        return $forecast->highMicrousd;
     }
 
     private function holdLock(int $generationId, string $owner, GenerationStep $step): bool
