@@ -19,14 +19,12 @@ final readonly class BlogAiSettingsService
 
     /**
      * @param  array<string, mixed>  $defaults
-     * @param  list<string>  $locales
      */
     public function __construct(
         private SettingRepository $settings,
         private ArticleLengthRules $length,
         private array $defaults,
         private string $fallbackEmail,
-        private array $locales,
     ) {}
 
     public function current(): BlogAiSettings
@@ -37,8 +35,19 @@ final readonly class BlogAiSettingsService
             is_array($stored) ? $stored : [],
             $this->defaults,
             $this->fallbackEmail,
-            $this->locales,
             $this->length,
         );
+    }
+
+    /**
+     * Les modeles que nous recommandons, etape par etape. Ce sont aussi les modeles de depart : ils ne s'ecrivent
+     * qu'a un seul endroit (`blog.ai.defaults.models`), et le bouton « Remettre les modeles recommandes » suit
+     * donc nos recommandations quand elles changent (demande de Micha du 19/11). Aucune requete.
+     *
+     * @return array<string, string>
+     */
+    public function recommendedModels(): array
+    {
+        return array_map(strval(...), (array) ($this->defaults['models'] ?? []));
     }
 }

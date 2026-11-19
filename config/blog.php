@@ -157,8 +157,6 @@ return [
             'articles_per_run' => 1,
             'pending_drafts_cap' => 3,
             'monthly_spend_cap_cents' => 1_000,
-            'priority_topics' => [],
-            'avoided_topics' => [],
             'models' => [
                 'topic' => 'anthropic/claude-haiku-5.5',
                 'research' => 'openai/gpt-6-luna',
@@ -171,7 +169,6 @@ return [
             'max_images' => 1,
             'article_words' => 1_000,
             'notification_email' => null,
-            'transparency_notice' => ['en' => '', 'fr' => '', 'es' => ''],
         ],
 
         /*

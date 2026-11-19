@@ -22,6 +22,6 @@
             <livewire:admin.blog.generation-launcher />
         </x-ui::page-header>
     @else
-        <x-ui::page-header :title="__('Réglages de la génération IA')" :description="__('Rythme, images, budget, sujets et modèles des articles proposés par l\'IA.')" class="mb-6 mt-2" />
+        <x-ui::page-header :title="__('Réglages de la génération IA')" :description="__('Comment l\'IA prépare les articles, ce qu\'ils coûtent, et quand elle en propose d\'elle-même.')" class="mb-6 mt-2" />
     @endif
 @endif

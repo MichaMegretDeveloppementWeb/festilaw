@@ -65,7 +65,7 @@ final readonly class BlogGenerationPresenter
             MonthlySpendLevel::Near => [
                 'level' => $level,
                 'title' => __('La dépense du mois approche du plafond'),
-                'text' => __('La génération a dépensé :spent ce mois-ci, soit :percent % du plafond de :cap. Les générations continuent, car ce plafond ne fait qu\'avertir.', [
+                'text' => __('La génération a dépensé :spent ce mois-ci, soit :percent % du plafond de :cap. Dépasser le plafond ne bloque pas la génération.', [
                     'spent' => $spent,
                     'cap' => $cap,
                     'percent' => intdiv(100 * $spentMicrousd, max(1, $capMicrousd)),
@@ -74,7 +74,7 @@ final readonly class BlogGenerationPresenter
             MonthlySpendLevel::Over => [
                 'level' => $level,
                 'title' => __('Le plafond de dépense du mois est dépassé'),
-                'text' => __('La génération a dépensé :spent ce mois-ci, au-delà du plafond de :cap. Les générations continuent, car ce plafond ne fait qu\'avertir. Si cette dépense est prévue, relevez le plafond.', [
+                'text' => __('La génération a dépensé :spent ce mois-ci, au-delà du plafond de :cap. Ce dépassement ne bloque pas la génération. Si cette dépense est prévue, vous pouvez relever le plafond.', [
                     'spent' => $spent,
                     'cap' => $cap,
                 ]),

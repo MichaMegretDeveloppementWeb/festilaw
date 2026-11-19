@@ -143,7 +143,7 @@ it('renders the alert messages', function () {
         ->toContain('href="https://example.test/admin/blog/generation/4"')
         ->toContain('storage/logs/laravel.log')
         ->and($credit)->toContain('Crédit d\'IA épuisé')->toContain('4,20 $')
-        ->and($near)->toContain('La dépense du mois approche du plafond')->toContain('85 %')->toContain('Rien n\'est bloqué')
+        ->and($near)->toContain('La dépense du mois approche du plafond')->toContain('85 %')->toContain('Dépasser le plafond ne bloque pas la génération.')->not->toContain('par lot')
         ->and($over)->toContain('Plafond de dépense du mois dépassé')->toContain('12,00 $')
         ->toContain('href="https://example.test/admin/blog/generation/settings"');
 });

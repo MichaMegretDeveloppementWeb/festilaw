@@ -57,16 +57,6 @@ it('names a model by its commercial name, and by its identifier once it left the
         ->and($catalog->name(''))->toBeNull();
 });
 
-it('turns the topics into a clean list, whatever the stored form', function () {
-    // L'ancienne forme enregistree : un texte, un sujet par ligne.
-    expect(BlogAiSettings::topics("Etsy\r\n  Amazon  \n\nETSY\n"))->toBe(['Etsy', 'Amazon'])
-        // La liste : sans vide, sans doublon (la casse ne compte pas), espaces ramenes a un seul.
-        ->and(BlogAiSettings::topics(['  Jouets   en bois ', '', 42, 'jouets en bois', 'Bougies']))->toBe(['Jouets en bois', 'Bougies'])
-        ->and(BlogAiSettings::topics(null))->toBe([])
-        ->and(BlogAiSettings::topics(array_map(static fn (int $number): string => "Sujet {$number}", range(1, 60))))->toHaveCount(BlogAiSettings::MAX_TOPICS)
-        ->and(mb_strlen(BlogAiSettings::topics([str_repeat('é', 200)])[0]))->toBe(BlogAiSettings::TOPIC_MAX_LENGTH);
-});
-
 it('reads the images of a generation from what was written on it', function () {
     $options = GenerationImageOptions::fromPayload(['images' => ['mode' => 'generated', 'max' => 2], 'other' => true]);
 

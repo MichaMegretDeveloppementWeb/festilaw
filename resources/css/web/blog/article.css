@@ -44,8 +44,6 @@
 .article__sources-list a { color: var(--color-coral); overflow-wrap: anywhere; }
 .article__sources-list a:hover { text-decoration: underline; }
 
-.article__transparency { margin-top: 28px; color: var(--color-ink-soft); font-size: 14px; font-style: italic; line-height: 1.6; }
-
 .article-cta {
     margin-top: 48px;
     padding: clamp(24px, 3vw, 36px);

@@ -51,7 +51,6 @@ it('starts from safe defaults: nothing is generated until someone switches it on
         ->and($settings->imageMode)->toBe(BlogAiImageMode::Stock)
         ->and($settings->maxImages)->toBe(1)
         ->and($settings->notificationEmail)->toBe('team@example.com')
-        ->and($settings->transparencyNotice)->toBe(['en' => '', 'fr' => '', 'es' => ''])
         ->and(array_keys($settings->models))->toBe(['topic', 'research', 'writing', 'verification', 'translation', 'image'])
         ->and($settings->modelFor('writing'))->toBe(config('blog.ai.defaults.models.writing'))
         ->and($settings->modelFor('unknown'))->toBeNull();
@@ -68,12 +67,10 @@ it('saves the settings in a single row and reads them back', function () {
         'period_unit' => 'month',
         'articles_per_run' => 3,
         'monthly_spend_cap_cents' => 2_500,
-        'priority_topics' => "Etsy\nAmazon",
         'models' => ['writing' => 'openai/gpt-6.1-terra'],
         'image_mode' => 'none',
         'max_images' => 3,
         'notification_email' => 'owner@example.com',
-        'transparency_notice' => ['fr' => 'Article rédigé avec l\'aide d\'une IA.'],
     ]);
 
     $settings = app(BlogAiSettingsService::class)->current();
@@ -84,15 +81,11 @@ it('saves the settings in a single row and reads them back', function () {
         ->and($settings->periodUnit)->toBe(BlogAiPeriodUnit::Month)
         ->and($settings->articlesPerRun)->toBe(3)
         ->and($settings->monthlySpendCapCents)->toBe(2_500)
-        // L'ancienne forme (un texte, un sujet par ligne) se lit comme une liste.
-        ->and($settings->priorityTopics)->toBe(['Etsy', 'Amazon'])
-        ->and($settings->avoidedTopics)->toBe([])
         ->and($settings->modelFor('writing'))->toBe('openai/gpt-6.1-terra')
         ->and($settings->modelFor('topic'))->toBe(config('blog.ai.defaults.models.topic'))
         ->and($settings->imageMode)->toBe(BlogAiImageMode::None)
         ->and($settings->maxImages)->toBe(3)
-        ->and($settings->notificationEmail)->toBe('owner@example.com')
-        ->and($settings->transparencyNotice)->toBe(['en' => '', 'fr' => 'Article rédigé avec l\'aide d\'une IA.', 'es' => '']);
+        ->and($settings->notificationEmail)->toBe('owner@example.com');
 });
 
 it('falls back on the defaults when the stored settings are unreadable', function () {
@@ -178,15 +171,19 @@ it('can make a simulated step fail, or find no topic, to try those paths by hand
         ->and($withoutTopic->outcome_reason)->toBe(BlogGenerationOutcomeReason::NoRelevantTopic);
 });
 
-it('reads topics saved under the former form, one topic per line, as a list', function () {
+it('reads settings saved with the topics and the transparency notice, then drops them at the next save', function () {
+    // Retires le 19/11 (decision de Micha) : un sujet se donne au lancement, et la mention n'est pas obligatoire.
     Setting::query()->updateOrCreate(
         ['key' => BlogAiSettingsService::KEY],
-        ['value' => json_encode(['priority_topics' => "Etsy\nAmazon\n\nEtsy", 'avoided_topics' => ''])],
+        ['value' => json_encode(['enabled' => true, 'priority_topics' => ['Etsy'], 'avoided_topics' => 'Crypto', 'transparency_notice' => ['fr' => 'Rédigé avec une IA.']])],
     );
 
     $settings = app(BlogAiSettingsService::class)->current();
+    BlogAi::saveSettings($settings->toStored());
 
-    expect($settings->priorityTopics)->toBe(['Etsy', 'Amazon'])
-        ->and($settings->avoidedTopics)->toBe([])
-        ->and($settings->toStored()['priority_topics'])->toBe(['Etsy', 'Amazon']);
+    $stored = json_decode((string) Setting::query()->where('key', BlogAiSettingsService::KEY)->value('value'), true);
+
+    expect($settings->enabled)->toBeTrue()
+        ->and($stored)->not->toHaveKeys(['priority_topics', 'avoided_topics', 'transparency_notice'])
+        ->and($stored['enabled'])->toBeTrue();
 });

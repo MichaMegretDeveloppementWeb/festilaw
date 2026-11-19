@@ -64,8 +64,6 @@ final class TopicStep extends EditorialStep
                 'instructions' => $context->instructions,
             ]),
             $this->block('Length of the article', 'About '.($context->length->words ?? $context->settings->articleWords).' words in the body.'),
-            $this->block('Priority topics', $context->settings->priorityTopics),
-            $this->block('Topics to avoid', $context->settings->avoidedTopics),
             $this->block('Existing articles', array_map(static fn (array $post): array => ['title' => $post['title'], 'excerpt' => $post['excerpt'], 'status' => $post['status']], $history->posts)),
             $this->block('Topics already proposed', $history->proposedTopics),
             $this->block('Notes from the web scan', match (true) {

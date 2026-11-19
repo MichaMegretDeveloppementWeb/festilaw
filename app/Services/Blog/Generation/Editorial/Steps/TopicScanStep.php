@@ -50,8 +50,6 @@ final class TopicScanStep extends EditorialStep
         $reply = $this->ask($context, new WebSearchAgent($instructions, self::WEB_SEARCHES, $this->webSearch), implode("\n\n", [
             $this->block('Today', CarbonImmutable::now()->toDateString()),
             $this->block('Instructions from the editor', $context->instructions ?? 'None.'),
-            $this->block('Priority topics', $context->settings->priorityTopics),
-            $this->block('Topics to avoid', $context->settings->avoidedTopics),
         ]));
 
         return GenerationStepResult::continue(

@@ -96,10 +96,6 @@
                 </section>
             @endif
 
-            @if ($page->transparencyNotice)
-                <p class="article__transparency" data-transparency-notice>{{ $page->transparencyNotice }}</p>
-            @endif
-
             <aside class="article-cta" aria-labelledby="article-cta-title">
                 <h2 id="article-cta-title" class="article-cta__title">{{ __('Does this apply to your products?') }}</h2>
                 <p class="article-cta__text">{{ __('Check in 30 seconds whether you need an EU Responsible Person, or see what Festilaw includes.') }}</p>

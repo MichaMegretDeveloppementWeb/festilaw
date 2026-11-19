@@ -32,7 +32,6 @@ use Illuminate\Support\Sleep;
 use Laravel\Ai\Responses\Data\Meta;
 use Laravel\Ai\Responses\Data\TextUsage;
 use Laravel\Ai\Responses\TextResponse;
-use Tests\Support\BlogAi;
 use Tests\Support\BlogContent;
 use Tests\Support\EditorialFixtures as Fixtures;
 
@@ -51,8 +50,7 @@ beforeEach(function () {
 
 // --- Sujet
 
-it('chooses a topic from the settings, the request and every known title, and keeps it on the generation', function () {
-    BlogAi::saveSettings(['priority_topics' => ['Etsy and the GPSR']]);
+it('chooses a topic from the request and every known title, and keeps it on the generation', function () {
     BlogContent::published('label');
     BlogGeneration::factory()->create(['topic_title' => 'Candle warnings', 'topic_rejected_at' => now()]);
     WebSearchAgent::fake()->preventStrayPrompts();
@@ -66,8 +64,10 @@ it('chooses a topic from the settings, the request and every known title, and ke
         ->and($result->findings->topicTitle)->toBe('Adding an economic operator on Etsy')
         ->and($result->findings->topicKind)->toBe(BlogTopicKind::Evergreen)
         ->and($result->usage->model)->toBe('anthropic/claude-haiku-5.5');
+    // Plus de sujets a privilegier ni a eviter dans les reglages (decision de Micha du 19/11).
     TopicAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Etsy economic operator')
-        && $prompt->contains('Etsy and the GPSR')
+        && ! $prompt->contains('Priority topics')
+        && ! $prompt->contains('Topics to avoid')
         && $prompt->contains('Label en')
         && $prompt->contains('Candle warnings')
         && $prompt->contains('No web scan'));
@@ -76,14 +76,14 @@ it('chooses a topic from the settings, the request and every known title, and ke
 });
 
 it('scans the web for a free topic with two bounded searches, and keeps the notes for the editor', function () {
-    BlogAi::saveSettings(['priority_topics' => ['Etsy and the GPSR']]);
     WebSearchAgent::fake(['Notes from the web scan.'])->preventStrayPrompts();
 
     $scan = app(TopicScanStep::class)->execute(Fixtures::context());
 
     expect($scan->output['notes'])->toBe('Notes from the web scan.');
     // Des extraits courts du moteur Exa : la recherche native d'Haiku rendait des pages entieres (17/11).
-    WebSearchAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Etsy and the GPSR')
+    WebSearchAgent::assertPrompted(fn ($prompt): bool => ! $prompt->contains('Priority topics')
+        && ! str_contains($prompt->agent->instructions(), 'priority topics')
         && str_contains($prompt->agent->instructions(), 'at most 2 web searches')
         && collect($prompt->agent->tools())->sole()->maxSearches === 2
         && collect($prompt->agent->tools())->sole()->providerOptions('openrouter') === ['engine' => 'exa', 'max_results' => 5, 'max_characters' => 1_500, 'max_total_results' => 10]);

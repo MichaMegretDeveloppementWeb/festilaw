@@ -63,7 +63,6 @@ final class BlogGenerationServiceProvider extends ServiceProvider
 
         $this->app->when(BlogAiSettingsService::class)->needs('$defaults')->giveConfig('blog.ai.defaults');
         $this->app->when(BlogAiSettingsService::class)->needs('$fallbackEmail')->giveConfig('festilaw.notification_email');
-        $this->app->when(BlogAiSettingsService::class)->needs('$locales')->giveConfig('festilaw.supported_locales');
         $this->app->when(BlogAiModelCatalog::class)->needs('$textModels')->giveConfig('blog.ai.models');
         $this->app->when(BlogAiModelCatalog::class)->needs('$imageModels')->giveConfig('blog.ai.image_models');
         // La cle n'est lue que pour dire a l'ecran si elle est presente ; elle n'est jamais affichee.

@@ -25,7 +25,6 @@ final class BlogAi
             $overrides,
             config('blog.ai.defaults'),
             (string) config('festilaw.notification_email'),
-            config('festilaw.supported_locales'),
             app(ArticleLengthRules::class),
         );
 

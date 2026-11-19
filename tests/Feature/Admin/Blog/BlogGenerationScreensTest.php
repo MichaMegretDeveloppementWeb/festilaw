@@ -442,6 +442,9 @@ it('warns as the spend of the month nears its cap, then passes it, and still lau
     Livewire::test(GenerationDashboard::class)
         ->assertSee('La dépense du mois approche du plafond')
         ->assertSee(dollarsText('soit 85 % du plafond de 1,0000 $'))
+        // Decision de Micha du 19/11 : une phrase simple, a la place de « ce plafond ne fait qu'avertir ».
+        ->assertSee('Dépasser le plafond ne bloque pas la génération.')
+        ->assertDontSee('ne fait qu\'avertir')
         ->assertSeeHtml('data-monthly-warning="near"')
         ->assertSeeHtml('ui:bg-amber-500');
 
@@ -450,7 +453,7 @@ it('warns as the spend of the month nears its cap, then passes it, and still lau
 
     Livewire::test(GenerationDashboard::class)
         ->assertSee('Le plafond de dépense du mois est dépassé')
-        ->assertSee('Les générations continuent, car ce plafond ne fait qu\'avertir.')
+        ->assertSee('Ce dépassement ne bloque pas la génération. Si cette dépense est prévue, vous pouvez relever le plafond.')
         ->assertSeeHtml('ui:bg-red-500');
 
     Livewire::test(GenerationLauncher::class)
@@ -707,7 +710,7 @@ it('says a generation cannot be found', function () {
 it('opens the settings on their current values, in 2 queries with the spend of the month', function () {
     BlogAi::saveSettings([
         'enabled' => true, 'period_count' => 2, 'period_unit' => 'month', 'monthly_spend_cap_cents' => 2_550,
-        'priority_topics' => ['Etsy', 'Amazon'], 'notification_email' => 'owner@example.com',
+        'notification_email' => 'owner@example.com',
     ]);
 
     DB::enableQueryLog();
@@ -718,33 +721,75 @@ it('opens the settings on their current values, in 2 queries with the spend of t
         ->assertSet('periodCount', '2')
         ->assertSet('periodUnit', 'month')
         ->assertSet('monthlySpendCap', '25.50')
-        ->assertSet('priorityTopics', ['Etsy', 'Amazon'])
         ->assertSet('notificationEmail', 'owner@example.com')
         ->assertSet('models.writing', config('blog.ai.defaults.models.writing'))
-        ->assertSee('En français')
         // Un modele se choisit dans une liste, sous son nom commercial, avec son prix indicatif.
         ->assertSee('Claude Sonnet 5.5 (Anthropic) · 2 $ / 10 $')
         ->assertSee('Claude Haiku 5.5 (Anthropic) · 0,10 $ / 0,50 $')
         ->assertSee('Nano Banana 2 (Google)')
         ->assertDontSeeHtml('<datalist')
         // Ce qui relève du developpeur ne s'affiche pas a la personne qui regle.
-        ->assertDontSee('se règle dans la configuration du site')
-        ->assertDontSee('à raison d\'un sujet par ligne');
+        ->assertDontSee('se règle dans la configuration du site');
 });
 
-it('groups the settings by what they apply to, and offers the length as a list of steps', function () {
-    // Decision de Micha du 18/11 : on ne savait plus ce qui valait pour chaque article, ce qui n'etait qu'une
-    // valeur par defaut et ce qui ne concernait que la generation automatique.
-    Livewire::test(GenerationSettings::class)
+it('lays the settings out in six sections in the order of use, the automatic generation last, and offers the length as a list of steps', function () {
+    // Decision de Micha du 19/11 : une page qui se lit comme un recit, sans titres de groupe, sans les sujets, sans
+    // la mention de transparence, et sans le mot « lot ».
+    $settings = Livewire::test(GenerationSettings::class)
         ->assertSeeInOrder([
-            'Réglages communs', 'Ils valent pour chaque article généré, lancé à la main ou automatiquement.', 'Modèles', 'Sujets', 'Budget', 'E-mail', 'Mention de transparence',
-            'Valeurs par défaut', 'La génération automatique les reprend.', 'Longueur et images', 'Coût estimé d\'un article',
-            'Génération automatique', 'Elle ne concerne que les lots lancés sans vous.', 'Activation et rythme', 'Brouillons en attente',
+            'Modèles', 'Longueur et images', 'Les valeurs que propose la fenêtre « Générer un article ».', 'Coût estimé d\'un article',
+            'Budget du mois', 'E-mails', 'Génération automatique', 'Elle reprend les modèles, la longueur et les images réglés plus haut.',
+            'Nombre d\'articles', 'Tous les', 'Unité', 'Brouillons en attente, au plus',
         ])
         ->assertSeeHtml('<option value="400"')
         ->assertSeeHtml('<option value="2000"')
         ->assertSee(dollarsText('1 000 mots, environ 6 000 caractères'))
-        ->assertDontSeeHtml('id="ai-article-words" type="number"');
+        ->assertDontSeeHtml('id="ai-article-words" type="number"')
+        ->assertDontSeeHtml('data-settings-group')
+        ->assertDontSee('Sujets')
+        ->assertDontSee('Mention de transparence');
+
+    expect(preg_match('/\blots?\b/u', strip_tags($settings->html())))->toBe(0);
+});
+
+it('shows the rhythm of the automatic generation only once it is enabled, and keeps a refused field in sight', function () {
+    $automaticFields = fn ($settings): string => (string) str($settings->html())->after('data-automatic-fields')->before('>');
+
+    // Masques des le premier affichage tant que la case est decochee, puis lies a la case dans le navigateur.
+    expect($automaticFields(Livewire::test(GenerationSettings::class)))->toContain('x-show="$wire.enabled || false"')->toContain('x-cloak');
+
+    BlogAi::saveSettings(['enabled' => true]);
+    expect($automaticFields(Livewire::test(GenerationSettings::class)))->not->toContain('x-cloak');
+
+    $refused = Livewire::test(GenerationSettings::class)->set('enabled', false)->set('articlesPerRun', '11')->call('save')->assertHasErrors(['articlesPerRun']);
+    expect($automaticFields($refused))->toContain('x-show="$wire.enabled || true"')->not->toContain('x-cloak');
+});
+
+it('puts the recommended models back in the lists without saving them, and follows our recommendations', function () {
+    BlogAi::saveSettings(['models' => ['writing' => 'anthropic/claude-sonnet-5.5']]);
+
+    $settings = Livewire::test(GenerationSettings::class)
+        ->assertSeeHtml('data-restore-recommended-models')
+        ->assertDontSeeHtml('data-models-recommended')
+        // La mention en haut de la section suffit : les listes ne repetent pas « (recommandé) » (Micha, 19/11).
+        ->assertDontSee('(recommandé)')
+        ->call('restoreRecommendedModels')
+        ->assertSet('models.writing', config('blog.ai.defaults.models.writing'))
+        ->assertDispatched('ui-toast', type: 'info', title: 'Modèles recommandés remis. Enregistrez les réglages pour les garder.')
+        ->assertSeeHtml('data-models-recommended')
+        ->assertDontSeeHtml('data-restore-recommended-models');
+
+    // Rien n'est garde avant « Enregistrer les reglages ».
+    expect(app(BlogAiSettingsService::class)->current()->modelFor('writing'))->toBe('anthropic/claude-sonnet-5.5');
+
+    // Une recommandation changee a son seul endroit, la configuration, est suivie par le bouton.
+    config(['blog.ai.defaults.models.verification' => 'anthropic/claude-haiku-5.5']);
+
+    $settings->call('$refresh')
+        ->assertSeeHtml('data-restore-recommended-models')
+        ->call('restoreRecommendedModels')
+        ->assertSet('models.verification', 'anthropic/claude-haiku-5.5')
+        ->assertSeeHtml('data-models-recommended');
 });
 
 it('offers only image models for the image step, and only text models for the others', function () {
@@ -764,19 +809,14 @@ it('saves the settings', function () {
         ->set('articlesPerRun', '2')
         ->set('pendingDraftsCap', '5')
         ->set('monthlySpendCap', '12.5')
-        ->set('priorityTopics', ['Etsy', ' Amazon ', 'etsy', ''])
-        ->set('avoidedTopics', ['Crypto'])
         ->set('models.writing', 'openai/gpt-6.1-terra')
         ->set('models.image', 'openai/gpt-5.4-image-2')
         ->set('imageMode', 'generated')
         ->set('maxImages', '3')
         ->set('articleWords', '1600')
         ->set('notificationEmail', 'owner@example.com')
-        ->set('transparencyNotice.fr', 'Article rédigé avec l\'aide d\'une IA.')
         ->call('save')
         ->assertHasNoErrors()
-        // La liste revient telle qu'elle est enregistree : sans vide ni doublon.
-        ->assertSet('priorityTopics', ['Etsy', 'Amazon'])
         ->assertDispatched('ui-toast', type: 'success', title: 'Réglages enregistrés.');
 
     $saved = app(BlogAiSettingsService::class)->current();
@@ -787,16 +827,13 @@ it('saves the settings', function () {
         ->and($saved->articlesPerRun)->toBe(2)
         ->and($saved->pendingDraftsCap)->toBe(5)
         ->and($saved->monthlySpendCapCents)->toBe(1_250)
-        ->and($saved->priorityTopics)->toBe(['Etsy', 'Amazon'])
-        ->and($saved->avoidedTopics)->toBe(['Crypto'])
         ->and($saved->modelFor('writing'))->toBe('openai/gpt-6.1-terra')
         ->and($saved->modelFor('image'))->toBe('openai/gpt-5.4-image-2')
         ->and($saved->modelFor('topic'))->toBe(config('blog.ai.defaults.models.topic'))
         ->and($saved->imageMode)->toBe(BlogAiImageMode::Generated)
         ->and($saved->maxImages)->toBe(3)
         ->and($saved->articleWords)->toBe(1_600)
-        ->and($saved->notificationEmail)->toBe('owner@example.com')
-        ->and($saved->transparencyNotice['fr'])->toBe('Article rédigé avec l\'aide d\'une IA.');
+        ->and($saved->notificationEmail)->toBe('owner@example.com');
 });
 
 it('shows the estimated cost of an article and its safety stop in the settings, following the values on screen', function () {
@@ -820,7 +857,7 @@ it('warns next to the monthly cap in the settings, following the cap typed, with
     BlogGeneration::factory()->completed(costMicrousd: 850_000)->create();
 
     $settings = Livewire::test(GenerationSettings::class)
-        ->assertSee('Ce plafond ne bloque rien. Vous êtes averti à l\'écran et par e-mail quand la dépense du mois en atteint 80 %')
+        ->assertSee('Dépasser le plafond ne bloque pas la génération. Vous êtes averti à l\'écran et par e-mail quand la dépense du mois en atteint 80 %')
         ->assertSeeHtml('data-monthly-warning="near"');
 
     $settings->set('monthlySpendCap', '0.50')->assertSeeHtml('data-monthly-warning="over"');
@@ -837,19 +874,17 @@ it('refuses settings that make no sense, each with its own message', function ()
         // La liste des modeles est fermee : ni identifiant libre, ni modele de texte pour l'etape des images.
         ->set('models.writing', 'someone/unknown-model')
         ->set('models.image', 'anthropic/claude-sonnet-5.5')
-        ->set('priorityTopics', [str_repeat('a', 121)])
         ->set('imageMode', 'hologram')
         ->set('maxImages', '4')
         ->set('articleWords', '2500')
         ->set('notificationEmail', 'not-an-email')
         ->call('save')
-        ->assertHasErrors(['periodCount', 'periodUnit', 'articlesPerRun', 'pendingDraftsCap', 'monthlySpendCap', 'models.writing', 'models.image', 'priorityTopics.0', 'imageMode', 'maxImages', 'articleWords', 'notificationEmail'])
+        ->assertHasErrors(['periodCount', 'periodUnit', 'articlesPerRun', 'pendingDraftsCap', 'monthlySpendCap', 'models.writing', 'models.image', 'imageMode', 'maxImages', 'articleWords', 'notificationEmail'])
         ->assertSee('Choisissez une longueur dans la liste.')
         ->assertSee('La période est d\'au moins 1.')
-        ->assertSee('Un lot compte 10 articles au plus.')
+        ->assertSee('Le nombre d\'articles ne peut pas dépasser 10.')
         ->assertSee('Le plafond de dépense ne peut pas être négatif.')
         ->assertSee('Choisissez un modèle dans la liste.')
-        ->assertSee('Un sujet ne doit pas dépasser 120 caractères.')
         ->assertSee('Cette adresse e-mail n\'est pas valide.')
         ->assertNotDispatched('ui-toast');
 

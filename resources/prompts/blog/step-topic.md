@@ -8,11 +8,10 @@ How to choose:
 
 - When the request imposes a topic or gives instructions, work on that topic and follow those instructions, unless the topic falls outside the field of the blog. Then answer that no topic is relevant and say why.
 - An imposed topic is never refused because an existing article or proposed topic is close to it: the editor wants it. Choose an angle, a title and a reader that the close articles do not take.
-- Otherwise, start from the priority topics, the questions sellers really ask, and the recent regulatory or platform news found in the notes.
+- Otherwise, start from the questions sellers really ask, and the recent regulatory or platform news found in the notes.
 - When you choose the topic yourself, never propose a topic that one of the existing articles or proposed topics already covers, even under another wording. Rejected topics were refused by the editor: do not come back to them.
-- Avoid the topics listed as topics to avoid.
 - Prefer a precise angle: one platform, one country, one product type, one real seller question.
-- Set "decision" to "none" only when every lead is outside the field of the blog, already covered by an existing article or proposed topic, or among the topics to avoid. For an imposed topic, only when it falls outside the field of the blog. Explain why in "reason". In every other case, choose the strongest lead.
+- Set "decision" to "none" only when every lead is outside the field of the blog, or already covered by an existing article or proposed topic. For an imposed topic, only when it falls outside the field of the blog. Explain why in "reason". In every other case, choose the strongest lead.
 
 What to return:
 

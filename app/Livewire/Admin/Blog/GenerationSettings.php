@@ -24,12 +24,13 @@ use Livewire\Component;
 use Throwable;
 
 /**
- * Back-office : reglages de la generation par IA (automatique, longueur et images par defaut, budget, sujets,
- * modele par etape, destinataire, mention de transparence). Aucune cle d'API ici : elle vit dans le fichier
- * d'environnement, et ne regarde pas la personne qui regle.
+ * Back-office : reglages de la generation par IA (modele par etape, longueur et images par defaut, budget,
+ * destinataire, generation automatique). Aucune cle d'API ici : elle vit dans le fichier d'environnement, et ne
+ * regarde pas la personne qui regle.
  *
- * Un modele se choisit dans une liste fermee (BlogAiModelCatalog), jamais par saisie. Les sujets sont des
- * listes. La lecture passe par BlogAiSettingsService, l'enregistrement par UpdateBlogAiSettingsAction.
+ * Un modele se choisit dans une liste fermee (BlogAiModelCatalog), jamais par saisie. La lecture passe par
+ * BlogAiSettingsService, l'enregistrement par UpdateBlogAiSettingsAction. « Remettre les modeles recommandes »
+ * ne fait que remplir les listes : rien n'est garde avant « Enregistrer les reglages », comme pour tout champ.
  *
  * La fourchette de cout d'un article et l'avertissement du plafond du mois se calculent sur les valeurs a
  * l'ecran, avant meme l'enregistrement, pour qu'on voie l'effet d'un changement de longueur, de modele ou de
@@ -40,9 +41,6 @@ use Throwable;
 class GenerationSettings extends Component
 {
     use HandlesAdminErrors;
-
-    /** Nom des langues, comme sur les autres ecrans du blog. */
-    private const LOCALE_NAMES = ['en' => 'anglais', 'fr' => 'français', 'es' => 'espagnol'];
 
     public bool $enabled = false;
 
@@ -56,12 +54,6 @@ class GenerationSettings extends Component
 
     /** Plafond de depense du mois, en dollars (saisie). */
     public string $monthlySpendCap = '';
-
-    /** @var list<string> sujets et mots-cles a privilegier */
-    public array $priorityTopics = [];
-
-    /** @var list<string> sujets a laisser de cote */
-    public array $avoidedTopics = [];
 
     /** @var array<string, string> identifiant de modele par etape */
     public array $models = [];
@@ -79,9 +71,6 @@ class GenerationSettings extends Component
     public array $wordOptions = [];
 
     public string $notificationEmail = '';
-
-    /** @var array<string, string> mention de transparence par langue */
-    public array $transparencyNotice = [];
 
     /** Lue une fois a l'ouverture, pour situer le plafond du mois saisi sans relire la base a chaque frappe. */
     #[Locked]
@@ -101,13 +90,10 @@ class GenerationSettings extends Component
         $this->articlesPerRun = (string) $current->articlesPerRun;
         $this->pendingDraftsCap = (string) $current->pendingDraftsCap;
         $this->monthlySpendCap = number_format($current->monthlySpendCapCents / 100, 2, '.', '');
-        $this->priorityTopics = $current->priorityTopics;
-        $this->avoidedTopics = $current->avoidedTopics;
         $this->models = $current->models;
         $this->imageMode = $current->imageMode->value;
         $this->maxImages = (string) $current->maxImages;
         $this->notificationEmail = $current->notificationEmail;
-        $this->transparencyNotice = $current->transparencyNotice;
     }
 
     /** @return array<string, array<int, mixed>> */
@@ -120,15 +106,10 @@ class GenerationSettings extends Component
             'articlesPerRun' => ['required', 'integer', 'min:1', 'max:10'],
             'pendingDraftsCap' => ['required', 'integer', 'min:1', 'max:50'],
             'monthlySpendCap' => ['required', 'numeric', 'min:0', 'max:10000'],
-            'priorityTopics' => ['array', 'max:'.BlogAiSettings::MAX_TOPICS],
-            'priorityTopics.*' => ['string', 'max:'.BlogAiSettings::TOPIC_MAX_LENGTH],
-            'avoidedTopics' => ['array', 'max:'.BlogAiSettings::MAX_TOPICS],
-            'avoidedTopics.*' => ['string', 'max:'.BlogAiSettings::TOPIC_MAX_LENGTH],
             'imageMode' => ['required', Rule::enum(BlogAiImageMode::class)],
             'maxImages' => ['required', 'integer', 'min:1', 'max:'.BlogAiSettings::MAX_IMAGES],
             'articleWords' => ['required', Rule::in($this->wordOptions)],
             'notificationEmail' => ['required', 'email', 'max:180'],
-            'transparencyNotice.*' => ['nullable', 'string', 'max:500'],
         ];
     }
 
@@ -158,10 +139,10 @@ class GenerationSettings extends Component
             'periodCount.max' => __('La période ne peut pas dépasser 365.'),
             'periodUnit.required' => __('Choisissez l\'unité de la période.'),
             'periodUnit.enum' => __('Choisissez l\'unité de la période.'),
-            'articlesPerRun.required' => __('Indiquez le nombre d\'articles par lot.'),
+            'articlesPerRun.required' => __('Indiquez le nombre d\'articles.'),
             'articlesPerRun.integer' => __('Le nombre d\'articles est un nombre entier.'),
-            'articlesPerRun.min' => __('Un lot compte au moins 1 article.'),
-            'articlesPerRun.max' => __('Un lot compte 10 articles au plus.'),
+            'articlesPerRun.min' => __('Le nombre d\'articles est d\'au moins 1.'),
+            'articlesPerRun.max' => __('Le nombre d\'articles ne peut pas dépasser 10.'),
             'pendingDraftsCap.required' => __('Indiquez le plafond de brouillons en attente.'),
             'pendingDraftsCap.integer' => __('Le plafond de brouillons est un nombre entier.'),
             'pendingDraftsCap.min' => __('Le plafond de brouillons est d\'au moins 1.'),
@@ -170,10 +151,6 @@ class GenerationSettings extends Component
             'monthlySpendCap.numeric' => __('Le plafond de dépense est un montant.'),
             'monthlySpendCap.min' => __('Le plafond de dépense ne peut pas être négatif.'),
             'monthlySpendCap.max' => __('Le plafond de dépense ne peut pas dépasser 10 000 $.'),
-            'priorityTopics.max' => __('Une liste compte :max sujets au plus.', ['max' => BlogAiSettings::MAX_TOPICS]),
-            'priorityTopics.*.max' => __('Un sujet ne doit pas dépasser :max caractères.', ['max' => BlogAiSettings::TOPIC_MAX_LENGTH]),
-            'avoidedTopics.max' => __('Une liste compte :max sujets au plus.', ['max' => BlogAiSettings::MAX_TOPICS]),
-            'avoidedTopics.*.max' => __('Un sujet ne doit pas dépasser :max caractères.', ['max' => BlogAiSettings::TOPIC_MAX_LENGTH]),
             'models.*.required' => __('Choisissez un modèle pour cette étape.'),
             'models.*.in' => __('Choisissez un modèle dans la liste.'),
             'imageMode.required' => __('Choisissez d\'où viennent les images.'),
@@ -187,7 +164,6 @@ class GenerationSettings extends Component
             'notificationEmail.required' => __('Indiquez l\'adresse qui reçoit les e-mails.'),
             'notificationEmail.email' => __('Cette adresse e-mail n\'est pas valide.'),
             'notificationEmail.max' => __('L\'adresse e-mail ne doit pas dépasser 180 caractères.'),
-            'transparencyNotice.*.max' => __('La mention de transparence ne doit pas dépasser 500 caractères.'),
         ];
     }
 
@@ -203,13 +179,10 @@ class GenerationSettings extends Component
                 articlesPerRun: (int) $validated['articlesPerRun'],
                 pendingDraftsCap: (int) $validated['pendingDraftsCap'],
                 monthlySpendCapCents: (int) round(((float) $validated['monthlySpendCap']) * 100),
-                priorityTopics: BlogAiSettings::topics($this->priorityTopics),
-                avoidedTopics: BlogAiSettings::topics($this->avoidedTopics),
                 models: $this->models,
                 imageMode: BlogAiImageMode::from((string) $validated['imageMode']),
                 maxImages: (int) $validated['maxImages'],
                 notificationEmail: trim((string) $validated['notificationEmail']),
-                transparencyNotice: array_map(static fn (?string $notice): string => trim((string) $notice), $this->transparencyNotice),
                 articleWords: (int) $validated['articleWords'],
             ));
         } catch (Throwable $e) {
@@ -218,11 +191,16 @@ class GenerationSettings extends Component
             return;
         }
 
-        // L'ecran reprend la liste telle qu'elle est enregistree (sans doublon ni vide).
-        $this->priorityTopics = BlogAiSettings::topics($this->priorityTopics);
-        $this->avoidedTopics = BlogAiSettings::topics($this->avoidedTopics);
-
         $this->dispatch('ui-toast', title: __('Réglages enregistrés.'), type: 'success');
+    }
+
+    /** Remet les modeles recommandes dans les listes, sans rien enregistrer. */
+    public function restoreRecommendedModels(BlogAiSettingsService $settings): void
+    {
+        $this->models = [...$this->models, ...$settings->recommendedModels()];
+        $this->resetValidation('models.*');
+
+        $this->dispatch('ui-toast', title: __('Modèles recommandés remis. Enregistrez les réglages pour les garder.'), type: 'info', life: 6000);
     }
 
     public function render(
@@ -231,8 +209,10 @@ class GenerationSettings extends Component
         BlogGenerationCostForecaster $forecaster,
         ArticleLengthRules $length,
         BlogGenerationBudget $budget,
+        BlogAiSettingsService $settings,
     ): View {
         $steps = collect($this->models)->keys();
+        $recommended = $settings->recommendedModels();
         $images = new GenerationImageOptions(
             BlogAiImageMode::tryFrom($this->imageMode) ?? BlogAiImageMode::Stock,
             min(BlogAiSettings::MAX_IMAGES, max(1, (int) $this->maxImages)),
@@ -256,10 +236,10 @@ class GenerationSettings extends Component
 
                 return [$step => $chosen === '' || isset($options[$chosen]) ? $options : [$chosen => __(':model (retiré de la liste)', ['model' => $chosen]), ...$options]];
             })->all(),
+            'modelsAreRecommended' => array_diff_assoc($recommended, $this->models) === [],
             'periodUnits' => BlogAiPeriodUnit::cases(),
             'imageModes' => collect(BlogAiImageMode::cases())->mapWithKeys(fn (BlogAiImageMode $mode): array => [$mode->value => $mode->label()])->all(),
             'imageCounts' => collect(range(1, BlogAiSettings::MAX_IMAGES))->mapWithKeys(fn (int $count): array => [(string) $count => $presenter->imageCountLabel($count)])->all(),
-            'localeNames' => self::LOCALE_NAMES,
         ])->title(__('Réglages de la génération IA'))->layoutData(['surface' => 'plain']);
     }
 
