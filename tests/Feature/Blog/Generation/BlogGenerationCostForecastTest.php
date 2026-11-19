@@ -95,9 +95,9 @@ it('keeps the default settings at a few cents an article, a model billed at its 
 
 it('brackets what each effort level cost with the recommended models, at the calibration of 19/11', function (BlogEffortLevel $effort, int $extraSearches, array $realCosts) {
     // Sujets imposes (personne responsable, jouets), 1 000 mots, une image de la banque. Le niveau Faible reprend
-    // la reflexion du banc d'essai du 19/11 (2 articles), qui faisait une recherche de sources de plus ; le niveau
-    // Moyen, celle des generations 89 et 91, qui en faisaient deux de plus ; le niveau Eleve est mesure tel quel
-    // (generations 92 et 93). Les recherches en plus s'ajoutent a l'estimation, a leur prix mesure.
+    // la reflexion du banc d'essai du 19/11 (2 articles), qui faisait une recherche de sources de plus, ajoutee a
+    // l'estimation a son prix mesure. Les niveaux Moyen (generations 94 et 95) et Eleve (92 et 93) sont mesures tels
+    // quels.
     $forecast = app(BlogGenerationCostForecaster::class)->forecast(config('blog.ai.defaults.models'), 1_000, stockImage(), topicImposed: true, effort: $effort);
     $extra = $extraSearches * config('blog.ai.web_search.price_microusd');
 
@@ -106,7 +106,7 @@ it('brackets what each effort level cost with the recommended models, at the cal
         ->and($forecast->highMicrousd)->toBeLessThanOrEqual((int) ($forecast->lowMicrousd * 1.6));
 })->with([
     'Faible' => [BlogEffortLevel::Low, 1, [64_912, 66_162]],
-    'Moyen' => [BlogEffortLevel::Medium, 2, [86_055, 101_284]],
+    'Moyen' => [BlogEffortLevel::Medium, 0, [77_354, 89_765]],
     'Eleve' => [BlogEffortLevel::High, 0, [120_223, 123_433]],
 ]);
 

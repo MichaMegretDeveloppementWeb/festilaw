@@ -292,3 +292,64 @@ function benchFileFixture(string $configuration = 'current'): array
         'measures' => ['words' => ['style' => 900], 'removed_claims' => 0],
     ];
 }
+
+// --- Banc d'images (C9) ----------------------------------------------------------------------------
+
+/** Un banc deja joue, reduit a ce que le banc d'images relit : l'article dont l'image a ete generee, et un autre qui l'a partagee. */
+function seedImageBench(): void
+{
+    Storage::fake('local');
+    $topic = ['key' => 'etsy', 'kind' => 'news', 'topic' => 'Adding an economic operator on Etsy'];
+    Storage::disk('local')->put('blog-bench/test/articles/etsy--current.json', json_encode(['topic' => $topic, 'image' => ['generated' => true, 'prompt' => 'A parcel on a wooden workbench.', 'model' => 'openai/gpt-5-image-mini']]));
+    Storage::disk('local')->put('blog-bench/test/articles/etsy--haiku.json', json_encode(['topic' => $topic, 'image' => ['generated' => false, 'reason' => 'shared']]));
+}
+
+it('replays the prompt of the image already generated with each other model, one image and one record each, without paying twice', function () {
+    // Demande de Micha du 19/11 : comparer des modeles d'image a prompt egal, sans reecrire les articles.
+    seedImageBench();
+    $models = new ArrayObject;
+    Image::fake(function ($prompt) use ($models): string {
+        $models[] = $prompt->model;
+
+        return base64_encode((string) file_get_contents(BlogImageFiles::png(1536, 1024)));
+    })->preventStrayImages();
+
+    $this->artisan('festilaw:blog-bench-images', ['run' => 'test', '--model' => ['google/gemini-nano-banana-2.1', 'openai/gpt-5.4-image-2']])->assertSuccessful();
+
+    expect($models->getArrayCopy())->toBe(['google/gemini-nano-banana-2.1', 'openai/gpt-5.4-image-2'])
+        ->and(BlogGeneration::query()->count() + BlogImage::query()->count())->toBe(0);
+    Image::assertGenerated(fn ($prompt): bool => $prompt->contains('A parcel on a wooden workbench.'));
+    Storage::disk('local')->assertExists(['blog-bench/test/images/etsy--google_gemini-nano-banana-2.1.png', 'blog-bench/test/images/etsy--openai_gpt-5.4-image-2.png']);
+    expect(benchFile('images/etsy--openai_gpt-5.4-image-2.json'))
+        ->prompt->toBe('A parcel on a wooden workbench.')
+        ->width->toBe(1536)
+        ->height->toBe(1024)
+        ->path->toBe('blog-bench/test/images/etsy--openai_gpt-5.4-image-2.png');
+
+    // Une reprise ne repaie pas une image deja faite.
+    $this->artisan('festilaw:blog-bench-images', ['run' => 'test', '--model' => ['openai/gpt-5.4-image-2']])->assertSuccessful();
+
+    expect($models)->toHaveCount(2);
+});
+
+it('gives the cost of an image bench without any call, and refuses a topic, a model or a bench it cannot replay', function () {
+    seedImageBench();
+    Image::fake()->preventStrayImages();
+
+    $this->artisan('festilaw:blog-bench-images', ['run' => 'test', '--model' => ['openai/gpt-5-image-mini'], '--dry' => true])
+        ->expectsOutputToContain('1 sujet(s), 1 modele(s)')
+        ->assertSuccessful();
+    $this->artisan('festilaw:blog-bench-images', ['run' => 'test', '--model' => ['openai/gpt-5.4-image-2'], '--topic' => ['nope']])
+        ->expectsOutputToContain('Sujet ou configuration inconnu : nope.')
+        ->assertFailed();
+    $this->artisan('festilaw:blog-bench-images', ['run' => 'test', '--model' => ['anthropic/claude-haiku-5.5']])
+        ->expectsOutputToContain('Modele d\'image absent du catalogue : anthropic/claude-haiku-5.5.')
+        ->assertFailed();
+
+    Storage::disk('local')->put('blog-bench/test/articles/etsy--current.json', json_encode(['topic' => ['key' => 'etsy'], 'image' => ['generated' => false, 'reason' => 'no description']]));
+    $this->artisan('festilaw:blog-bench-images', ['run' => 'test', '--model' => ['openai/gpt-5.4-image-2']])
+        ->expectsOutputToContain('Aucune image n\'a été générée pour le sujet etsy dans ce banc')
+        ->assertFailed();
+
+    Image::assertNothingGenerated();
+});

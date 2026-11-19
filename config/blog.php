@@ -143,6 +143,8 @@ return [
          | 18/11) : voir `safety_stop_percent`.
          |
          | Modeles : ceux que les essais des 18 et 19/11 recommandent (SC7, docs/comparaison-modeles.md du chantier).
+         | GPT-5.4 Image 2 pour les images generees, retenu par Micha a l'essai d'images du 19/11 (C9) : le moins
+         | cher, le plus rapide, et le seul qui ne dessine pas de faux texte.
          | Haiku 5.5 pour le sujet. GPT-6 Luna pour la recherche, ses dossiers etant plus riches et plus precis
          | que ceux de Haiku sur 3 paires sur 5 (1 pour Haiku). Luna aussi pour la redaction et les versions :
          | trois a quatre fois plus rapide que DeepSeek V4.1 Flash pour un cout voisin, au prix d'une langue un
@@ -163,7 +165,7 @@ return [
                 'writing' => 'openai/gpt-6-luna',
                 'verification' => 'openai/gpt-6.1-terra',
                 'translation' => 'openai/gpt-6-luna',
-                'image' => 'openai/gpt-5-image-mini',
+                'image' => 'openai/gpt-5.4-image-2',
             ],
             'image_mode' => 'stock',
             'max_images' => 1,
@@ -238,18 +240,21 @@ return [
          | refuse le reglage de resolution que le SDK lui envoie.
          |
          | `price_microusd` : le prix d'une image paysage, bas et haut, tel qu'on l'a mesure. Il sert a
-         | l'estimation. GPT-5 Image Mini a coute 0,0127 $ ou 0,0498 $ pour la meme taille (banc du 18/11).
+         | l'estimation. GPT-5 Image Mini a coute 0,0127 $ ou 0,0498 $ pour la meme taille (banc du 18/11) ;
+         | GPT-5.4 Image 2 de 0,0053 a 0,0109 $ et Nano Banana 2.1 de 0,0604 a 0,0640 $ sur les memes prompts
+         | (banc d'images du 19/11, `festilaw:blog-bench-images`).
          | `reserve_microusd` : ce qu'il doit rester avant l'arret de securite pour demander une image. Pour
-         | Nano Banana 2, mesure du 17/11 (6,7 a 10 centimes) doublee. Pour les trois autres, deduit du prix
-         | public d'un jeton d'image (17/11) rapporte a ces mesures. Sans prix mesure, l'estimation compte la
-         | moitie de la reserve en bas et la reserve en haut.
+         | Nano Banana 2, mesure du 17/11 (6,7 a 10 centimes) doublee. Pour Nano Banana 2.1, sa mesure du 19/11
+         | arrondie au-dessus. Pour les deux autres, deduit du prix public d'un jeton d'image (17/11) rapporte
+         | a ces mesures. Sans prix mesure, l'estimation compte la moitie de la reserve en bas et la reserve en
+         | haut.
          */
         'image_models' => [
             'openai/gpt-5-image-mini' => ['name' => 'GPT-5 Image Mini', 'provider' => 'OpenAI', 'price_microusd' => [12_700, 49_800], 'reserve_microusd' => 50_000],
             'google/gemini-3.1-flash-image' => ['name' => 'Nano Banana 2', 'provider' => 'Google', 'reserve_microusd' => 120_000],
-            'google/gemini-nano-banana-2.1' => ['name' => 'Nano Banana 2.1', 'provider' => 'Google', 'reserve_microusd' => 60_000],
+            'google/gemini-nano-banana-2.1' => ['name' => 'Nano Banana 2.1', 'provider' => 'Google', 'price_microusd' => [60_400, 64_000], 'reserve_microusd' => 80_000],
             'google/gemini-3-pro-image' => ['name' => 'Nano Banana Pro', 'provider' => 'Google', 'reserve_microusd' => 240_000],
-            'openai/gpt-5.4-image-2' => ['name' => 'GPT-5.4 Image 2', 'provider' => 'OpenAI', 'reserve_microusd' => 60_000],
+            'openai/gpt-5.4-image-2' => ['name' => 'GPT-5.4 Image 2', 'provider' => 'OpenAI', 'price_microusd' => [5_300, 10_900], 'reserve_microusd' => 60_000],
         ],
 
         /*

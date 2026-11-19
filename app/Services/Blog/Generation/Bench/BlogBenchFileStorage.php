@@ -109,6 +109,31 @@ final readonly class BlogBenchFileStorage
         }
     }
 
+    /**
+     * La fiche d'une image du banc d'images (un sujet, un autre modele), ou nulle si elle n'est pas encore faite.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function imageTrial(string $run, string $topicKey, string $model): ?array
+    {
+        return $this->read($this->path($run, 'images/'.$this->imageTrialName($topicKey, $model).'.json'));
+    }
+
+    /**
+     * Range l'image d'un autre modele a cote de celle du sujet, puis sa fiche, qui recoit le chemin de l'image.
+     *
+     * @param  array<string, mixed>  $record
+     * @return array<string, mixed>
+     */
+    public function saveImageTrial(string $run, string $topicKey, string $model, string $temporaryPath, array $record): array
+    {
+        $name = $this->imageTrialName($topicKey, $model);
+        $record = [...$record, 'path' => $this->saveImage($run, $name, $temporaryPath)];
+        $this->write($this->path($run, "images/{$name}.json"), $this->json($record));
+
+        return $record;
+    }
+
     /** Le chemin complet d'un banc, pour le dire a la personne qui l'a lance. */
     public function location(string $run): string
     {
@@ -118,6 +143,11 @@ final readonly class BlogBenchFileStorage
     private function verificationName(string $articleKey, string $model): string
     {
         return $articleKey.'--'.str_replace('/', '_', $model).'.json';
+    }
+
+    private function imageTrialName(string $topicKey, string $model): string
+    {
+        return $topicKey.'--'.str_replace('/', '_', $model);
     }
 
     private function path(string $run, string $file): string

@@ -15,7 +15,7 @@ final readonly class BlogAiModelCatalog
     public const IMAGE_SETTING = 'image';
 
     /**
-     * @param  array<string, array{name?: string, provider?: string, input?: int, output?: int, price_margin_percent?: int, token_factor_percent?: int, reasoning_tokens?: array{0: int, 1: int}}>  $textModels
+     * @param  array<string, array{name?: string, provider?: string, input?: int, output?: int, price_margin_percent?: int, token_factor_percent?: int, reasoning_tokens?: array<int|string, mixed>, lowest_effort?: string}>  $textModels
      * @param  array<string, array{name?: string, provider?: string, reserve_microusd?: int, price_microusd?: array{0: int, 1: int}}>  $imageModels
      */
     public function __construct(

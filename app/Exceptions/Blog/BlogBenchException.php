@@ -74,6 +74,14 @@ final class BlogBenchException extends BaseAppException
         );
     }
 
+    public static function noImagePrompt(string $topicKey): self
+    {
+        return new self(
+            technicalMessage: "Blog bench: no generated image, so no prompt to replay, for topic [{$topicKey}].",
+            userMessage: __('Aucune image n\'a été générée pour le sujet :topic dans ce banc : il n\'y a pas de prompt à redonner.', ['topic' => $topicKey]),
+        );
+    }
+
     public static function unexpectedImage(string $mime): self
     {
         return new self(
