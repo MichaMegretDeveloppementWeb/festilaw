@@ -76,4 +76,19 @@ final readonly class BlogBenchPlan
             array_values($unknown),
         ];
     }
+
+    /**
+     * Le meme plan, la recherche confiee a un autre modele. Le cadrage du sujet garde le sien, pour que seule
+     * la recherche change quand on compare les dossiers de faits de deux modeles.
+     */
+    public function withResearchModel(string $model): self
+    {
+        return new self($this->topics, $this->configurations, [...$this->sharedModels, 'research' => $model], $this->imageModel, $this->words);
+    }
+
+    /** Le meme plan sans configuration : les sujets sont prepares, aucun article n'est ecrit, aucune image n'est generee. */
+    public function topicsOnly(): self
+    {
+        return new self($this->topics, [], $this->sharedModels, $this->imageModel, $this->words);
+    }
 }

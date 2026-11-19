@@ -25,6 +25,9 @@ use InvalidArgumentException;
  * Le code applique lui-meme les corrections, pour que le style de la version ne bouge pas. Une correction est
  * ecartee quand son passage ne se trouve pas une seule fois dans la version, ou quand elle ajouterait un lien,
  * un jeton, un emplacement d'image ou un chiffre absent du texte anglais.
+ *
+ * Le controle recoit le lexique de sa langue, comme la traduction. Sans lui, il a « corrige » vers l'anglais un
+ * terme officiel juste (« Attention » devenu « Attention » ou « Avertissements », essai du 19/11).
  */
 final class VersionCheckStep extends EditorialStep
 {
@@ -66,7 +69,11 @@ final class VersionCheckStep extends EditorialStep
         }
 
         $language = self::LANGUAGES[$this->locale];
-        $agent = new VersionCheckAgent($this->prompts->get('festilaw-context')."\n\n".$this->prompts->render('step-version-check', ['language' => $language]));
+        $agent = new VersionCheckAgent(implode("\n\n", [
+            $this->prompts->get('festilaw-context'),
+            $this->prompts->get('lexicon-'.$this->locale),
+            $this->prompts->render('step-version-check', ['language' => $language]),
+        ]));
         $reply = $this->ask($context, $agent, implode("\n\n", [
             $this->block('English article (checked against the sources)', $english->forPrompt()),
             $this->block("{$language} version to check", $version->forPrompt()),

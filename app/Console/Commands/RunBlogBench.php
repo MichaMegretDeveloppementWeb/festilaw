@@ -14,6 +14,7 @@ use App\Services\Blog\Generation\Bench\BlogBenchFileStorage;
 use App\Services\Blog\Generation\Bench\BlogBenchForecaster;
 use App\Services\Blog\Generation\Bench\BlogBenchMeasures;
 use App\Services\Blog\Generation\BlogAiCostFormatter;
+use App\Services\Blog\Generation\BlogAiModelCatalog;
 use App\Services\Blog\Generation\BlogAiSettingsService;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
@@ -35,7 +36,9 @@ final class RunBlogBench extends Command
         {--dry : Donne le cout estime du banc, sans aucun appel}
         {--run= : Nom du banc a reprendre (sinon un nouveau banc, a la date et a l\'heure du lancement)}
         {--topic=* : Sujets a jouer (cles de blog.ai.bench.topics), tous par defaut}
-        {--configuration=* : Configurations a jouer (cles de blog.ai.bench.configurations), toutes par defaut}';
+        {--configuration=* : Configurations a jouer (cles de blog.ai.bench.configurations), toutes par defaut}
+        {--research-model= : Modele de la recherche, a la place de celui de blog.ai.bench.shared_models (comparaison des dossiers de faits)}
+        {--topics-only : Prepare les sujets (cadrage et recherche) sans ecrire d\'article}';
 
     protected $description = 'Banc d\'essai des modeles : rejoue le pipeline sur des sujets fixes, sans rien creer dans le site.';
 
@@ -48,6 +51,7 @@ final class RunBlogBench extends Command
         BlogBenchMeasures $measures,
         BlogBenchFileStorage $storage,
         BlogAiCostFormatter $dollars,
+        BlogAiModelCatalog $catalog,
     ): int {
         [$plan, $unknown] = $plan->only((array) $this->option('topic'), (array) $this->option('configuration'));
 
@@ -55,6 +59,22 @@ final class RunBlogBench extends Command
             $this->error(BlogBenchException::unknownKeys($unknown)->getUserMessage());
 
             return self::FAILURE;
+        }
+
+        $researchModel = (string) $this->option('research-model');
+
+        if ($researchModel !== '') {
+            if (! in_array($researchModel, $catalog->idsFor('research'), true)) {
+                $this->error(BlogBenchException::unknownResearchModel($researchModel)->getUserMessage());
+
+                return self::FAILURE;
+            }
+
+            $plan = $plan->withResearchModel($researchModel);
+        }
+
+        if ($this->option('topics-only')) {
+            $plan = $plan->topicsOnly();
         }
 
         $settings = $settingsService->current();

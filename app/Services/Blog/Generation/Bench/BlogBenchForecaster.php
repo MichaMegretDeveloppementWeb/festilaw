@@ -56,7 +56,8 @@ final readonly class BlogBenchForecaster
     public function forecast(BlogBenchPlan $plan): array
     {
         $shared = $this->shared($plan);
-        $image = $this->image($plan);
+        // Sans article a ecrire, le banc ne genere pas d'image : elle part du premier article ecrit.
+        $image = $plan->configurations === [] ? new GenerationCostForecast(0, 0) : $this->image($plan);
         $configurations = [];
         $writingLow = 0;
         $writingHigh = 0;

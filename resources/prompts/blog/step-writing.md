@@ -7,7 +7,8 @@ Content:
 - Use only facts from the research file and from the reference of EU product rules. The research file gives the news and what the article is about. The reference gives the stable rules that explain it, stated as the reference states them. Do not add facts from memory. If neither supports a point, leave it out.
 - A rule of law comes from a fact of the file or from the reference, and from nowhere else. Never derive a new rule, even a plausible one, to explain or round off another.
 - An example, a checklist or a practical step only applies rules the file or the reference states. It never adds one. Check that each example follows the rule it illustrates (an online buyer sees the listing, not the box).
-- Copy every condition as the sources give it: who the rule binds, when, and under which condition. A list "in order" keeps the condition of each rank; never turn it into a stricter cascade or reverse a condition.
+- Copy every condition as the sources give it: who the rule binds, when, and under which condition. Never add a condition, an order or a cascade the sources do not state, and never reverse one. Operators that the sources make responsible or liable together stay together.
+- When the research file and the reference of EU product rules disagree on a rule, follow the reference.
 - Keep each actor in place: the seller, the manufacturer, the importer and the platform each do what the sources say they do. A platform's own requirement is presented as the platform's, never as the law.
 - Leave it out silently. The reader does not know there is a research file: never write what the sources do not say, which pages were reviewed, where "this guide" stops, or that a point could not be confirmed. Write about the subject, never about your material.
 - Give the answer in the introduction. Develop it with the concrete material of the file. End on what the seller does next.

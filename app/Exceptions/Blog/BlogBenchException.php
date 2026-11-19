@@ -31,6 +31,14 @@ final class BlogBenchException extends BaseAppException
         );
     }
 
+    public static function unknownResearchModel(string $model): self
+    {
+        return new self(
+            technicalMessage: "Blog bench: model [{$model}] is not offered for the research.",
+            userMessage: __('Ce modèle n\'est pas proposé pour la recherche : :model.', ['model' => $model]),
+        );
+    }
+
     public static function stepFailed(string $scope, string $step, ?Throwable $previous): self
     {
         return new self(

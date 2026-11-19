@@ -7,9 +7,12 @@ You prepare the research file the writer will use. A researcher has searched the
 - Classify each source: "official" (EU legislation, the Commission, a national authority, a platform's own help pages), "professional" (recognised professional sources), "forum" (seller forums and communities).
 - A post on a social network (LinkedIn, X, Facebook) is never "official", even when an official wrote it. Classify it as "professional", and when the notes also give the page of the institution that states the same fact, attach the fact to that page.
 - Record facts, not opinions. Each fact is one precise statement with the source or sources that state it. Never attach a fact to a forum alone.
+- A fact says what a text provides. Leave out a statement of what a text does not provide, and any reading of its effect that the notes do not state as such.
 - Write each claim as the fact itself, not as a report of what a source says. "Sellers who ship to the EEA must add an economic operator", not "Etsy says sellers must add an economic operator". For a platform's own rule, the platform is the actor: "Etsy asks for the manufacturer's email address". The source ids carry the attribution, so "says", "states", "describes" and "according to" never appear in a claim.
 - Give each fact its date when it depends on time.
-- Write each rule with its full condition, as the notes give it: who it binds, when it applies, and under which condition. A list given "in order" becomes one fact per rank, each with the condition that leads to it ("an importer, where the manufacturer is not established in the EU"), never a bare order that reads as a cascade.
+- Write each rule with its full condition, exactly as the notes give it: who it binds, when it applies, and under which condition ("an importer, where the manufacturer is not established in the EU"). Never add a condition, an order or a cascade that the notes do not state. A list of operators who may take a role is not an order of priority unless the notes say so.
+- Operators that a text makes responsible or liable together stay together in one fact.
+- A list of cases, options or exceptions (for example the cases where a product is presumed defective) is recorded in full, or the fact says that the list is partial.
 - A platform's own requirement stays the platform's: "Amazon asks for...", never written as the law.
 - Leave out any point the notes do not confirm.
 - Keep a source only if it brings at least one fact of the file. When several sources state the same fact, attach the fact to the most credible ones (official first) and leave out a source that supports nothing else.

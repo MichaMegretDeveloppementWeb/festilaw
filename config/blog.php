@@ -142,11 +142,13 @@ return [
          | une fois depasse (decision de Micha du 17/11). Il n'y a plus de plafond par article (decision du
          | 18/11) : voir `safety_stop_percent`.
          |
-         | Modeles : ceux que le banc d'essai du 18/11 recommande (SC7, docs/comparaison-modeles.md du chantier).
-         | Haiku 5.5 pour le sujet et la recherche. GPT-6 Luna pour la redaction et les versions : cinq fois
-         | plus rapide que DeepSeek V4.1 Flash pour un cout voisin, et plus pres du dossier. GPT-6.1 Terra pour
-         | la verification et le controle des versions : il attrapait 10 erreurs connues sur 11, contre 1 pour
-         | Haiku. Environ 0,07 a 0,09 $ l'article, recherche comprise, image a part.
+         | Modeles : ceux que les essais des 18 et 19/11 recommandent (SC7, docs/comparaison-modeles.md du chantier).
+         | Haiku 5.5 pour le sujet. GPT-6 Luna pour la recherche, ses dossiers etant plus riches et plus precis
+         | que ceux de Haiku sur 3 paires sur 5 (1 pour Haiku). Luna aussi pour la redaction et les versions :
+         | trois a quatre fois plus rapide que DeepSeek V4.1 Flash pour un cout voisin, au prix d'une langue un
+         | peu moins vivante (choix de Micha). GPT-6.1 Terra pour la verification et le controle des versions :
+         | il attrapait 10 erreurs connues sur 11, contre 1 pour Haiku. Environ 0,07 a 0,09 $ l'article,
+         | recherche comprise, image a part.
          */
         'defaults' => [
             'enabled' => false,
@@ -159,7 +161,7 @@ return [
             'avoided_topics' => [],
             'models' => [
                 'topic' => 'anthropic/claude-haiku-5.5',
-                'research' => 'anthropic/claude-haiku-5.5',
+                'research' => 'openai/gpt-6-luna',
                 'writing' => 'openai/gpt-6-luna',
                 'verification' => 'openai/gpt-6.1-terra',
                 'translation' => 'openai/gpt-6-luna',
@@ -393,9 +395,10 @@ return [
             // Plafond d'une verification rejouee par festilaw:blog-bench-verify (reserve de GPT-6.1 Terra : environ 0,33 $).
             'verification_cap_cents' => 50,
             'article_words' => 1_000,
+            // Les modeles du site depuis le 19/11 ; --research-model en essaie un autre pour la recherche.
             'shared_models' => [
                 'topic' => 'anthropic/claude-haiku-5.5',
-                'research' => 'anthropic/claude-haiku-5.5',
+                'research' => 'openai/gpt-6-luna',
             ],
             'image_model' => 'openai/gpt-5-image-mini',
             'topics' => [
@@ -427,6 +430,11 @@ return [
                 'luna-terra' => [
                     'name' => 'Haiku 5.5 + GPT-6 Luna + GPT-6.1 Terra',
                     'models' => ['writing' => 'openai/gpt-6-luna', 'verification' => 'openai/gpt-6.1-terra', 'translation' => 'openai/gpt-6-luna'],
+                ],
+                // Essai du 19/11 : un redacteur bon marche jamais essaye, Mistral etant reconnu pour son francais.
+                'mistral-terra' => [
+                    'name' => 'Haiku 5.5 + Mistral Large 4 + GPT-6.1 Terra',
+                    'models' => ['writing' => 'mistralai/mistral-large-4-0', 'verification' => 'openai/gpt-6.1-terra', 'translation' => 'mistralai/mistral-large-4-0'],
                 ],
                 'sonnet' => [
                     'name' => 'Haiku 5.5 + Sonnet 5.5',

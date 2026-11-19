@@ -678,3 +678,14 @@ it('corrects a version that changes a fact of the English article, with the mode
         && $prompt->contains('French version to check')
         && str_contains($prompt->agent->instructions(), 'an alternative turned into a cumulation'));
 });
+
+it('gives the version check the lexicon of its own language, so that an official term is never corrected toward the English', function () {
+    // Essai du 19/11 : sans lexique, le controle a change « Attention » en « Attention » ou « Avertissements ».
+    VersionCheckAgent::fake([['corrections' => [], 'report_fr' => 'Version conforme.']])->preventStrayPrompts();
+
+    app()->make(VersionCheckStep::class, ['locale' => 'es'])->execute(Fixtures::context(['style' => Fixtures::articleOutput(), 'translation_es' => Fixtures::articleOutput()]));
+
+    VersionCheckAgent::assertPrompted(fn ($prompt): bool => str_contains($prompt->agent->instructions(), 'Domain lexicon, English to Spanish')
+        && ! str_contains($prompt->agent->instructions(), 'Domain lexicon, English to French')
+        && str_contains($prompt->agent->instructions(), 'Never correct it toward the English'));
+});

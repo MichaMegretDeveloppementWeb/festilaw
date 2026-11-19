@@ -15,7 +15,9 @@ Use these terms consistently. When a platform shows a label in English to seller
 | manufacturer | fabricante |
 | importer | importador |
 | distributor | distribuidor |
-| fulfilment service provider | prestador de servicios de tramitación de pedidos |
+| authorised representative | representante autorizado |
+| registered trade name, registered trade mark | nombre comercial registrado, marca registrada |
+| fulfilment service provider | prestador de servicios logísticos, el término del Reglamento (UE) 2019/1020 y del GPSR |
 | online marketplace | mercado en línea |
 | market surveillance authority | autoridad de vigilancia del mercado |
 | technical documentation | documentación técnica |

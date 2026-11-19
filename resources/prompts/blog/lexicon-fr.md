@@ -15,6 +15,8 @@ Use these terms consistently. When a platform shows a label in English to seller
 | manufacturer | fabricant |
 | importer | importateur |
 | distributor | distributeur |
+| authorised representative | mandataire, le terme du règlement (UE) 2019/1020 et du GPSR. Never « représentant autorisé » |
+| registered trade name, registered trade mark | raison sociale, marque déposée |
 | fulfilment service provider | prestataire de services d'exécution des commandes |
 | online marketplace | place de marché en ligne |
 | market surveillance authority | autorité de surveillance du marché |

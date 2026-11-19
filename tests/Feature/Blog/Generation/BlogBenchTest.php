@@ -8,11 +8,13 @@ use App\Ai\Agents\Blog\TranslatorAgent;
 use App\Ai\Agents\Blog\VersionCheckAgent;
 use App\Ai\Agents\Blog\WebSearchAgent;
 use App\Ai\Agents\Blog\WriterAgent;
+use App\Data\Blog\Generation\Bench\BlogBenchPlan;
 use App\Data\Blog\Generation\GenerationImageOptions;
 use App\Enums\Blog\Generation\BlogAiImageMode;
 use App\Models\BlogGeneration;
 use App\Models\BlogImage;
 use App\Models\BlogPost;
+use App\Services\Blog\Generation\Bench\BlogBenchForecaster;
 use App\Services\Blog\Generation\BlogGenerationCostForecaster;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -32,6 +34,7 @@ uses(RefreshDatabase::class);
 
 const BENCH_DEEPSEEK = 'deepseek/deepseek-v4.1-flash';
 const BENCH_HAIKU = 'anthropic/claude-haiku-5.5';
+const BENCH_LUNA = 'openai/gpt-6-luna';
 
 beforeEach(function () {
     Sleep::fake();
@@ -192,6 +195,39 @@ it('refuses a topic or a configuration that the bench does not know', function (
         ->assertFailed();
 
     expect($calls->getArrayCopy())->toBe([]);
+});
+
+it('prepares the topics with another research model and writes no article when asked', function () {
+    $calls = fakeBenchAgents();
+
+    $this->artisan('festilaw:blog-bench', ['--run' => 'test', '--research-model' => BENCH_LUNA, '--topics-only' => true])->assertSuccessful();
+
+    // Seule la recherche change de modele : le cadrage garde le sien, rien n'est ecrit ni dessine.
+    expect($calls['topic'])->toBe([BENCH_HAIKU])
+        ->and($calls['research_notes'])->toBe([BENCH_LUNA])
+        ->and($calls['research'])->toBe([BENCH_LUNA])
+        ->and($calls->getArrayCopy())->not->toHaveKey('writing');
+    Image::assertNothingGenerated();
+    expect(benchFile('topics/etsy.json')['models']['research'])->toBe(BENCH_LUNA)
+        ->and(Storage::disk('local')->allFiles('blog-bench/test/articles'))->toBe([]);
+});
+
+it('refuses a research model the catalogue does not offer, without calling any model', function () {
+    $calls = fakeBenchAgents();
+
+    $this->artisan('festilaw:blog-bench', ['--research-model' => 'nope/model'])
+        ->expectsOutputToContain('Ce modèle n\'est pas proposé pour la recherche : nope/model.')
+        ->assertFailed();
+
+    expect($calls->getArrayCopy())->toBe([]);
+});
+
+it('estimates a topics-only bench at the research alone, with no image and no article', function () {
+    $forecast = app(BlogBenchForecaster::class)->forecast(BlogBenchPlan::fromConfig(config('blog.ai.bench'))->topicsOnly());
+
+    expect($forecast['configurations'])->toBe([])
+        ->and([$forecast['total']->lowMicrousd, $forecast['total']->highMicrousd])->toBe([$forecast['shared']->lowMicrousd, $forecast['shared']->highMicrousd])
+        ->and($forecast['shared']->lowMicrousd)->toBeGreaterThan(0);
 });
 
 it('replays the verification of a written article with each model asked, one file per model, nothing created in the site', function () {

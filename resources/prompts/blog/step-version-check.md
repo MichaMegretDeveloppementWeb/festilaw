@@ -18,6 +18,8 @@ Look for:
 
 Do not report a difference of style, order, wording, title or headings when the facts are the same. Do not correct the language, the typography or the style.
 
+The domain lexicon above gives the official {{language}} wording of legal terms, as the {{language}} versions of the EU texts use it. A lexicon term that differs from a literal translation of the English (for example the word that must precede a toy warning) is the right term, not a difference of fact. Never correct it toward the English, and never add the English variant next to it.
+
 For each difference, give in "corrections":
 
 - "original": the exact passage of the {{language}} version, copied character for character, long enough to occur only once in the version (a sentence or a clause);
