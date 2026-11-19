@@ -421,6 +421,11 @@ return [
                     'name' => 'Haiku 5.5 + DeepSeek V4.1 Flash + GPT-6.1 Terra',
                     'models' => ['writing' => 'deepseek/deepseek-v4.1-flash', 'verification' => 'openai/gpt-6.1-terra', 'translation' => 'deepseek/deepseek-v4.1-flash'],
                 ],
+                // Essai du 19/11 : Luna, trois fois plus rapide que DeepSeek, verifie par Terra.
+                'luna-terra' => [
+                    'name' => 'Haiku 5.5 + GPT-6 Luna + GPT-6.1 Terra',
+                    'models' => ['writing' => 'openai/gpt-6-luna', 'verification' => 'openai/gpt-6.1-terra', 'translation' => 'openai/gpt-6-luna'],
+                ],
                 'sonnet' => [
                     'name' => 'Haiku 5.5 + Sonnet 5.5',
                     'models' => ['writing' => 'anthropic/claude-sonnet-5.5', 'verification' => 'anthropic/claude-haiku-5.5', 'translation' => 'anthropic/claude-sonnet-5.5'],
