@@ -21,6 +21,9 @@
 @source '../views/layouts/admin.blade.php';
 @source '../views/livewire/admin';
 @source '../views/components/admin';
+/* Vues du kit publiees dans le projet pour y ajouter un emplacement (combobox, 19/11/2026) : leurs classes
+   `ui:` viennent de la feuille du kit, les notres doivent etre compilees ici. */
+@source '../views/vendor/ui';
 @source '../js/admin';
 
 /* Le mode sombre suit la classe posee par le kit (falcon_theme_class), pas le reglage de l'appareil. */

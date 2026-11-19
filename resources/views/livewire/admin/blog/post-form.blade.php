@@ -42,6 +42,7 @@
     x-on:post-translation-failed.window="translation.pending = null"
     x-on:keydown.escape.window="settingsOpen = false"
     x-on:ui-modal-closed.window="modalClosed($event.detail)"
+    x-on:post-category-create="openCategory($event.detail.name)"
     class="flex min-h-[calc(100svh-6.5rem)] flex-col sm:min-h-[calc(100svh-7.5rem)]"
 >
     {{-- Contenu des trois langues, remis une seule fois (texte echappe, lu par le script) : Livewire ne

@@ -62,6 +62,8 @@ const blogPostForm = (config) => ({
     imageForm: emptyImageForm(),
     // Source en cours de saisie dans sa fenetre. `index` nul : une nouvelle source.
     sourceForm: { index: null, label: '', url: '', errors: {}, saving: false },
+    // Categorie creee depuis la liste des categories : son nom dans les trois langues, et les refus du serveur.
+    categoryForm: { names: { en: '', fr: '', es: '' }, errors: {}, saving: false },
     // Ce qui est tape dans la recherche de la fenetre des articles a lier.
     relatedQuery: '',
     // Change a chaque mouvement du curseur : la barre d'outils relit l'etat des boutons.
@@ -575,6 +577,38 @@ const blogPostForm = (config) => ({
             this.$dispatch('ui-close-modal', 'post-source');
         } finally {
             this.sourceForm.saving = false;
+        }
+    },
+
+    // Ouvre la fenetre d'une nouvelle categorie (action de la liste des categories, decision de Micha du 19/11) :
+    // le texte tape dans la recherche est deja ecrit dans la langue de l'onglet ouvert.
+    openCategory(name = '') {
+        this.categoryForm = { names: { en: '', fr: '', es: '' }, errors: {}, saving: false };
+        this.categoryForm.names[this.tab] = name;
+        this.$dispatch('ui-open-modal', 'post-category');
+    },
+
+    // Le serveur cree la categorie et la choisit pour l'article, ou rend ses refus par champ.
+    async createCategory() {
+        if (this.categoryForm.saving) {
+            return;
+        }
+
+        this.categoryForm.saving = true;
+
+        try {
+            const errors = await this.$wire.createCategory(this.categoryForm.names);
+
+            if (errors && Object.keys(errors).length > 0) {
+                this.categoryForm.errors = errors;
+
+                return;
+            }
+
+            this.dirty = true;
+            this.$dispatch('ui-close-modal', 'post-category');
+        } finally {
+            this.categoryForm.saving = false;
         }
     },
 

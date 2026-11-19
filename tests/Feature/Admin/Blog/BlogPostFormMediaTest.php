@@ -13,6 +13,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Tests\Support\BlogContent;
 use Tests\Support\BlogImageFiles;
@@ -396,6 +397,30 @@ describe('choosing the related articles', function () {
             ->assertHasNoErrors();
 
         expect($post->relatedPosts()->orderBy('blog_post_related.position')->pluck('blog_posts.id')->all())->toBe([$third->id, $second->id]);
+    });
+
+    it('shows the chosen related articles at the top of their window, each removable from there', function () {
+        $post = BlogContent::draft('pending');
+        $first = BlogContent::published('label');
+        $second = BlogContent::draft('other');
+
+        // Seule la liste des articles choisis, dans la fenetre (la section de l'article montre les memes titres).
+        $chosen = fn (string $html): string => Str::betweenFirst($html, 'data-related-chosen', '</ul>');
+
+        $form = Livewire::test(PostForm::class, ['post' => $post->id])
+            ->assertDontSeeHtml('data-related-chosen')
+            ->call('openRelatedPicker')
+            ->call('addRelated', $first->id)
+            ->call('addRelated', $second->id)
+            ->assertSee('Articles liés');
+
+        expect($chosen($form->html()))->toContain('Label fr')
+            ->toContain('Other fr')
+            ->toContain('$wire.removeRelated('.$first->id.')');
+
+        $form->call('removeRelated', $first->id);
+
+        expect($chosen($form->html()))->not->toContain('Label fr')->toContain('Other fr');
     });
 
     it('stops at six related articles', function () {

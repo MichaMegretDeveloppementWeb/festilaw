@@ -198,7 +198,10 @@ it('shows the public path in front of the address, and explains the two Google f
         ->assertSee('Résultat dans Google')
         ->assertSee('Si ces champs sont vides, le nom de la catégorie et la description de la catégorie sont utilisés.')
         ->assertDontSee('Sans rien remplir ici')
-        ->assertSee('Créée à partir du nom. Vous pouvez la modifier.')
+        ->assertSee('L\'adresse de la page de la catégorie, dans cette langue.')
+        ->assertSee('Reprendre l\'adresse depuis le nom')
+        ->assertDontSee('Créée à partir du nom')
+        ->assertDontSee('Adresse personnalisée')
         ->assertDontSee('Laissez vide');
 });
 

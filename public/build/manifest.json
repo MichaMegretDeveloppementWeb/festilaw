@@ -4,7 +4,7 @@
     "name": "slug-field"
   },
   "resources/css/admin.css": {
-    "file": "assets/admin-DBbaYoUs.css",
+    "file": "assets/admin-DT9YtLpP.css",
     "name": "admin",
     "names": [
       "admin.css"
@@ -148,7 +148,7 @@
     ]
   },
   "resources/js/admin/blog-post-form.js": {
-    "file": "assets/blog-post-form-ZWxsPALU.js",
+    "file": "assets/blog-post-form-CQgoPAQX.js",
     "name": "blog-post-form",
     "src": "resources/js/admin/blog-post-form.js",
     "isEntry": true,

@@ -2,6 +2,7 @@
 
 use App\Enums\Blog\BlogPostStatus;
 use App\Livewire\Admin\Blog\PostForm;
+use App\Models\BlogCategory;
 use App\Models\BlogGeneration;
 use App\Models\BlogGenerationStep;
 use App\Models\BlogPost;
@@ -365,6 +366,59 @@ it('stops at thirty sources', function () {
         ->assertSet('sources.29.label', 'Dernière');
 });
 
+it('creates a missing category without leaving the article, and chooses it', function () {
+    $post = BlogContent::draft('pending');
+    $previousCategoryId = $post->blog_category_id;
+
+    $form = Livewire::test(PostForm::class, ['post' => $post->id])
+        ->call('createCategory', ['en' => ' Toys ', 'fr' => 'Jouets', 'es' => 'Juguetes'])
+        ->assertReturned([])
+        ->assertDispatched('ui-toast', title: 'Catégorie créée.', type: 'success');
+
+    $category = BlogCategory::query()->whereHas('translations', fn ($query) => $query->where('name', 'Jouets'))->with('translations')->sole();
+
+    $form->assertSet('categoryId', (string) $category->id)
+        ->assertViewHas('categoryOptions', fn (array $options): bool => ($options[$category->id] ?? null) === 'Jouets');
+
+    expect($category->translations->pluck('name', 'locale')->all())->toEqual(['en' => 'Toys', 'fr' => 'Jouets', 'es' => 'Juguetes'])
+        // L'adresse de chaque langue se deduit du nom.
+        ->and($category->translations->pluck('slug', 'locale')->all())->toEqual(['en' => 'toys', 'fr' => 'jouets', 'es' => 'juguetes'])
+        // Le choix de l'article s'enregistre avec lui, pas avant.
+        ->and($post->fresh()->blog_category_id)->toBe($previousCategoryId);
+});
+
+it('refuses a new category without its name in every language, and creates nothing', function () {
+    Livewire::test(PostForm::class)
+        ->call('createCategory', ['en' => 'Toys', 'fr' => '  ', 'es' => str_repeat('a', 256)])
+        ->assertReturned([
+            'fr' => 'Le nom en français est obligatoire.',
+            'es' => 'Le nom en espagnol ne peut pas dépasser 255 caractères.',
+        ])
+        ->assertSet('categoryId', '')
+        ->assertNotDispatched('ui-toast');
+
+    expect(BlogCategory::query()->count())->toBe(0);
+});
+
+it('offers a new category at the bottom of the category list, or alone when none exists yet', function () {
+    // Aucune categorie : un bouton ouvre la fenetre, a la place du lien vers la page Categories.
+    $html = Livewire::test(PostForm::class)
+        ->assertSee('Aucune catégorie n\'existe encore.')
+        ->assertSee('Créer la catégorie')
+        ->html();
+
+    expect($html)->toContain('data-create-category')
+        ->and($html)->not->toContain('data-combobox-action')
+        ->and($html)->not->toContain('href="'.route('admin.blog.categories.create').'"');
+
+    // Des categories : l'action vit en bas de la liste, dans l'emplacement ajoute a la vue du kit publiee.
+    BlogContent::category('rules');
+
+    expect(Livewire::test(PostForm::class)->html())->toContain('data-combobox-action')
+        ->toContain('data-create-category')
+        ->toContain('Nouvelle catégorie');
+});
+
 it('limits the length of every text field, naming the language', function () {
     Livewire::test(PostForm::class)
         ->set('texts.es.title', str_repeat('a', 256))
@@ -435,7 +489,11 @@ it('shows the public path in front of the address, and explains the two Google f
         ->assertSee('Résultat dans Google')
         ->assertSee('Si ces champs sont vides, le titre de l\'article et l\'extrait sont utilisés.')
         ->assertDontSee('Sans rien remplir ici')
-        ->assertSee('Créée à partir du titre. Vous pouvez la modifier.')
+        // L'aide dit a quoi sert le champ, jamais son etat ; le lien ne parait que si l'adresse a ete changee.
+        ->assertSee('L\'adresse de l\'article sur le site, dans cette langue.')
+        ->assertSee('Reprendre l\'adresse depuis le titre')
+        ->assertDontSee('Créée à partir du titre')
+        ->assertDontSee('Adresse personnalisée')
         ->assertDontSee('Proposée automatiquement');
 });
 

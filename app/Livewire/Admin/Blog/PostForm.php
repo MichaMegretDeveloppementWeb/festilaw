@@ -6,6 +6,7 @@ namespace App\Livewire\Admin\Blog;
 
 use App\Actions\Admin\Blog\SaveAndPublishBlogPostAction;
 use App\Actions\Admin\Blog\SaveAndScheduleBlogPostAction;
+use App\Actions\Blog\Category\SaveBlogCategoryAction;
 use App\Actions\Blog\Image\RecropBlogImageAction;
 use App\Actions\Blog\Image\StoreBlogImageAction;
 use App\Actions\Blog\Image\UpdateBlogImageAltAction;
@@ -14,9 +15,11 @@ use App\Actions\Blog\Post\SaveBlogPostAction;
 use App\Actions\Blog\Post\UnpublishBlogPostAction;
 use App\Data\Admin\Blog\BlogPostFormOpening;
 use App\Data\Admin\Blog\BlogPostStatusChangeResult;
+use App\Data\Blog\BlogCategoryTranslationData;
 use App\Data\Blog\BlogImageCrop;
 use App\Data\Blog\BlogPostTranslationData;
 use App\Data\Blog\BlogSourceData;
+use App\Data\Blog\SaveBlogCategoryData;
 use App\Data\Blog\SaveBlogPostData;
 use App\Data\Blog\StoreBlogImageData;
 use App\Enums\Blog\BlogImageUsage;
@@ -596,6 +599,55 @@ class PostForm extends Component
 
         $this->sources = array_values($this->sources);
         $this->resetErrorBag();
+    }
+
+    /**
+     * Cree une categorie depuis l'article, sans le quitter (decision de Micha du 19/11), puis la choisit pour lui.
+     * La fenetre de saisie vit dans le navigateur, qui affiche les refus rendus ici. Seul le nom est demande,
+     * dans chaque langue : l'adresse s'en deduit, la description se complete plus tard depuis Categories. La
+     * categorie existe aussitot ; le choix de l'article s'enregistre avec lui.
+     *
+     * @param  array<string, mixed>  $names  nom par langue
+     * @return array<string, string> refus par langue (`en`, `fr`, `es`) ou `form`, vide si la categorie est creee
+     */
+    public function createCategory(array $names, SaveBlogCategoryAction $saveCategory): array
+    {
+        $typed = [];
+        $rules = [];
+        $messages = [];
+
+        foreach (self::LOCALES as $locale => $language) {
+            $typed[$locale] = is_string($names[$locale] ?? null) ? trim($names[$locale]) : '';
+            $rules[$locale] = ['required', 'string', 'max:255'];
+            $messages["{$locale}.required"] = __('Le nom en :language est obligatoire.', ['language' => $language]);
+            $messages["{$locale}.max"] = __('Le nom en :language ne peut pas dépasser 255 caractères.', ['language' => $language]);
+        }
+
+        $validator = Validator::make($typed, $rules, $messages);
+
+        if ($validator->fails()) {
+            return array_map(static fn (array $refusals): string => $refusals[0], $validator->errors()->toArray());
+        }
+
+        $translations = array_map(static fn (string $name): BlogCategoryTranslationData => new BlogCategoryTranslationData(name: $name), $typed);
+
+        try {
+            $category = $saveCategory->execute(new SaveBlogCategoryData(null, $translations));
+        } catch (BaseAppException $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+
+            return ['form' => $e->getUserMessage()];
+        } catch (Throwable $e) {
+            Log::error('Unexpected error while creating a blog category from the post form.', ['post_id' => $this->postId, 'exception' => $e]);
+
+            return ['form' => __('La catégorie n\'a pas été créée. Réessayez. Si le problème persiste, contactez l\'assistance technique.')];
+        }
+
+        $this->categoryId = (string) $category->id;
+        $this->resetErrorBag('categoryId');
+        $this->dispatch('ui-toast', title: __('Catégorie créée.'), type: 'success');
+
+        return [];
     }
 
     /** Appele par wire:sort : rang de la source deplacee et sa nouvelle place (a partir de 0). */

@@ -52,11 +52,54 @@
     </x-slot:footer>
 </x-ui::modal>
 
-{{-- Articles a lier. La liste n'est lue par le serveur que pendant que la fenetre est ouverte
-     ($pickingRelated) ; la recherche filtre dans le navigateur. Un clic ajoute l'article, la fenetre reste
-     ouverte pour en ajouter d'autres. --}}
-<x-ui::modal name="post-related" :title="__('Ajouter un article lié')">
+{{-- Nouvelle categorie, ouverte depuis la liste des categories de l'article. Le nom est demande dans les trois
+     langues, car la categorie a une page publique dans chacune ; le reste se complete plus tard depuis la page
+     Categories. Les champs vivent dans le navigateur (categoryForm), le serveur rend ses refus par champ. --}}
+<x-ui::modal name="post-category" :title="__('Nouvelle catégorie')">
+    <div data-no-dirty class="space-y-4">
+        @foreach ($locales as $locale => $language)
+            <div wire:key="category-name-{{ $locale }}">
+                <x-ui::form-group :label="__('Nom en :language', ['language' => $language])" :for="'category-name-'.$locale">
+                    <x-ui::input :id="'category-name-'.$locale" type="text" x-model="categoryForm.names.{{ $locale }}" x-on:keydown.enter.prevent="createCategory()"
+                        maxlength="255" autocomplete="off" x-bind:aria-invalid="categoryForm.errors['{{ $locale }}'] ? 'true' : 'false'" />
+                </x-ui::form-group>
+                <p x-show="categoryForm.errors['{{ $locale }}']" x-cloak x-text="categoryForm.errors['{{ $locale }}']" class="mt-1.5 text-[12px] text-red-700 dark:text-red-400" role="alert"></p>
+            </div>
+        @endforeach
+
+        <p class="text-[12px] text-muted">{{ __('Vous pourrez compléter sa description plus tard, depuis la page Catégories.') }}</p>
+        <p x-show="categoryForm.errors.form" x-cloak x-text="categoryForm.errors.form" class="text-[12px] text-red-700 dark:text-red-400" role="alert"></p>
+    </div>
+
+    <x-slot:footer>
+        <x-ui::button variant="ghost" x-on:click="$dispatch('ui-close-modal', 'post-category')">{{ __('Annuler') }}</x-ui::button>
+        <x-ui::button x-on:click="createCategory()" x-bind:disabled="categoryForm.saving" data-confirm-category>{{ __('Créer la catégorie') }}</x-ui::button>
+    </x-slot:footer>
+</x-ui::modal>
+
+{{-- Articles lies. En haut, ceux deja choisis, en pastilles courtes qu'une croix retire : Micha devait fermer la
+     fenetre pour les voir (19/11). Dessous, les articles a lier : la liste n'est lue par le serveur que pendant
+     que la fenetre est ouverte ($pickingRelated), et la recherche filtre dans le navigateur. Un clic ajoute
+     l'article, la fenetre reste ouverte pour en ajouter d'autres. Ajouter ou retirer agit aussitot sur la
+     section « Articles liés » de l'article, qui s'enregistre avec lui. --}}
+<x-ui::modal name="post-related" :title="__('Articles liés')">
     <div data-no-dirty>
+        @if ($related !== [])
+            <ul class="mb-4 flex flex-wrap gap-1.5" data-related-chosen>
+                @foreach ($related as $item)
+                    <li wire:key="related-chosen-{{ $item['id'] }}"
+                        class="inline-flex max-w-[14rem] items-center gap-1 rounded-full bg-elevated py-0.5 pl-2.5 pr-1 text-[12px] font-medium text-primary">
+                        <span @class(['truncate', 'italic text-muted' => ! $item['title']]) title="{{ $item['title'] }}">{{ $item['title'] ?? __('Sans titre') }}</span>
+                        <button type="button" x-on:click="dirty = true; $wire.removeRelated({{ $item['id'] }})"
+                            class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-gray-200 hover:text-primary dark:hover:bg-gray-700"
+                            aria-label="{{ __('Retirer :title des articles liés', ['title' => $item['title'] ?? __('cet article')]) }}" title="{{ __('Retirer') }}">
+                            <x-ui::icon name="x-mark" class="h-3 w-3" stroke-width="2" />
+                        </button>
+                    </li>
+                @endforeach
+            </ul>
+        @endif
+
         @if (! $pickingRelated)
             <div class="flex justify-center py-8"><x-ui::spinner size="lg" /></div>
         @elseif (count($related) >= $relatedLimit)

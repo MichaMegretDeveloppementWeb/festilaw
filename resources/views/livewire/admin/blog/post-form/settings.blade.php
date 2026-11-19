@@ -20,20 +20,32 @@
 
     {{-- Le contenu defile a l'interieur du panneau : sur ordinateur, il ne depasse jamais la hauteur de l'ecran. --}}
     <div class="min-h-0 flex-1 overflow-y-auto p-5 lg:px-0 [&>*+*]:mt-6 [&>*+*]:border-t [&>*+*]:border-default [&>*+*]:pt-6">
-        {{-- Categorie --}}
+        {{-- Categorie. Une categorie qui manque se cree sans quitter l'article (decision de Micha du 19/11) : une
+             action au bas de la liste, ou un bouton quand il n'en existe aucune, ouvre la fenetre « Nouvelle
+             catégorie » (post-form/dialogs). L'action vit dans l'emplacement `action` de la vue du kit publiee
+             (resources/views/vendor/ui/components/combobox.blade.php) : elle lit la recherche tapee. --}}
         @if ($categoryOptions === [])
             <div>
                 <p class="mb-1.5 text-[13px] font-medium text-gray-700 dark:text-gray-300">{{ __('Catégorie') }}</p>
                 <p class="text-[13px] text-secondary">{{ __('Aucune catégorie n\'existe encore.') }}</p>
-                <p class="mt-1 text-[12px] text-muted">
-                    {{ __('Le brouillon peut être enregistré sans catégorie, mais il en faudra une pour publier.') }}
-                    <a href="{{ route('admin.blog.categories.create') }}" class="font-medium text-secondary underline underline-offset-2 hover:text-primary">{{ __('Créer une catégorie') }}</a>
-                </p>
+                <p class="mt-1 text-[12px] text-muted">{{ __('Le brouillon peut être enregistré sans catégorie, mais il en faudra une pour publier.') }}</p>
+                <x-ui::button variant="secondary" size="compact" class="mt-2" data-create-category x-on:click="openCategory()">
+                    <x-ui::icon name="plus" /> {{ __('Nouvelle catégorie') }}
+                </x-ui::button>
             </div>
         @else
             <x-ui::form-group :label="__('Catégorie')" for="category-id" :error="$errors->first('categoryId')">
                 <x-ui::combobox id="category-id" wire:model="categoryId" :options="$categoryOptions" :error="$errors->has('categoryId')"
-                    :placeholder="__('Choisir une catégorie')" :search-placeholder="__('Rechercher une catégorie')" :empty="__('Aucune catégorie ne correspond')" />
+                    :placeholder="__('Choisir une catégorie')" :search-placeholder="__('Rechercher une catégorie')" :empty="__('Aucune catégorie ne correspond')">
+                    <x-slot:action>
+                        <button type="button" data-create-category
+                            x-on:click="open = false; $dispatch('post-category-create', { name: search.trim() })"
+                            class="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-[13px] font-medium text-secondary transition-colors hover:bg-elevated hover:text-primary max-sm:min-h-11">
+                            <x-ui::icon name="plus" class="h-4 w-4 shrink-0" />
+                            <span class="truncate" x-text="search.trim() === '' ? @js(__('Nouvelle catégorie')) : @js(__('Créer « :name »')).replace(':name', search.trim())">{{ __('Nouvelle catégorie') }}</span>
+                        </button>
+                    </x-slot:action>
+                </x-ui::combobox>
             </x-ui::form-group>
         @endif
 
