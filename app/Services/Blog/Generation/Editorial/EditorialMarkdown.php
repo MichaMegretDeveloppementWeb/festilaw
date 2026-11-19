@@ -65,4 +65,17 @@ final class EditorialMarkdown
 
         return array_map(intval(...), $matches[1]);
     }
+
+    /**
+     * Les intertitres, tous niveaux, dans l'ordre du texte. Une traduction les garde dans le meme ordre : le
+     * rang d'un intertitre anglais donne celui de sa version francaise (points d'attention de la verification).
+     *
+     * @return list<string>
+     */
+    public static function headings(string $markdown): array
+    {
+        preg_match_all('~^#{2,6}[ \t]+(.+?)[ \t#]*$~m', $markdown, $matches);
+
+        return $matches[1];
+    }
 }

@@ -52,7 +52,7 @@ An evergreen guide answers one precise question completely and stays useful for 
 
 ## Search engines
 
-Search engines accept content written with the help of AI when it is useful and reliable, and demote sites that publish many pages without added value. Write few articles, precise and useful. Never duplicate a topic already covered by the blog.
+Search engines accept content written with the help of AI when it is useful and reliable, and demote sites that publish many pages without added value. Write few articles, precise and useful. Never duplicate a topic already covered by the blog. A recent change to a rule the blog covers is a new topic: a news article about the change, which leaves the older article as it is.
 
 ## Images
 

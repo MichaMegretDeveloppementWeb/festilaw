@@ -22,7 +22,7 @@ final readonly class BlogGenerationDetailView
      * @param  string|null  $announced  le cout annonce au lancement (nul pour une generation anterieure a cette annonce)
      * @param  list<array{key: string, label: string, text: string}>  $report  compte rendu de l'IA, point par point (`key` : l'etape qui l'a ecrit)
      * @param  list<BlogGenerationStepView>  $steps  dans l'ordre du pipeline
-     * @param  list<array{where: string, passage: string, reason: string}>  $review  passages retires ou corriges, a relire d'abord (generation terminee)
+     * @param  list<array{where: string|null, statement: string, check: string}>  $attentionPoints  affirmations gardees sur lesquelles la verification a un doute, situees dans le brouillon francais (generation terminee)
      */
     public function __construct(
         public int $id,
@@ -44,7 +44,7 @@ final readonly class BlogGenerationDetailView
         public ?int $postId,
         public array $report,
         public array $steps,
-        public array $review = [],
+        public array $attentionPoints = [],
     ) {}
 
     public function isActive(): bool

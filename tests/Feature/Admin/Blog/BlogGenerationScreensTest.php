@@ -362,27 +362,73 @@ it('shows the cost announced at launch under the real cost of a generation, and 
         ->assertDontSeeHtml('data-generation-announced');
 });
 
-it('lists the passages the checks removed or corrected on a finished generation, and nothing while it runs', function () {
-    // Decision de Micha du 18/11 : la relecture commence la ou le risque etait, le brouillon reste propre.
+it('shows the few attention points of a finished generation under their French heading, and nothing of what was removed', function () {
+    // Decision de Micha du 19/11 : ce que la verification a retire ou corrige est regle et ne s'affiche plus ; seuls
+    // les rares doutes restants, en francais, situes dans le brouillon francais.
     $finished = BlogGeneration::factory()->completed(costMicrousd: 60_000)->create();
     BlogGenerationStep::factory()->for($finished, 'generation')->named('verification', 6)->completed(4_000)->create([
-        'output' => ['article' => ['body' => 'Long text.'], 'removed_claims' => [['claim' => 'The box is read before paying.', 'reason' => "L'acheteur en ligne ne voit pas la boîte."]]],
+        'output' => [
+            'article' => ['body' => "Intro.\n\n## Who signs the declaration\n\nText.\n\n### On Etsy\n\nMore."],
+            'removed_claims' => [['claim' => 'The box is read before paying.', 'reason' => "L'acheteur en ligne ne voit pas la boîte."]],
+            'attention_points' => [
+                ['heading' => '', 'statement_fr' => 'Le règlement s\'applique depuis décembre 2024.', 'check_fr' => 'Vérifiez la date d\'application.'],
+                ['heading' => '## On Etsy', 'statement_fr' => 'Etsy demande l\'adresse de la personne responsable.', 'check_fr' => 'Vérifiez la page d\'aide d\'Etsy.'],
+                ['heading' => 'A heading the article does not have', 'statement_fr' => 'Une affirmation sans lieu.', 'check_fr' => 'Vérifiez la source.'],
+            ],
+        ],
     ]);
-    BlogGenerationStep::factory()->for($finished, 'generation')->named('version_check_es', 11)->completed(1_000)->create([
-        'output' => ['corrections' => [['original' => 'Deben añadir ambos campos.', 'corrected' => 'Deben añadir uno de los campos.', 'reason' => 'La version fait une obligation double.']]],
-    ]);
-    $running = BlogGeneration::factory()->running()->create();
-    BlogGenerationStep::factory()->for($running, 'generation')->named('verification', 6)->completed(4_000)->create([
-        'output' => ['removed_claims' => [['claim' => 'Not shown yet.', 'reason' => 'x']]],
+    BlogGenerationStep::factory()->for($finished, 'generation')->named('version_check_fr', 9)->completed(1_000)->create([
+        'output' => [
+            'article' => ['body' => "Intro.\n\n## Qui signe la déclaration\n\nTexte.\n\n### Sur Etsy\n\nSuite."],
+            'corrections' => [['original' => 'Il faut les deux.', 'corrected' => 'Il faut l\'un des deux.', 'reason' => 'La version fait une obligation double.']],
+        ],
     ]);
 
-    Livewire::test(GenerationDetail::class, ['generation' => $finished->id])
-        ->assertSeeHtml('data-generation-review')
-        ->assertSeeInOrder(['À relire en priorité', 'Texte anglais', 'The box is read before paying.', "L'acheteur en ligne ne voit pas la boîte.", 'Version espagnole', 'Deben añadir ambos campos.'])
-        ->assertDontSee('Long text.');
+    $detail = Livewire::test(GenerationDetail::class, ['generation' => $finished->id])
+        ->assertSeeHtml('data-attention-points')
+        ->assertSeeInOrder([
+            'Points d\'attention', 'Des affirmations gardées dans l\'article, sur lesquelles la vérification a un doute.',
+            'Dans l\'introduction', 'Le règlement s\'applique depuis décembre 2024.', 'Vérifiez la date d\'application.',
+            'Sous l\'intertitre « Sur Etsy »', 'Etsy demande l\'adresse de la personne responsable.',
+            'Une affirmation sans lieu.',
+        ])
+        ->assertDontSee('À relire en priorité')
+        ->assertDontSee('Texte anglais')
+        ->assertDontSee('The box is read before paying.')
+        ->assertDontSee('Il faut les deux.')
+        ->assertDontSee('On Etsy');
+
+    // Un intertitre introuvable ne donne aucun lieu, jamais un lieu en anglais.
+    expect(substr_count($detail->html(), 'data-attention-point>'))->toBe(3)
+        ->and(substr_count($detail->html(), 'intertitre'))->toBe(1);
+});
+
+it('names the first step after what it looks for, lasting rules as well as news', function () {
+    // Decision de Micha du 19/11 : la veille ne contraint pas a l'actualite, et son nom suit.
+    $generation = BlogGeneration::factory()->completed()->create();
+    BlogGenerationStep::factory()->for($generation, 'generation')->named('topic_scan', 1)->completed(1_000)->create();
+
+    Livewire::test(GenerationDetail::class, ['generation' => $generation->id])
+        ->assertSee('Recherche de pistes')
+        ->assertDontSee('Veille de l\'actualité');
+});
+
+it('shows no attention points while a generation runs, nor when the verification has none', function () {
+    $running = BlogGeneration::factory()->running()->create();
+    BlogGenerationStep::factory()->for($running, 'generation')->named('verification', 6)->completed(4_000)->create([
+        'output' => ['attention_points' => [['heading' => '', 'statement_fr' => 'Pas encore affiché.', 'check_fr' => 'x']]],
+    ]);
+    $clean = BlogGeneration::factory()->completed()->create();
+    BlogGenerationStep::factory()->for($clean, 'generation')->named('verification', 6)->completed(4_000)->create([
+        'output' => ['article' => ['body' => 'Text.'], 'removed_claims' => [['claim' => 'Removed.', 'reason' => 'x']], 'attention_points' => []],
+    ]);
+
     Livewire::test(GenerationDetail::class, ['generation' => $running->id])
-        ->assertDontSeeHtml('data-generation-review')
-        ->assertDontSee('Not shown yet.');
+        ->assertDontSeeHtml('data-attention-points')
+        ->assertDontSee('Pas encore affiché.');
+    Livewire::test(GenerationDetail::class, ['generation' => $clean->id])
+        ->assertDontSeeHtml('data-attention-points')
+        ->assertDontSee('Points d\'attention');
 });
 
 it('puts the safety stop at twice the high of the estimate', function () {

@@ -8,8 +8,10 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\HasStructuredOutput;
 
 /**
- * Etape « verification » : relit l'article contre le dossier et retire toute affirmation que le dossier
- * n'etaye pas, sans rien ajouter. Ce qu'il retire ne va qu'au journal technique de l'etape.
+ * Etape « verification » : relit l'article contre le dossier et retire ou corrige toute affirmation que le
+ * dossier n'etaye pas, sans rien ajouter. Ce qu'il retire va au journal de l'etape. Il signale a part les
+ * rares affirmations gardees sur lesquelles un doute reste (points d'attention, en francais), que la page de
+ * la generation montre (decision de Micha du 19/11).
  */
 final class FactCheckAgent extends BlogAgent implements HasStructuredOutput
 {
@@ -30,6 +32,11 @@ final class FactCheckAgent extends BlogAgent implements HasStructuredOutput
             'removed_claims' => $schema->array()->items($schema->object([
                 'claim' => $schema->string()->required(),
                 'reason' => $schema->string()->description('Why, in one plain French sentence for the editor.')->required(),
+            ]))->required(),
+            'attention_points' => $schema->array()->items($schema->object([
+                'heading' => $schema->string()->description('The heading the statement stands under, copied exactly. Empty in the introduction.')->required(),
+                'statement_fr' => $schema->string()->description('What the article says, in one plain French sentence.')->required(),
+                'check_fr' => $schema->string()->description('What the editor should check, in one plain French sentence.')->required(),
             ]))->required(),
             'report_fr' => $schema->string()->required(),
         ];

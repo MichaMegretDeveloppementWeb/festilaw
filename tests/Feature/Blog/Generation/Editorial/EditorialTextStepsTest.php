@@ -132,6 +132,26 @@ it('turns down a topic that repeats a known title, even when the model did not s
         ->and($result->findings->topicTitle)->toBe('Adding an economic operator on Etsy');
 });
 
+it('keeps a news article on a covered subject, about what changed, and looks for lasting rules as well as recent changes', function () {
+    // Decision de Micha du 19/11 : la veille ne contraint pas a l'actualite, et un changement recent sur une regle
+    // deja traitee justifie un nouvel article, sans toucher a l'ancien.
+    $post = BlogContent::published('label');
+    $post->translations()->where('locale', 'en')->update(['title' => 'How to add your economic operator on Etsy']);
+    WebSearchAgent::fake(['Notes from the web scan.']);
+    TopicAgent::fake([[...Fixtures::topic(), 'kind' => 'news', 'title' => 'Adding your economic operator on Etsy, what changes in 2027']])->preventStrayPrompts();
+
+    app(TopicScanStep::class)->execute(Fixtures::context());
+    $result = app(TopicStep::class)->execute(Fixtures::context());
+
+    expect($result->stopsGeneration())->toBeFalse()
+        ->and($result->findings->topicKind)->toBe(BlogTopicKind::News);
+    WebSearchAgent::assertPrompted(fn ($prompt): bool => str_contains($prompt->agent->instructions(), 'A good lead is either recent or lasting')
+        && str_contains($prompt->agent->instructions(), 'one for the long-standing rules sellers keep asking about'));
+    TopicAgent::assertPrompted(fn ($prompt): bool => str_contains($prompt->agent->instructions(), 'A rule that has applied for years is as good a topic as a recent change')
+        && str_contains($prompt->agent->instructions(), 'A recent change to a rule an existing article covers')
+        && str_contains($prompt->agent->instructions(), 'A recent change to a rule the blog covers is a new topic'));
+});
+
 it('keeps an imposed topic even when its title repeats a known one', function () {
     // Banc d'essai du 18/11 : un sujet impose a ete refuse comme deja traite. La personne qui l'impose le veut.
     $post = BlogContent::published('label');
@@ -414,7 +434,26 @@ it('removes the statements the research file does not support, and keeps the tra
 
     expect($result->output['article']['body'])->toBe(Fixtures::body())
         ->and($result->output['removed_claims'])->toBe([['claim' => 'Fines reach 4% of turnover.', 'reason' => 'Not in the research file.']])
+        ->and($result->output['attention_points'])->toBe([])
         ->and($result->summary)->toBe('Une affirmation non appuyée a été retirée.');
+});
+
+it('keeps at most three complete attention points, and asks to settle every doubt it can first', function () {
+    // Decision de Micha du 19/11 : la verification regle ce qu'elle trouve, et ne signale que quelques doutes.
+    $point = fn (int $number): array => ['heading' => 'Who signs', 'statement_fr' => "Affirmation {$number}.", 'check_fr' => "Vérifiez la source {$number}."];
+    FactCheckAgent::fake([[
+        ...Fixtures::article(),
+        'removed_claims' => [],
+        'attention_points' => [['heading' => '', 'statement_fr' => '', 'check_fr' => 'Vide.'], $point(1), $point(2), $point(3), $point(4)],
+        'report_fr' => 'Rien à retirer.',
+    ]])->preventStrayPrompts();
+
+    $result = app(VerificationStep::class)->execute(Fixtures::context(['research' => Fixtures::research(), 'writing' => Fixtures::articleOutput()]));
+
+    expect($result->output['attention_points'])->toBe([$point(1), $point(2), $point(3)]);
+    FactCheckAgent::assertPrompted(fn ($prompt): bool => str_contains($prompt->agent->instructions(), 'Settle every doubt you can yourself')
+        && str_contains($prompt->agent->instructions(), '"attention_points": only the statements you kept although a real doubt remains')
+        && str_contains($prompt->agent->instructions(), 'At most three, and most articles have none'));
 });
 
 it('sends back once a check that adds a figure or drops an image, then refuses it', function (string $body) {

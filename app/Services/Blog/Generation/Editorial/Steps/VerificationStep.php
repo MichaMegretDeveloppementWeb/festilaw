@@ -24,10 +24,13 @@ use App\Services\Blog\Generation\Editorial\EditorialMarkdown;
  * trois fois). Les articles du blog que le texte cite lui sont donnes (titre et extrait), pour qu'elle garde la
  * phrase qui les presente (generations 78 a 80). Elle recoit aussi les affirmations du redacteur avec leurs
  * appuis, et controle chaque paire (banc d'essai du 18/11). Ce qui a ete retire ou corrige va a la sortie de
- * l'etape, avec sa raison en francais, et la page de la generation le montre ; jamais sur le brouillon.
+ * l'etape, avec sa raison en francais, pour le journal et le banc d'essai. La page de la generation ne montre
+ * que les points d'attention : les rares affirmations gardees sur lesquelles un doute reste (Micha, 19/11).
  */
 final class VerificationStep extends EditorialStep
 {
+    private const MAX_ATTENTION_POINTS = 3;
+
     public function __construct(
         BlogAgentCaller $caller,
         BlogPromptLibrary $prompts,
@@ -91,12 +94,33 @@ final class VerificationStep extends EditorialStep
         ), static fn (array $claim): bool => ($claim['claim'] ?? '') !== ''));
 
         return GenerationStepResult::continue(
-            ['article' => $checked->toArray(), 'removed_claims' => $removed],
+            ['article' => $checked->toArray(), 'removed_claims' => $removed, 'attention_points' => $this->attentionPoints($reply->structured())],
             $usage,
             $this->report($reply, $removed === []
                 ? __('Chaque affirmation de l\'article est appuyée par le dossier de recherche.')
                 : trans_choice('{1} Une affirmation non appuyée par le dossier a été retirée.|[2,*] :count affirmations non appuyées par le dossier ont été retirées.', count($removed), ['count' => count($removed)])),
         );
+    }
+
+    /**
+     * Les points d'attention complets, trois au plus. La consigne en demande peu, et la plupart des articles
+     * n'en ont aucun : une longue liste ferait croire que l'outil doute de tout (Micha, 19/11).
+     *
+     * @param  array<string, mixed>  $answer
+     * @return list<array{heading: string, statement_fr: string, check_fr: string}>
+     */
+    private function attentionPoints(array $answer): array
+    {
+        $points = array_map(fn ($point): array => is_array($point) ? [
+            'heading' => $this->text($point, 'heading'),
+            'statement_fr' => $this->text($point, 'statement_fr'),
+            'check_fr' => $this->text($point, 'check_fr'),
+        ] : [], $this->items($answer, 'attention_points'));
+
+        return array_slice(array_values(array_filter(
+            $points,
+            static fn (array $point): bool => ($point['statement_fr'] ?? '') !== '' && ($point['check_fr'] ?? '') !== '',
+        )), 0, self::MAX_ATTENTION_POINTS);
     }
 
     /**

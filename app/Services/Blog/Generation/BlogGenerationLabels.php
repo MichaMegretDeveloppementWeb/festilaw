@@ -18,7 +18,7 @@ final readonly class BlogGenerationLabels
     public function step(string $key): string
     {
         return match ($key) {
-            'topic_scan' => __('Veille de l\'actualité'),
+            'topic_scan' => __('Recherche de pistes'),
             'topic' => __('Choix du sujet'),
             'research_notes' => __('Recherche sur le web'),
             'research' => __('Dossier de faits'),

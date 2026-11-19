@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\Blog\Generation\BlogTopicKind;
 use App\Services\Blog\Generation\Editorial\BlogFactGuard;
 use App\Services\Blog\Generation\Editorial\BlogTopicSimilarity;
 use App\Services\Blog\Generation\Editorial\BlogWritingSignalsInspector;
@@ -148,3 +149,16 @@ it('spots a topic that repeats a known title, whatever its case, accents or smal
     'a new subject' => ['Toy safety rules for wooden toys sold on Amazon', null],
     'a neighbour, left to the model' => ['Candle warning labels for EU buyers', null],
 ]);
+
+it('lets a news article take up a covered subject to say what changed, and still spots a repeated news title', function () {
+    // Decision de Micha du 19/11 : un changement recent sur une regle deja traitee justifie un nouvel article.
+    $known = ['Adding an economic operator on Etsy', 'Etsy economic operator rules change in 2027'];
+    $similarity = new BlogTopicSimilarity;
+    $news = 'Adding the economic operator on Etsy, what changes in 2027';
+
+    expect($similarity->duplicateOf($news, $known, BlogTopicKind::News))->toBeNull()
+        // Le meme titre, en article de fond, reprend le sujet traite.
+        ->and($similarity->duplicateOf($news, $known))->toBe('Adding an economic operator on Etsy')
+        // Deux titres d'actualite presque identiques restent un doublon.
+        ->and($similarity->duplicateOf('The Etsy economic operator rules change from 2027', $known, BlogTopicKind::News))->toBe('Etsy economic operator rules change in 2027');
+});

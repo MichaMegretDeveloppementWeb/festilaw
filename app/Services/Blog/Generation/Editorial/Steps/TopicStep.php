@@ -108,7 +108,7 @@ final class TopicStep extends EditorialStep
             'reason' => $this->text($answer, 'reason'),
             'citations' => $citations,
         ];
-        $duplicateOf = filled($context->topicHint) ? null : $this->similarity->duplicateOf($title, $history->titles());
+        $duplicateOf = filled($context->topicHint) ? null : $this->similarity->duplicateOf($title, $history->titles(), $kind);
 
         if ($duplicateOf !== null) {
             return GenerationStepResult::stop(

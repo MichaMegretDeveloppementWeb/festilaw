@@ -15,6 +15,7 @@ use App\Data\Blog\Generation\GenerationStepResult;
 use App\Data\Blog\SaveBlogPostData;
 use App\Enums\Blog\BlogPostOrigin;
 use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
+use App\Enums\Blog\Generation\BlogTopicKind;
 use App\Exceptions\Blog\BlogEditorialException;
 use App\Repositories\Blog\BlogGeneratedDraftRepository;
 use App\Repositories\Blog\BlogTopicHistoryRepository;
@@ -77,7 +78,8 @@ final readonly class AssembleGeneratedBlogDraftAction implements GenerationStep
             }
         }
 
-        $duplicateOf = filled($context->topicHint) ? null : $this->similarity->duplicateOf($articles['en']->title, $this->history->load(exceptGenerationId: $context->generationId)->titles());
+        $kind = BlogTopicKind::tryFrom((string) ($context->output('topic')['kind'] ?? '')) ?? BlogTopicKind::Evergreen;
+        $duplicateOf = filled($context->topicHint) ? null : $this->similarity->duplicateOf($articles['en']->title, $this->history->load(exceptGenerationId: $context->generationId)->titles(), $kind);
 
         if ($duplicateOf !== null) {
             return GenerationStepResult::stop(

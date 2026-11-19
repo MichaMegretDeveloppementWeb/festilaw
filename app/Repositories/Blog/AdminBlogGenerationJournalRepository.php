@@ -64,34 +64,43 @@ final readonly class AdminBlogGenerationJournalRepository
     }
 
     /**
-     * Les passages retires ou corriges par la verification et par le controle des versions, dans l'ordre des
-     * etapes. Seuls ces deux champs de la sortie sont lus, jamais le texte de l'article.
+     * Les points d'attention de la verification, avec le texte qu'elle a verifie et le texte francais final
+     * (controle de la version francaise, sinon sa traduction), pour situer chaque point sous son intertitre
+     * francais. Une requete, trois lignes au plus, et seuls ces champs de la sortie sont lus.
      *
-     * @return list<array{step: string, passage: string, reason: string}>
+     * @return array{points: list<array{heading: string, statement_fr: string, check_fr: string}>, checked_body: string, french_body: string|null}
      */
-    public function correctedPassages(int $generationId): array
+    public function attentionPoints(int $generationId): array
     {
         $rows = BlogGenerationStep::query()->toBase()
             ->where('blog_generation_id', $generationId)
             ->where('status', BlogGenerationStepStatus::Completed->value)
-            ->whereIn('step', ['verification', 'version_check_fr', 'version_check_es'])
-            ->orderBy('position')
-            ->get(['step', 'output->removed_claims as removed_claims', 'output->corrections as corrections']);
-        $passages = [];
+            ->whereIn('step', ['verification', 'translation_fr', 'version_check_fr'])
+            ->get(['step', 'output->attention_points as attention_points', 'output->article->body as body'])
+            ->keyBy('step');
+        $verification = $rows->get('verification');
+        $items = json_decode((string) ($verification?->attention_points ?? '[]'), true);
+        $points = [];
 
-        foreach ($rows as $row) {
-            $items = json_decode((string) ($row->removed_claims ?? $row->corrections ?? '[]'), true);
+        foreach (is_array($items) ? $items : [] as $item) {
+            $point = is_array($item) ? [
+                'heading' => trim((string) ($item['heading'] ?? '')),
+                'statement_fr' => trim((string) ($item['statement_fr'] ?? '')),
+                'check_fr' => trim((string) ($item['check_fr'] ?? '')),
+            ] : null;
 
-            foreach (is_array($items) ? $items : [] as $item) {
-                $passage = is_array($item) ? trim((string) ($item['claim'] ?? $item['original'] ?? '')) : '';
-
-                if ($passage !== '') {
-                    $passages[] = ['step' => (string) $row->step, 'passage' => $passage, 'reason' => trim((string) ($item['reason'] ?? ''))];
-                }
+            if ($point !== null && $point['statement_fr'] !== '' && $point['check_fr'] !== '') {
+                $points[] = $point;
             }
         }
 
-        return $passages;
+        $french = $rows->get('version_check_fr') ?? $rows->get('translation_fr');
+
+        return [
+            'points' => $points,
+            'checked_body' => (string) ($verification?->body ?? ''),
+            'french_body' => $french?->body === null ? null : (string) $french->body,
+        ];
     }
 
     /** @return Builder<BlogGeneration> */

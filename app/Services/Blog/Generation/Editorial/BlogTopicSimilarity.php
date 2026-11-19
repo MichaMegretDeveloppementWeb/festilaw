@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Blog\Generation\Editorial;
 
+use App\Enums\Blog\Generation\BlogTopicKind;
 use Illuminate\Support\Str;
 
 /**
@@ -12,6 +13,10 @@ use Illuminate\Support\Str;
  * Les titres se comparent en mots significatifs (sans accents, sans casse, sans mots vides), par la part de
  * mots communs. Le controle est volontairement simple : il ecarte les reprises evidentes, le modele juge les
  * sujets voisins avec la liste complete sous les yeux.
+ *
+ * Un article d'actualite peut reprendre un sujet deja traite pour annoncer ce qui change (decision de Micha du
+ * 19/11) : son titre reprend les mots de l'ancien et y ajoute le changement. Pour lui, la part de mots communs
+ * se rapporte au plus long des deux titres, et deux titres d'actualite presque identiques restent un doublon.
  */
 final class BlogTopicSimilarity
 {
@@ -32,7 +37,7 @@ final class BlogTopicSimilarity
      *
      * @param  list<string>  $knownTitles
      */
-    public function duplicateOf(string $candidate, array $knownTitles): ?string
+    public function duplicateOf(string $candidate, array $knownTitles, BlogTopicKind $kind = BlogTopicKind::Evergreen): ?string
     {
         $words = $this->words($candidate);
 
@@ -43,7 +48,7 @@ final class BlogTopicSimilarity
         foreach ($knownTitles as $title) {
             $other = $this->words($title);
 
-            if ($other !== [] && $this->overlap($words, $other) >= self::THRESHOLD) {
+            if ($other !== [] && $this->overlap($words, $other, $kind) >= self::THRESHOLD) {
                 return $title;
             }
         }
@@ -72,13 +77,16 @@ final class BlogTopicSimilarity
 
     /**
      * Mots communs rapportes au plus petit des deux titres : un titre court entierement repris par un plus
-     * long compte comme un doublon.
+     * long compte comme un doublon. Pour un article d'actualite, au plus long : le changement qu'il ajoute a
+     * un sujet traite en fait un autre sujet.
      *
      * @param  list<string>  $first
      * @param  list<string>  $second
      */
-    private function overlap(array $first, array $second): float
+    private function overlap(array $first, array $second, BlogTopicKind $kind): float
     {
-        return count(array_intersect($first, $second)) / min(count($first), count($second));
+        $sizes = [count($first), count($second)];
+
+        return count(array_intersect($first, $second)) / ($kind === BlogTopicKind::News ? max($sizes) : min($sizes));
     }
 }

@@ -21,7 +21,7 @@ use App\Services\Blog\Generation\Editorial\Steps\WritingStep;
 use Illuminate\Contracts\Container\Container;
 
 /**
- * Le pipeline editorial (SC6, cahier des charges § 11) : veille de l'actualite, choix du sujet, recherche sur
+ * Le pipeline editorial (SC6, cahier des charges § 11) : recherche de pistes, choix du sujet, recherche sur
  * le web, dossier de faits, redaction, verification, relecture du style, versions francaise et espagnole,
  * chacune controlee contre le texte anglais, images, assemblage du brouillon. Chaque recherche web est une etape a elle seule : enregistree des qu'elle
  * finit, elle n'est jamais refaite par un nouvel essai de l'etape qui la met en forme. Les etapes de texte

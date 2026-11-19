@@ -252,6 +252,19 @@ it('creates no draft when the final title repeats a known article', function () 
         ->and(BlogPost::query()->count())->toBe(1);
 });
 
+it('creates the draft of a news article whose title takes up a covered subject to say what changed', function () {
+    // Decision de Micha du 19/11 : l'ancien article reste tel quel, le nouveau annonce le changement.
+    $existing = BlogContent::published('label');
+    $existing->translations()->where('locale', 'en')->update(['title' => 'Economic operator on Etsy']);
+    $generation = BlogGeneration::factory()->running()->create();
+    $outputs = textOutputs();
+    $context = fn (string $kind): GenerationStepContext => new GenerationStepContext($generation->id, BlogGenerationType::Article, null, null, Fixtures::context()->settings, [...$outputs, 'topic' => [...$outputs['topic'], 'kind' => $kind]], [], 1);
+
+    expect(app(AssembleGeneratedBlogDraftAction::class)->execute($context('evergreen'))->stopReason)->toBe(BlogGenerationOutcomeReason::DuplicateTopic)
+        ->and(app(AssembleGeneratedBlogDraftAction::class)->execute($context('news'))->stopsGeneration())->toBeFalse()
+        ->and(BlogPost::query()->count())->toBe(2);
+});
+
 it('creates the draft of an imposed topic even when its final title repeats a known article', function () {
     $existing = BlogContent::published('label');
     $existing->translations()->where('locale', 'en')->update(['title' => 'Adding an economic operator on Etsy']);

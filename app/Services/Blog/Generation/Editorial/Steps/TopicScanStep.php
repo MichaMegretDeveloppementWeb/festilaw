@@ -12,9 +12,11 @@ use App\Services\Blog\Generation\Editorial\BlogPromptLibrary;
 use Carbon\CarbonImmutable;
 
 /**
- * Veille de l'actualite avant le choix du sujet. Etape a part entiere pour que ses recherches, payees, soient
- * enregistrees avant le choix : un nouvel essai du choix ne les refait pas. Un sujet impose s'en passe, la
- * recherche de l'article cherchera de toute facon sur le web.
+ * Recherche de pistes avant le choix du sujet : les changements recents, et les regles anciennes que les
+ * vendeurs comprennent encore mal (decision de Micha du 19/11 : la veille ne contraint pas a l'actualite).
+ * Etape a part entiere pour que ses recherches, payees, soient enregistrees avant le choix : un nouvel essai
+ * du choix ne les refait pas. Un sujet impose s'en passe, la recherche de l'article cherchera de toute facon
+ * sur le web.
  */
 final class TopicScanStep extends EditorialStep
 {

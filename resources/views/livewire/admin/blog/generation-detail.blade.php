@@ -141,17 +141,20 @@
                 @endif
             </x-admin.section>
 
-            {{-- Les passages retires ou corriges par les controles : la relecture commence la. --}}
-            @if ($generation->review !== [])
-                <x-admin.section :title="__('À relire en priorité')" :description="__('Les passages que la vérification a retirés ou corrigés avant d\'écrire le brouillon. Relisez d\'abord ces endroits.')" data-generation-review>
+            {{-- Les rares affirmations gardees sur lesquelles la verification a un doute (decision de Micha du 19/11).
+                 Ce qu'elle a retire ou corrige ne s'affiche plus : c'est regle. Chaque point dit ou le trouver dans le
+                 brouillon francais, ce que dit l'article, et quoi verifier, pour eviter les allers-retours. La
+                 plupart des generations n'en ont aucun, et la section n'apparait pas. --}}
+            @if ($generation->attentionPoints !== [])
+                <x-admin.section :title="__('Points d\'attention')" :description="__('Des affirmations gardées dans l\'article, sur lesquelles la vérification a un doute. Vérifiez-les avant de publier.')" data-attention-points>
                     <div class="divide-y divide-[var(--ui-border)]">
-                        @foreach ($generation->review as $item)
-                            <section class="py-5">
-                                <p class="text-[11px] font-semibold uppercase tracking-wide text-muted">{{ $item['where'] }}</p>
-                                <p class="mt-1.5 max-w-3xl text-[14px] leading-[1.7] text-primary">« {{ $item['passage'] }} »</p>
-                                @if ($item['reason'] !== '')
-                                    <p class="mt-1 max-w-3xl text-[13px] leading-[1.6] text-secondary">{{ $item['reason'] }}</p>
+                        @foreach ($generation->attentionPoints as $point)
+                            <section class="py-5" data-attention-point>
+                                @if ($point['where'])
+                                    <p class="text-[12px] text-muted">{{ $point['where'] }}</p>
                                 @endif
+                                <p class="mt-1 max-w-3xl text-[14px] leading-[1.7] text-primary">{{ $point['statement'] }}</p>
+                                <p class="mt-1 max-w-3xl text-[13px] leading-[1.6] text-secondary">{{ $point['check'] }}</p>
                             </section>
                         @endforeach
                     </div>
