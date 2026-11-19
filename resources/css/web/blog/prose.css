@@ -1,5 +1,6 @@
 /* Contenu d'un article : le HTML produit par le serveur (BlogContentRenderer) ne contient que des
-   paragraphes, intertitres h2 / h3, listes, citations, liens, gras, italique et figures d'image. */
+   paragraphes, intertitres h2 / h3, listes, citations, liens, gras, italique, figures d'image et blocs
+   « image et texte ». */
 
 .prose { color: var(--color-ink); font-size: 17.5px; line-height: 1.75; overflow-wrap: break-word; }
 .prose > * + * { margin-top: 1.1em; }
@@ -37,26 +38,29 @@
 .prose .blog-figure--small { max-width: 22.5rem; margin-inline: auto; }
 .prose .blog-figure img { display: block; width: 100%; height: auto; border-radius: var(--radius); background: var(--color-line); }
 
-/* Image reduite placee a gauche ou a droite : le texte se met a cote d'elle des que la colonne est assez large
-   (seuils mesures sur la colonne de l'article, pas sur l'ecran). En dessous, et sur telephone, l'image reste
-   centree au-dessus du texte. Un navigateur qui ne connait pas @container garde ce second affichage. */
-.prose { container-type: inline-size; display: flow-root; }
+/* Bloc « image et texte » : une image reduite et son propre texte, a cote d'elle des que la colonne est assez
+   large (seuils mesures sur la colonne de l'article, pas sur l'ecran), l'image de son cote, le texte de l'autre.
+   En dessous, et sur telephone, l'image se centre au-dessus de son texte. Le texte d'avant ou d'apres ne passe
+   jamais a cote de l'image : plus de flottement (decision de Micha du 19/11/2026). Un navigateur qui ne connait
+   pas @container garde l'affichage l'un sous l'autre. */
+.prose { container-type: inline-size; }
+
+.prose .blog-figure-text { margin: 2em 0; }
+.prose .blog-figure-text .blog-figure { margin-block: 0; }
+.prose .blog-figure-text__body { margin-top: 1.1em; }
+.prose .blog-figure-text__body > * + * { margin-top: 1.1em; }
+.prose .blog-figure-text__body > :first-child { margin-top: 0; }
 
 @container (min-width: 44rem) {
-    .prose .blog-figure--small.blog-figure--left { float: left; width: 22.5rem; margin: 1.55em 1.9em 1em 0; }
-    .prose .blog-figure--small.blog-figure--right { float: right; width: 22.5rem; margin: 1.55em 0 1em 1.9em; }
+    .prose .blog-figure-text--small { display: grid; grid-template-columns: 22.5rem minmax(0, 1fr); column-gap: 1.9em; align-items: start; }
+    .prose .blog-figure-text--small.blog-figure-text--right { grid-template-columns: minmax(0, 1fr) 22.5rem; }
+    .prose .blog-figure-text--small.blog-figure-text--right .blog-figure { order: 2; }
+    .prose .blog-figure-text--small .blog-figure-text__body { margin-top: 0; }
 }
 
 @container (min-width: 54rem) {
-    .prose .blog-figure--medium.blog-figure--left { float: left; width: 35rem; margin: 1.55em 1.9em 1em 0; }
-    .prose .blog-figure--medium.blog-figure--right { float: right; width: 35rem; margin: 1.55em 0 1em 1.9em; }
+    .prose .blog-figure-text--medium { display: grid; grid-template-columns: 35rem minmax(0, 1fr); column-gap: 1.9em; align-items: start; }
+    .prose .blog-figure-text--medium.blog-figure-text--right { grid-template-columns: minmax(0, 1fr) 35rem; }
+    .prose .blog-figure-text--medium.blog-figure-text--right .blog-figure { order: 2; }
+    .prose .blog-figure-text--medium .blog-figure-text__body { margin-top: 0; }
 }
-
-/* Un intertitre, une citation ou une autre image repartent sous l'image. Une liste reste un bloc a cote d'elle,
-   pour que ses puces ne passent pas sur l'image. */
-.prose h2,
-.prose h3,
-.prose blockquote,
-.prose .blog-figure { clear: both; }
-.prose ul,
-.prose ol { display: flow-root; }

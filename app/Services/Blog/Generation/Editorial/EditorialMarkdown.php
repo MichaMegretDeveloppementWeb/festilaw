@@ -10,8 +10,11 @@ namespace App\Services\Blog\Generation\Editorial;
  * - un lien interne s'ecrit `[texte](festilaw:post/12)` ou `[texte](festilaw:page/pricing)`, et devient
  *   l'adresse de la page dans la langue de chaque version a l'assemblage ;
  * - l'emplacement d'une image du texte s'ecrit `[[image:1]]`, seul sur sa ligne, et devient l'image a
- *   l'assemblage.
- * Une traduction doit rendre exactement les memes reperes que l'anglais.
+ *   l'assemblage ;
+ * - une image qui a son propre texte a cote d'elle (bloc « image et texte ») s'ecrit `[[image:1]]`, son
+ *   texte, puis `[[/image:1]]`, chacun sur sa ligne (traduction assistee seulement : l'IA qui redige ne
+ *   place que des images seules).
+ * Une traduction doit rendre exactement les memes reperes que le texte de depart.
  */
 final class EditorialMarkdown
 {
@@ -20,6 +23,12 @@ final class EditorialMarkdown
 
     /** L'emplacement d'une image du texte, numerote a partir de 1. */
     public const IMAGE_PLACEHOLDER = '~\[\[image:(\d+)\]\]~';
+
+    /** La fin du texte place a cote d'une image, qui suit son emplacement. */
+    public const IMAGE_END = '~\[\[/image:(\d+)\]\]~';
+
+    /** Un repere d'image, emplacement ou fin : ni un nombre, ni un mot, ni un texte a retoucher. */
+    public const IMAGE_MARKER = '~\[\[/?image:\d+\]\]~';
 
     /**
      * Les jetons de liens, dans l'ordre du texte (un meme jeton peut revenir).
@@ -41,6 +50,18 @@ final class EditorialMarkdown
     public static function imagePlaceholders(string $markdown): array
     {
         preg_match_all(self::IMAGE_PLACEHOLDER, $markdown, $matches);
+
+        return array_map(intval(...), $matches[1]);
+    }
+
+    /**
+     * Les numeros des fins de texte a cote d'une image, dans l'ordre du texte.
+     *
+     * @return list<int>
+     */
+    public static function imageEnds(string $markdown): array
+    {
+        preg_match_all(self::IMAGE_END, $markdown, $matches);
 
         return array_map(intval(...), $matches[1]);
     }

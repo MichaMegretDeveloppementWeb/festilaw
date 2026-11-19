@@ -69,9 +69,38 @@ final class BlogContentRenderer
             Schema::BULLET_LIST => '<ul>'.$this->items($block['content'], $locale, $images).'</ul>',
             Schema::ORDERED_LIST => '<ol>'.$this->items($block['content'], $locale, $images).'</ol>',
             Schema::BLOCKQUOTE => '<blockquote>'.implode('', array_map(fn (array $child): string => $this->block($child, $locale, $images), $block['content'])).'</blockquote>',
-            Schema::IMAGE => $this->figure($images[$block['attrs']['imageId']] ?? null, $locale, $block['attrs']['width'] ?? null, $block['attrs']['align'] ?? null),
+            Schema::IMAGE => $this->figure($images[$block['attrs']['imageId']] ?? null, $locale, $block['attrs']['width'] ?? null),
+            Schema::IMAGE_TEXT => $this->imageText($block, $locale, $images),
             default => '',
         };
+    }
+
+    /**
+     * Bloc « image et texte » : la figure puis son texte, dans un conteneur que la feuille de la page met en
+     * deux colonnes quand la colonne de l'article est assez large (resources/css/web/blog/prose.css), et l'un
+     * sous l'autre en dessous. Le cote est une classe : l'ordre du HTML reste le meme, image d'abord. Une image
+     * introuvable laisse son texte, rendu comme le reste de l'article.
+     *
+     * @param  array<string, mixed>  $block
+     * @param  array<int, BlogImage>  $images
+     */
+    private function imageText(array $block, string $locale, array $images): string
+    {
+        $text = implode('', array_map(
+            fn (array $child): string => $child['type'] === Schema::PARAGRAPH && ($child['content'] ?? []) === [] ? '' : $this->block($child, $locale, $images),
+            $block['content'],
+        ));
+
+        $figure = $this->figure($images[$block['attrs']['imageId']] ?? null, $locale, $block['attrs']['width']);
+
+        if ($figure === '') {
+            return $text;
+        }
+
+        $class = "blog-figure-text blog-figure-text--{$block['attrs']['width']} blog-figure-text--{$block['attrs']['side']}";
+        $body = $text === '' ? '' : "<div class=\"blog-figure-text__body\">{$text}</div>";
+
+        return "<div class=\"{$class}\">{$figure}{$body}</div>";
     }
 
     /**
@@ -173,7 +202,7 @@ final class BlogContentRenderer
      * classe de plus, et annonce au navigateur sa largeur a l'ecran pour qu'il charge une variante plus
      * legere.
      */
-    private function figure(?BlogImage $image, string $locale, ?string $width = null, ?string $align = null): string
+    private function figure(?BlogImage $image, string $locale, ?string $width = null): string
     {
         if ($image === null) {
             return '';
@@ -211,11 +240,6 @@ final class BlogContentRenderer
         }
 
         $class = $reduced === null ? 'blog-figure' : "blog-figure blog-figure--{$width}";
-
-        // A gauche ou a droite, le texte se place a cote de l'image (resources/css/web/blog/prose.css).
-        if ($reduced !== null && in_array($align, Schema::IMAGE_ALIGNS, true)) {
-            $class .= " blog-figure--{$align}";
-        }
 
         return "<figure class=\"{$class}\"><img{$html}></figure>";
     }

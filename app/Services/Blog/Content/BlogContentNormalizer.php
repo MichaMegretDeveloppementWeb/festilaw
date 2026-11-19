@@ -21,12 +21,20 @@ use App\Services\Blog\Content\BlogContentSchema as Schema;
  */
 final class BlogContentNormalizer
 {
-    /** Une image n'est admise qu'au premier niveau du document. */
+    /** Une image n'est admise qu'au premier niveau du document, seule ou avec son texte. */
     private const TOP_LEVEL_BLOCKS = [
-        Schema::PARAGRAPH, Schema::HEADING, Schema::BULLET_LIST, Schema::ORDERED_LIST, Schema::BLOCKQUOTE, Schema::IMAGE,
+        Schema::PARAGRAPH, Schema::HEADING, Schema::BULLET_LIST, Schema::ORDERED_LIST, Schema::BLOCKQUOTE, Schema::IMAGE, Schema::IMAGE_TEXT,
     ];
 
     private const LIST_ITEM_BLOCKS = [Schema::PARAGRAPH, Schema::BULLET_LIST, Schema::ORDERED_LIST];
+
+    /** Ce que le texte a cote d'une image peut contenir (choix de Micha du 19/11) : ni image, ni citation. */
+    private const SIDE_TEXT_BLOCKS = [Schema::PARAGRAPH, Schema::HEADING, Schema::BULLET_LIST, Schema::ORDERED_LIST];
+
+    /** Bloc « image et texte » sans largeur ou sans cote connus : une petite image, a gauche. */
+    private const SIDE_DEFAULT_WIDTH = 'small';
+
+    private const SIDE_DEFAULT_SIDE = 'left';
 
     private int $nodeCount = 0;
 
@@ -108,6 +116,7 @@ final class BlogContentNormalizer
                 Schema::BULLET_LIST, Schema::ORDERED_LIST => $this->list($node, $depth),
                 Schema::BLOCKQUOTE => $this->blockquote($node, $depth),
                 Schema::IMAGE => $this->image($node),
+                Schema::IMAGE_TEXT => $this->imageText($node, $depth),
                 default => null,
             };
 
@@ -220,19 +229,47 @@ final class BlogContentNormalizer
         $attrs = ['imageId' => $imageId];
         $width = $node['attrs']['width'] ?? null;
 
-        // Pleine largeur : aucun attribut. Une largeur inconnue est retiree, l'image reprend toute la colonne.
+        // Pleine largeur : aucun attribut. Une largeur inconnue est retiree, l'image reprend toute la colonne. Une
+        // image seule n'a pas de position : placee a gauche ou a droite, elle devient un bloc « image et texte ».
         if (is_string($width) && in_array($width, Schema::IMAGE_WIDTHS, true)) {
             $attrs['width'] = $width;
-
-            // Une position n'a de sens que pour une image reduite : en pleine largeur, il n'y a pas de place a cote.
-            $align = $node['attrs']['align'] ?? null;
-
-            if (is_string($align) && in_array($align, Schema::IMAGE_ALIGNS, true)) {
-                $attrs['align'] = $align;
-            }
         }
 
         return ['type' => Schema::IMAGE, 'attrs' => $attrs];
+    }
+
+    /**
+     * Bloc « image et texte » : l'image, toujours reduite, et son texte de l'autre cote. Le texte garde des
+     * paragraphes, des listes et des intertitres, ramenes au niveau 3 pour rester sous ceux de l'article. Un
+     * texte vide garde un paragraphe vide, ou l'editeur place le curseur. Sans image valable, le bloc disparait.
+     *
+     * @param  array<string, mixed>  $node
+     * @return array<string, mixed>|null
+     */
+    private function imageText(array $node, int $depth): ?array
+    {
+        $image = $this->image($node);
+
+        if ($image === null) {
+            return null;
+        }
+
+        $side = $node['attrs']['side'] ?? null;
+
+        $content = array_map(
+            static fn (array $block): array => $block['type'] === Schema::HEADING ? [...$block, 'attrs' => ['level' => 3]] : $block,
+            $this->blocks($node['content'] ?? [], $depth + 1, self::SIDE_TEXT_BLOCKS),
+        );
+
+        return [
+            'type' => Schema::IMAGE_TEXT,
+            'attrs' => [
+                'imageId' => $image['attrs']['imageId'],
+                'width' => $image['attrs']['width'] ?? self::SIDE_DEFAULT_WIDTH,
+                'side' => is_string($side) && in_array($side, Schema::IMAGE_SIDES, true) ? $side : self::SIDE_DEFAULT_SIDE,
+            ],
+            'content' => $content === [] ? [['type' => Schema::PARAGRAPH]] : $content,
+        ];
     }
 
     /**

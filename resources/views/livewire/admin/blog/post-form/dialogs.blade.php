@@ -193,7 +193,7 @@
                             :options="['left' => __('Gauche'), 'center' => __('Centre'), 'right' => __('Droite')]" />
                     </div>
                 </div>
-                <p x-show="imageForm.width !== 'full'" x-cloak class="-mt-1 text-[12px] leading-relaxed text-muted">{{ __('À gauche ou à droite, le texte se place à côté de l\'image sur un grand écran. Sur un écran plus étroit, l\'image passe au-dessus du texte.') }}</p>
+                <p x-show="imageForm.width !== 'full'" x-cloak class="-mt-1 text-[12px] leading-relaxed text-muted">{{ __('À gauche ou à droite, l\'image a sa propre zone de texte à côté d\'elle. Sur un écran étroit, elle passe au-dessus de ce texte.') }}</p>
 
                 <x-ui::form-group :label="__('Description de l\'image')" for="post-image-alt"
                     :hint="__('Une phrase qui dit ce que montre l\'image, pour les personnes qui ne la voient pas et pour Google.')">

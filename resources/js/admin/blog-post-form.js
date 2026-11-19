@@ -222,6 +222,12 @@ const blogPostForm = (config) => ({
         return this.pulse >= 0 && (editors.get(locale)?.can()[command]?.() ?? false);
     },
 
+    // Le curseur est dans le texte a cote d'une image : ni intertitre de niveau 2, ni citation, ni image n'y
+    // sont admis (le serveur les retirerait), les boutons correspondants se desactivent.
+    inSideText(locale) {
+        return this.isActive(locale, 'blogImageText');
+    },
+
     openLink(locale) {
         const editor = editors.get(locale);
 

@@ -27,6 +27,13 @@ final class BlogContentSchema
 
     public const IMAGE = 'blogImage';
 
+    /**
+     * Image reduite avec son propre texte a cote d'elle, a gauche ou a droite (decision de Micha du 19/11/2026).
+     * Le texte d'avant ou d'apres ne passe jamais a cote de l'image, comme il le faisait quand elle flottait :
+     * le bloc se deplace d'un seul tenant, image et texte ensemble.
+     */
+    public const IMAGE_TEXT = 'blogImageText';
+
     public const TEXT = 'text';
 
     public const HARD_BREAK = 'hardBreak';
@@ -44,11 +51,10 @@ final class BlogContentSchema
     public const IMAGE_WIDTHS = ['medium', 'small'];
 
     /**
-     * Positions qu'une image REDUITE peut prendre (attribut `align`) : a gauche ou a droite, le texte se place
-     * alors a cote d'elle sur un ecran assez large. Sans attribut, elle est centree, seule sur sa ligne. Une
-     * image en pleine largeur n'a pas de position.
+     * Cote de l'image dans un bloc « image et texte » (attribut `side`), son texte etant de l'autre cote. Une
+     * image seule n'a pas de position : elle est centree.
      */
-    public const IMAGE_ALIGNS = ['left', 'right'];
+    public const IMAGE_SIDES = ['left', 'right'];
 
     /** Niveaux d'intertitre autorises (le titre de la page est le seul h1). */
     public const HEADING_LEVELS = [2, 3];

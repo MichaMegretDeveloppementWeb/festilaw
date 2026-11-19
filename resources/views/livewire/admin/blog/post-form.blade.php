@@ -20,6 +20,11 @@
         'widths' => ['full' => __('Pleine'), 'medium' => __('Moyenne'), 'small' => __('Petite')],
         'position' => __('Position de l\'image dans l\'article'),
         'positions' => ['left' => __('Gauche'), 'center' => __('Centre'), 'right' => __('Droite')],
+        'settings' => __('Réglages de l\'image'),
+        'handle' => __('Glisser pour déplacer l\'image'),
+        'moveUp' => __('Monter'),
+        'moveDown' => __('Descendre'),
+        'sideText' => __('Texte à côté de l\'image'),
         // Memes phrases que les refus du serveur (BlogImageException) : le script les dit avant tout envoi.
         'wrongType' => __('Ce format d\'image n\'est pas pris en charge. Envoyez un fichier JPEG, PNG ou WebP.'),
         'unreadable' => __('Ce fichier n\'est pas une image lisible. Envoyez un fichier JPEG, PNG ou WebP.'),

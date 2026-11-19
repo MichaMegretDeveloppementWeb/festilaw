@@ -58,7 +58,11 @@ function richDocument(int $imageId = 41): array
             ['type' => 'hardBreak'],
             $text('Second line.'),
         ]],
-        ['type' => 'blogImage', 'attrs' => ['imageId' => $imageId, 'width' => 'medium', 'align' => 'left']],
+        ['type' => 'blogImageText', 'attrs' => ['imageId' => $imageId, 'width' => 'medium', 'side' => 'left'], 'content' => [
+            ['type' => 'paragraph', 'content' => [$text('Beside the image, '), $text('in bold', [['type' => 'bold']]), $text('.')]],
+            ['type' => 'heading', 'attrs' => ['level' => 3], 'content' => [$text('Next to it')]],
+            ['type' => 'bulletList', 'content' => [['type' => 'listItem', 'content' => [['type' => 'paragraph', 'content' => [$text('A point beside')]]]]]],
+        ]],
         ['type' => 'bulletList', 'content' => [
             ['type' => 'listItem', 'content' => [
                 ['type' => 'paragraph', 'content' => [$text('Company name')]],
@@ -74,13 +78,26 @@ it('writes a document as Markdown and builds it back identical, images and their
     ['markdown' => $markdown, 'images' => $images] = app(BlogDocumentMarkdownWriter::class)->write(richDocument());
 
     expect($markdown)->toContain("## What Etsy asks for\n\nSince 13 December 2024, a **Responsible Person** is *required*. See [our prices](/pricing). A star \\* stays a star.")
-        ->toContain('[[image:1]]')
-        ->and($images)->toBe([1 => ['imageId' => 41, 'width' => 'medium', 'align' => 'left']]);
+        // Le texte a cote de l'image se traduit avec le reste, entre les deux reperes de son image.
+        ->toContain("[[image:1]]\n\nBeside the image, **in bold**.\n\n### Next to it\n\n- A point beside\n\n[[/image:1]]")
+        ->and($images)->toBe([1 => ['imageId' => 41, 'width' => 'medium', 'side' => 'left']]);
 
     $rebuilt = app(EditorialDocumentBuilder::class)->build($markdown, $images);
     $normalizer = app(BlogContentNormalizer::class);
 
     expect($normalizer->normalize($rebuilt)->document)->toBe($normalizer->normalize(richDocument())->document);
+});
+
+it('keeps the text after an image in its place when the translation lost the end of the text beside it', function () {
+    $images = [1 => ['imageId' => 41, 'width' => 'small', 'side' => 'right'], 2 => ['imageId' => 42]];
+    $markdown = "Before.\n\n[[image:1]]\n\nNo end marker after this.\n\n[[image:2]]\n\n[[/image:9]]\n\nAfter.";
+
+    $content = app(EditorialDocumentBuilder::class)->build($markdown, $images)['content'];
+
+    // Le bloc garde un texte vide, le texte suivant reste hors de lui, et un repere egare disparait.
+    expect(array_column($content, 'type'))->toBe(['paragraph', 'blogImageText', 'paragraph', 'blogImage', 'paragraph'])
+        ->and($content[1]['content'])->toBe([['type' => 'paragraph']])
+        ->and($content[1]['attrs'])->toBe($images[1]);
 });
 
 it('queues the translation of the text in the form as a generation, without saving the article', function () {
@@ -97,7 +114,7 @@ it('queues the translation of the text in the form as a generation, without savi
         ->and($generation->topic_hint)->toBe('Traduction en anglais de « Ajouter un opérateur économique »')
         ->and($generation->payload['translation']['from'])->toBe('fr')
         ->and($generation->payload['translation']['article']['body'])->toContain('[[image:1]]')
-        ->and($generation->payload['translation']['images'][1])->toBe(['imageId' => 41, 'width' => 'medium', 'align' => 'left']);
+        ->and($generation->payload['translation']['images'][1])->toBe(['imageId' => 41, 'width' => 'medium', 'side' => 'left']);
 });
 
 it('refuses a translation into the same language, from an unknown language, or of an empty text', function (string $from, string $to, string $title) {
@@ -157,7 +174,10 @@ it('lets the form follow a translation, then hands back the texts and the docume
         ->assertDispatched('post-translation-ready', function (string $event, array $params): bool {
             return $params['locale'] === 'fr'
                 && $params['texts']['title'] === '[FR] Etsy labels'
-                && $params['content']['content'][2] === ['type' => 'blogImage', 'attrs' => ['imageId' => 41, 'width' => 'medium', 'align' => 'left']];
+                && $params['content']['content'][2]['type'] === 'blogImageText'
+                && $params['content']['content'][2]['attrs'] === ['imageId' => 41, 'width' => 'medium', 'side' => 'left']
+                && $params['content']['content'][2]['content'] === richDocument()['content'][2]['content']
+                && $params['content']['content'][3]['type'] === 'bulletList';
         })
         ->assertSet('generationId', null);
 

@@ -36,6 +36,15 @@ it('reports a rewrite that changed a number, a link, an internal link or an imag
     ]);
 });
 
+it('reports a translation that lost the end of the text beside an image, and never reads a marker as a number', function () {
+    $before = "[[image:1]]\n\nBeside the image.\n\n[[/image:1]]\n\nAfter.";
+    $after = "[[image:1]]\n\nÀ côté de l'image.\n\nAprès.";
+
+    expect((new BlogFactGuard)->differences($before, $after))->toBe(['image text ends changed: missing [1], added []'])
+        ->and(EditorialMarkdown::imageEnds($before))->toBe([1])
+        ->and((new BlogFactGuard)->numbers($before))->toBe([]);
+});
+
 it('counts the measurable signs of generated text, without blocking anything', function () {
     $markdown = <<<'MD'
 ## The GPSR: what changes

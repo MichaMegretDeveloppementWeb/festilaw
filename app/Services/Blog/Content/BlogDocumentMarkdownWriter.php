@@ -9,9 +9,11 @@ use App\Services\Blog\Content\BlogContentSchema as Schema;
 /**
  * Ecrit un document de l'editeur en Markdown restreint, l'inverse de BlogMarkdownConverter, pour le donner a
  * traduire a un modele (traduction assistee, SC6). Les images deviennent des emplacements `[[image:N]]`
- * numerotes dans l'ordre, et leurs attributs (image, largeur, position) sont rendus a part : la traduction
- * les retrouve tels quels. Le texte est echappe, pour qu'un asterisque ou un crochet ecrit par la personne
- * ne devienne pas une mise en forme.
+ * numerotes dans l'ordre, et leurs attributs (image, largeur, cote) sont rendus a part : la traduction les
+ * retrouve tels quels. Le texte place a cote d'une image (bloc « image et texte ») s'ecrit entre
+ * `[[image:N]]` et `[[/image:N]]`, pour etre traduit avec le reste puis remis dans son bloc
+ * (EditorialDocumentBuilder). Le texte est echappe, pour qu'un asterisque ou un crochet ecrit par la
+ * personne ne devienne pas une mise en forme.
  */
 final class BlogDocumentMarkdownWriter
 {
@@ -48,8 +50,25 @@ final class BlogDocumentMarkdownWriter
             Schema::ORDERED_LIST => $this->listItems($node['content'] ?? [], true, $images),
             Schema::BLOCKQUOTE => $this->quote($node['content'] ?? [], $images),
             Schema::IMAGE => $this->image($node, $images),
+            Schema::IMAGE_TEXT => $this->imageText($node, $images),
             default => '',
         };
+    }
+
+    /**
+     * L'emplacement de l'image, son texte, puis la fin de ce texte, chacun separe d'une ligne vide : le lecteur
+     * de Markdown y voit des blocs du premier niveau, que la reconstruction range dans le bloc.
+     *
+     * @param  array<string, mixed>  $node
+     * @param  array<int, array<string, mixed>>  $images
+     */
+    private function imageText(array $node, array &$images): string
+    {
+        $opening = $this->image($node, $images);
+        $number = count($images);
+        $text = array_filter(array_map(fn (array $child): string => $this->block($child, $images), $node['content'] ?? []), static fn (string $part): bool => $part !== '');
+
+        return implode("\n\n", [$opening, ...$text, "[[/image:{$number}]]"]);
     }
 
     /**

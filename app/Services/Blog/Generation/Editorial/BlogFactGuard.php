@@ -19,7 +19,7 @@ final class BlogFactGuard
     {
         $differences = [];
 
-        foreach (['numbers' => $this->numbers(...), 'links' => $this->links(...), 'link tokens' => EditorialMarkdown::linkTokens(...), 'image placeholders' => $this->placeholders(...)] as $kind => $extract) {
+        foreach (['numbers' => $this->numbers(...), 'links' => $this->links(...), 'link tokens' => EditorialMarkdown::linkTokens(...), 'image placeholders' => $this->placeholders(...), 'image text ends' => $this->ends(...)] as $kind => $extract) {
             $missing = $this->without($extract($before), $extract($after));
             $added = $this->without($extract($after), $extract($before));
 
@@ -39,7 +39,7 @@ final class BlogFactGuard
     public function numbers(string $text): array
     {
         // Liens et reperes retires d'abord : leurs chiffres sont compares a part.
-        $text = (string) preg_replace(['/\]\([^)]*\)/', EditorialMarkdown::IMAGE_PLACEHOLDER], [']', ''], $text);
+        $text = (string) preg_replace(['/\]\([^)]*\)/', EditorialMarkdown::IMAGE_MARKER], [']', ''], $text);
         preg_match_all('/\d{1,3}(?:[ \x{00A0}\x{202F}]\d{3})+(?:[.,]\d+)?|\d+(?:[.,]\d+)*/u', $text, $matches);
 
         return array_map(static fn (string $number): string => (string) preg_replace('/\D/', '', $number), $matches[0]);
@@ -57,6 +57,17 @@ final class BlogFactGuard
     private function placeholders(string $text): array
     {
         return array_map(strval(...), EditorialMarkdown::imagePlaceholders($text));
+    }
+
+    /**
+     * Une fin de texte a cote d'une image perdue ferait passer tout le texte suivant a cote d'elle, ou l'en
+     * sortirait : elle se compte comme un emplacement.
+     *
+     * @return list<string>
+     */
+    private function ends(string $text): array
+    {
+        return array_map(strval(...), EditorialMarkdown::imageEnds($text));
     }
 
     /**

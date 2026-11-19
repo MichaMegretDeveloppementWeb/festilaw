@@ -55,7 +55,7 @@ final class BlogWritingSignalsInspector
         $blocks = array_values(array_filter(array_map(trim(...), preg_split('/\n\s*\n/', str_replace("\r\n", "\n", $markdown)) ?: [])));
         $headings = array_values(array_filter($blocks, static fn (string $block): bool => str_starts_with($block, '#')));
         $prose = array_values(array_filter($blocks, static fn (string $block): bool => ! str_starts_with($block, '#')
-            && preg_match(EditorialMarkdown::IMAGE_PLACEHOLDER, $block) !== 1));
+            && preg_match(EditorialMarkdown::IMAGE_MARKER, $block) !== 1));
         $paragraphs = array_values(array_filter($prose, static fn (string $block): bool => preg_match('/^\s*(?:[-*+]|\d+[.)])\s/', $block) !== 1));
 
         $plainProse = $this->plain(implode("\n\n", $prose));
@@ -214,7 +214,7 @@ final class BlogWritingSignalsInspector
     private function plain(string $markdown): string
     {
         $text = (string) preg_replace('/\[([^\]]*)\]\([^)]*\)/', '$1', $markdown);
-        $text = (string) preg_replace(EditorialMarkdown::IMAGE_PLACEHOLDER, '', $text);
+        $text = (string) preg_replace(EditorialMarkdown::IMAGE_MARKER, '', $text);
 
         return trim((string) preg_replace(['/^#+\s*/m', '/^\s*(?:[-*+]|\d+[.)])\s+/m', '/[*_`]/'], '', $text));
     }

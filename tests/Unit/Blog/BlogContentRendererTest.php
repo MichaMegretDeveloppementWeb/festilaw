@@ -129,18 +129,32 @@ it('marks a reduced image and tells the browser how wide it is shown, so that a 
     'small' => ['small', '(min-width: 360px) 360px, 100vw'],
 ]);
 
-it('marks a reduced image placed on one side, so that the text sits beside it', function (string $align) {
-    $html = renderBlogBlocks([['type' => 'blogImage', 'attrs' => ['imageId' => 7, 'width' => 'small', 'align' => $align]]], 'en', [blogImageForRender(7)]);
+it('renders an image with its text beside it as one block, the side as a class and the image first', function (string $side) {
+    $html = renderBlogBlocks([['type' => 'blogImageText', 'attrs' => ['imageId' => 7, 'width' => 'small', 'side' => $side], 'content' => [
+        ['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Beside.']]],
+        ['type' => 'heading', 'attrs' => ['level' => 3], 'content' => [['type' => 'text', 'text' => 'Point']]],
+    ]]], 'en', [blogImageForRender(7)]);
 
-    expect($html)->toStartWith("<figure class=\"blog-figure blog-figure--small blog-figure--{$align}\"><img");
+    expect($html)->toStartWith("<div class=\"blog-figure-text blog-figure-text--small blog-figure-text--{$side}\"><figure class=\"blog-figure blog-figure--small\"><img")
+        ->toContain(' sizes="(min-width: 360px) 360px, 100vw"')
+        ->toEndWith('</figure><div class="blog-figure-text__body"><p>Beside.</p><h3 id="point">Point</h3></div></div>');
 })->with(['left', 'right']);
 
-it('gives no position to a full width image, nor an unknown one to a reduced image', function () {
-    $full = renderBlogBlocks([['type' => 'blogImage', 'attrs' => ['imageId' => 7, 'align' => 'left']]], 'en', [blogImageForRender(7)]);
-    $unknown = renderBlogBlocks([['type' => 'blogImage', 'attrs' => ['imageId' => 7, 'width' => 'medium', 'align' => 'top']]], 'en', [blogImageForRender(7)]);
+it('renders an image with an empty text without an empty body, and the text alone when the image is missing', function () {
+    $empty = renderBlogBlocks([['type' => 'blogImageText', 'attrs' => ['imageId' => 7, 'width' => 'medium', 'side' => 'left'], 'content' => [['type' => 'paragraph']]]], 'en', [blogImageForRender(7)]);
+    $missing = renderBlogBlocks([['type' => 'blogImageText', 'attrs' => ['imageId' => 404, 'width' => 'small', 'side' => 'left'], 'content' => [
+        ['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Kept.']]],
+    ]]], 'en', [blogImageForRender(7)]);
 
-    expect($full)->toStartWith('<figure class="blog-figure"><img')
-        ->and($unknown)->toStartWith('<figure class="blog-figure blog-figure--medium"><img');
+    expect($empty)->toStartWith('<div class="blog-figure-text blog-figure-text--medium blog-figure-text--left"><figure')
+        ->toEndWith('</figure></div>')
+        ->and($missing)->toBe('<p>Kept.</p>');
+});
+
+it('gives no position to an image on its own', function () {
+    $html = renderBlogBlocks([['type' => 'blogImage', 'attrs' => ['imageId' => 7, 'width' => 'medium', 'align' => 'left']]], 'en', [blogImageForRender(7)]);
+
+    expect($html)->toStartWith('<figure class="blog-figure blog-figure--medium"><img');
 });
 
 it('renders an image whose width is not a known reduced width at full width', function () {

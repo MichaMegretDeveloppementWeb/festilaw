@@ -79,18 +79,57 @@ it('keeps the width of an image of the text only when it is a known reduced widt
     'nothing' => [null, ['imageId' => 12]],
 ]);
 
-it('keeps the position of an image of the text only when the image is reduced and the position is known', function (array $attrs, array $expected) {
-    $content = blogNormalizer()->normalize(blogDoc(['type' => 'blogImage', 'attrs' => ['imageId' => 12, ...$attrs]]));
+it('gives no position to an image on its own, which stays centred', function () {
+    $content = blogNormalizer()->normalize(blogDoc(['type' => 'blogImage', 'attrs' => ['imageId' => 12, 'width' => 'small', 'align' => 'left']]));
 
-    expect($content->document['content'][0]['attrs'])->toBe($expected);
+    expect($content->document['content'][0]['attrs'])->toBe(['imageId' => 12, 'width' => 'small']);
+});
+
+it('keeps an image with its own text beside it, as one block', function () {
+    $content = blogNormalizer()->normalize(blogDoc(
+        blogParagraph(blogText('Before')),
+        ['type' => 'blogImageText', 'attrs' => ['imageId' => '12', 'width' => 'medium', 'side' => 'right', 'onclick' => 'x'], 'content' => [
+            blogParagraph(blogText('Beside the image', [['type' => 'bold']])),
+            ['type' => 'heading', 'attrs' => ['level' => 2], 'content' => [blogText('A heading')]],
+            ['type' => 'bulletList', 'content' => [['type' => 'listItem', 'content' => [blogParagraph(blogText('One point'))]]]],
+            // Ni image ni citation dans le texte d'une image.
+            ['type' => 'blogImage', 'attrs' => ['imageId' => 99]],
+            ['type' => 'blockquote', 'content' => [blogParagraph(blogText('Quoted'))]],
+        ]],
+        blogParagraph(blogText('After')),
+    ));
+
+    expect($content->document['content'][1])->toBe(['type' => 'blogImageText', 'attrs' => ['imageId' => 12, 'width' => 'medium', 'side' => 'right'], 'content' => [
+        blogParagraph(blogText('Beside the image', [['type' => 'bold']])),
+        // Un intertitre a cote d'une image reste sous ceux de l'article.
+        ['type' => 'heading', 'attrs' => ['level' => 3], 'content' => [blogText('A heading')]],
+        ['type' => 'bulletList', 'content' => [['type' => 'listItem', 'content' => [blogParagraph(blogText('One point'))]]]],
+    ]])
+        // Le texte d'avant et d'apres reste hors du bloc ; l'image est citee, les mots du bloc comptent.
+        ->and($content->document['content'])->toHaveCount(3)
+        ->and($content->imageIds)->toBe([12])
+        ->and($content->wordCount)->toBe(9);
+});
+
+it('gives an image with text a reduced width, a side and a place for its text, whatever it received', function (array $attrs, array $expected) {
+    $content = blogNormalizer()->normalize(blogDoc(['type' => 'blogImageText', 'attrs' => ['imageId' => 12, ...$attrs]]));
+
+    expect($content->document['content'][0])->toBe(['type' => 'blogImageText', 'attrs' => $expected, 'content' => [['type' => 'paragraph']]]);
 })->with([
-    'small on the left' => [['width' => 'small', 'align' => 'left'], ['imageId' => 12, 'width' => 'small', 'align' => 'left']],
-    'medium on the right' => [['width' => 'medium', 'align' => 'right'], ['imageId' => 12, 'width' => 'medium', 'align' => 'right']],
-    'centre is the absence of position' => [['width' => 'small', 'align' => 'center'], ['imageId' => 12, 'width' => 'small']],
-    'unknown position' => [['width' => 'small', 'align' => 'top'], ['imageId' => 12, 'width' => 'small']],
-    'no position at full width' => [['align' => 'left'], ['imageId' => 12]],
-    'no position when the width is unknown' => [['width' => 'huge', 'align' => 'right'], ['imageId' => 12]],
+    'nothing' => [[], ['imageId' => 12, 'width' => 'small', 'side' => 'left']],
+    'unknown width and side' => [['width' => 'huge', 'side' => 'top'], ['imageId' => 12, 'width' => 'small', 'side' => 'left']],
+    'medium on the right' => [['width' => 'medium', 'side' => 'right'], ['imageId' => 12, 'width' => 'medium', 'side' => 'right']],
 ]);
+
+it('drops an image with text that has no valid image', function () {
+    $content = blogNormalizer()->normalize(blogDoc(
+        ['type' => 'blogImageText', 'attrs' => ['imageId' => 'abc'], 'content' => [blogParagraph(blogText('Lost'))]],
+        blogParagraph(blogText('Kept')),
+    ));
+
+    expect($content->document['content'])->toBe([blogParagraph(blogText('Kept'))])
+        ->and($content->imageIds)->toBe([]);
+});
 
 it('removes unknown elements, marks and attributes', function () {
     $content = blogNormalizer()->normalize(blogDoc(
@@ -151,6 +190,8 @@ it('gives the same result when applied twice', function () {
     $document = blogDoc(
         blogParagraph(blogText('x', [['type' => 'italic'], ['type' => 'bold']]), blogText('y', [['type' => 'bold'], ['type' => 'italic']])),
         ['type' => 'heading', 'attrs' => ['level' => 5], 'content' => [blogText('T')]],
+        ['type' => 'blogImageText', 'attrs' => ['imageId' => 3, 'side' => 'right'], 'content' => [['type' => 'heading', 'attrs' => ['level' => 2], 'content' => [blogText('H')]]]],
+        ['type' => 'blogImageText', 'attrs' => ['imageId' => 4], 'content' => []],
     );
 
     $once = blogNormalizer()->normalize($document);

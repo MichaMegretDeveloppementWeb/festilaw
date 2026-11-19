@@ -15,7 +15,7 @@ it('sets French punctuation, quotation marks and numbers the way French readers 
 });
 
 it('never touches a link address, an internal link token, an image placeholder or a time', function () {
-    $text = "Voir [le règlement](https://eur-lex.europa.eu/eli/reg/2023/988/oj?lang=fr) et [le quiz](festilaw:page/quiz).\n\n[[image:1]]\n\nRendez-vous à 10:30.";
+    $text = "Voir [le règlement](https://eur-lex.europa.eu/eli/reg/2023/988/oj?lang=fr) et [le quiz](festilaw:page/quiz).\n\n[[image:1]]\n\nÀ côté de l'image.\n\n[[/image:1]]\n\nRendez-vous à 10:30.";
 
     expect((new EditorialTypography)->apply($text, 'fr'))->toBe($text);
 });

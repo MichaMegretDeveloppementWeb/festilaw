@@ -23,8 +23,8 @@ final class EditorialTypography
 
     private const NARROW_NBSP = "\u{202F}";
 
-    /** Ce qui ne se retouche jamais : cible d'un lien Markdown, emplacement d'image, code, adresse, jeton interne. */
-    private const PROTECTED = '/(\]\([^)]*\)|\[\[image:\d+\]\]|`[^`]*`|<https?:\/\/[^>\s]+>|https?:\/\/[^\s)\]]+|festilaw:[^\s)\]]+)/u';
+    /** Ce qui ne se retouche jamais : cible d'un lien Markdown, repere d'image (emplacement ou fin), code, adresse, jeton interne. */
+    private const PROTECTED = '/(\]\([^)]*\)|\[\[\/?image:\d+\]\]|`[^`]*`|<https?:\/\/[^>\s]+>|https?:\/\/[^\s)\]]+|festilaw:[^\s)\]]+)/u';
 
     public function article(EditorialArticle $article, string $locale): EditorialArticle
     {
