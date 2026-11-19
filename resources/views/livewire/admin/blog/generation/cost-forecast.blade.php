@@ -8,6 +8,6 @@
     </x-admin.stats.item>
     <x-admin.stats.item icon="shield-check" :label="__('Arrêt de sécurité')" size="sm" data-forecast-stop>
         {{ $forecast['stop'] }}
-        <x-slot:extra>{{ __('Le double du haut de l\'estimation. La génération s\'arrête si son coût allait dépasser ce montant.') }}</x-slot:extra>
+        <x-slot:extra>{{ __('La génération s\'arrête d\'elle-même si son coût allait dépasser ce montant.') }}</x-slot:extra>
     </x-admin.stats.item>
 </x-admin.stats>

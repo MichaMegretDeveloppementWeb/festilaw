@@ -67,7 +67,7 @@ final readonly class BlogGenerationJournalService
             outcome: $generation->outcome_reason === BlogGenerationOutcomeReason::CancelledByUser
                 ? null
                 : $this->labels->outcome($generation->outcome_reason, $failedSteps[$generation->id] ?? null),
-            subject: $this->presenter->subject($generation->topic_title, $generation->topic_hint),
+            subject: $this->presenter->subject($generation->getAttributes()['post_title'] ?? null, $generation->topic_title, $generation->topic_hint),
             postId: $generation->blog_post_id,
             cost: $this->costs->dollars($generation->cost_microusd),
             duration: $generation->finished_at === null ? null : $this->presenter->elapsed($generation->started_at, $generation->finished_at),

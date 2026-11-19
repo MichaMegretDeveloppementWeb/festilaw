@@ -5,7 +5,8 @@
         <x-ui::icon name="sparkles" class="ai-icon h-4 w-4" /> {{ __('Générer un article') }}
     </x-ui::button>
 
-    <x-ui::modal name="launch-generation" :title="__('Générer un article')">
+    {{-- 45 em : la largeur ordinaire d'une fenetre du kit serrait les champs (Micha, 19/11). --}}
+    <x-ui::modal name="launch-generation" width="45em" :title="__('Générer un article')">
         <form wire:submit="launch" id="launch-generation-form" class="space-y-4">
             <p class="text-[13px] leading-relaxed text-secondary">{{ __('Laissez le sujet et les consignes vides si vous voulez que l\'IA choisisse le sujet.') }}</p>
 
@@ -45,7 +46,7 @@
                 @include('livewire.admin.blog.generation.monthly-warning', ['warning' => $monthlyWarning])
             @endif
 
-            <p class="text-[12px] leading-relaxed text-muted">{{ __('La génération démarre en quelques secondes et dure plusieurs minutes. Vous pouvez quitter la page, un e-mail vous préviendra quand elle sera terminée.') }}</p>
+            <p class="text-[12px] leading-relaxed text-muted">{{ __('La génération démarre en quelques secondes et dure plusieurs minutes. Vous pouvez quitter la page. Un e-mail vous préviendra quand elle sera terminée.') }}</p>
         </form>
 
         <x-slot:footer>

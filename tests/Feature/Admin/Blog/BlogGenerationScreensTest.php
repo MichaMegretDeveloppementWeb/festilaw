@@ -107,7 +107,9 @@ it('shows the spend of the month against its cap, the automatic rhythm and the d
         ->assertSee(dollarsText('sur 4,0000 $ de plafond'))
         ->assertSee('Activée')
         ->assertSee('2 articles chaque semaine')
-        ->assertSee('brouillons générés attendent votre relecture')
+        // Le titre « Brouillons à relire » dit deja ce qu'est le nombre : rien d'autre que le lien (Micha, 19/11).
+        ->assertDontSee('attendent votre relecture')
+        ->assertSee('Voir les brouillons')
         ->assertSeeHtml(e(route('admin.blog.posts.index', ['origin' => 'ai', 'status' => 'draft'])))
         // Ni formulaire de lancement ni journal pagine sur cette page : chacun a sa place.
         ->assertDontSee('Lancer une génération')
@@ -119,6 +121,8 @@ it('says when a worker is listening, and warns when none is', function () {
     Livewire::test(GenerationDashboard::class)
         ->assertSee('Les générations ne démarrent pas pour le moment')
         ->assertSee('Un article demandé maintenant restera en attente.')
+        ->assertSee('Si cela persiste, contactez l\'assistance technique.')
+        ->assertDontSee('Si cela dure')
         ->assertSee('Service de génération à l\'arrêt')
         ->assertDontSee('traitement')
         ->assertDontSee('Traitement');
@@ -311,6 +315,11 @@ it('renders the launch button without any query, and reads the settings and the 
     expect(count(DB::getQueryLog()))->toBe(2);
 });
 
+it('opens a launch window wide enough for its fields', function () {
+    // La largeur ordinaire d'une fenetre du kit serrait les champs (Micha, 19/11).
+    expect(Livewire::test(GenerationLauncher::class)->html())->toContain('max-width: 45em');
+});
+
 it('shows the estimated cost of the article in the launch window, and follows its length', function () {
     $launcher = Livewire::test(GenerationLauncher::class)
         ->call('prepare')
@@ -477,6 +486,38 @@ it('lists every generation in the history, newest first, twenty per page, in 3 q
         ->assertDontSee('Modèles')
         ->assertDontSee('Jetons')
         ->assertDontSee('Simulated provider failure.');
+});
+
+it('shows the history as rows like the overview, with the duration and small icon actions in a tooltip, and no table', function () {
+    $post = BlogPost::factory()->create();
+    BlogGeneration::factory()->completed()->create(['blog_post_id' => $post->id, 'started_at' => now()->subMinutes(5)->subSeconds(19), 'finished_at' => now()]);
+    BlogGeneration::factory()->failed()->create();
+    BlogGeneration::factory()->create();
+
+    $html = Livewire::test(GenerationHistory::class)->html();
+
+    expect($html)->toContain('data-generation-history')
+        ->not->toContain('ui-table')
+        ->toContain('5 min 19 s')
+        ->toContain('aria-label="Ouvrir le brouillon"')
+        ->toContain('aria-label="Relancer"')
+        ->toContain('aria-label="Arrêter"')
+        ->toContain('ui-tooltip');
+});
+
+it('names a generation that created an article by the French title of the article, in the lists and on its page', function () {
+    $post = BlogPost::factory()->withTranslations()->create();
+    $post->translations()->where('locale', 'fr')->update(['title' => 'Bougies : les règles à connaître']);
+    $generation = BlogGeneration::factory()->completed()->create(['topic_title' => 'Candle rules in English', 'blog_post_id' => $post->id]);
+    BlogGeneration::factory()->completed()->create(['topic_title' => 'Working subject only']);
+
+    Livewire::test(GenerationHistory::class)
+        ->assertSee('Bougies : les règles à connaître')
+        ->assertDontSee('Candle rules in English')
+        // Sans article, le sujet de travail reste.
+        ->assertSee('Working subject only');
+    Livewire::test(GenerationDashboard::class)->assertSee('Bougies : les règles à connaître')->assertDontSee('Candle rules in English');
+    Livewire::test(GenerationDetail::class, ['generation' => $generation->id])->assertSee('Bougies : les règles à connaître');
 });
 
 it('restarts a failed generation and stops a waiting one from the history, and keeps who stopped it', function () {

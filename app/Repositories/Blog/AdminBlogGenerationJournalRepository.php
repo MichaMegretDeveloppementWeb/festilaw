@@ -15,13 +15,20 @@ use Illuminate\Support\Collection;
  * Generations lues par le back-office : une page de l'historique, les dernieres pour la vue d'ensemble, et
  * une generation avec le nom des personnes qui l'ont lancee et arretee. Les plus recentes d'abord. Pour une
  * generation terminee, les passages que la verification et le controle des versions ont retires ou corriges.
+ * Chacune porte le titre francais de l'article qu'elle a cree (`post_title`), lu par une jointure de la meme
+ * requete : le back-office l'affiche a la place du sujet de travail, en anglais (decision de Micha du 19/11).
  */
 final readonly class AdminBlogGenerationJournalRepository
 {
     private const LIST_COLUMNS = [
-        'id', 'trigger', 'status', 'outcome_reason', 'topic_title', 'topic_hint', 'blog_post_id', 'cost_microusd',
-        'started_at', 'finished_at', 'created_at',
+        'blog_generations.id', 'blog_generations.trigger', 'blog_generations.status', 'blog_generations.outcome_reason',
+        'blog_generations.topic_title', 'blog_generations.topic_hint', 'blog_generations.blog_post_id',
+        'blog_generations.cost_microusd', 'blog_generations.started_at', 'blog_generations.finished_at',
+        'blog_generations.created_at', 'post_texts.title as post_title',
     ];
+
+    /** Langue du titre de l'article montre au back-office. */
+    private const POST_TITLE_LOCALE = 'fr';
 
     /** @return LengthAwarePaginator<int, BlogGeneration> */
     public function paginate(int $perPage): LengthAwarePaginator
@@ -41,7 +48,7 @@ final readonly class AdminBlogGenerationJournalRepository
      */
     public function findWithPeople(int $generationId): ?BlogGeneration
     {
-        return BlogGeneration::query()
+        return $this->withPostTitle(BlogGeneration::query())
             ->leftJoin('users as requesters', 'requesters.id', '=', 'blog_generations.requested_by')
             ->leftJoin('users as cancellers', 'cancellers.id', '=', 'blog_generations.cancel_requested_by')
             ->where('blog_generations.id', $generationId)
@@ -52,7 +59,7 @@ final readonly class AdminBlogGenerationJournalRepository
                 'blog_generations.cost_microusd', 'blog_generations.forecast_low_microusd', 'blog_generations.forecast_high_microusd',
                 'blog_generations.started_at', 'blog_generations.finished_at',
                 'blog_generations.cancel_requested_at', 'blog_generations.created_at',
-                'requesters.name as requester_name', 'cancellers.name as canceller_name',
+                'requesters.name as requester_name', 'cancellers.name as canceller_name', 'post_texts.title as post_title',
             ]);
     }
 
@@ -90,6 +97,18 @@ final readonly class AdminBlogGenerationJournalRepository
     /** @return Builder<BlogGeneration> */
     private function newest(): Builder
     {
-        return BlogGeneration::query()->select(self::LIST_COLUMNS)->latest('id');
+        return $this->withPostTitle(BlogGeneration::query())->select(self::LIST_COLUMNS)->latest('blog_generations.id');
+    }
+
+    /**
+     * @param  Builder<BlogGeneration>  $query
+     * @return Builder<BlogGeneration>
+     */
+    private function withPostTitle(Builder $query): Builder
+    {
+        return $query->leftJoin('blog_post_translations as post_texts', static function ($join): void {
+            $join->on('post_texts.blog_post_id', '=', 'blog_generations.blog_post_id')
+                ->where('post_texts.locale', '=', self::POST_TITLE_LOCALE);
+        });
     }
 }

@@ -196,9 +196,19 @@ final readonly class BlogGenerationPresenter
         return $this->duration(max(0, ($to ?? CarbonImmutable::now())->getTimestamp() - $from->getTimestamp()));
     }
 
-    /** Le sujet affiche : celui que l'IA a retenu, sinon celui qui a ete impose, sinon rien. */
-    public function subject(?string $topicTitle, ?string $topicHint): ?string
+    /**
+     * Le sujet affiche : le titre francais de l'article cree, une fois la generation terminee (le back-office
+     * est en francais, et le sujet de travail est en anglais, decision de Micha du 19/11) ; sinon le sujet que
+     * l'IA a retenu, sinon celui qui a ete impose, sinon rien.
+     */
+    public function subject(?string $postTitle, ?string $topicTitle, ?string $topicHint): ?string
     {
-        return filled($topicTitle) ? $topicTitle : (filled($topicHint) ? $topicHint : null);
+        foreach ([$postTitle, $topicTitle, $topicHint] as $subject) {
+            if (filled($subject)) {
+                return $subject;
+            }
+        }
+
+        return null;
     }
 }

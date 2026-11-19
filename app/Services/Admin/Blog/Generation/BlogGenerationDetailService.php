@@ -92,7 +92,7 @@ final readonly class BlogGenerationDetailService
                 ? $this->stopped($generation, $keys, $rows)
                 : $this->labels->outcome($generation->outcome_reason, $failedStep),
             advice: $this->labels->advice($generation->outcome_reason),
-            subject: $this->presenter->subject($generation->topic_title, $generation->topic_hint),
+            subject: $this->presenter->subject($generation->getAttributes()['post_title'] ?? null, $generation->topic_title, $generation->topic_hint),
             topicHint: $generation->topic_hint,
             instructions: $generation->instructions,
             duration: $this->presenter->elapsed($generation->started_at, $generation->finished_at),
