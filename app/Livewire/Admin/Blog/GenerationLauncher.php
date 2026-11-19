@@ -10,6 +10,7 @@ use App\Data\Blog\Generation\BlogAiSettings;
 use App\Data\Blog\Generation\GenerationImageOptions;
 use App\Data\Blog\Generation\QueueBlogGenerationData;
 use App\Enums\Blog\Generation\BlogAiImageMode;
+use App\Enums\Blog\Generation\BlogEffortLevel;
 use App\Exceptions\BaseAppException;
 use App\Livewire\Concerns\HandlesAdminErrors;
 use App\Services\Admin\Blog\Generation\BlogGenerationPresenter;
@@ -51,6 +52,9 @@ class GenerationLauncher extends Component
     /** Longueur du texte, en mots (saisie). */
     public string $articleWords = '';
 
+    /** Niveau d'effort de cette generation (celui des reglages au depart). */
+    public string $effort = '';
+
     /** @var array<string, string> les modeles des reglages, pour la fourchette de cout */
     #[Locked]
     public array $models = [];
@@ -84,6 +88,7 @@ class GenerationLauncher extends Component
         $this->imageMode = $current->imageMode->value;
         $this->maxImages = (string) $current->maxImages;
         $this->articleWords = (string) $length->clamp($current->articleWords);
+        $this->effort = $current->effort->value;
         $this->models = $current->models;
         $this->wordOptions = $length->options();
         $this->prepared = true;
@@ -98,6 +103,7 @@ class GenerationLauncher extends Component
             'imageMode' => ['required', Rule::enum(BlogAiImageMode::class)],
             'maxImages' => ['required', 'integer', 'min:1', 'max:'.BlogAiSettings::MAX_IMAGES],
             'articleWords' => ['required', Rule::in($this->wordOptions)],
+            'effort' => ['required', Rule::enum(BlogEffortLevel::class)],
         ];
     }
 
@@ -115,6 +121,8 @@ class GenerationLauncher extends Component
             'maxImages.max' => __('Choisissez le nombre d\'images.'),
             'articleWords.required' => __('Choisissez la longueur du texte.'),
             'articleWords.in' => __('Choisissez une longueur dans la liste.'),
+            'effort.required' => __('Choisissez le niveau d\'effort.'),
+            'effort.enum' => __('Choisissez le niveau d\'effort.'),
         ];
     }
 
@@ -132,6 +140,7 @@ class GenerationLauncher extends Component
                     (int) $validated['maxImages'],
                 ),
                 articleWords: (int) $validated['articleWords'],
+                effort: BlogEffortLevel::from((string) $validated['effort']),
             ));
         } catch (BaseAppException $e) {
             Log::error($e->getMessage(), ['exception' => $e]);
@@ -156,6 +165,7 @@ class GenerationLauncher extends Component
             $length->clamp((int) $this->articleWords),
             new GenerationImageOptions(BlogAiImageMode::tryFrom($this->imageMode) ?? BlogAiImageMode::Stock, min(BlogAiSettings::MAX_IMAGES, max(1, (int) $this->maxImages))),
             topicImposed: trim($this->topicHint) !== '',
+            effort: BlogEffortLevel::tryFrom($this->effort) ?? BlogEffortLevel::Medium,
         )) : null;
 
         return view('livewire.admin.blog.generation-launcher', [
@@ -167,6 +177,7 @@ class GenerationLauncher extends Component
             ) : null,
             'imageModes' => collect(BlogAiImageMode::cases())->mapWithKeys(fn (BlogAiImageMode $mode): array => [$mode->value => $mode->label()])->all(),
             'lengthOptions' => $presenter->lengthOptions($this->wordOptions),
+            'effortLevels' => collect(BlogEffortLevel::cases())->mapWithKeys(fn (BlogEffortLevel $level): array => [$level->value => $level->label()])->all(),
             'imageCounts' => collect(range(1, BlogAiSettings::MAX_IMAGES))->mapWithKeys(fn (int $count): array => [(string) $count => $presenter->imageCountLabel($count)])->all(),
         ]);
     }

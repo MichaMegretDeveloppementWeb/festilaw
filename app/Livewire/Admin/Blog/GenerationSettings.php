@@ -10,6 +10,7 @@ use App\Data\Blog\Generation\BlogAiSettings;
 use App\Data\Blog\Generation\GenerationImageOptions;
 use App\Enums\Blog\Generation\BlogAiImageMode;
 use App\Enums\Blog\Generation\BlogAiPeriodUnit;
+use App\Enums\Blog\Generation\BlogEffortLevel;
 use App\Livewire\Concerns\HandlesAdminErrors;
 use App\Services\Admin\Blog\Generation\BlogGenerationPresenter;
 use App\Services\Blog\Generation\BlogAiModelCatalog;
@@ -66,6 +67,9 @@ class GenerationSettings extends Component
     /** Longueur par defaut du texte, en mots (saisie). */
     public string $articleWords = '';
 
+    /** Niveau d'effort par defaut : celui des generations automatiques, propose dans la fenetre de lancement. */
+    public string $effort = '';
+
     /** @var list<int> les paliers de longueur proposes */
     #[Locked]
     public array $wordOptions = [];
@@ -83,6 +87,7 @@ class GenerationSettings extends Component
 
         $this->wordOptions = $length->options();
         $this->articleWords = (string) $length->clamp($current->articleWords);
+        $this->effort = $current->effort->value;
 
         $this->enabled = $current->enabled;
         $this->periodCount = (string) $current->periodCount;
@@ -109,6 +114,7 @@ class GenerationSettings extends Component
             'imageMode' => ['required', Rule::enum(BlogAiImageMode::class)],
             'maxImages' => ['required', 'integer', 'min:1', 'max:'.BlogAiSettings::MAX_IMAGES],
             'articleWords' => ['required', Rule::in($this->wordOptions)],
+            'effort' => ['required', Rule::enum(BlogEffortLevel::class)],
             'notificationEmail' => ['required', 'email', 'max:180'],
         ];
     }
@@ -161,6 +167,8 @@ class GenerationSettings extends Component
             'maxImages.max' => __('Choisissez le nombre d\'images.'),
             'articleWords.required' => __('Choisissez la longueur du texte.'),
             'articleWords.in' => __('Choisissez une longueur dans la liste.'),
+            'effort.required' => __('Choisissez le niveau d\'effort.'),
+            'effort.enum' => __('Choisissez le niveau d\'effort.'),
             'notificationEmail.required' => __('Indiquez l\'adresse qui reçoit les e-mails.'),
             'notificationEmail.email' => __('Cette adresse e-mail n\'est pas valide.'),
             'notificationEmail.max' => __('L\'adresse e-mail ne doit pas dépasser 180 caractères.'),
@@ -184,6 +192,7 @@ class GenerationSettings extends Component
                 maxImages: (int) $validated['maxImages'],
                 notificationEmail: trim((string) $validated['notificationEmail']),
                 articleWords: (int) $validated['articleWords'],
+                effort: BlogEffortLevel::from((string) $validated['effort']),
             ));
         } catch (Throwable $e) {
             $this->reportAdminError($e, 'Admin update blog AI settings');
@@ -220,7 +229,10 @@ class GenerationSettings extends Component
         $monthlyCap = self::microusd($this->monthlySpendCap);
 
         return view('livewire.admin.blog.generation-settings', [
-            'forecast' => $presenter->forecast($forecaster->forecast($this->models, $length->clamp((int) $this->articleWords), $images)),
+            'forecast' => $presenter->forecast($forecaster->forecast(
+                $this->models, $length->clamp((int) $this->articleWords), $images,
+                effort: BlogEffortLevel::tryFrom($this->effort) ?? BlogEffortLevel::Medium,
+            )),
             'monthlyWarning' => $monthlyCap === null ? null : $presenter->monthlyWarning(
                 $budget->monthlyLevel($this->spentThisMonthMicrousd, $monthlyCap),
                 $this->spentThisMonthMicrousd,
@@ -239,6 +251,7 @@ class GenerationSettings extends Component
             'modelsAreRecommended' => array_diff_assoc($recommended, $this->models) === [],
             'periodUnits' => BlogAiPeriodUnit::cases(),
             'imageModes' => collect(BlogAiImageMode::cases())->mapWithKeys(fn (BlogAiImageMode $mode): array => [$mode->value => $mode->label()])->all(),
+            'effortLevels' => collect(BlogEffortLevel::cases())->mapWithKeys(fn (BlogEffortLevel $level): array => [$level->value => $level->label()])->all(),
             'imageCounts' => collect(range(1, BlogAiSettings::MAX_IMAGES))->mapWithKeys(fn (int $count): array => [(string) $count => $presenter->imageCountLabel($count)])->all(),
         ])->title(__('Réglages de la génération IA'))->layoutData(['surface' => 'plain']);
     }

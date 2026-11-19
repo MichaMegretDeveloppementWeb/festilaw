@@ -169,6 +169,7 @@ return [
             'max_images' => 1,
             'article_words' => 1_000,
             'notification_email' => null,
+            'effort' => 'medium',
         ],
 
         /*
@@ -200,28 +201,35 @@ return [
          | Trois mesures facultatives, pour le cout estime d'un article, relevees sur les 17 articles du banc
          | d'essai du 18/11 (storage/app/private/blog-bench/2026-11-18-sc7 et journal « Blog AI call. ») :
          | - `price_margin_percent`, ce que le modele coute vraiment par rapport au catalogue : Haiku 5.5,
-         |   Sonnet 5.5 et DeepSeek V4.1 Flash au prix du catalogue, GPT-6 Luna 14 % au-dessus. DeepSeek
-         |   coutait 2,8 fois son catalogue chez Wafer le 17/11 ; le routage au meilleur prix l'a ramene au
-         |   catalogue ;
+         |   Sonnet 5.5 et DeepSeek V4.1 Flash au prix du catalogue, GPT-6 Luna 14 % au-dessus, GPT-6.1 Terra
+         |   20 % en dessous (77 a 84 % du catalogue a la verification et au controle des versions, etalonnage
+         |   du 19/11). DeepSeek coutait 2,8 fois son catalogue chez Wafer le 17/11 ; le routage au meilleur
+         |   prix l'a ramene au catalogue ;
          | - `token_factor_percent`, combien de jetons le modele compte pour un meme texte, par rapport a
          |   DeepSeek et a GPT-6 Luna : environ une fois et demie plus pour Anthropic, en lecture comme en
          |   ecriture ;
-         | - `reasoning_tokens`, la reflexion par appel d'un modele qui ignore l'effort demande : DeepSeek de
-         |   2 200 a 8 500 jetons, Luna presque aucune, Sonnet aucune.
+         | - `reasoning_tokens`, la reflexion par appel d'un modele mesure : une paire pour un modele qui ignore
+         |   l'effort demande (DeepSeek de 2 200 a 8 500 jetons, Sonnet aucune), une paire par effort pour un
+         |   modele qui le suit a sa facon, et pour un effort une paire par etape quand elles different
+         |   (`default`, puis l'etape). Mesures de l'etalonnage du 19/11 (generations 89, 91, 92 et 93) : Luna
+         |   presque aucune en `low`, environ 2 000 jetons pour rediger en `medium` et 9 000 en `high`, moins
+         |   de 2 300 par appel pour les autres etapes ; Terra environ 3 000 pour verifier en `high`.
+         | `lowest_effort` : le plus petit effort qu'un modele accepte, quand il pourrait refuser `none`
+         | (DeepSeek, par prudence : rien ne dit qu'il l'accepte).
          */
         'models' => [
             'anthropic/claude-opus-5.5' => ['name' => 'Claude Opus 5.5', 'provider' => 'Anthropic', 'input' => 400, 'output' => 2_000, 'token_factor_percent' => 145],
             'anthropic/claude-sonnet-5.5' => ['name' => 'Claude Sonnet 5.5', 'provider' => 'Anthropic', 'input' => 200, 'output' => 1_000, 'price_margin_percent' => 100, 'token_factor_percent' => 145, 'reasoning_tokens' => [0, 0]],
             'anthropic/claude-haiku-5.5' => ['name' => 'Claude Haiku 5.5', 'provider' => 'Anthropic', 'input' => 10, 'output' => 50, 'price_margin_percent' => 100, 'token_factor_percent' => 145],
             'openai/gpt-6.1-sol' => ['name' => 'GPT-6.1 Sol', 'provider' => 'OpenAI', 'input' => 200, 'output' => 1_000],
-            'openai/gpt-6.1-terra' => ['name' => 'GPT-6.1 Terra', 'provider' => 'OpenAI', 'input' => 100, 'output' => 500, 'price_margin_percent' => 100, 'reasoning_tokens' => [30, 200]],
-            'openai/gpt-6-luna' => ['name' => 'GPT-6 Luna', 'provider' => 'OpenAI', 'input' => 10, 'output' => 50, 'price_margin_percent' => 114, 'reasoning_tokens' => [0, 300]],
+            'openai/gpt-6.1-terra' => ['name' => 'GPT-6.1 Terra', 'provider' => 'OpenAI', 'input' => 100, 'output' => 500, 'price_margin_percent' => 80, 'reasoning_tokens' => ['low' => [30, 200], 'medium' => [250, 750], 'high' => ['default' => [250, 1_700], 'verification' => [2_300, 3_100]]]],
+            'openai/gpt-6-luna' => ['name' => 'GPT-6 Luna', 'provider' => 'OpenAI', 'input' => 10, 'output' => 50, 'price_margin_percent' => 114, 'reasoning_tokens' => ['low' => [0, 300], 'medium' => ['default' => [250, 900], 'writing' => [1_900, 2_300], 'research_notes' => [650, 1_000]], 'high' => ['default' => [700, 2_300], 'writing' => [8_500, 10_000], 'research_notes' => [3_500, 4_000]]]],
             'google/gemini-4-carbon' => ['name' => 'Gemini 4 Carbon', 'provider' => 'Google', 'input' => 200, 'output' => 1_000],
             'google/gemini-4-hydrogen' => ['name' => 'Gemini 4 Hydrogen', 'provider' => 'Google', 'input' => 150, 'output' => 750],
             'google/gemini-3.1-flash-lite' => ['name' => 'Gemini 3.1 Flash Lite', 'provider' => 'Google', 'input' => 25, 'output' => 150],
             'x-ai/grok-4.7' => ['name' => 'Grok 4.7', 'provider' => 'SpaceXAI', 'input' => 200, 'output' => 600],
             'mistralai/mistral-large-4-0' => ['name' => 'Mistral Large 4', 'provider' => 'Mistral', 'input' => 70, 'output' => 210],
-            'deepseek/deepseek-v4.1-flash' => ['name' => 'DeepSeek V4.1 Flash', 'provider' => 'DeepSeek', 'input' => 5, 'output' => 20, 'price_margin_percent' => 100, 'reasoning_tokens' => [2_200, 8_500]],
+            'deepseek/deepseek-v4.1-flash' => ['name' => 'DeepSeek V4.1 Flash', 'provider' => 'DeepSeek', 'input' => 5, 'output' => 20, 'price_margin_percent' => 100, 'reasoning_tokens' => [2_200, 8_500], 'lowest_effort' => 'low'],
         ],
 
         /*
@@ -249,26 +257,48 @@ return [
          | native d'Anthropic, choisie sinon pour Haiku, rend des pages dont la taille ne se regle pas (47 000
          | jetons pour deux recherches le 17/11). Exa rend des extraits, au plus `max_results` par recherche
          | et `max_characters` par extrait, soit environ 2 000 jetons par recherche. Prix public d'Exa au
-         | 17/11 : 0,007 $ par recherche, dix resultats compris (documentation d'OpenRouter). Le contenu des
-         | extraits est facture en plus, comme du texte lu.
+         | 17/11 : 0,007 $ par recherche, dix resultats compris (documentation d'OpenRouter). Prix mesure le
+         | 19/11 sur six generations : 6 470 a 6 580 millioniemes de dollar, d'ou `price_microusd`. Le contenu
+         | des extraits est facture en plus, comme du texte lu.
          */
         'web_search' => [
             'engine' => 'exa',
             'max_results' => 5,
             'max_characters' => 1_500,
-            'price_microusd' => 7_000,
+            'price_microusd' => 6_500,
         ],
 
         /*
-         | Reflexion du modele avant de repondre (`reasoning.effort` d'OpenRouter), par etape. Elle est
-         | facturee comme du texte ecrit et compte dans la meme limite que la reponse : au 17/11, celle de
-         | Haiku 5.5 (effort moyen par defaut) a coupe le dossier de faits. `none` pour les etapes qui ne font
-         | que mettre des notes en forme, `low` ailleurs.
+         | Niveaux d'effort d'une generation (demande de Micha du 19/11, chantier C8) : faible, moyen, eleve,
+         | moyen par defaut. Chacun fixe, par etape, la reflexion demandee au modele (`reasoning.effort`
+         | d'OpenRouter, facturee comme du texte ecrit et comptee dans la meme limite que la reponse) et le
+         | nombre de recherches web, a 0,7 centime l'une. Regle de Micha (19/11, apres l'etalonnage) : baisser
+         | d'un niveau baisse a la fois la reflexion et la profondeur des recherches, et monter les monte.
+         | - Faible : 1 recherche de pistes et 2 de sources, reflexion `low`, `none` pour le choix du sujet et
+         |   le dossier, qui ne font que mettre des notes en forme. C'est la reflexion etalonnee par le banc
+         |   d'essai du 18/11. Sans aucune reflexion, GPT-6 Luna rendait trois fois de suite un JSON illisible a
+         |   la relecture du style, et les traductions demandaient deux fois plus de corrections (generations
+         |   88 et 90 du 19/11) : ce niveau ne coutait pas moins.
+         | - Moyen : 2 et 3 recherches, reflexion `medium`, `low` pour le choix du sujet et le dossier.
+         | - Eleve : 3 et 5 recherches, reflexion `high`, `medium` pour le choix du sujet et le dossier.
+         | Ces niveaux sont lus par l'appel au modele, les etapes qui cherchent sur le web et l'estimation du
+         | cout (BlogEffortLevels).
          */
-        'reasoning' => [
-            'default' => 'low',
-            'topic' => 'none',
-            'research' => 'none',
+        'effort' => [
+            'levels' => [
+                'low' => [
+                    'reasoning' => ['default' => 'low', 'topic' => 'none', 'research' => 'none'],
+                    'searches' => ['topic_scan' => 1, 'research_notes' => 2],
+                ],
+                'medium' => [
+                    'reasoning' => ['default' => 'medium', 'topic' => 'low', 'research' => 'low'],
+                    'searches' => ['topic_scan' => 2, 'research_notes' => 3],
+                ],
+                'high' => [
+                    'reasoning' => ['default' => 'high', 'topic' => 'medium', 'research' => 'medium'],
+                    'searches' => ['topic_scan' => 3, 'research_notes' => 5],
+                ],
+            ],
         ],
 
         /*
@@ -309,34 +339,40 @@ return [
          | Cout estime d'un article (BlogGenerationCostForecaster), annonce avant le lancement et garde sur la
          | generation. Profil de chaque etape, par appel, cale sur les 17 articles du banc d'essai du 18/11
          | (quatre configurations, journal « Blog AI call. ») : jetons lus (fixes, et par millier de mots du
-         | texte), jetons visibles ecrits, reflexion basse et haute, nombre d'appels bas et haut (correction,
-         | second passage ; les nouveaux essais, des incidents, ne comptent pas), recherches web. Les jetons
+         | texte, et par recherche web), jetons visibles ecrits, reflexion basse et haute par effort demande,
+         | nombre d'appels bas et haut (correction, second passage ; les nouveaux essais, des incidents, ne
+         | comptent pas). Le nombre de recherches vient du niveau d'effort (`effort.levels`). Les jetons
          | sont comptes a la facon de DeepSeek et de GPT-6 Luna ; un modele d'Anthropic les multiplie par son
          | `token_factor_percent`. La relecture du style et les deux versions font toujours deux appels, car
          | le second passage part des qu'une phrase garde un signe de texte genere. Un appel apres le premier
          | relit en plus la reponse precedente. La reflexion de chaque etape est celle d'un modele qui respecte
-         | l'effort demande (Haiku 5.5) ; un modele qui l'ignore porte la sienne au catalogue
-         | (`reasoning_tokens`). Les jetons sont comptes au prix mesure du modele (`price_margin_percent`) ; un
-         | modele jamais mesure compte au catalogue en bas et a `default_price_margin_percent` en haut. Avec
-         | ce profil, chacun des 17 articles du banc tombe dans la fourchette de sa configuration, et le haut
-         | ne depasse pas une fois et demie le bas (BlogGenerationCostForecastTest). La veille (`topic_scan`),
-         | absente du banc ou les sujets etaient imposes, garde la mesure de la generation 77 ramenee aux
-         | jetons de ce profil.
+         | l'effort demande (Haiku 5.5), par effort : `low` est mesure ; `medium` vaut 2,5 fois `low` et `high`
+         | 4 fois (rapport des parts de sortie qu'OpenRouter donne a ces efforts), estimations prudentes pour un
+         | modele que le banc n'a pas mesure ; `none` ne reflechit pas. Un modele mesure porte la sienne au
+         | catalogue (`reasoning_tokens`). Les jetons sont comptes au prix mesure du modele
+         | (`price_margin_percent`) ; un modele jamais mesure compte au catalogue en bas et a
+         | `default_price_margin_percent` en haut. Avec ce profil, chacun des 17 articles du banc tombe dans
+         | la fourchette de sa configuration au niveau Faible, et le haut ne depasse pas une fois et demie le
+         | bas. Avec les modeles recommandes, chaque niveau d'effort encadre ce que l'etalonnage du 19/11 a
+         | coute (BlogGenerationCostForecastTest). La recherche de pistes (`topic_scan`), absente du banc ou
+         | les sujets etaient imposes, garde la mesure de la generation 77 ramenee aux jetons de ce profil.
+         | Les jetons lus par la recherche sur le web suivent le nombre de recherches : environ 13 000 pour
+         | deux, 19 000 pour trois, 32 000 a 40 000 pour cinq (19/11).
          */
         'forecast' => [
             'default_price_margin_percent' => 150,
             'steps' => [
-                'topic_scan' => ['setting' => 'topic', 'input' => 6_550, 'output' => 1_000, 'reasoning' => [200, 1_000], 'calls' => [1, 1], 'searches' => 2],
-                'topic' => ['setting' => 'topic', 'input' => 4_750, 'output' => 450, 'reasoning' => [0, 0], 'calls' => [1, 1]],
-                'research_notes' => ['setting' => 'research', 'input' => 10_550, 'output' => 1_800, 'reasoning' => [250, 600], 'calls' => [1, 1], 'searches' => 3],
-                'research' => ['setting' => 'research', 'input' => 6_000, 'output' => 1_800, 'reasoning' => [0, 0], 'calls' => [1, 1]],
-                'writing' => ['setting' => 'writing', 'input' => 11_400, 'output_per_1000_words' => 1_700, 'reasoning' => [1_200, 3_200], 'calls' => [1, 2]],
-                'verification' => ['setting' => 'verification', 'input' => 6_700, 'input_per_1000_words' => 1_500, 'output_per_1000_words' => 1_680, 'reasoning' => [300, 4_400], 'calls' => [1, 2]],
-                'style' => ['setting' => 'writing', 'input' => 5_700, 'input_per_1000_words' => 1_500, 'output_per_1000_words' => 1_350, 'reasoning' => [400, 1_400], 'calls' => [2, 2]],
-                'translation_fr' => ['setting' => 'translation', 'input' => 8_300, 'input_per_1000_words' => 1_500, 'output_per_1000_words' => 1_800, 'reasoning' => [1_000, 5_000], 'calls' => [2, 2]],
-                'version_check_fr' => ['setting' => 'verification', 'input' => 2_200, 'input_per_1000_words' => 3_300, 'output' => 300, 'reasoning' => [300, 2_000], 'calls' => [1, 1]],
-                'version_check_es' => ['setting' => 'verification', 'input' => 2_200, 'input_per_1000_words' => 3_300, 'output' => 300, 'reasoning' => [300, 2_000], 'calls' => [1, 1]],
-                'translation_es' => ['setting' => 'translation', 'input' => 7_700, 'input_per_1000_words' => 1_500, 'output_per_1000_words' => 1_750, 'reasoning' => [1_000, 5_000], 'calls' => [2, 2]],
+                'topic_scan' => ['setting' => 'topic', 'input' => 2_550, 'input_per_search' => 2_000, 'output' => 1_000, 'reasoning' => ['low' => [200, 1_000], 'medium' => [500, 2_500], 'high' => [800, 4_000]], 'calls' => [1, 1]],
+                'topic' => ['setting' => 'topic', 'input' => 4_750, 'output' => 450, 'reasoning' => ['low' => [200, 1_000], 'medium' => [500, 2_500], 'high' => [800, 4_000]], 'calls' => [1, 1]],
+                'research_notes' => ['setting' => 'research', 'input' => 1_500, 'input_per_search' => 6_000, 'output' => 1_800, 'reasoning' => ['low' => [250, 600], 'medium' => [625, 1_500], 'high' => [1_000, 2_400]], 'calls' => [1, 1]],
+                'research' => ['setting' => 'research', 'input' => 6_000, 'output' => 1_800, 'reasoning' => ['low' => [250, 600], 'medium' => [625, 1_500], 'high' => [1_000, 2_400]], 'calls' => [1, 1]],
+                'writing' => ['setting' => 'writing', 'input' => 11_400, 'output_per_1000_words' => 1_700, 'reasoning' => ['low' => [1_200, 3_200], 'medium' => [3_000, 8_000], 'high' => [4_800, 12_800]], 'calls' => [1, 2]],
+                'verification' => ['setting' => 'verification', 'input' => 6_700, 'input_per_1000_words' => 1_500, 'output_per_1000_words' => 1_680, 'reasoning' => ['low' => [300, 4_400], 'medium' => [750, 11_000], 'high' => [1_200, 17_600]], 'calls' => [1, 2]],
+                'style' => ['setting' => 'writing', 'input' => 5_700, 'input_per_1000_words' => 1_500, 'output_per_1000_words' => 1_350, 'reasoning' => ['low' => [400, 1_400], 'medium' => [1_000, 3_500], 'high' => [1_600, 5_600]], 'calls' => [2, 2]],
+                'translation_fr' => ['setting' => 'translation', 'input' => 8_300, 'input_per_1000_words' => 1_500, 'output_per_1000_words' => 1_800, 'reasoning' => ['low' => [1_000, 5_000], 'medium' => [2_500, 12_500], 'high' => [4_000, 20_000]], 'calls' => [2, 2]],
+                'version_check_fr' => ['setting' => 'verification', 'input' => 2_200, 'input_per_1000_words' => 3_300, 'output' => 300, 'reasoning' => ['low' => [300, 2_000], 'medium' => [750, 5_000], 'high' => [1_200, 8_000]], 'calls' => [1, 1]],
+                'version_check_es' => ['setting' => 'verification', 'input' => 2_200, 'input_per_1000_words' => 3_300, 'output' => 300, 'reasoning' => ['low' => [300, 2_000], 'medium' => [750, 5_000], 'high' => [1_200, 8_000]], 'calls' => [1, 1]],
+                'translation_es' => ['setting' => 'translation', 'input' => 7_700, 'input_per_1000_words' => 1_500, 'output_per_1000_words' => 1_750, 'reasoning' => ['low' => [1_000, 5_000], 'medium' => [2_500, 12_500], 'high' => [4_000, 20_000]], 'calls' => [2, 2]],
             ],
         ],
 

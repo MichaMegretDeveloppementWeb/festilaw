@@ -4,6 +4,7 @@ use App\Data\Blog\Generation\GenerationCostForecast;
 use App\Enums\Blog\BlogPostOrigin;
 use App\Enums\Blog\Generation\BlogAiImageMode;
 use App\Enums\Blog\Generation\BlogAiPeriodUnit;
+use App\Enums\Blog\Generation\BlogEffortLevel;
 use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Livewire\Admin\Blog\GenerationActivity;
@@ -295,7 +296,7 @@ it('tells the page when the generation it shows changes state', function () {
 // --- Fenetre de lancement -------------------------------------------------------------------------
 
 it('renders the launch button without any query, and reads the settings and the spend of the month only when the window opens', function () {
-    BlogAi::saveSettings(['image_mode' => 'generated', 'max_images' => 3]);
+    BlogAi::saveSettings(['image_mode' => 'generated', 'max_images' => 3, 'effort' => 'high']);
 
     DB::enableQueryLog();
     $launcher = Livewire::test(GenerationLauncher::class);
@@ -307,6 +308,7 @@ it('renders the launch button without any query, and reads the settings and the 
     $launcher->call('prepare')
         ->assertSet('imageMode', 'generated')
         ->assertSet('maxImages', '3')
+        ->assertSet('effort', 'high')
         // Une seconde ouverture garde ce que la personne a deja choisi.
         ->set('imageMode', 'none')
         ->call('prepare')
@@ -318,6 +320,28 @@ it('renders the launch button without any query, and reads the settings and the 
 it('opens a launch window wide enough for its fields', function () {
     // La largeur ordinaire d'une fenetre du kit serrait les champs (Micha, 19/11).
     expect(Livewire::test(GenerationLauncher::class)->html())->toContain('max-width: 45em');
+});
+
+it('offers the effort level in the launch window, follows it in the estimate, and keeps it on the generation', function () {
+    // Decision de Micha du 19/11 : le niveau des reglages, modifiable pour chaque generation.
+    $launcher = Livewire::test(GenerationLauncher::class)
+        ->call('prepare')
+        ->assertSet('effort', 'medium')
+        ->assertSeeHtml('data-effort-field')
+        ->assertSee('Moyen (recommandé)')
+        ->assertSee('Élevé lit plus de sources et réfléchit davantage, pour un coût plus élevé.');
+
+    $medium = $launcher->viewData('forecast')['high'];
+    $launcher->set('effort', 'high');
+
+    expect($launcher->viewData('forecast')['high'])->not->toBe($medium);
+
+    $launcher->call('launch')->assertHasNoErrors();
+
+    expect(BlogGeneration::query()->sole()->payload['effort'])->toBe('high');
+    Livewire::test(GenerationLauncher::class)->call('prepare')->set('effort', 'maximum')->call('launch')
+        ->assertHasErrors(['effort'])
+        ->assertSee('Choisissez le niveau d\'effort.');
 });
 
 it('shows the estimated cost of the article in the launch window, and follows its length', function () {
@@ -462,7 +486,7 @@ it('queues a generation with its topic, its instructions and its own images, the
         ->and($generation->instructions)->toBe('Short, for beginners.')
         ->and($generation->requested_by)->toBe($user->id)
         // Les images sont celles de cette generation, pas celles des reglages ; la longueur, celle des reglages.
-        ->and($generation->payload)->toBe(['images' => ['mode' => 'generated', 'max' => 2], 'length' => ['words' => 1_000]])
+        ->and($generation->payload)->toBe(['images' => ['mode' => 'generated', 'max' => 2], 'effort' => 'medium', 'length' => ['words' => 1_000]])
         ->and(session('toast-success'))->toBe('Génération lancée.');
 });
 
@@ -621,7 +645,7 @@ it('shows a generation step by step, with its model, tokens and cost under each 
         'topic_hint' => 'Labels on Etsy',
         'instructions' => 'Short.',
         'requested_by' => $user->id,
-        'payload' => ['images' => ['mode' => 'stock', 'max' => 2], 'length' => ['words' => 1_200]],
+        'payload' => ['images' => ['mode' => 'stock', 'max' => 2], 'length' => ['words' => 1_200], 'effort' => 'high'],
         'cost_microusd' => 42_500,
         'last_error' => 'Provider is down.',
     ]);
@@ -653,6 +677,7 @@ it('shows a generation step by step, with its model, tokens and cost under each 
         ->assertSee(dollarsText('0,0125 $'))
         ->assertSee('Banque d\'images, 2 au plus')
         ->assertSee('Environ 1 200 mots (7 200 caractères)')
+        ->assertSeeInOrder(['Effort', 'Élevé'])
         // Le modele sous son nom commercial, les tokens par sens avec le mot « tokens », plus aucune phrase « jetons lus ».
         ->assertSee('Claude Sonnet 5.5')
         ->assertDontSee('anthropic/claude-sonnet-5.5')
@@ -768,6 +793,8 @@ it('opens the settings on their current values, in 2 queries with the spend of t
         ->assertSet('periodUnit', 'month')
         ->assertSet('monthlySpendCap', '25.50')
         ->assertSet('notificationEmail', 'owner@example.com')
+        // Moyen au depart (decision de Micha du 19/11).
+        ->assertSet('effort', 'medium')
         ->assertSet('models.writing', config('blog.ai.defaults.models.writing'))
         // Un modele se choisit dans une liste, sous son nom commercial, avec son prix indicatif.
         ->assertSee('Claude Sonnet 5.5 (Anthropic) · 2 $ / 10 $')
@@ -783,7 +810,7 @@ it('lays the settings out in six sections in the order of use, the automatic gen
     // la mention de transparence, et sans le mot « lot ».
     $settings = Livewire::test(GenerationSettings::class)
         ->assertSeeInOrder([
-            'Modèles', 'Longueur et images', 'Les valeurs que propose la fenêtre « Générer un article ».', 'Coût estimé d\'un article',
+            'Modèles', 'Longueur, images et effort', 'Les valeurs que propose la fenêtre « Générer un article ».', 'Niveau d\'effort', 'Coût estimé d\'un article',
             'Budget du mois', 'E-mails', 'Génération automatique', 'Elle reprend les modèles, la longueur et les images réglés plus haut.',
             'Nombre d\'articles', 'Tous les', 'Unité', 'Brouillons en attente, au plus',
         ])
@@ -816,10 +843,15 @@ it('puts the recommended models back in the lists without saving them, and follo
 
     $settings = Livewire::test(GenerationSettings::class)
         ->assertSeeHtml('data-restore-recommended-models')
-        ->assertDontSeeHtml('data-models-recommended')
-        // La mention en haut de la section suffit : les listes ne repetent pas « (recommandé) » (Micha, 19/11).
-        ->assertDontSee('(recommandé)')
-        ->call('restoreRecommendedModels')
+        ->assertDontSeeHtml('data-models-recommended');
+
+    // La mention en haut de la section suffit : les listes des modeles ne repetent pas « (recommandé) » (Micha, 19/11).
+    $modelLists = collect(array_keys(config('blog.ai.defaults.models')))
+        ->map(fn (string $step): string => (string) str($settings->html())->after('id="ai-model-'.$step.'"')->before('</select>'))
+        ->implode('');
+    expect($modelLists)->not->toContain('(recommandé)');
+
+    $settings->call('restoreRecommendedModels')
         ->assertSet('models.writing', config('blog.ai.defaults.models.writing'))
         ->assertDispatched('ui-toast', type: 'info', title: 'Modèles recommandés remis. Enregistrez les réglages pour les garder.')
         ->assertSeeHtml('data-models-recommended')
@@ -860,6 +892,7 @@ it('saves the settings', function () {
         ->set('imageMode', 'generated')
         ->set('maxImages', '3')
         ->set('articleWords', '1600')
+        ->set('effort', 'low')
         ->set('notificationEmail', 'owner@example.com')
         ->call('save')
         ->assertHasNoErrors()
@@ -879,6 +912,7 @@ it('saves the settings', function () {
         ->and($saved->imageMode)->toBe(BlogAiImageMode::Generated)
         ->and($saved->maxImages)->toBe(3)
         ->and($saved->articleWords)->toBe(1_600)
+        ->and($saved->effort)->toBe(BlogEffortLevel::Low)
         ->and($saved->notificationEmail)->toBe('owner@example.com');
 });
 
@@ -891,11 +925,14 @@ it('shows the estimated cost of an article and its safety stop in the settings, 
         ->assertSeeHtml('data-forecast-stop')
         ->assertDontSee('Plafond de dépense par article');
 
-    // Les valeurs a l'ecran comptent avant l'enregistrement : un article plus long coute plus.
+    // Les valeurs a l'ecran comptent avant l'enregistrement : un article plus long coute plus, un effort plus bas moins.
     $short = $settings->viewData('forecast')['stop'];
     $settings->set('articleWords', '2000');
+    $long = $settings->viewData('forecast')['stop'];
+    $settings->set('effort', 'low');
 
-    expect($settings->viewData('forecast')['stop'])->not->toBe($short);
+    expect($long)->not->toBe($short)
+        ->and($settings->viewData('forecast')['stop'])->not->toBe($long);
 });
 
 it('warns next to the monthly cap in the settings, following the cap typed, without blocking anything', function () {

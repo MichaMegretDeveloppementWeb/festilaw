@@ -20,9 +20,13 @@
                 <x-ui::textarea id="generation-instructions" wire:model="instructions" rows="3" maxlength="2000" :error="$errors->has('instructions')" />
             </x-ui::form-group>
 
-            <x-ui::form-group :label="__('Longueur du texte')" for="generation-article-words" :error="$errors->first('articleWords')">
-                <x-ui::select id="generation-article-words" wire:model.live="articleWords" :options="$lengthOptions" :error="$errors->has('articleWords')" />
-            </x-ui::form-group>
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <x-ui::form-group :label="__('Longueur du texte')" for="generation-article-words" :error="$errors->first('articleWords')">
+                    <x-ui::select id="generation-article-words" wire:model.live="articleWords" :options="$lengthOptions" :error="$errors->has('articleWords')" />
+                </x-ui::form-group>
+
+                @include('livewire.admin.blog.generation.effort-field', ['id' => 'generation-effort'])
+            </div>
 
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <x-ui::form-group :label="__('Origine des images')" for="generation-image-mode" :error="$errors->first('imageMode')">

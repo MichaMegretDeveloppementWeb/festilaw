@@ -6,6 +6,7 @@ namespace App\Actions\Blog\Generation;
 
 use App\Contracts\Blog\Generation\GenerationPipeline;
 use App\Data\Blog\Generation\BlogAiSettings;
+use App\Data\Blog\Generation\GenerationEffort;
 use App\Data\Blog\Generation\GenerationImageOptions;
 use App\Data\Blog\Generation\GenerationLength;
 use App\Data\Blog\Generation\ScheduledGenerationPlan;
@@ -86,13 +87,14 @@ final readonly class PlanScheduledBlogGenerationsAction
             : $settings->periodUnit->addTo($lastLaunchedAt, $settings->periodCount)->startOfDay();
     }
 
-    /** Chaque generation du lot porte les images, la longueur et le cout annonce des reglages, figes au lancement. */
+    /** Chaque generation du lot porte les images, la longueur, l'effort et le cout annonce des reglages, figes au lancement. */
     private function launch(int $count, BlogAiSettings $settings): void
     {
         $batchUuid = (string) Str::uuid();
         $payload = [
             GenerationImageOptions::PAYLOAD_KEY => GenerationImageOptions::fromSettings($settings)->toPayload(),
             GenerationLength::PAYLOAD_KEY => GenerationLength::payloadFor($settings->articleWords),
+            GenerationEffort::PAYLOAD_KEY => $settings->effort->value,
         ];
         $forecast = $this->forecaster->forGeneration($settings, BlogGenerationType::Article, $payload, topicImposed: false);
 

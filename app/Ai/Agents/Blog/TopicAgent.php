@@ -12,8 +12,11 @@ use Laravel\Ai\Contracts\HasStructuredOutput;
  * Choisit le sujet d'un article, ou repond qu'aucun n'est assez pertinent, a partir des notes de l'etape de
  * veille et de la liste des titres connus. Sans outil : une sortie structuree ne tient pas avec la recherche
  * web (essai reel du 17/11).
+ *
+ * Limite de longueur : une reponse d'environ 600 jetons, plus la reflexion du niveau d'effort eleve
+ * (`medium` pour cette etape), qui depassait les 2 000 jetons d'avant.
  */
-#[MaxTokens(2000)]
+#[MaxTokens(4000)]
 final class TopicAgent extends BlogAgent implements HasStructuredOutput
 {
     public function schema(JsonSchema $schema): array

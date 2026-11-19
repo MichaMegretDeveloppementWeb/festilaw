@@ -71,7 +71,7 @@ abstract class EditorialStep implements GenerationStep
         try {
             return $this->caller->call(
                 $this->key(), $agent, $prompt, $this->model($context), $this->turnTimeoutSeconds(),
-                $context->generationId, $context->budgetLeftAfter($spent),
+                $context->generationId, $context->budgetLeftAfter($spent), $context->effort,
             );
         } catch (BlogAiProviderException $e) {
             throw $spent === null ? $e : $e->withEarlierUsage($spent);

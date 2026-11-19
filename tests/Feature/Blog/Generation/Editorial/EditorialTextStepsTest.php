@@ -9,6 +9,7 @@ use App\Ai\Agents\Blog\TranslatorAgent;
 use App\Ai\Agents\Blog\VersionCheckAgent;
 use App\Ai\Agents\Blog\WebSearchAgent;
 use App\Ai\Agents\Blog\WriterAgent;
+use App\Enums\Blog\Generation\BlogEffortLevel;
 use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogTopicKind;
@@ -146,7 +147,7 @@ it('keeps a news article on a covered subject, about what changed, and looks for
     expect($result->stopsGeneration())->toBeFalse()
         ->and($result->findings->topicKind)->toBe(BlogTopicKind::News);
     WebSearchAgent::assertPrompted(fn ($prompt): bool => str_contains($prompt->agent->instructions(), 'A good lead is either recent or lasting')
-        && str_contains($prompt->agent->instructions(), 'one for the long-standing rules sellers keep asking about'));
+        && str_contains($prompt->agent->instructions(), 'cover both recent regulatory, platform or enforcement changes and the long-standing rules'));
     TopicAgent::assertPrompted(fn ($prompt): bool => str_contains($prompt->agent->instructions(), 'A rule that has applied for years is as good a topic as a recent change')
         && str_contains($prompt->agent->instructions(), 'A recent change to a rule an existing article covers')
         && str_contains($prompt->agent->instructions(), 'A recent change to a rule the blog covers is a new topic'));
@@ -200,6 +201,22 @@ it('keeps the paid web scan when the topic choice fails, and never pays it again
 });
 
 // --- Recherche
+
+it('reads fewer sources at a low effort and more at a high one, in the scan and in the research', function () {
+    // Decision de Micha du 19/11 : chaque niveau d'effort change aussi les sources lues (1 + 2, 2 + 3, 3 + 5).
+    WebSearchAgent::fake(['Notes.', 'Notes.', Fixtures::notesCiting(), Fixtures::notesCiting()])->preventStrayPrompts();
+
+    app(TopicScanStep::class)->execute(Fixtures::context(effort: BlogEffortLevel::Low));
+    app(TopicScanStep::class)->execute(Fixtures::context(effort: BlogEffortLevel::High));
+    app(ResearchNotesStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic()], effort: BlogEffortLevel::Low));
+    app(ResearchNotesStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic()], effort: BlogEffortLevel::High));
+
+    foreach ([['find leads', 1], ['find leads', 3], ['research the topic', 2], ['research the topic', 5]] as [$task, $count]) {
+        WebSearchAgent::assertPrompted(fn ($prompt): bool => str_contains($prompt->agent->instructions(), $task)
+            && str_contains($prompt->agent->instructions(), "at most {$count} web searches")
+            && collect($prompt->agent->tools())->sole()->maxSearches === $count);
+    }
+});
 
 it('searches the web for the chosen topic with three bounded searches, and keeps the notes', function () {
     WebSearchAgent::fake([Fixtures::notesCiting()])->preventStrayPrompts();

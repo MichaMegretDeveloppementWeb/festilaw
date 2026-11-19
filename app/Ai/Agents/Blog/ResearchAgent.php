@@ -13,8 +13,8 @@ use Laravel\Ai\Contracts\HasStructuredOutput;
  * tient pas avec la recherche web (essai reel du 17/11).
  *
  * Limite de longueur : le dossier tire de 900 mots de notes fait environ 2 500 jetons, et cette etape ne
- * reflechit pas (`blog.ai.reasoning`). Au 17/11, 6 000 jetons avec la reflexion par defaut de Haiku 5.5
- * coupaient la reponse.
+ * reflechit pas, ou peu au niveau d'effort eleve (`blog.ai.effort`). Au 17/11, 6 000 jetons avec la reflexion
+ * par defaut de Haiku 5.5 coupaient la reponse.
  */
 #[MaxTokens(8000)]
 final class ResearchAgent extends BlogAgent implements HasStructuredOutput

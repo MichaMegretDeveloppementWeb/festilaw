@@ -4,6 +4,7 @@ use App\Ai\Agents\Blog\FactCheckAgent;
 use App\Ai\Agents\Blog\TopicAgent;
 use App\Ai\Agents\Blog\WebSearchAgent;
 use App\Data\Blog\Generation\BlogAgentReply;
+use App\Enums\Blog\Generation\BlogEffortLevel;
 use App\Exceptions\Blog\BlogAiProviderException;
 use App\Services\Blog\Generation\Editorial\BlogAgentCaller;
 use GuzzleHttp\Psr7\Response as Psr7Response;
@@ -136,13 +137,38 @@ it('asks for the reasoning effort of the step and the cheapest provider, and for
     app(BlogAgentCaller::class)->call('research_notes', new WebSearchAgent('Search.', 3, config('blog.ai.web_search')), 'Search.', 'anthropic/claude-haiku-5.5', 90);
 
     $sent = Http::recorded()->map(fn (array $pair) => $pair[0]->data())->values();
-    // Au 17/11, la reflexion par defaut de Haiku coupait le dossier de faits, et rien ne demandait le fournisseur le moins cher.
-    expect($sent[0]['reasoning'])->toBe(['effort' => 'none'])
+    // Au niveau d'effort Moyen, le choix du sujet reflechit un cran en dessous des autres etapes. Au 17/11, rien ne
+    // demandait le fournisseur le moins cher.
+    expect($sent[0]['reasoning'])->toBe(['effort' => 'low'])
         ->and($sent[0]['provider'])->toBe(['sort' => 'price', 'require_parameters' => true])
-        ->and($sent[1]['reasoning'])->toBe(['effort' => 'low'])
+        ->and($sent[1]['reasoning'])->toBe(['effort' => 'medium'])
         ->and($sent[1]['provider'])->toBe(['sort' => 'price'])
         ->and($sent[1]['tools'][0]['type'])->toBe('openrouter:web_search')
         ->and($sent[1]['tools'][0]['parameters'])->toBe(['max_uses' => 3, 'engine' => 'exa', 'max_results' => 5, 'max_characters' => 1_500, 'max_total_results' => 15]);
+});
+
+it('asks for the reasoning of the effort level, and the lowest effort a model accepts when it may refuse none', function () {
+    // Regle de Micha du 19/11 : baisser d'un niveau baisse la reflexion de chaque etape, monter la monte.
+    config(['ai.providers.openrouter.key' => 'test-key']);
+    Http::fake(['openrouter.ai/*' => Http::response(openRouterCompletion('Text.'))]);
+    $caller = app(BlogAgentCaller::class);
+
+    $caller->call('writing', new TestBlogAgent, 'Write.', 'openai/gpt-6-luna', 90, effort: BlogEffortLevel::Low);
+    $caller->call('topic', new TestBlogAgent, 'Topic.', 'anthropic/claude-haiku-5.5', 90, effort: BlogEffortLevel::Low);
+    $caller->call('topic', new TestBlogAgent, 'Topic.', 'deepseek/deepseek-v4.1-flash', 90, effort: BlogEffortLevel::Low);
+    $caller->call('writing', new TestBlogAgent, 'Write.', 'openai/gpt-6-luna', 90, effort: BlogEffortLevel::Medium);
+    $caller->call('writing', new TestBlogAgent, 'Write.', 'openai/gpt-6-luna', 90, effort: BlogEffortLevel::High);
+    $caller->call('topic', new TestBlogAgent, 'Topic.', 'anthropic/claude-haiku-5.5', 90, effort: BlogEffortLevel::High);
+
+    expect(Http::recorded()->map(fn (array $pair): mixed => $pair[0]->data()['reasoning'] ?? null)->values()->all())->toBe([
+        ['effort' => 'low'],
+        ['effort' => 'none'],
+        // DeepSeek pourrait refuser l'absence de reflexion : il recoit le plus petit effort qu'il accepte.
+        ['effort' => 'low'],
+        ['effort' => 'medium'],
+        ['effort' => 'high'],
+        ['effort' => 'medium'],
+    ]);
 });
 
 it('writes one line per call to the log, with its tokens and cost but no text', function () {
@@ -168,7 +194,7 @@ it('refuses a structured answer cut off at its length limit, and keeps what it c
 
     expect(fn () => app(BlogAgentCaller::class)->call('topic', new TopicAgent('Choose.'), 'Topic.', 'anthropic/claude-haiku-5.5', 90))
         ->toThrow(function (BlogAiProviderException $e): void {
-            expect($e->getMessage())->toContain('cut off at its limit of 2000 tokens')
+            expect($e->getMessage())->toContain('cut off at its limit of 4000 tokens')
                 ->and($e->usage->costMicrousd)->toBe(12_300);
         });
 });

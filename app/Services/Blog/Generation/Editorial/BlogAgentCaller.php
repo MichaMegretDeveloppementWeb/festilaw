@@ -8,10 +8,12 @@ use App\Ai\Agents\Blog\BlogAgent;
 use App\Ai\Agents\Blog\WebSearchAgent;
 use App\Data\Blog\Generation\BlogAgentReply;
 use App\Data\Blog\Generation\GenerationUsage;
+use App\Enums\Blog\Generation\BlogEffortLevel;
 use App\Exceptions\Blog\BlogAiProviderException;
 use App\Exceptions\Blog\BlogEditorialException;
 use App\Services\Blog\Generation\BlogAiCostEstimator;
 use App\Services\Blog\Generation\BlogAiModelCatalog;
+use App\Services\Blog\Generation\BlogEffortLevels;
 use App\Services\Blog\Generation\OpenRouterUsageReader;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Log;
@@ -41,17 +43,18 @@ final readonly class BlogAgentCaller
         private BlogAiCostEstimator $estimator,
         private string $provider,
         private BlogAiModelCatalog $models,
-        private array $reasoning = [],
+        private BlogEffortLevels $effort,
         private int $defaultMarginPercent = 150,
     ) {}
 
     /**
      * @param  int  $timeoutSeconds  delai d'une requete au fournisseur, pas de l'appel entier
      * @param  int|null  $budgetLeftMicrousd  nul : aucun arret de securite
+     * @param  BlogEffortLevel  $effort  le niveau d'effort de la generation, qui fixe la reflexion demandee
      *
      * @throws BlogAiProviderException
      */
-    public function call(string $step, BlogAgent $agent, string $prompt, string $model, int $timeoutSeconds, ?int $generationId = null, ?int $budgetLeftMicrousd = null): BlogAgentReply
+    public function call(string $step, BlogAgent $agent, string $prompt, string $model, int $timeoutSeconds, ?int $generationId = null, ?int $budgetLeftMicrousd = null, BlogEffortLevel $effort = BlogEffortLevel::Medium): BlogAgentReply
     {
         if ($budgetLeftMicrousd !== null) {
             $reserved = $this->reserve($agent, $prompt, $model);
@@ -62,7 +65,7 @@ final readonly class BlogAgentCaller
         }
 
         $recorder = new AgentStepRecorder;
-        $agent->withRequestOptions($this->requestOptions($step, $agent));
+        $agent->withRequestOptions($this->requestOptions($step, $agent, $model, $effort));
 
         try {
             $response = $agent->observeStepsWith($recorder)->prompt($prompt, provider: $this->provider, model: $model, timeout: $timeoutSeconds);
@@ -118,12 +121,10 @@ final readonly class BlogAgentCaller
      *
      * @return array<string, mixed>
      */
-    private function requestOptions(string $step, BlogAgent $agent): array
+    private function requestOptions(string $step, BlogAgent $agent, string $model, BlogEffortLevel $level): array
     {
-        $effort = $this->reasoning[$step] ?? $this->reasoning['default'] ?? null;
-
         return array_filter([
-            'reasoning' => $effort === null ? null : ['effort' => $effort],
+            'reasoning' => ['effort' => $this->effort->reasoning($level, $step, $model)],
             'provider' => ['sort' => 'price'] + ($agent instanceof HasStructuredOutput ? ['require_parameters' => true] : []),
         ]);
     }

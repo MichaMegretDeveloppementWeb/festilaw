@@ -8,6 +8,7 @@ use App\Contracts\Blog\Generation\GenerationPipeline;
 use App\Contracts\Blog\Generation\GenerationStep;
 use App\Data\Admin\Blog\Generation\BlogGenerationDetailView;
 use App\Data\Admin\Blog\Generation\BlogGenerationStepView;
+use App\Data\Blog\Generation\GenerationEffort;
 use App\Data\Blog\Generation\GenerationImageOptions;
 use App\Data\Blog\Generation\GenerationLength;
 use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
@@ -103,6 +104,7 @@ final readonly class BlogGenerationDetailService
             outputTokens: (int) $rows->sum('output_tokens'),
             images: $images === null ? null : $this->presenter->images($images),
             length: $words === null ? null : $this->presenter->length($words),
+            effort: GenerationEffort::fromPayload($generation->payload)?->shortLabel(),
             postId: $generation->blog_post_id,
             report: $this->report($rows),
             steps: $keys->map(fn (string $key): BlogGenerationStepView => $this->stepView($key, $rows->get($key)))->all(),

@@ -6,6 +6,7 @@ namespace App\Data\Blog\Generation;
 
 use App\Enums\Blog\Generation\BlogAiImageMode;
 use App\Enums\Blog\Generation\BlogAiPeriodUnit;
+use App\Enums\Blog\Generation\BlogEffortLevel;
 
 /**
  * Reglages de la generation par IA, tels que le back-office les enregistre (cle `blog.ai` de la table
@@ -35,6 +36,7 @@ final readonly class BlogAiSettings
         public int $maxImages,
         public string $notificationEmail,
         public int $articleWords,
+        public BlogEffortLevel $effort,
     ) {}
 
     /**
@@ -65,6 +67,7 @@ final readonly class BlogAiSettings
             maxImages: min(self::MAX_IMAGES, max(1, (int) $value('max_images'))),
             notificationEmail: $email !== '' ? $email : $fallbackEmail,
             articleWords: $length->clamp((int) $value('article_words')),
+            effort: BlogEffortLevel::tryFrom((string) $value('effort')) ?? BlogEffortLevel::Medium,
         );
     }
 
@@ -108,6 +111,7 @@ final readonly class BlogAiSettings
             'max_images' => $this->maxImages,
             'notification_email' => $this->notificationEmail,
             'article_words' => $this->articleWords,
+            'effort' => $this->effort->value,
         ];
     }
 }

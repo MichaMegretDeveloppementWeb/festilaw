@@ -7,6 +7,7 @@ namespace App\Services\Blog\Generation\Editorial\Steps;
 use App\Ai\Agents\Blog\WebSearchAgent;
 use App\Data\Blog\Generation\GenerationStepContext;
 use App\Data\Blog\Generation\GenerationStepResult;
+use App\Services\Blog\Generation\BlogEffortLevels;
 use App\Services\Blog\Generation\Editorial\BlogAgentCaller;
 use App\Services\Blog\Generation\Editorial\BlogPromptLibrary;
 use Carbon\CarbonImmutable;
@@ -20,13 +21,11 @@ use Carbon\CarbonImmutable;
  */
 final class TopicScanStep extends EditorialStep
 {
-    /** Decision de Micha du 17/11. */
-    private const WEB_SEARCHES = 2;
-
     /** @param  array{engine?: string, max_results?: int, max_characters?: int}  $webSearch */
     public function __construct(
         BlogAgentCaller $caller,
         BlogPromptLibrary $prompts,
+        private readonly BlogEffortLevels $effort,
         private readonly array $webSearch = [],
     ) {
         parent::__construct($caller, $prompts);
@@ -48,8 +47,9 @@ final class TopicScanStep extends EditorialStep
             return GenerationStepResult::continue(['skipped' => true, 'notes' => '', 'citations' => [], 'cut_off' => false]);
         }
 
-        $instructions = $this->prompts->compose('festilaw-context')."\n\n".$this->prompts->render('step-topic-scan', ['searches' => self::WEB_SEARCHES]);
-        $reply = $this->ask($context, new WebSearchAgent($instructions, self::WEB_SEARCHES, $this->webSearch), implode("\n\n", [
+        $searches = $this->effort->searches($context->effort, $this->key());
+        $instructions = $this->prompts->compose('festilaw-context')."\n\n".$this->prompts->render('step-topic-scan', ['searches' => $searches]);
+        $reply = $this->ask($context, new WebSearchAgent($instructions, $searches, $this->webSearch), implode("\n\n", [
             $this->block('Today', CarbonImmutable::now()->toDateString()),
             $this->block('Instructions from the editor', $context->instructions ?? 'None.'),
         ]));

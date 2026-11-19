@@ -22,6 +22,7 @@ use App\Services\Blog\Generation\Bench\BlogBenchStepRunner;
 use App\Services\Blog\Generation\BlogAiCostEstimator;
 use App\Services\Blog\Generation\BlogAiModelCatalog;
 use App\Services\Blog\Generation\BlogAiSettingsService;
+use App\Services\Blog\Generation\BlogEffortLevels;
 use App\Services\Blog\Generation\BlogGenerationAlertService;
 use App\Services\Blog\Generation\BlogGenerationBudget;
 use App\Services\Blog\Generation\BlogGenerationCostForecaster;
@@ -84,7 +85,7 @@ final class BlogGenerationServiceProvider extends ServiceProvider
         $this->app->when(BlogAiCostEstimator::class)->needs('$prices')->giveConfig('blog.ai.models');
 
         $this->app->when(BlogAgentCaller::class)->needs('$provider')->giveConfig('blog.ai.provider');
-        $this->app->when(BlogAgentCaller::class)->needs('$reasoning')->giveConfig('blog.ai.reasoning');
+        $this->app->when(BlogEffortLevels::class)->needs('$levels')->giveConfig('blog.ai.effort.levels');
         $this->app->when(BlogAgentCaller::class)->needs('$defaultMarginPercent')->giveConfig('blog.ai.forecast.default_price_margin_percent');
         $this->app->when([TopicScanStep::class, ResearchNotesStep::class])->needs('$webSearch')->giveConfig('blog.ai.web_search');
         $this->app->bind(HostResolver::class, DnsHostResolver::class);

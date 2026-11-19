@@ -13,10 +13,10 @@ use Laravel\Ai\Providers\Tools\WebSearch;
  * modele qui cherche sur le web ignore le format JSON demande (essai reel du 17/11). Pas de lecture de page
  * entiere : au premier essai reel, elle a porte un article a 1,3 million de jetons et 3 $.
  *
- * Limite de longueur : 900 mots de notes (environ 1 300 jetons) plus une reflexion faible (20 % de la
- * limite), avec une marge de deux fois.
+ * Limite de longueur : 900 mots de notes (environ 1 300 jetons) plus la reflexion du niveau d'effort eleve
+ * (`high`, jusqu'a 80 % de la limite chez un modele qui la regle ainsi), avec une marge.
  */
-#[MaxTokens(4000)]
+#[MaxTokens(8000)]
 final class WebSearchAgent extends BlogAgent implements HasTools
 {
     /** @param  array{engine?: string, max_results?: int, max_characters?: int}  $searchOptions */

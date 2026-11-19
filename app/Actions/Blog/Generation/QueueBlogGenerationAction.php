@@ -6,6 +6,7 @@ namespace App\Actions\Blog\Generation;
 
 use App\Contracts\Blog\Generation\GenerationPipeline;
 use App\Data\Blog\Generation\ArticleLengthRules;
+use App\Data\Blog\Generation\GenerationEffort;
 use App\Data\Blog\Generation\GenerationImageOptions;
 use App\Data\Blog\Generation\GenerationLength;
 use App\Data\Blog\Generation\QueueBlogGenerationData;
@@ -45,10 +46,11 @@ final readonly class QueueBlogGenerationAction
         $instructions = trim((string) $data->instructions);
         $images = $data->images ?? GenerationImageOptions::fromSettings($settings);
         $words = $this->length->clamp($data->articleWords ?? $settings->articleWords);
-        // Les images et la longueur sont celles de CETTE generation : le pipeline ne lira pas les reglages du moment.
+        // Les images, la longueur et l'effort sont ceux de CETTE generation : le pipeline ne lira pas les reglages du moment.
         $payload = [
             ...$data->payload,
             GenerationImageOptions::PAYLOAD_KEY => $images->toPayload(),
+            GenerationEffort::PAYLOAD_KEY => ($data->effort ?? $settings->effort)->value,
             ...($data->type === BlogGenerationType::Article ? [GenerationLength::PAYLOAD_KEY => GenerationLength::payloadFor($words)] : []),
         ];
         $forecast = $this->forecaster->forGeneration($settings, $data->type, $payload, topicImposed: $topicHint !== '');

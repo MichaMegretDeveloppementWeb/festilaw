@@ -7,6 +7,7 @@ use App\Data\Blog\Generation\GenerationFindings;
 use App\Data\Blog\Generation\GenerationStepContext;
 use App\Data\Blog\Generation\GenerationStepResult;
 use App\Data\Blog\Generation\GenerationUsage;
+use App\Enums\Blog\Generation\BlogEffortLevel;
 use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogGenerationStepStatus;
@@ -100,7 +101,14 @@ it('hands each step the request and what the previous steps produced', function 
         ->and($seen->output('topic'))->toBe(['step' => 'topic'])
         ->and($seen->output('assembly'))->toBe([])
         ->and($seen->attempt)->toBe(1)
-        ->and($seen->settings->enabled)->toBeFalse();
+        ->and($seen->settings->enabled)->toBeFalse()
+        // Une generation anterieure aux niveaux d'effort tourne au niveau Moyen, le reglage d'alors.
+        ->and($seen->effort)->toBe(BlogEffortLevel::Medium);
+
+    BlogGeneration::factory()->create(['payload' => ['effort' => 'high']]);
+    generationWorkerPass();
+
+    expect($seen->effort)->toBe(BlogEffortLevel::High);
 });
 
 it('keeps on the generation the topic a step chose and the draft a step created, without the steps touching it', function () {

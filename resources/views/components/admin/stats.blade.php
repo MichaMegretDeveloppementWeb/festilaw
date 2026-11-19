@@ -2,7 +2,8 @@
 {{-- Bande de chiffres : des cellules separees par des filets fins, entre deux filets horizontaux. Les filets
      viennent de l'espace d'un pixel entre les cellules, qui laisse voir la couleur des bordures du kit : ils
      restent justes quel que soit le nombre de colonnes. Le nombre de cellules doit remplir la derniere ligne
-     (2, 3 ou 4 cellules), sinon une case vide paraitrait grise.
+     (2, 3, 4 ou 5 cellules), sinon une case vide paraitrait grise. Cinq colonnes servent a la demande d'une
+     generation (lancement, sujet, images, longueur, effort).
      Sur telephone : deux colonnes, la derniere cellule d'un nombre impair prend toute la ligne, et les cellules
      se resserrent (une bande ne doit pas repousser la page). Contenu : des <x-admin.stats.item>.
      La bande part du bord du titre de la page, et les cellules de la premiere colonne n'ont pas de marge a
@@ -13,6 +14,7 @@
     $grid = match ((int) $columns) {
         2 => 'grid-cols-2 [&>*:nth-child(odd)]:pl-0',
         4 => 'grid-cols-2 lg:grid-cols-4 max-lg:[&>*:nth-child(odd)]:pl-0 lg:[&>*:nth-child(4n+1)]:pl-0',
+        5 => 'grid-cols-2 lg:grid-cols-5 max-lg:[&>*:last-child:nth-child(odd)]:col-span-2 max-lg:[&>*:nth-child(odd)]:pl-0 lg:[&>*:nth-child(5n+1)]:pl-0',
         default => 'grid-cols-2 sm:grid-cols-3 max-sm:[&>*:last-child:nth-child(odd)]:col-span-2 max-sm:[&>*:nth-child(odd)]:pl-0 sm:[&>*:nth-child(3n+1)]:pl-0',
     };
 @endphp

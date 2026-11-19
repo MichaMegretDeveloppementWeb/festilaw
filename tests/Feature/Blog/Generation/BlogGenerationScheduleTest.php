@@ -2,9 +2,11 @@
 
 use App\Actions\Blog\Generation\PlanScheduledBlogGenerationsAction;
 use App\Contracts\Blog\Generation\GenerationPipeline;
+use App\Data\Blog\Generation\GenerationEffort;
 use App\Data\Blog\Generation\GenerationImageOptions;
 use App\Data\Blog\Generation\ScheduledGenerationPlan;
 use App\Enums\Blog\Generation\BlogAiImageMode;
+use App\Enums\Blog\Generation\BlogEffortLevel;
 use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogGenerationTrigger;
@@ -206,16 +208,18 @@ it('fails loudly, without queueing, when the pipeline cannot be used', function 
     expect(BlogGeneration::count())->toBe(0);
 });
 
-it('gives every generation of a batch the default images of the settings, fixed at launch', function () {
-    BlogAi::saveSettings(['enabled' => true, 'articles_per_run' => 2, 'image_mode' => 'none', 'max_images' => 2]);
+it('gives every generation of a batch the default images and effort of the settings, fixed at launch', function () {
+    BlogAi::saveSettings(['enabled' => true, 'articles_per_run' => 2, 'image_mode' => 'none', 'max_images' => 2, 'effort' => 'high']);
 
     planScheduledGenerations();
 
     // Les reglages changent apres le lancement : le lot garde les images qu'il avait.
-    BlogAi::saveSettings(['enabled' => true, 'image_mode' => 'generated', 'max_images' => 3]);
+    BlogAi::saveSettings(['enabled' => true, 'image_mode' => 'generated', 'max_images' => 3, 'effort' => 'low']);
 
-    $images = BlogGeneration::query()->get()->map(fn (BlogGeneration $generation): ?GenerationImageOptions => GenerationImageOptions::fromPayload($generation->payload));
+    $generations = BlogGeneration::query()->get();
+    $images = $generations->map(fn (BlogGeneration $generation): ?GenerationImageOptions => GenerationImageOptions::fromPayload($generation->payload));
 
     expect($images)->toHaveCount(2)
-        ->and($images->every(fn (?GenerationImageOptions $options): bool => $options?->mode === BlogAiImageMode::None && $options->maxImages === 2))->toBeTrue();
+        ->and($images->every(fn (?GenerationImageOptions $options): bool => $options?->mode === BlogAiImageMode::None && $options->maxImages === 2))->toBeTrue()
+        ->and($generations->every(fn (BlogGeneration $generation): bool => GenerationEffort::fromPayload($generation->payload) === BlogEffortLevel::High))->toBeTrue();
 });

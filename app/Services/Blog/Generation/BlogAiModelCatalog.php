@@ -32,15 +32,30 @@ final readonly class BlogAiModelCatalog
     }
 
     /**
-     * La reflexion, basse et haute, d'un modele qui ignore l'effort demande ; nulle pour un modele qui le respecte.
+     * La reflexion par appel, basse et haute, d'un modele mesure : une seule paire pour un modele qui ignore
+     * l'effort demande (DeepSeek), une paire par effort pour un modele qui le suit a sa facon (GPT-6 Luna,
+     * GPT-6.1 Terra). Pour un effort, la paire peut aussi dependre de l'etape (`default`, puis la cle d'une
+     * etape mesuree a part) : en `high`, Luna reflechit 9 000 jetons pour rediger et moins de 2 500 pour
+     * traduire (etalonnage du 19/11). Nulle quand rien n'est mesure pour cet effort : le profil de l'etape
+     * s'applique.
      *
      * @return array{0: int, 1: int}|null
      */
-    public function reasoningTokens(?string $id): ?array
+    public function reasoningTokens(?string $id, string $effort, string $step = 'default'): ?array
     {
         $tokens = $this->textModels[(string) $id]['reasoning_tokens'] ?? null;
+        $tokens = is_array($tokens) && array_is_list($tokens) ? $tokens : ($tokens[$effort] ?? null);
+        $tokens = is_array($tokens) && ! array_is_list($tokens) ? ($tokens[$step] ?? $tokens['default'] ?? null) : $tokens;
 
         return is_array($tokens) && count($tokens) === 2 ? [(int) $tokens[0], (int) $tokens[1]] : null;
+    }
+
+    /** Le plus petit effort de reflexion que le modele accepte, quand il refuse `none` ; nul sinon. */
+    public function lowestEffort(?string $id): ?string
+    {
+        $effort = $this->textModels[(string) $id]['lowest_effort'] ?? null;
+
+        return is_string($effort) ? $effort : null;
     }
 
     /**

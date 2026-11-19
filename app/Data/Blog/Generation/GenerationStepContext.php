@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Data\Blog\Generation;
 
+use App\Enums\Blog\Generation\BlogEffortLevel;
 use App\Enums\Blog\Generation\BlogGenerationType;
 
 /**
@@ -18,6 +19,7 @@ final readonly class GenerationStepContext
      * @param  array<string, mixed>  $payload  donnees propres a la demande (par exemple l'article a traduire)
      * @param  int|null  $budgetLeftMicrousd  ce qui reste avant l'arret de securite ; nul : aucun
      * @param  GenerationLength|null  $length  la longueur demandee du texte ; nulle : aucune exigence
+     * @param  BlogEffortLevel  $effort  le niveau d'effort de la generation (reflexion, recherches web)
      */
     public function __construct(
         public int $generationId,
@@ -30,6 +32,7 @@ final readonly class GenerationStepContext
         public int $attempt,
         public ?int $budgetLeftMicrousd = null,
         public ?GenerationLength $length = null,
+        public BlogEffortLevel $effort = BlogEffortLevel::Medium,
     ) {}
 
     /** Ce qui reste pour un appel, une fois deduit ce que l'etape a deja depense pendant cet essai. */

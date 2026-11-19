@@ -6,9 +6,11 @@ namespace App\Services\Blog\Generation;
 
 use App\Data\Blog\Generation\BlogAiSettings;
 use App\Data\Blog\Generation\GenerationCostForecast;
+use App\Data\Blog\Generation\GenerationEffort;
 use App\Data\Blog\Generation\GenerationImageOptions;
 use App\Data\Blog\Generation\GenerationLength;
 use App\Enums\Blog\Generation\BlogAiImageMode;
+use App\Enums\Blog\Generation\BlogEffortLevel;
 use App\Enums\Blog\Generation\BlogGenerationType;
 use App\Services\Blog\Generation\Editorial\BlogWritingSignalsInspector;
 
@@ -18,24 +20,27 @@ use App\Services\Blog\Generation\Editorial\BlogWritingSignalsInspector;
  * requete.
  *
  * La borne basse compte un appel par etape et une reflexion faible ; la borne haute, les corrections et
- * seconds passages et la reflexion a son plus haut. Les jetons comptent au prix que le modele coute vraiment
+ * seconds passages et la reflexion a son plus haut. Le niveau d'effort fixe, par etape, la reflexion
+ * demandee et le nombre de recherches web, lus aux memes niveaux que l'appel au modele (BlogEffortLevels) :
+ * l'estimation suit donc le niveau choisi. Les jetons comptent au prix que le modele coute vraiment
  * quand on l'a mesure : appliquer a tous la marge mesuree sur DeepSeek (2,8 fois le catalogue) bloquait des
  * reglages a Haiku, facture au prix du catalogue.
  */
 final readonly class BlogGenerationCostForecaster
 {
-    /** @param  array<string, array<string, mixed>>  $profile  par etape : reglage de modele, jetons, appels, recherches */
+    /** @param  array<string, array<string, mixed>>  $profile  par etape : reglage de modele, jetons, reflexion par effort, appels */
     public function __construct(
         private BlogAiCostEstimator $prices,
         private BlogAiModelCatalog $models,
         private array $profile,
         private int $defaultMarginPercent,
         private BlogWritingSignalsInspector $words,
+        private BlogEffortLevels $effort,
     ) {}
 
-    public function forSettings(BlogAiSettings $settings, ?int $words = null, ?GenerationImageOptions $images = null, bool $topicImposed = false): GenerationCostForecast
+    public function forSettings(BlogAiSettings $settings, ?int $words = null, ?GenerationImageOptions $images = null, bool $topicImposed = false, ?BlogEffortLevel $effort = null): GenerationCostForecast
     {
-        return $this->forecast($settings->models, $words ?? $settings->articleWords, $images ?? GenerationImageOptions::fromSettings($settings), $topicImposed);
+        return $this->forecast($settings->models, $words ?? $settings->articleWords, $images ?? GenerationImageOptions::fromSettings($settings), $topicImposed, effort: $effort ?? $settings->effort);
     }
 
     /**
@@ -51,10 +56,10 @@ final readonly class BlogGenerationCostForecaster
             $article = (array) ($payload['translation']['article'] ?? []);
             $words = $this->words->words(trim((string) ($article['title'] ?? '')."\n\n".(string) ($article['body'] ?? '')));
 
-            return $this->forecast($settings->models, $words, new GenerationImageOptions(BlogAiImageMode::None, 1), true, ['translation_fr']);
+            return $this->forecast($settings->models, $words, new GenerationImageOptions(BlogAiImageMode::None, 1), true, ['translation_fr'], GenerationEffort::fromPayload($payload) ?? $settings->effort);
         }
 
-        return $this->forSettings($settings, GenerationLength::wordsFromPayload($payload), GenerationImageOptions::fromPayload($payload), $topicImposed);
+        return $this->forSettings($settings, GenerationLength::wordsFromPayload($payload), GenerationImageOptions::fromPayload($payload), $topicImposed, GenerationEffort::fromPayload($payload));
     }
 
     /**
@@ -66,7 +71,7 @@ final readonly class BlogGenerationCostForecaster
      * @param  array<string, string>  $models  modele par reglage (sujet, recherche, redaction...)
      * @param  list<string>|null  $onlySteps  les seules etapes a compter (banc d'essai : la recherche partagee a part) ; nul : toutes
      */
-    public function forecast(array $models, int $words, GenerationImageOptions $images, bool $topicImposed = false, ?array $onlySteps = null): GenerationCostForecast
+    public function forecast(array $models, int $words, GenerationImageOptions $images, bool $topicImposed = false, ?array $onlySteps = null, BlogEffortLevel $effort = BlogEffortLevel::Medium): GenerationCostForecast
     {
         $low = 0;
         $high = 0;
@@ -78,12 +83,14 @@ final readonly class BlogGenerationCostForecaster
 
             $model = $models[(string) $profile['setting']] ?? null;
             $factor = $this->models->tokenFactorPercent($model);
-            $input = intdiv(((int) ($profile['input'] ?? 0) + intdiv((int) ($profile['input_per_1000_words'] ?? 0) * $words, 1_000)) * $factor, 100);
+            $searchCount = $this->effort->searches($effort, (string) $step);
+            $read = (int) ($profile['input'] ?? 0) + (int) ($profile['input_per_search'] ?? 0) * $searchCount + intdiv((int) ($profile['input_per_1000_words'] ?? 0) * $words, 1_000);
+            $input = intdiv($read * $factor, 100);
             $visible = intdiv(((int) ($profile['output'] ?? 0) + intdiv((int) ($profile['output_per_1000_words'] ?? 0) * $words, 1_000)) * $factor, 100);
-            [$lowReasoning, $highReasoning] = $this->reasoning($model, $profile['reasoning'] ?? [0, 0]);
+            [$lowReasoning, $highReasoning] = $this->reasoning($model, (string) $step, $this->effort->reasoning($effort, (string) $step, $model), (array) ($profile['reasoning'] ?? []));
             [$lowCalls, $highCalls] = $profile['calls'] ?? [1, 1];
             $measured = $this->models->priceMarginPercent($model);
-            $searches = $this->prices->webSearchesMicrousd((int) ($profile['searches'] ?? 0));
+            $searches = $this->prices->webSearchesMicrousd($searchCount);
 
             $low += $searches + $this->calls($model, $input, $visible, $lowReasoning, (int) $lowCalls, $measured ?? 100);
             $high += $searches + $this->calls($model, $input, $visible, $highReasoning, (int) $highCalls, $measured ?? $this->defaultMarginPercent);
@@ -99,15 +106,21 @@ final readonly class BlogGenerationCostForecaster
     }
 
     /**
-     * La reflexion de l'etape, sauf pour un modele qui ignore l'effort demande : la sienne. Une etape sans
+     * La reflexion de l'etape pour l'effort demande, sauf pour un modele mesure : la sienne. Une etape sans
      * reflexion (effort « none ») n'en a pour aucun modele.
      *
-     * @param  array{0: int, 1: int}  $step
+     * @param  array<string, array{0: int, 1: int}>  $byEffort  reflexion basse et haute du profil, par effort
      * @return array{0: int, 1: int}
      */
-    private function reasoning(?string $model, array $step): array
+    private function reasoning(?string $model, string $step, string $effort, array $byEffort): array
     {
-        return $step[1] > 0 ? ($this->models->reasoningTokens($model) ?? $step) : $step;
+        if ($effort === 'none') {
+            return [0, 0];
+        }
+
+        $profiled = $byEffort[$effort] ?? [0, 0];
+
+        return $this->models->reasoningTokens($model, $effort, $step) ?? [(int) $profiled[0], (int) $profiled[1]];
     }
 
     /** Un appel apres le premier (correction, second passage) relit en plus la reponse precedente. */

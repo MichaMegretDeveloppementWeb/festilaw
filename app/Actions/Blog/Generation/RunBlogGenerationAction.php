@@ -8,6 +8,7 @@ use App\Contracts\Blog\Generation\GenerationPipeline;
 use App\Contracts\Blog\Generation\GenerationStep;
 use App\Data\Blog\Generation\ArticleLengthRules;
 use App\Data\Blog\Generation\BlogAiSettings;
+use App\Data\Blog\Generation\GenerationEffort;
 use App\Data\Blog\Generation\GenerationLength;
 use App\Data\Blog\Generation\GenerationSafetyStop;
 use App\Data\Blog\Generation\GenerationStepContext;
@@ -186,6 +187,7 @@ final readonly class RunBlogGenerationAction
             attempt: $attempt,
             budgetLeftMicrousd: $this->budgetLeft($generation->id, $ceiling),
             length: $this->length->for(GenerationLength::wordsFromPayload($generation->payload) ?? $settings->articleWords),
+            effort: GenerationEffort::forRun($generation->payload),
         );
     }
 

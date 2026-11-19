@@ -34,13 +34,14 @@
             </div>
         </x-admin.section>
 
-        {{-- C8 ajoutera ici le niveau d'effort, a cote de la longueur et des images. --}}
-        <x-admin.section data-settings-section="length" :title="__('Longueur et images')"
+        <x-admin.section data-settings-section="length" :title="__('Longueur, images et effort')"
             :description="__('Les valeurs que propose la fenêtre « Générer un article ». Vous pouvez les changer pour un article.')">
-            <div class="grid grid-cols-1 gap-5 pt-6 sm:grid-cols-3">
+            <div class="grid grid-cols-1 gap-5 pt-6 sm:grid-cols-2">
                 <x-ui::form-group :label="__('Longueur du texte')" for="ai-article-words" :error="$errors->first('articleWords')">
                     <x-ui::select id="ai-article-words" wire:model.live="articleWords" :options="$lengthOptions" :error="$errors->has('articleWords')" />
                 </x-ui::form-group>
+
+                @include('livewire.admin.blog.generation.effort-field', ['id' => 'ai-effort'])
 
                 <x-ui::form-group :label="__('Origine des images')" for="ai-image-mode" :error="$errors->first('imageMode')">
                     <x-ui::select id="ai-image-mode" wire:model.live="imageMode" :error="$errors->has('imageMode')" :options="$imageModes" />

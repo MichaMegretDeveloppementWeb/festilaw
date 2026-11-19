@@ -9,6 +9,7 @@ use App\Data\Blog\Generation\GenerationImageOptions;
 use App\Data\Blog\Generation\GenerationStepResult;
 use App\Data\Blog\Generation\QueueBlogGenerationData;
 use App\Enums\Blog\Generation\BlogAiImageMode;
+use App\Enums\Blog\Generation\BlogEffortLevel;
 use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogGenerationStepStatus;
@@ -341,22 +342,23 @@ it('renders the message of a finished batch: how many succeeded, where the other
     expect($message([$succeeded]))->toContain('Ouvrir les articles')->not->toContain('assistance technique');
 });
 
-it('gives a requested generation its own images and length, or the default ones of the settings', function () {
-    BlogAi::saveSettings(['image_mode' => 'generated', 'max_images' => 3, 'article_words' => 1_200]);
+it('gives a requested generation its own images, length and effort, or the default ones of the settings', function () {
+    BlogAi::saveSettings(['image_mode' => 'generated', 'max_images' => 3, 'article_words' => 1_200, 'effort' => 'low']);
 
     $withDefaults = app(QueueBlogGenerationAction::class)->execute(new QueueBlogGenerationData);
     $withItsOwn = app(QueueBlogGenerationAction::class)->execute(new QueueBlogGenerationData(
         payload: ['post_id' => 7],
         images: new GenerationImageOptions(BlogAiImageMode::None, 1),
         articleWords: 9_000,
+        effort: BlogEffortLevel::High,
     ));
 
-    // Les reglages changent ensuite : les generations deja demandees gardent leurs images et leur longueur.
-    BlogAi::saveSettings(['image_mode' => 'stock', 'max_images' => 1, 'article_words' => 600]);
+    // Les reglages changent ensuite : les generations deja demandees gardent leurs images, leur longueur et leur effort.
+    BlogAi::saveSettings(['image_mode' => 'stock', 'max_images' => 1, 'article_words' => 600, 'effort' => 'medium']);
 
     // Une longueur hors des bornes est ramenee a la borne (2 000 mots au plus).
-    expect(BlogGeneration::query()->findOrFail($withDefaults)->payload)->toEqual(['images' => ['mode' => 'generated', 'max' => 3], 'length' => ['words' => 1_200]])
-        ->and(BlogGeneration::query()->findOrFail($withItsOwn)->payload)->toEqual(['post_id' => 7, 'images' => ['mode' => 'none', 'max' => 1], 'length' => ['words' => 2_000]]);
+    expect(BlogGeneration::query()->findOrFail($withDefaults)->payload)->toEqual(['images' => ['mode' => 'generated', 'max' => 3], 'effort' => 'low', 'length' => ['words' => 1_200]])
+        ->and(BlogGeneration::query()->findOrFail($withItsOwn)->payload)->toEqual(['post_id' => 7, 'images' => ['mode' => 'none', 'max' => 1], 'effort' => 'high', 'length' => ['words' => 2_000]]);
 });
 
 it('keeps who stopped a generation and when, whether it was waiting or already running', function () {
