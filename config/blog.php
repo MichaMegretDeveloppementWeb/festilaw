@@ -290,6 +290,15 @@ return [
         'safety_stop_percent' => 200,
 
         /*
+         | Plancher de l'arret de securite, en millioniemes de dollar (decision de Micha du 19/11) : 2 centimes. Un
+         | appel a l'IA reserve d'avance le prix de la plus longue reponse permise, environ 1,5 centime pour une
+         | traduction avec GPT-6 Luna, quelle que soit la longueur du texte. Le double du cout annonce d'un texte
+         | court (0,47 centime) refusait donc toute traduction assistee courte, sans rien depenser. Un article
+         | ordinaire n'est pas touche : son arret de securite est bien au-dessus.
+         */
+        'safety_stop_floor_microusd' => 20_000,
+
+        /*
          | Sources affichees sous un article (decision de Micha du 18/11) : les trois plus credibles, au plus
          | cinq quand le redacteur dit pourquoi une quatrieme ou une cinquieme est necessaire. Les articles
          | 77 a 80 en affichaient de 5 a 13. La recherche, elle, n'est pas plafonnee.

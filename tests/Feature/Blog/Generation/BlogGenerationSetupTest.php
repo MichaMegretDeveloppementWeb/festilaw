@@ -55,8 +55,10 @@ it('starts from safe defaults: nothing is generated until someone switches it on
         ->and(array_keys($settings->models))->toBe(['topic', 'research', 'writing', 'verification', 'translation', 'image'])
         ->and($settings->modelFor('writing'))->toBe(config('blog.ai.defaults.models.writing'))
         ->and($settings->modelFor('unknown'))->toBeNull();
-    // Plus de plafond par article (decision du 18/11) : une generation s'arrete au double du haut annonce.
-    expect(app(GenerationSafetyStop::class)->ceiling(100_000))->toBe(200_000);
+    // Plus de plafond par article (decision du 18/11) : une generation s'arrete au double du haut annonce, jamais
+    // sous 2 centimes (decision du 19/11), pour qu'un texte court puisse etre traduit.
+    expect(app(GenerationSafetyStop::class)->ceiling(100_000))->toBe(200_000)
+        ->and(app(GenerationSafetyStop::class)->ceiling(2_355))->toBe(20_000);
 });
 
 it('saves the settings in a single row and reads them back', function () {

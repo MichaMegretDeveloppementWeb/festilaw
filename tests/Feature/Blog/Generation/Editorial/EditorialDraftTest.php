@@ -326,7 +326,8 @@ it('runs the whole editorial pipeline through the worker and delivers a draft to
 });
 
 it('stops by safety before a call that could pass twice the announced cost, without sending it', function () {
-    config(['blog.ai.pipeline' => 'editorial']);
+    // Sans plancher : celui de 2 centimes (19/11) laisserait passer la reserve de 0,014 $ de cet essai.
+    config(['blog.ai.pipeline' => 'editorial', 'blog.ai.safety_stop_floor_microusd' => 0]);
     WebSearchAgent::fake()->preventStrayPrompts();
     $generation = BlogGeneration::factory()->create(['forecast_low_microusd' => 3_000, 'forecast_high_microusd' => 5_000]);
 
