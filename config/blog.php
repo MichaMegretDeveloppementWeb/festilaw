@@ -142,9 +142,11 @@ return [
          | une fois depasse (decision de Micha du 17/11). Il n'y a plus de plafond par article (decision du
          | 18/11) : voir `safety_stop_percent`.
          |
-         | Modeles : les moins chers qui savent faire chaque tache (prix au 17/11 : Haiku 5.5 a 0,10 $ et
-         | 0,50 $ par million de jetons, GPT-5 Image Mini a environ 1,3 centime l'image). Au premier essai
-         | reel, Sonnet 5.5 a chaque etape coutait plus d'un dollar l'article.
+         | Modeles : ceux que le banc d'essai du 18/11 recommande (SC7, docs/comparaison-modeles.md du chantier).
+         | Haiku 5.5 pour le sujet et la recherche. GPT-6 Luna pour la redaction et les versions : cinq fois
+         | plus rapide que DeepSeek V4.1 Flash pour un cout voisin, et plus pres du dossier. GPT-6.1 Terra pour
+         | la verification et le controle des versions : il attrapait 10 erreurs connues sur 11, contre 1 pour
+         | Haiku. Environ 0,07 a 0,09 $ l'article, recherche comprise, image a part.
          */
         'defaults' => [
             'enabled' => false,
@@ -158,9 +160,9 @@ return [
             'models' => [
                 'topic' => 'anthropic/claude-haiku-5.5',
                 'research' => 'anthropic/claude-haiku-5.5',
-                'writing' => 'anthropic/claude-haiku-5.5',
-                'verification' => 'anthropic/claude-haiku-5.5',
-                'translation' => 'anthropic/claude-haiku-5.5',
+                'writing' => 'openai/gpt-6-luna',
+                'verification' => 'openai/gpt-6.1-terra',
+                'translation' => 'openai/gpt-6-luna',
                 'image' => 'openai/gpt-5-image-mini',
             ],
             'image_mode' => 'stock',
