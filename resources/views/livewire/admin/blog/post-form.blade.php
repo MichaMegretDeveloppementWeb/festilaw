@@ -78,11 +78,7 @@
 
         <div class="grid items-start gap-y-6 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem]">
             <div class="min-w-0 lg:pr-8">
-                {{-- Les onglets debordent de la colonne comme les filets de la page : leur premier libelle reste
-                     aligne sur le titre. --}}
-                <div class="-mx-4 sm:-mx-5">
-                    <x-admin.blog.language-tabs :locales="$locales" />
-                </div>
+                <x-admin.blog.language-tabs :locales="$locales" />
 
                 @foreach ($locales as $locale => $language)
                     <div x-show="tab === '{{ $locale }}'" @if ($locale !== 'en') x-cloak @endif role="tabpanel" class="space-y-6 pt-8">

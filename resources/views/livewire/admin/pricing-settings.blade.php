@@ -3,7 +3,7 @@
 <div>
     <x-ui::page-header :title="__('Tarifs')" :description="__('Tarifs annuels des packs Creator et Pro, modifiables sans redéploiement.')" class="mb-8" />
 
-    <x-admin.section :title="__('Tarifs annuels')"
+    <x-admin.section :spaced="false" :title="__('Tarifs annuels')"
         :description="__('La première année est facturée au prorata (de la signature à la fin de l\'année). Le tarif est le montant annuel plein, aussi utilisé pour les renouvellements.')">
         <form wire:submit="save" class="max-w-md space-y-4 pt-6">
             <x-ui::form-group :label="__('Pack Creator (€ par an)')" for="creator-price" :error="$errors->first('creatorPrice')">

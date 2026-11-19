@@ -1,17 +1,14 @@
-@props(['locale', 'prefix', 'titleFallback', 'descriptionFallback'])
-{{-- « Résultat dans Google » d'une langue : ce que Google affichera, puis le titre et la description,
+@props(['locale', 'prefix', 'titleFallback', 'descriptionFallback', 'spaced' => true])
+{{-- « Résultat dans Google » d'une langue, en section de la page (titre, phrase, filet) depuis le 19/11 : Micha
+     ne la distinguait pas des champs de l'article. Ce que Google affichera, puis le titre et la description,
      l'un sous l'autre, avec leur longueur conseillee.
      $prefix : debut du chemin public ; $titleFallback, $descriptionFallback : ce que Google affiche quand
-     le champ reste vide (« le titre de l'article », « l'extrait »).
+     le champ reste vide (« le titre de l'article », « l'extrait ») ; $spaced : celui de <x-admin.section>.
      Demande `googleTitle(langue)` et `googleDescription(langue)` dans la portee Alpine du formulaire. --}}
-<div {{ $attributes->class(['border-t border-default pt-5']) }}>
-    <h3 class="text-[14px] font-semibold text-primary">{{ __('Résultat dans Google') }}</h3>
-    <p class="mt-1 max-w-prose text-[12px] leading-relaxed text-muted">
-        {{ __('Titre et description affichés dans les résultats de Google. Si ces champs sont vides, :title et :description sont utilisés.', ['title' => $titleFallback, 'description' => $descriptionFallback]) }}
-    </p>
-
+<x-admin.section {{ $attributes }} :spaced="$spaced" :title="__('Résultat dans Google')"
+    :description="__('Titre et description affichés dans les résultats de Google. Si ces champs sont vides, :title et :description sont utilisés.', ['title' => $titleFallback, 'description' => $descriptionFallback])">
     {{-- Apercu, mis a jour pendant la saisie, avec les memes replis que la page publique. --}}
-    <div class="mt-4 rounded-lg bg-elevated px-4 py-3" aria-hidden="true">
+    <div class="mt-6 rounded-lg bg-elevated px-4 py-3" aria-hidden="true">
         <p class="truncate text-[12px] text-muted">{{ parse_url(url('/'), PHP_URL_HOST) }}<span x-text="@js(str_replace('/', ' › ', rtrim($prefix, '/'))) + ' › ' + (($wire.texts.{{ $locale }}.slug || '').trim() || '…')"></span></p>
         <p class="mt-0.5 truncate text-[15px] font-medium text-blue-700 dark:text-blue-400" x-text="googleTitle('{{ $locale }}') || @js(__('Titre de la page'))"></p>
         <p class="mt-0.5 line-clamp-2 text-[12px] leading-relaxed text-secondary" x-text="googleDescription('{{ $locale }}') || @js(__('Description de la page'))"></p>
@@ -32,4 +29,4 @@
             </x-ui::form-group>
         </div>
     </div>
-</div>
+</x-admin.section>

@@ -1,6 +1,6 @@
 {{-- Liste des categories, sur page blanche et sur toute la largeur. `pending` : la categorie visee par la
-     fenetre de suppression. Les lignes a filets debordent de la colonne de la meme marge que les autres listes,
-     pour que le texte reste aligne sur le titre de la page. --}}
+     fenetre de suppression. Lignes et filets partent du bord du titre de la page, comme toutes les listes
+     (decision de Micha du 19/11). --}}
 <div x-data="{ pending: { id: null, name: '' } }">
     <x-ui::page-header :title="__('Catégories')" :description="__('Les rubriques du blog. Leur ordre est celui du menu des catégories sur le site.')" class="mb-8">
         <x-ui::button :href="route('admin.blog.categories.create')"><x-ui::icon name="plus" /> {{ __('Nouvelle catégorie') }}</x-ui::button>
@@ -10,7 +10,7 @@
         <x-ui::load-failure :title="__('Le chargement des catégories a échoué.')"
             :description="__('Réessayez. Si le problème persiste, contactez l\'assistance technique.')" retry="$refresh" />
     @else
-        <div class="-mx-4 border-y border-default sm:-mx-5">
+        <div class="border-y border-default">
             @if ($categories === [])
                 <x-ui::empty-state icon="tag" :title="__('Aucune catégorie pour le moment.')"
                     :description="__('Un article a besoin d\'une catégorie pour être publié.')">
@@ -24,8 +24,8 @@
                         {{-- Toute la ligne ouvre la categorie ; son nom reste un vrai lien pour le clavier. --}}
                         <li wire:key="category-{{ $category->id }}" wire:sort:item="{{ $category->id }}"
                             x-on:click="if (! $event.target.closest('a, button, [data-handle]')) window.location.href = '{{ $editUrl }}'"
-                            class="flex items-center gap-3 px-4 py-4 transition-colors hover:bg-elevated sm:px-5">
-                            <span wire:sort:handle data-handle class="-ml-1 flex shrink-0 cursor-grab items-center rounded-lg p-1.5 text-muted transition hover:text-secondary" title="{{ __('Glisser pour changer l\'ordre') }}">
+                            class="flex items-center gap-3 py-4 transition-colors hover:bg-elevated">
+                            <span wire:sort:handle data-handle class="-ml-1.5 flex shrink-0 cursor-grab items-center rounded-lg p-1.5 text-muted transition hover:text-secondary" title="{{ __('Glisser pour changer l\'ordre') }}">
                                 <x-ui::icon name="bars-2" />
                             </span>
                             <div class="min-w-0 flex-1">

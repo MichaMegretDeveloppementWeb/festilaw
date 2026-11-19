@@ -41,7 +41,7 @@
     @error('submissions-load-failed')
         <x-ui::load-failure :title="$message" :description="__('Réessayez. Si le problème persiste, contactez l\'assistance technique.')" retry="$refresh" />
     @else
-    <div class="relative -mx-4 border-t border-default sm:-mx-5">
+    <div class="relative border-t border-default">
         @if ($submissions === null || $submissions->isEmpty())
             <x-ui::empty-state icon="inbox" :title="$contactsMode ? __('Aucune prise de contact.') : __('Aucun dossier ne correspond.')" />
         @else

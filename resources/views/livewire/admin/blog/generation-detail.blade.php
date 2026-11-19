@@ -119,7 +119,7 @@
 
             {{-- 2. La demande d'origine : la meme forme, en plus discret (valeurs en 14 px). Le filet du titre de
                  section sert de bord haut a la bande. --}}
-            <x-admin.section class="mt-12" :title="__('La demande')" data-generation-request>
+            <x-admin.section :title="__('La demande')" data-generation-request>
                 <x-admin.stats class="border-t-0" :columns="4">
                     <x-admin.stats.item icon="bolt" :label="__('Lancement')" size="sm">{{ $generation->trigger->label() }}</x-admin.stats.item>
                     <x-admin.stats.item icon="chat-bubble-left-ellipsis" :label="__('Sujet demandé')" size="sm">
@@ -134,7 +134,7 @@
                 </x-admin.stats>
 
                 @if ($generation->instructions)
-                    <div class="-mx-4 border-b border-default px-4 py-5 sm:-mx-5 sm:px-5">
+                    <div class="border-b border-default py-5">
                         <p class="flex items-center gap-1.5 text-[12px] font-medium text-muted"><x-ui::icon name="pencil-square" class="h-4 w-4" /> {{ __('Consignes') }}</p>
                         <p class="mt-2 max-w-4xl whitespace-pre-line text-[14px] leading-relaxed text-primary">{{ $generation->instructions }}</p>
                     </div>
@@ -143,10 +143,10 @@
 
             {{-- Les passages retires ou corriges par les controles : la relecture commence la. --}}
             @if ($generation->review !== [])
-                <x-admin.section class="mt-12" :title="__('À relire en priorité')" :description="__('Les passages que la vérification a retirés ou corrigés avant d\'écrire le brouillon. Relisez d\'abord ces endroits.')" data-generation-review>
-                    <div class="-mx-4 divide-y divide-[var(--ui-border)] sm:-mx-5">
+                <x-admin.section :title="__('À relire en priorité')" :description="__('Les passages que la vérification a retirés ou corrigés avant d\'écrire le brouillon. Relisez d\'abord ces endroits.')" data-generation-review>
+                    <div class="divide-y divide-[var(--ui-border)]">
                         @foreach ($generation->review as $item)
-                            <section class="px-4 py-5 sm:px-5">
+                            <section class="py-5">
                                 <p class="text-[11px] font-semibold uppercase tracking-wide text-muted">{{ $item['where'] }}</p>
                                 <p class="mt-1.5 max-w-3xl text-[14px] leading-[1.7] text-primary">« {{ $item['passage'] }} »</p>
                                 @if ($item['reason'] !== '')
@@ -160,10 +160,10 @@
 
             {{-- 3. Ce que l'IA a fait. --}}
             @if ($generation->report !== [])
-                <x-admin.section class="mt-12" :title="__('Compte rendu de l\'IA')" :description="__('Les choix faits par l\'IA pour cet article, expliqués par elle.')" data-generation-report>
-                    <div class="-mx-4 divide-y divide-[var(--ui-border)] sm:-mx-5">
+                <x-admin.section :title="__('Compte rendu de l\'IA')" :description="__('Les choix faits par l\'IA pour cet article, expliqués par elle.')" data-generation-report>
+                    <div class="divide-y divide-[var(--ui-border)]">
                         @foreach ($generation->report as $point)
-                            <section class="flex gap-4 px-4 py-5 sm:px-5">
+                            <section class="flex gap-4 py-5">
                                 <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-elevated text-secondary" aria-hidden="true">
                                     <x-ui::icon :name="$reportIcons[$point['key']] ?? 'chat-bubble-left-ellipsis'" class="h-[18px] w-[18px]" />
                                 </span>
@@ -177,7 +177,7 @@
                 </x-admin.section>
             @endif
 
-            <x-admin.section class="mt-12" :title="__('Étapes')">
+            <x-admin.section :title="__('Étapes')">
                 <x-slot:actions>
                     {{ trans_choice('{0} Aucune étape terminée|{1} :count étape terminée sur :total|[2,*] :count étapes terminées sur :total', $generation->completedSteps(), ['count' => $generation->completedSteps(), 'total' => $total]) }}
                 </x-slot:actions>

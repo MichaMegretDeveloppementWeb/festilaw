@@ -3,7 +3,7 @@
 <div>
     <x-ui::page-header :title="__('Mon compte')" :description="__('Gérez votre adresse email et votre mot de passe.')" class="mb-8" />
 
-    <div class="space-y-12">
+    <div>
         <x-admin.section :title="__('Adresse email')">
             <form wire:submit="updateEmail" class="max-w-md space-y-4 pt-6">
                 <x-ui::form-group :label="__('Email')" for="profile-email" :error="$errors->first('email')">

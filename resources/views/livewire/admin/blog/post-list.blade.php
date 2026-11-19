@@ -60,7 +60,7 @@
             :description="__('Réessayez. Si le problème persiste, contactez l\'assistance technique.')" retry="$refresh" />
     @else
         {{-- Le tableau sur la page blanche, sans carte, aligne sur le titre de la page. --}}
-        <div class="relative -mx-4 border-t border-default sm:-mx-5">
+        <div class="relative border-t border-default">
             {{-- Voile pendant qu'une recherche, un tri ou un changement de page se charge. --}}
             <div wire:loading.delay.long wire:target="search, status, category, origin, perPage, sortBy, gotoPage, nextPage, previousPage, delete"
                 class="absolute inset-0 z-10 bg-surface/70">

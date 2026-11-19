@@ -54,7 +54,7 @@
             <livewire:admin.blog.generation-activity />
         </x-admin.stats>
 
-        <x-admin.section class="mt-12" :title="__('Dernières générations')">
+        <x-admin.section :title="__('Dernières générations')">
             <x-slot:actions>
                 <a href="{{ route('admin.blog.generation.history') }}" class="inline-flex items-center gap-1 font-medium text-secondary transition-colors hover:text-primary">
                     {{ __('Tout l\'historique') }} <x-ui::icon name="arrow-right" class="h-3.5 w-3.5" />
@@ -66,14 +66,14 @@
                     :description="__('La première apparaîtra ici dès son lancement.')" />
             @else
                 {{-- Toute la ligne ouvre la generation, comme dans l'historique : le lien du sujet s'etend sur la ligne
-                     entiere, et les boutons de la ligne passent au-dessus de lui. Les lignes debordent de la colonne de
-                     la meme marge que leurs filets, pour que le texte reste aligne sur les titres. --}}
-                <ul class="-mx-4 divide-y divide-[var(--ui-border)] border-b border-default sm:-mx-5" data-latest-generations>
+                     entiere, et les boutons de la ligne passent au-dessus de lui. Lignes et filets partent du bord du
+                     titre (decision de Micha du 19/11). --}}
+                <ul class="divide-y divide-[var(--ui-border)] border-b border-default" data-latest-generations>
                     @foreach ($overview->latest as $generation)
                         @php
                             $detailUrl = route('admin.blog.generation.show', ['generation' => $generation->id]);
                         @endphp
-                        <li wire:key="latest-{{ $generation->id }}" class="relative flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-elevated sm:px-5" data-generation="{{ $generation->id }}" data-generation-status="{{ $generation->status->value }}">
+                        <li wire:key="latest-{{ $generation->id }}" class="relative flex items-center gap-3 py-3.5 transition-colors hover:bg-elevated" data-generation="{{ $generation->id }}" data-generation-status="{{ $generation->status->value }}">
                             <div class="min-w-0 flex-1">
                                 <a href="{{ $detailUrl }}" class="block truncate text-[14px] font-medium text-primary after:absolute after:inset-0">{{ $generation->subject ?? __('Sujet choisi par l\'IA') }}</a>
                                 <p class="mt-0.5 truncate text-[12px] text-muted">

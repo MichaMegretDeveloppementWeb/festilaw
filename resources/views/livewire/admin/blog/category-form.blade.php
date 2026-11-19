@@ -18,11 +18,7 @@
             <x-ui::alert type="error" class="mb-6" :title="__('La catégorie n\'a pas été enregistrée')">{{ $message }}</x-ui::alert>
         @enderror
 
-        {{-- Les onglets debordent de la colonne comme les filets de la page : leur premier libelle reste aligne
-             sur le titre. --}}
-        <div class="-mx-4 sm:-mx-5">
-            <x-admin.blog.language-tabs :locales="$locales" :partial="false" />
-        </div>
+        <x-admin.blog.language-tabs :locales="$locales" :partial="false" />
 
         @foreach ($locales as $locale => $language)
             <div x-show="tab === '{{ $locale }}'" @if ($locale !== 'en') x-cloak @endif role="tabpanel"
@@ -47,7 +43,7 @@
                     </div>
                 </div>
 
-                <x-admin.blog.google-fields class="min-w-0 lg:border-t-0 lg:pt-0" :locale="$locale" :prefix="$addressPrefixes[$locale]"
+                <x-admin.blog.google-fields :spaced="false" class="mt-8 min-w-0 lg:mt-0" :locale="$locale" :prefix="$addressPrefixes[$locale]"
                     :title-fallback="__('le nom de la catégorie')" :description-fallback="__('la description de la catégorie')" />
             </div>
         @endforeach

@@ -122,7 +122,7 @@
 
     <div @class(['grid items-start gap-y-12', 'lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem]' => $hasSidebar])>
         {{-- Ce qu'on consulte --}}
-        <div @class(['min-w-0 space-y-12', 'lg:pr-8' => $hasSidebar])>
+        <div @class(['min-w-0', 'lg:pr-8' => $hasSidebar])>
             {{-- Le client en fiche de contact : qui (entreprise, personne), puis une ligne par moyen de le joindre,
                  cliquable, puis les donnees secondaires sur une ligne grise. Pas de seconde grille sous celle des
                  chiffres du dossier (retour de Micha du 16/11 au soir). --}}
@@ -193,7 +193,7 @@
                         .($submission->contract->signature_provider ? ', '.__('via :provider', ['provider' => $submission->contract->signature_provider]) : '').'.';
                 @endphp
                 <x-admin.section :title="__('Mandat et contrat')" :description="$mandateSummary" data-dossier-mandate>
-                    <ul class="-mx-4 divide-y divide-[var(--ui-border)] border-b border-default sm:-mx-5">
+                    <ul class="divide-y divide-[var(--ui-border)] border-b border-default">
                         @if ($submission->contract->signed_file_path)
                             <li>
                                 <x-admin.document-item :title="__('Mandat signé')"
@@ -225,7 +225,7 @@
                                     :download-url="route('admin.submissions.countersigned', ['submission' => $submission->id])" />
                             </li>
                         @else
-                            <li class="px-4 py-3.5 text-[13px] text-muted sm:px-5">{{ __('Aucun contrat contresigné déposé pour le moment.') }}</li>
+                            <li class="py-3.5 text-[13px] text-muted">{{ __('Aucun contrat contresigné déposé pour le moment.') }}</li>
                         @endif
 
                         {{-- Mandats remplaces par un changement de pack apres paiement (SC12) : conserves comme trace. --}}
@@ -261,7 +261,7 @@
                     @if ($submission->uploadedDocuments->isEmpty())
                         <p class="pt-5 text-[13px] text-secondary">{{ __('Aucune pièce téléversée.') }}</p>
                     @else
-                        <ul class="-mx-4 divide-y divide-[var(--ui-border)] border-b border-default sm:-mx-5">
+                        <ul class="divide-y divide-[var(--ui-border)] border-b border-default">
                             @foreach ($submission->uploadedDocuments as $doc)
                                 <li wire:key="doc-{{ $doc->id }}">
                                     <x-admin.document-item :title="$doc->type->label()" :subtitle="$doc->original_filename"
@@ -277,7 +277,7 @@
                     @if ($submission->payments->isEmpty())
                         <p class="pt-5 text-[13px] text-secondary">{{ __('Aucun paiement enregistré pour ce dossier.') }}</p>
                     @else
-                        <ul class="-mx-4 divide-y divide-[var(--ui-border)] border-b border-default sm:-mx-5">
+                        <ul class="divide-y divide-[var(--ui-border)] border-b border-default">
                             @foreach ($submission->payments as $payment)
                                 @php
                                     $settled = in_array($payment->status, [\App\Enums\Payment\PaymentStatus::Succeeded, \App\Enums\Payment\PaymentStatus::Refunded], true);
@@ -288,7 +288,7 @@
                                         default => 'gray',
                                     };
                                 @endphp
-                                <li wire:key="pay-{{ $payment->id }}" class="grid gap-x-6 gap-y-2 px-4 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:px-5">
+                                <li wire:key="pay-{{ $payment->id }}" class="grid gap-x-6 gap-y-2 py-4 sm:grid-cols-[minmax(0,1fr)_auto]">
                                     <div class="min-w-0">
                                         <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
                                             <span class="text-[15px] font-semibold tabular-nums text-primary">{{ number_format($payment->amount_cents / 100, 2, ',', ' ') }} {{ $payment->currency }}</span>
@@ -341,9 +341,9 @@
                 @if ($submission->notes->isEmpty())
                     <p class="pt-5 text-[13px] text-secondary">{{ __('Aucune note pour le moment.') }}</p>
                 @else
-                    <ul class="-mx-4 mt-6 divide-y divide-[var(--ui-border)] border-y border-default sm:-mx-5">
+                    <ul class="mt-6 divide-y divide-[var(--ui-border)] border-y border-default">
                         @foreach ($submission->notes as $note)
-                            <li class="px-4 py-4 sm:px-5" wire:key="note-{{ $note->id }}">
+                            <li class="py-4" wire:key="note-{{ $note->id }}">
                                 <p class="text-[12px] text-muted">{{ $note->author?->name ?: __('Équipe') }}, {{ $note->created_at->format('d/m/Y à H:i') }}</p>
                                 <p class="mt-1 max-w-3xl whitespace-pre-wrap text-[14px] leading-relaxed text-secondary">{{ $note->body }}</p>
                             </li>

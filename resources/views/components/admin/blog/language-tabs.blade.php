@@ -5,14 +5,15 @@
      $partial : l'etat « incomplete » existe pour ce formulaire (non pour une categorie, redigee des son nom).
      L'anneau dit l'etat de REDACTION de la langue, jamais celui de la publication : c'est ecrit dans la
      legende, dans l'info-bulle et pour les lecteurs d'ecran.
-     Les onglets se touchent et s'espacent par leur marge interieure : aucune zone morte entre deux. --}}
-<div class="flex items-center justify-between gap-4 border-b border-default pl-2 pr-5">
+     Les onglets se touchent et s'espacent par leur marge interieure : aucune zone morte entre deux. Le premier
+     n'en a pas a gauche, pour que son libelle parte du bord du titre comme le filet (decision du 19/11). --}}
+<div class="flex items-center justify-between gap-4 border-b border-default">
     <div class="-mb-px flex overflow-x-auto" role="tablist" aria-label="{{ __('Langue') }}">
         @foreach ($locales as $locale => $language)
             <button type="button" role="tab" x-on:click="tab = '{{ $locale }}'" x-bind:aria-selected="(tab === '{{ $locale }}').toString()"
                 x-bind:class="tab === '{{ $locale }}' ? 'border-gray-900 text-gray-900 dark:border-white dark:text-white' : 'border-transparent text-muted hover:text-secondary'"
                 x-bind:title="@js(ucfirst($language)) + ' : ' + { empty: @js(__('rien de rédigé')), partial: @js(__('incomplète')), written: @js(__('rédigée')) }[state('{{ $locale }}')]"
-                class="flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-[13px] font-medium transition-colors">
+                class="flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-[13px] font-medium transition-colors first:pl-0">
                 {{ ucfirst($language) }}
                 <span aria-hidden="true" class="h-2 w-2 rounded-full border-[1.5px]"
                     x-bind:class="{ 'border-gray-300 dark:border-gray-600': state('{{ $locale }}') === 'empty', 'border-amber-500': state('{{ $locale }}') === 'partial', 'border-emerald-500': state('{{ $locale }}') === 'written' }"></span>

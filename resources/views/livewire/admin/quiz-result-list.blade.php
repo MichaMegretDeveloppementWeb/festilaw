@@ -16,7 +16,7 @@
             <x-ui::segmented :legend="__('Filtrer par résultat')" wire:model.live="outcome" :options="$outcomeOptions" class="w-max max-w-none" />
         </div>
 
-        <div class="relative -mx-4 mt-4 border-t border-default sm:-mx-5">
+        <div class="relative mt-4 border-t border-default">
             @if ($results === null || $results->isEmpty())
                 <x-ui::empty-state icon="question-mark-circle" :title="$outcome !== '' ? __('Aucune réponse ne correspond.') : __('Aucune réponse au quiz pour le moment.')" />
             @else

@@ -1,9 +1,9 @@
 @props(['title', 'subtitle' => null, 'downloadUrl'])
 
 {{-- Un fichier d'un dossier, en ligne d'une liste a filets (page blanche) : une icone sur carre gris neutre, le nom,
-     sa precision, et le bouton de telechargement. La liste qui l'entoure pose les filets et deborde de la colonne
-     (-mx-4 sm:-mx-5) ; la ligne reprend la meme marge interieure, pour que le texte reste aligne sur les titres. --}}
-<div {{ $attributes->merge(['class' => 'flex items-center gap-3 px-4 py-3.5 sm:px-5']) }}>
+     sa precision, et le bouton de telechargement. La liste qui l'entoure pose les filets ; la ligne n'a pas de
+     marge laterale, pour que l'icone et le bouton partent des bords du titre (decision de Micha du 19/11). --}}
+<div {{ $attributes->merge(['class' => 'flex items-center gap-3 py-3.5']) }}>
     <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-elevated text-secondary" aria-hidden="true">
         <x-ui::icon name="document-text" class="h-[18px] w-[18px]" />
     </span>

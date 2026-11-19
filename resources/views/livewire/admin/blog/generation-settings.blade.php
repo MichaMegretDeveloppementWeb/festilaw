@@ -6,7 +6,7 @@
 <div class="flex min-h-[calc(100svh-6.5rem)] flex-col sm:min-h-[calc(100svh-7.5rem)]">
     @include('livewire.admin.blog.generation.header', ['page' => 'settings'])
 
-    <form wire:submit="save" id="generation-settings-form" class="space-y-16 pb-10">
+    <form wire:submit="save" id="generation-settings-form" class="space-y-24 pb-10">
         <x-admin.section-group data-settings-group="common" :title="__('Réglages communs')"
             :description="__('Ils valent pour chaque article généré, lancé à la main ou automatiquement.')">
             <x-admin.section data-settings-card :title="__('Modèles')"
