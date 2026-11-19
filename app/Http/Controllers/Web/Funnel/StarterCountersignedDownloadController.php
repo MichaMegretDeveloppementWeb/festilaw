@@ -20,6 +20,6 @@ final class StarterCountersignedDownloadController extends Controller
         $path = (string) ($dossier->contract?->countersigned_file_path ?? '');
         abort_if($path === '' || ! Storage::disk('local')->exists($path), 404);
 
-        return Storage::disk('local')->download($path, 'festilaw-contract-'.$dossier->reference.'.pdf');
+        return Storage::disk('local')->download($path, 'festilaw-agreement-'.$dossier->reference.'-countersigned.pdf');
     }
 }

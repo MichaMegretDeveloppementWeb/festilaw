@@ -5,7 +5,7 @@
 
     <x-mail.text>{{ __('Your payment is confirmed and your Festilaw :pack is now active. We\'ll issue your official EU Responsible Person address and email it to you within 24 hours.', ['pack' => __($submission->type->label())]) }}</x-mail.text>
 
-    <x-mail.text>{{ __('You can view your file and download your signed mandate and documents any time:') }}</x-mail.text>
+    <x-mail.text>{{ __('You can view your file and download your signed agreement and documents any time:') }}</x-mail.text>
 
     <x-mail.button :url="$fileUrl">{{ __('Open my file') }}</x-mail.button>
 

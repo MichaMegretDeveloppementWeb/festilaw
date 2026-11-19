@@ -10,7 +10,7 @@
     <x-mail.panel>
         <div style="font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
             <strong style="color:#0B1E45;">Ce qui ne s'exécute plus</strong><br>
-            Rappels de renouvellement · vérification des paiements et des signatures · récupération des mandats signés · purges RGPD.
+            Rappels de renouvellement · vérification des paiements et des signatures · récupération des contrats signés · purges RGPD.
         </div>
     </x-mail.panel>
 

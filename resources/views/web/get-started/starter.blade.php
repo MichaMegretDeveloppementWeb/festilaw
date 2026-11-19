@@ -14,7 +14,7 @@
                 <header class="funnel__head">
                     <span class="eyebrow">{{ __('Creator Pack') }}</span>
                     <h1 class="funnel__title">{!! __('Open your :file', ['file' => '<span class="funnel__title-em">'.e(__('compliance file')).'</span>']) !!}</h1>
-                    <p class="funnel__intro">{{ __('A few details to get started. Next, you\'ll upload your documents, sign your mandate, and pay securely. It takes about two minutes.') }}</p>
+                    <p class="funnel__intro">{{ __('A few details to get started. Next, you\'ll upload your documents, sign your agreement, and pay securely. It takes about two minutes.') }}</p>
                 </header>
 
                 <div class="funnel__body">
@@ -33,7 +33,7 @@
                         :included="[
                             __('Your official EU Responsible Person address'),
                             __('Set up and live within 24 hours'),
-                            __('Sign your mandate 100% online'),
+                            __('Sign your agreement 100% online'),
                             __('Real human support, from entrepreneurs'),
                         ]"
                         :note="__('Cancel anytime before payment. Your details are never shared with third parties.')" />

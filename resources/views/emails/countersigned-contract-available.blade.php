@@ -1,9 +1,9 @@
 <x-mail.layout>
-    <x-mail.heading>{{ __('Your countersigned Festilaw contract') }}</x-mail.heading>
+    <x-mail.heading>{{ __('Your countersigned Festilaw agreement') }}</x-mail.heading>
 
     <x-mail.text>{{ __('Hello') }}{{ $submission->first_name ? ' '.$submission->first_name : '' }},</x-mail.text>
 
-    <x-mail.text>{{ __('Good news: your Festilaw contract has been countersigned. The final signed document is attached, and it is also available in your file:') }}</x-mail.text>
+    <x-mail.text>{{ __('Good news: your Festilaw agreement has been countersigned. The final signed document is attached, and it is also available in your file:') }}</x-mail.text>
 
     <x-mail.button :url="$dossierUrl">{{ __('Open my file') }}</x-mail.button>
 

@@ -24,7 +24,7 @@ final class CountersignedContractAvailable extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: __('Your countersigned Festilaw contract'));
+        return new Envelope(subject: __('Your countersigned Festilaw agreement'));
     }
 
     public function content(): Content
@@ -45,7 +45,7 @@ final class CountersignedContractAvailable extends Mailable
 
         return [
             Attachment::fromStorageDisk('local', $path)
-                ->as('festilaw-contract-'.$this->submission->reference.'.pdf')
+                ->as('festilaw-agreement-'.$this->submission->reference.'-countersigned.pdf')
                 ->withMime('application/pdf'),
         ];
     }

@@ -114,7 +114,7 @@
                 <div @class(['mx-auto max-w-[90em] px-4 py-6 sm:py-8', 'sm:px-6' => ! $plainSurface, 'sm:px-10 lg:px-12' => $plainSurface])>
                     @if ($schedulerStatus['stalled'] ?? false)
                         <x-ui::alert type="error" class="mb-6" :title="__('Les tâches automatiques ne tournent plus depuis le :date (UTC)', ['date' => $schedulerStatus['lastRunAt']->format('d/m/Y à H:i')])">
-                            {{ __('Rappels de renouvellement, vérification des paiements et des signatures, récupération des mandats signés et purges RGPD ne s\'exécutent plus. À vérifier côté hébergement (tâche cron).') }}
+                            {{ __('Rappels de renouvellement, vérification des paiements et des signatures, récupération des contrats signés et purges RGPD ne s\'exécutent plus. À vérifier côté hébergement (tâche cron).') }}
                         </x-ui::alert>
                     @endif
 

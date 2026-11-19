@@ -19,6 +19,6 @@ final class AdminCountersignedDownloadController extends Controller
         $path = (string) ($submission->contract?->countersigned_file_path ?? '');
         abort_if($path === '' || ! Storage::disk('local')->exists($path), 404);
 
-        return Storage::disk('local')->download($path, 'festilaw-contract-'.$submission->reference.'.pdf');
+        return Storage::disk('local')->download($path, 'festilaw-agreement-'.$submission->reference.'-countersigned.pdf');
     }
 }

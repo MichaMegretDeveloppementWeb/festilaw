@@ -14,7 +14,7 @@
     @endif
     <div class="journey-switch__actions">
         <button type="button" class="btn btn--coral btn--sm" wire:click="sign" wire:loading.attr="disabled" wire:target="sign">
-            <span wire:loading.remove wire:target="sign">{{ __('Sign the mandate') }}</span>
+            <span wire:loading.remove wire:target="sign">{{ __('Sign the agreement') }}</span>
             <span wire:loading wire:target="sign">{{ __('Opening') }}&hellip;</span>
         </button>
         @if ($panel->signatureStarted)

@@ -184,7 +184,7 @@ it('switches the file to Creator at the renewal, with a new Creator mandate to s
     // L'espace demande la signature du mandat Creator ; pas de renouvellement avant.
     get(route('my-project', ['dossier' => 'protok']))
         ->assertOk()
-        ->assertSee('Sign your Creator Pack mandate')
+        ->assertSee('Sign your Creator Pack agreement')
         ->assertDontSee('to renew');
     post(route('get-started.starter.renew', ['dossier' => 'protok']))->assertRedirect();
     expect(Payment::where('type', PaymentType::AnnualRenewal)->count())->toBe(0);

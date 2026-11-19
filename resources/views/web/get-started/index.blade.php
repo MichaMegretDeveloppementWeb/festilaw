@@ -27,7 +27,7 @@
                 </li>
                 <li class="start-step">
                     <span class="start-step__num">2</span>
-                    <span class="start-step__label">{{ __('Upload your documents & sign your mandate') }}</span>
+                    <span class="start-step__label">{{ __('Upload your documents & sign your agreement') }}</span>
                 </li>
                 <li class="start-step">
                     <span class="start-step__num">3</span>

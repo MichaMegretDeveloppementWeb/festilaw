@@ -24,7 +24,7 @@
                 <header class="funnel__head">
                     <span class="eyebrow">{{ __($packLabel) }}</span>
                     <h1 class="funnel__title">{!! __('Your :file', ['file' => '<span class="funnel__title-em">'.e(__('compliance file')).'</span>']) !!}</h1>
-                    <p class="funnel__intro">{{ __('Three steps to your EU Responsible Person: upload your documents, sign your mandate, and pay securely.') }}</p>
+                    <p class="funnel__intro">{{ __('Three steps to your EU Responsible Person: upload your documents, sign your agreement, and pay securely.') }}</p>
                 </header>
 
                 <div class="funnel__body">
@@ -46,7 +46,7 @@
                             : [
                                 __('Your official EU Responsible Person address'),
                                 __('Set up and live within 24 hours'),
-                                __('Sign your mandate 100% online'),
+                                __('Sign your agreement 100% online'),
                                 __('Real human support, from entrepreneurs'),
                             ]"
                         :note="__('Your documents are stored privately and never shared with third parties.')" />

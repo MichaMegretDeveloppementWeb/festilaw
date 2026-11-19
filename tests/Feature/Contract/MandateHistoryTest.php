@@ -96,13 +96,13 @@ it('lists the previous mandates in the back-office and lets the admin download t
 
     Livewire::test(SubmissionDetail::class, ['submission' => $dossier])
         // La section dit le mandat en cours ; le mandat remplace est une ligne de plus, avec son lien.
-        ->assertSee('Mandat Pro Pack')
-        ->assertSee('Mandat précédent, signé le')
-        ->assertSee('Mandat Creator Pack');
+        ->assertSee('Contrat Pro Pack')
+        ->assertSee('Contrat précédent, signé le')
+        ->assertSee('Contrat Creator Pack');
 
     get(route('admin.submissions.contract-mandate', ['submission' => $dossier->id, 'contract' => $previous->id]))
         ->assertOk()
-        ->assertDownload('festilaw-mandate-'.$dossier->reference.'-creator.pdf');
+        ->assertDownload('festilaw-agreement-'.$dossier->reference.'-creator.pdf');
 
     // Un mandat d'un autre dossier n'est pas accessible par cette route.
     $other = Contract::factory()->signed()->create(['signed_file_path' => 'contracts/creator.pdf']);

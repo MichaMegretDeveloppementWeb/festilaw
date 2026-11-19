@@ -142,8 +142,8 @@ it('walks the journey end-to-end through the UI: documents, then signature, then
         ->set('documents.technical_documentation', UploadedFile::fake()->create('tech.pdf', 120, 'application/pdf'))
         ->call('submitDocuments')
         ->assertHasNoErrors()
-        ->assertSee('Documents saved. Next: sign your mandate.')
-        ->assertSee('Sign your Responsible Person mandate');
+        ->assertSee('Documents saved. Next: sign your agreement.')
+        ->assertSee('Sign your Responsible Person agreement');
 
     $submission->refresh();
     expect($submission->status)->toBe(SubmissionStatus::InProgress)
@@ -167,7 +167,7 @@ it('walks the journey end-to-end through the UI: documents, then signature, then
     Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
         ->call('signingCompleted')
         ->assertHasNoErrors()
-        ->assertSee('Mandate signed. Last step: payment.')
+        ->assertSee('Agreement signed. Last step: payment.')
         ->assertSee('Pay & activate');
     expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingPayment);
 
@@ -186,7 +186,7 @@ it('walks the journey end-to-end through the UI: documents, then signature, then
     get(route('my-project', ['dossier' => $token]))
         ->assertOk()
         ->assertSee('Your documents')
-        ->assertSeeInOrder(['Documents uploaded', 'Mandate signed', 'Payment']);
+        ->assertSeeInOrder(['Documents uploaded', 'Agreement signed', 'Payment']);
 });
 
 it('opens a new dossier on the documents and never starts a signature before them', function () {
@@ -195,7 +195,7 @@ it('opens a new dossier on the documents and never starts a signature before the
 
     Livewire::test(StarterJourney::class, ['submission' => $submission])
         ->assertSee('Upload your documents')
-        ->assertDontSee('Sign the mandate')
+        ->assertDontSee('Sign the agreement')
         ->set('incorporationPlace', 'Toronto, Canada')
         ->set('foundingYear', '2015')
         ->set('activity', 'handmade ceramics')
@@ -259,7 +259,7 @@ it('asks each pack for its own required documents', function () {
         ->set('documents.technical_documentation', UploadedFile::fake()->create('tech.pdf', 120, 'application/pdf'))
         ->call('submitDocuments')
         ->assertHasNoErrors()
-        ->assertSee('Sign your Responsible Person mandate');
+        ->assertSee('Sign your Responsible Person agreement');
 
     expect($pro->fresh()->uploadedDocuments)->toHaveCount(1);
 
@@ -279,7 +279,7 @@ it('confirms the signature on the signer return and shows the success banner', f
     Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
         ->call('confirmSignature')
         ->assertHasNoErrors()
-        ->assertSee('Mandate signed. Last step: payment.')
+        ->assertSee('Agreement signed. Last step: payment.')
         ->assertSee('Pay & activate');
 
     expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingPayment)
@@ -338,7 +338,7 @@ it('confirms the signature as soon as the embedded signing window reports it com
         ->call('signingCompleted')
         ->assertHasNoErrors()
         ->assertSet('confirmingSignature', false)
-        ->assertSee('Mandate signed. Last step: payment.')
+        ->assertSee('Agreement signed. Last step: payment.')
         ->assertSee('Pay & activate');
 
     expect($submission->fresh()->status)->toBe(SubmissionStatus::AwaitingPayment)
@@ -384,7 +384,7 @@ it('bounds the finalising loop and falls back to the manual check', function () 
     $journey->assertSet('signatureChecks', 15)
         ->assertSee('taking a little longer')
         ->assertSee('I have signed · check now')
-        ->assertSee('Sign the mandate');
+        ->assertSee('Sign the agreement');
 
     expect($submission->fresh()->status)->toBe(SubmissionStatus::InProgress);
 });
@@ -806,7 +806,7 @@ it('shows download links (and a replace control) when reviewing completed steps'
 
     Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
         ->call('goToStep', 'sign')->assertSet('viewStep', 'sign')            // revue signature
-        ->assertSee(__('Signed mandate'))->assertSee(__('Download'));
+        ->assertSee(__('Signed agreement'))->assertSee(__('Download'));
 });
 
 it('lets the client replace a document while reviewing the completed documents step', function () {

@@ -383,7 +383,7 @@ class SubmissionDetail extends Component
         // On ne contresigne que ce que le client a signe : refuser un depot sur un mandat non signe
         // (en attente / refuse / expire), sinon on notifierait un client d'un contrat jamais signe.
         if ($this->submission->contract->signature_status !== SignatureStatus::Signed) {
-            $this->addError('countersigned', __('Le client doit d\'abord signer le mandat avant de pouvoir déposer le contrat contresigné.'));
+            $this->addError('countersigned', __('Le client doit d\'abord signer son contrat. Vous pourrez ensuite déposer le contrat contresigné.'));
 
             return;
         }
@@ -442,7 +442,7 @@ class SubmissionDetail extends Component
         $this->submission->load('contract');
 
         $this->toast($this->submission->contract->signed_file_path !== null
-            ? __('Mandat signé récupéré.')
+            ? __('Contrat signé récupéré.')
             : __('Le PDF signé n\'a pas pu être récupéré (le prestataire ne l\'a pas encore fourni). Réessayez dans quelques instants.'), $this->submission->contract->signed_file_path !== null ? 'success' : 'error');
     }
 

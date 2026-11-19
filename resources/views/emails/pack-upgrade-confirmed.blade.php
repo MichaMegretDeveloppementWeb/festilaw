@@ -5,7 +5,7 @@
 
     <x-mail.text>{{ __('Your switch to the :pack is confirmed: we\'ve received your payment of :amount for the rest of :year.', ['pack' => __($submission->type->label()), 'amount' => $amount, 'year' => $year]) }}</x-mail.text>
 
-    <x-mail.text>{{ __('From 1 January, your plan renews at :price per year. Your signed :pack mandate is available in your file:', ['price' => $annualPrice, 'pack' => __($submission->type->label())]) }}</x-mail.text>
+    <x-mail.text>{{ __('From 1 January, your plan renews at :price per year. Your signed :pack agreement is available in your file:', ['price' => $annualPrice, 'pack' => __($submission->type->label())]) }}</x-mail.text>
 
     <x-mail.button :url="$fileUrl">{{ __('Open my file') }}</x-mail.button>
 

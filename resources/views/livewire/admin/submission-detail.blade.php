@@ -1,7 +1,7 @@
 {{-- Fiche d'un dossier ou d'une prise de contact, sur page blanche (decision de Micha du 16/11/2026).
      En-tete : la reference (ou le nom du contact), l'etat par un point de couleur et son libelle, les actions et un
      menu ⋯ qui porte la suppression. Puis la bande des chiffres du dossier, et deux colonnes : a gauche ce qu'on
-     consulte (client, mandat et contrat, pieces, paiements, notes), a droite les formulaires de gestion (statut,
+     consulte (client, contrat, pieces, paiements, notes), a droite les formulaires de gestion (statut,
      Personne Responsable, changement de pack, rendez-vous), separes par un filet vertical, sans carte.
      Une prise de contact n'a pas de colonne de droite. Les boutons de la page n'ouvrent que les fenetres de
      confirmation ; ce sont les boutons des fenetres qui lancent les actions. --}}
@@ -96,7 +96,7 @@
         {{-- Les chiffres du dossier : tout vient des donnees deja chargees, aucune requete de plus. --}}
         <x-admin.stats :columns="4" class="mb-12" data-dossier-facts>
             <x-admin.stats.item icon="rectangle-stack" :label="__('Pack')" size="sm">{{ $submission->type->label() }}</x-admin.stats.item>
-            <x-admin.stats.item icon="pencil-square" :label="__('Signature')" size="sm">{{ $submission->contract?->signature_status->label() ?? __('Pas encore de mandat') }}</x-admin.stats.item>
+            <x-admin.stats.item icon="pencil-square" :label="__('Signature')" size="sm">{{ $submission->contract?->signature_status->label() ?? __('Pas encore de contrat') }}</x-admin.stats.item>
             <x-admin.stats.item icon="credit-card" :label="__('Paiement')" size="sm">
                 @if ($lastPayment)
                     {{ number_format($lastPayment->amount_cents / 100, 2, ',', ' ') }} {{ $lastPayment->currency }}
@@ -189,24 +189,24 @@
                 @php
                     $hasCountersigned = (bool) $submission->contract->countersigned_file_path;
                     $previousMandates = $submission->contracts->where('role', \App\Enums\Contract\ContractRole::Superseded)->whereNotNull('signed_file_path');
-                    $mandateSummary = __('Mandat :pack', ['pack' => $submission->contract->packType()->label()]).', '.mb_strtolower($submission->contract->signature_status->label())
+                    $mandateSummary = __('Contrat :pack', ['pack' => $submission->contract->packType()->label()]).', '.mb_strtolower($submission->contract->signature_status->label())
                         .($submission->contract->signature_provider ? ', '.__('via :provider', ['provider' => $submission->contract->signature_provider]) : '').'.';
                 @endphp
-                <x-admin.section :title="__('Mandat et contrat')" :description="$mandateSummary" data-dossier-mandate>
+                <x-admin.section :title="__('Contrat')" :description="$mandateSummary" data-dossier-mandate>
                     <ul class="divide-y divide-[var(--ui-border)] border-b border-default">
                         @if ($submission->contract->signed_file_path)
                             <li>
-                                <x-admin.document-item :title="__('Mandat signé')"
+                                <x-admin.document-item :title="__('Signé par le client')"
                                     :subtitle="$submission->contract->signed_at ? __('Signé le').' '.$submission->contract->signed_at->format('d/m/Y') : __('Document PDF')"
                                     :download-url="route('admin.submissions.mandate', ['submission' => $submission->id])" />
                             </li>
                         @elseif ($submission->contract->signature_status === \App\Enums\Contract\SignatureStatus::Signed)
-                            {{-- Mandat signe mais PDF local absent (echec transitoire du prestataire) : recuperation manuelle immediate. --}}
+                            {{-- Contrat signe mais PDF local absent (echec transitoire du prestataire) : recuperation manuelle immediate. --}}
                             <li class="flex flex-col gap-3 bg-amber-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5 dark:bg-amber-950/30">
                                 <div class="flex items-start gap-2.5">
                                     <x-ui::icon name="exclamation-triangle" class="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
                                     <div>
-                                        <p class="text-[13px] font-medium text-primary">{{ __('Mandat signé, PDF manquant') }}</p>
+                                        <p class="text-[13px] font-medium text-primary">{{ __('Contrat signé, PDF manquant') }}</p>
                                         <p class="text-[12px] text-muted">{{ __('La signature a bien eu lieu mais le PDF n\'a pas pu être téléchargé. Récupérez-le maintenant.') }}</p>
                                     </div>
                                 </div>
@@ -220,7 +220,7 @@
                         {{-- Contrat contresigne par Festilaw (contre-signature manuelle, hors SignWell) --}}
                         @if ($hasCountersigned)
                             <li>
-                                <x-admin.document-item :title="__('Contrat contresigné')"
+                                <x-admin.document-item :title="__('Contresigné par Festilaw')"
                                     :subtitle="__('Déposé le').' '.$submission->contract->countersigned_at?->format('d/m/Y à H:i')"
                                     :download-url="route('admin.submissions.countersigned', ['submission' => $submission->id])" />
                             </li>
@@ -228,11 +228,11 @@
                             <li class="py-3.5 text-[13px] text-muted">{{ __('Aucun contrat contresigné déposé pour le moment.') }}</li>
                         @endif
 
-                        {{-- Mandats remplaces par un changement de pack apres paiement (SC12) : conserves comme trace. --}}
+                        {{-- Contrats remplaces par un changement de pack apres paiement (SC12) : conserves comme trace. --}}
                         @foreach ($previousMandates as $previous)
                             <li>
-                                <x-admin.document-item :title="__('Mandat :pack', ['pack' => $previous->packType()->label()])"
-                                    :subtitle="__('Mandat précédent, signé le').' '.$previous->signed_at?->format('d/m/Y').($previous->superseded_at ? ', '.__('remplacé le').' '.$previous->superseded_at->format('d/m/Y') : '')"
+                                <x-admin.document-item :title="__('Contrat :pack', ['pack' => $previous->packType()->label()])"
+                                    :subtitle="__('Contrat précédent, signé le').' '.$previous->signed_at?->format('d/m/Y').($previous->superseded_at ? ', '.__('remplacé le').' '.$previous->superseded_at->format('d/m/Y') : '')"
                                     :download-url="route('admin.submissions.contract-mandate', ['submission' => $submission->id, 'contract' => $previous->id])" />
                             </li>
                         @endforeach
@@ -484,7 +484,7 @@
     @foreach ($revertibleUpgrades ?? [] as $change)
         <x-ui::modal name="revert-upgrade-{{ $change->id }}" variant="confirm"
             :title="__('Annuler le passage au Pro et rembourser :amount EUR au client ?', ['amount' => number_format($change->amount_cents / 100, 2, ',', ' ')])">
-            <p>{{ __('Le dossier reviendra au Creator avec son mandat Creator.') }}</p>
+            <p>{{ __('Le dossier reviendra au Creator avec son contrat Creator.') }}</p>
 
             <x-slot:actions>
                 <x-ui::button variant="ghost" x-on:click="$dispatch('ui-close-modal', 'revert-upgrade-{{ $change->id }}')">{{ __('Ne rien changer') }}</x-ui::button>

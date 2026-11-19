@@ -5,7 +5,7 @@
 
     <x-mail.text>{{ __('We\'ve approved your request: your file switches to the :pack from 1 January :year. Until then, nothing changes for you.', ['pack' => $pack, 'year' => $year]) }}</x-mail.text>
 
-    <x-mail.text>{{ __('At your renewal, you\'ll sign your :pack mandate in your file, then renew at :price per year.', ['pack' => $pack, 'price' => $price]) }}</x-mail.text>
+    <x-mail.text>{{ __('At your renewal, you\'ll sign your :pack agreement in your file, then renew at :price per year.', ['pack' => $pack, 'price' => $price]) }}</x-mail.text>
 
     <x-mail.button :url="$fileUrl">{{ __('Open my file') }}</x-mail.button>
 

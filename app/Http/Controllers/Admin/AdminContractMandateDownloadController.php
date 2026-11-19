@@ -25,6 +25,6 @@ final class AdminContractMandateDownloadController extends Controller
 
         $pack = strtolower(str_replace(' Pack', '', $contract->packType()->label()));
 
-        return Storage::disk('local')->download($path, 'festilaw-mandate-'.$submission->reference.'-'.$pack.'.pdf');
+        return Storage::disk('local')->download($path, 'festilaw-agreement-'.$submission->reference.'-'.$pack.'.pdf');
     }
 }

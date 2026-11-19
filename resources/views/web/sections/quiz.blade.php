@@ -9,7 +9,7 @@
         'results' => [
             'concerned' => [
                 'title' => __('Yes, GPSR applies to you.'),
-                'text' => __('You must have a GPSR Responsible Person. Festilaw can provide your official mandate within 24 hours.'),
+                'text' => __('You must have a GPSR Responsible Person. Festilaw can take on this role within 24 hours.'),
             ],
             'excluded' => [
                 'title' => __('This is outside what we cover.'),

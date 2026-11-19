@@ -20,6 +20,6 @@ final class AdminMandateDownloadController extends Controller
 
         abort_if($path === '' || ! Storage::disk('local')->exists($path), 404);
 
-        return Storage::disk('local')->download($path, 'festilaw-mandate-'.$submission->reference.'.pdf');
+        return Storage::disk('local')->download($path, 'festilaw-agreement-'.$submission->reference.'.pdf');
     }
 }

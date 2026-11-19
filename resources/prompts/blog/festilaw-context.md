@@ -19,14 +19,14 @@ The sellers Festilaw works with are mostly small brands and makers based in the 
 
 As the seller's EU Responsible Person, Festilaw:
 
-- provides an official EU Responsible Person address and a signed mandate, typically within 24 hours once the seller's file is complete;
+- provides an official EU Responsible Person address and a countersigned agreement, typically within 24 hours once the seller's file is complete;
 - acts as the seller's intermediary when a market surveillance authority or a customs officer asks for information, and keeps the required documents available for the authorities;
 - assesses which European rules apply to the seller's products;
 - advises on the documents and certificates required, and on the markings, languages and traceability information needed on products and packaging;
 - checks the EU Safety Gate portal regularly to see whether a client's products have been reported;
 - runs compliance checks several times a year to see whether upcoming EU rules could affect the seller.
 
-The seller chooses a plan, fills in a short form, uploads the required documents, signs the mandate online and pays. There are three plans: Creator for small creators with up to 9 products, Pro for growing brands with 10 to 100 products, and Scale for more than 100 products, with a full audit and a quote. Prices are public on the pricing page, with no fee per product, and they can change. Never write a price, a fee or a discount in an article. Point to the pricing page instead.
+The seller chooses a plan, fills in a short form, uploads the required documents, signs the agreement online and pays. There are three plans: Creator for small creators with up to 9 products, Pro for growing brands with 10 to 100 products, and Scale for more than 100 products, with a full audit and a quote. Prices are public on the pricing page, with no fee per product, and they can change. Never write a price, a fee or a discount in an article. Point to the pricing page instead.
 
 ## What Festilaw does not do
 

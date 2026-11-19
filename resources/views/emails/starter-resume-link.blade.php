@@ -4,7 +4,7 @@
 
         <x-mail.text>{{ __('Hello') }}{{ $submission->first_name ? ' '.$submission->first_name : '' }},</x-mail.text>
 
-        <x-mail.text>{{ __('Here is your secure link to your Festilaw file. Your :pack is active · you can view it and download your signed mandate and documents:', ['pack' => __($submission->type->label())]) }}</x-mail.text>
+        <x-mail.text>{{ __('Here is your secure link to your Festilaw file. Your :pack is active · you can view it and download your signed agreement and documents:', ['pack' => __($submission->type->label())]) }}</x-mail.text>
 
         <x-mail.button :url="$resumeUrl">{{ __('Open my file') }}</x-mail.button>
 

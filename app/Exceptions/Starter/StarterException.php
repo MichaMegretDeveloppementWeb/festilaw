@@ -13,7 +13,7 @@ final class StarterException extends BaseAppException
     {
         return new self(
             technicalMessage: "STARTER submission [{$submissionId}] cannot proceed to payment: dossier is incomplete.",
-            userMessage: 'Please upload all required documents and sign your mandate before paying.',
+            userMessage: 'Please upload all required documents and sign your agreement before paying.',
         );
     }
 
@@ -94,7 +94,7 @@ final class StarterException extends BaseAppException
     {
         return new self(
             technicalMessage: "STARTER submission [{$submissionId}] cannot pay the Pro upgrade: the Pro mandate is not signed.",
-            userMessage: 'Please sign your Pro Pack mandate before paying.',
+            userMessage: 'Please sign your Pro Pack agreement before paying.',
         );
     }
 

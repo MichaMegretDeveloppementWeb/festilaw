@@ -465,7 +465,7 @@ it('voids an approved request when Festilaw cancels the switch to Pro, then rene
         ->and($dossier->contract->id)->toBe($creatorMandate->id);
     get(route('my-project', ['dossier' => 'creatortok']))
         ->assertSee('Pay €333 to renew')
-        ->assertDontSee('Sign your Creator Pack mandate');
+        ->assertDontSee('Sign your Creator Pack agreement');
 });
 
 it('does not apply a switch back to Creator on a file that is already Creator', function () {
@@ -513,7 +513,7 @@ it('asks Festilaw to confirm in a window, with the amount, before cancelling a p
     Livewire::test(SubmissionDetail::class, ['submission' => $dossier->fresh()])
         ->assertSeeHtml("ui-open-modal', 'revert-upgrade-{$upgrade->id}'")
         ->assertSee('Annuler le passage au Pro et rembourser '.number_format($upgrade->amount_cents / 100, 2, ',', ' ').' EUR au client ?')
-        ->assertSee('Le dossier reviendra au Creator avec son mandat Creator.')
+        ->assertSee('Le dossier reviendra au Creator avec son contrat Creator.')
         ->assertSeeHtml('wire:click="revertPackUpgrade('.$upgrade->id.')"')
         ->assertDontSeeHtml('wire:confirm');
 

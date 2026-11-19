@@ -20,6 +20,6 @@ final class StarterMandateDownloadController extends Controller
         $path = (string) ($dossier->contract?->signed_file_path ?? '');
         abort_if($path === '' || ! Storage::disk('local')->exists($path), 404);
 
-        return Storage::disk('local')->download($path, 'festilaw-mandate-'.$dossier->reference.'.pdf');
+        return Storage::disk('local')->download($path, 'festilaw-agreement-'.$dossier->reference.'.pdf');
     }
 }

@@ -3,8 +3,8 @@
         $flashMessage = match (session('starter_status')) {
             'documents_saved' => $currentStep === 'payment'
                 ? __('Documents saved. Last step: payment.')
-                : __('Documents saved. Next: sign your mandate.'),
-            'signed' => __('Mandate signed. Last step: payment.'),
+                : __('Documents saved. Next: sign your agreement.'),
+            'signed' => __('Agreement signed. Last step: payment.'),
             'pack_changed' => __('You\'ve switched to the :pack. Your details and documents have been carried over.', ['pack' => __($packLabel)]),
             'paid' => __('Payment received. Your file is complete.'),
             'document_replaced' => __('Document replaced.'),
@@ -32,7 +32,7 @@
                 <p class="journey-switch__title">{{ __('Switch to the :pack?', ['pack' => $otherPack]) }}</p>
                 <p>{{ __('The :pack is :price/year. Your details and documents are carried over to a new file for this plan.', ['pack' => $otherPack, 'price' => $otherPrice]) }}</p>
                 @if ($contractSigned)
-                    <p>{{ __('You\'ve already signed your mandate for the :current: you\'ll sign a new one for the :pack.', ['current' => __($packLabel), 'pack' => $otherPack]) }}</p>
+                    <p>{{ __('You\'ve already signed your agreement for the :current: you\'ll sign a new one for the :pack.', ['current' => __($packLabel), 'pack' => $otherPack]) }}</p>
                 @endif
                 <p>{{ __('Your current link will stop working: we\'ll email you the new one.') }}</p>
                 <div class="journey-switch__actions">
@@ -81,13 +81,13 @@
              d'action restent sur l'etape reelle : impossible de declencher une action hors sequence ici. --}}
         <div class="journey-panel">
             @if ($step === 'sign')
-                <h2 class="journey-panel__title">{{ __('Sign your Responsible Person mandate') }}</h2>
-                <p class="journey-panel__text">{{ __('You have already signed your Responsible Person mandate. This step is done.') }}</p>
+                <h2 class="journey-panel__title">{{ __('Sign your Responsible Person agreement') }}</h2>
+                <p class="journey-panel__text">{{ __('You have already signed your Responsible Person agreement. This step is done.') }}</p>
                 @if ($mandateAvailable)
                     <ul class="journey-docs">
                         <li class="journey-doc">
                             <svg class="journey-doc__icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                            <span class="journey-doc__meta"><span class="journey-doc__name">{{ __('Signed mandate') }}</span></span>
+                            <span class="journey-doc__meta"><span class="journey-doc__name">{{ __('Signed agreement') }}</span></span>
                             <span class="journey-doc__actions">
                                 <a href="{{ $mandateUrl }}" class="journey-doc__btn">{{ __('Download') }}</a>
                             </span>
@@ -139,15 +139,15 @@
 
     @elseif ($step === 'sign')
         <div class="journey-panel">
-            <h2 class="journey-panel__title">{{ __('Sign your Responsible Person mandate') }}</h2>
-            <p class="journey-panel__text">{{ __('This mandate authorises Festilaw to act as your official GPSR Responsible Person in the EU. You\'ll sign it securely with our signing partner, in a window right on this page.') }}</p>
+            <h2 class="journey-panel__title">{{ __('Sign your Responsible Person agreement') }}</h2>
+            <p class="journey-panel__text">{{ __('This agreement appoints Festilaw as your official GPSR Responsible Person in the EU. You\'ll sign it securely with our signing partner, in a window right on this page.') }}</p>
             @if ($contractDeclined)
                 <p class="journey-note journey-note--warn">{{ __('The previous signature was declined. You can restart it below.') }}</p>
             @endif
 
             @unless ($signatureStarted)
                 <div class="journey-mandate">
-                    <p class="journey-mandate__intro">{{ __('Confirm the details that will appear on your mandate:') }}</p>
+                    <p class="journey-mandate__intro">{{ __('Confirm the details that will appear on your agreement:') }}</p>
                     <div class="funnel-form">
                         <div class="funnel-form__field">
                             <label>{{ __('Company') }}</label>
@@ -184,7 +184,7 @@
                     <p class="journey-note">{{ __('Your signature is taking a little longer to be confirmed. Check again below in a moment.') }}</p>
                 @endif
                 <button type="button" class="btn btn--coral" wire:click="sign" wire:loading.attr="disabled" wire:target="sign">
-                    <span wire:loading.remove wire:target="sign">{{ __('Sign the mandate') }}</span>
+                    <span wire:loading.remove wire:target="sign">{{ __('Sign the agreement') }}</span>
                     <span wire:loading wire:target="sign">{{ __('Opening') }}&hellip;</span>
                 </button>
             @endif
@@ -324,7 +324,7 @@
                 <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
             </div>
             <h3 class="funnel-success__title">{{ __('Your :pack is active.', ['pack' => __($packLabel)]) }}</h3>
-            <p class="funnel-success__text">{{ __('Your file is ready in your personal space, with your signed mandate and documents.') }}</p>
+            <p class="funnel-success__text">{{ __('Your file is ready in your personal space, with your signed agreement and documents.') }}</p>
             <a href="{{ $myProjectUrl }}" class="btn btn--coral">{{ __('Go to my project') }}</a>
         </div>
 

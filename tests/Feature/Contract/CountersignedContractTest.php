@@ -113,7 +113,7 @@ it('shows the counter-signed contract to the client and streams it', function ()
 
     get(route('my-project', ['dossier' => 'cs-dossier']))
         ->assertOk()
-        ->assertSee('Countersigned contract');
+        ->assertSee('Countersigned agreement');
 
     get(route('get-started.starter.countersigned', ['dossier' => 'cs-dossier']))->assertOk();
 });

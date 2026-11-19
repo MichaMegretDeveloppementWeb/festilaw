@@ -111,7 +111,7 @@ it('switches a Creator dossier to Pro from the journey, carrying over details an
         ->get(route('get-started.starter.journey', ['dossier' => $new->resume_token]))
         ->assertOk()
         ->assertSee('switched to the Pro Pack. Your details and documents have been carried over.')
-        ->assertSee('Sign your Responsible Person mandate');
+        ->assertSee('Sign your Responsible Person agreement');
 
     // Nouveau lien envoye au client, equipe prevenue.
     Mail::assertSent(StarterResumeLink::class, fn (StarterResumeLink $mail) => $mail->hasTo('maya@example.com') && $mail->submission->is($new));
@@ -126,7 +126,7 @@ it('asks for a new signature when the mandate was already signed, keeping the si
 
     Livewire::test(StarterJourney::class, ['submission' => $old->fresh()])
         ->set('confirmingPackChange', true)
-        ->assertSee('You\'ve already signed your mandate for the Creator Pack: you\'ll sign a new one for the Pro Pack.')
+        ->assertSee('You\'ve already signed your agreement for the Creator Pack: you\'ll sign a new one for the Pro Pack.')
         ->call('changePack')
         ->assertRedirect();
 
@@ -139,7 +139,7 @@ it('asks for a new signature when the mandate was already signed, keeping the si
         ->and($old->contract->signed_file_path)->toBe('contracts/old.pdf');
 
     get(route('get-started.starter.journey', ['dossier' => $new->resume_token]))
-        ->assertSee('Sign your Responsible Person mandate');
+        ->assertSee('Sign your Responsible Person agreement');
 });
 
 it('opens the new dossier on the documents when the new pack requires one that is missing', function () {

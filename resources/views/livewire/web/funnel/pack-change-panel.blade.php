@@ -16,8 +16,8 @@
         <div class="journey-flash">
             <svg class="journey-flash__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
             <span>{{ $flash === 'signed'
-                ? __('Your :pack mandate is signed. Last step: pay the difference.', ['pack' => $other])
-                : __('Your :pack mandate is signed. You can now renew your plan.', ['pack' => $current]) }}</span>
+                ? __('Your :pack agreement is signed. Last step: pay the difference.', ['pack' => $other])
+                : __('Your :pack agreement is signed. You can now renew your plan.', ['pack' => $current]) }}</span>
         </div>
     @elseif ($flash === 'upgrade_cancelled')
         <p class="journey-note">{{ __('No change: you keep the :pack.', ['pack' => $current]) }}</p>
@@ -32,7 +32,7 @@
             <div class="journey-switch">
                 <p class="journey-switch__title">{{ __('Switch to the :pack?', ['pack' => $other]) }}</p>
                 <p>{{ __('You pay :amount today: the difference with your :current for the rest of :year. From 1 January, your plan renews at :price per year.', ['amount' => $quote, 'current' => $current, 'year' => $panel->year, 'price' => $otherPrice]) }}</p>
-                <p>{{ __('You\'ll first sign a new mandate for the :pack, right on this page.', ['pack' => $other]) }}</p>
+                <p>{{ __('You\'ll first sign a new agreement for the :pack, right on this page.', ['pack' => $other]) }}</p>
                 <div class="journey-switch__actions">
                     <button type="button" class="btn btn--coral btn--sm" wire:click="startUpgrade" wire:loading.attr="disabled" wire:target="startUpgrade">
                         <span wire:loading.remove wire:target="startUpgrade">{{ __('Switch to the :pack', ['pack' => $other]) }}</span>
@@ -47,7 +47,7 @@
     @elseif ($panel->mode === Panel::UPGRADE_SIGN)
         <div class="journey-switch">
             <p class="journey-switch__title">{{ __('Switching to the :pack', ['pack' => $other]) }}</p>
-            <p>{{ __('Step 1 of 2: sign your :pack mandate, in a window right on this page.', ['pack' => $other]) }}</p>
+            <p>{{ __('Step 1 of 2: sign your :pack agreement, in a window right on this page.', ['pack' => $other]) }}</p>
             @include('livewire.web.funnel.partials.pack-change-signature')
             <p class="journey-switch-link"><button type="button" wire:click="cancelUpgrade" wire:loading.attr="disabled" wire:target="cancelUpgrade">{{ __('Keep the :pack', ['pack' => $current]) }}</button></p>
         </div>
@@ -67,8 +67,8 @@
         <p class="journey-note">{{ __('Your payment is being confirmed. Your :pack starts as soon as it is.', ['pack' => $other]) }}</p>
     @elseif ($panel->mode === Panel::MANDATE_SIGN)
         <div class="journey-switch">
-            <p class="journey-switch__title">{{ __('Sign your :pack mandate', ['pack' => $current]) }}</p>
-            <p>{{ __('Your file is now on the :pack. Sign your new mandate, in a window right on this page, then renew your plan.', ['pack' => $current]) }}</p>
+            <p class="journey-switch__title">{{ __('Sign your :pack agreement', ['pack' => $current]) }}</p>
+            <p>{{ __('Your file is now on the :pack. Sign your new agreement, in a window right on this page, then renew your plan.', ['pack' => $current]) }}</p>
             @include('livewire.web.funnel.partials.pack-change-signature')
         </div>
     @elseif ($panel->mode === Panel::DOWNGRADE_REQUESTED)
@@ -78,7 +78,7 @@
         </p>
     @elseif ($panel->mode === Panel::DOWNGRADE_APPROVED)
         <p class="journey-note">
-            {{ __('Confirmed: your file switches to the :pack from 1 January :year, at :price per year. You\'ll sign your new mandate when you renew.', ['pack' => $other, 'year' => $panel->effectiveYear, 'price' => $otherPrice]) }}
+            {{ __('Confirmed: your file switches to the :pack from 1 January :year, at :price per year. You\'ll sign your new agreement when you renew.', ['pack' => $other, 'year' => $panel->effectiveYear, 'price' => $otherPrice]) }}
             <span class="journey-switch-link"><button type="button" wire:click="withdrawDowngrade" wire:confirm="{{ __('Keep the :pack and withdraw your request?', ['pack' => $current]) }}">{{ __('Withdraw my request') }}</button></span>
         </p>
     @elseif ($panel->mode === Panel::DOWNGRADE_OFFER || $panel->mode === Panel::DOWNGRADE_REJECTED)
@@ -89,7 +89,7 @@
         @if ($requestingDowngrade)
             <div class="journey-switch">
                 <p class="journey-switch__title">{{ __('Switch to the :pack from your next renewal?', ['pack' => $other]) }}</p>
-                <p>{{ __('Your :current stays active until 31 December :lastYear. From 1 January :year, your plan renews at :price per year, with a new :pack mandate to sign.', ['current' => $current, 'lastYear' => $panel->effectiveYear - 1, 'year' => $panel->effectiveYear, 'price' => $otherPrice, 'pack' => $other]) }}</p>
+                <p>{{ __('Your :current stays active until 31 December :lastYear. From 1 January :year, your plan renews at :price per year, with a new :pack agreement to sign.', ['current' => $current, 'lastYear' => $panel->effectiveYear - 1, 'year' => $panel->effectiveYear, 'price' => $otherPrice, 'pack' => $other]) }}</p>
                 <p>{{ __('Festilaw checks that your business is eligible before confirming.') }}</p>
                 <div class="funnel-form">
                     <div class="funnel-form__field">

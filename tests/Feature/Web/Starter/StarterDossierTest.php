@@ -63,7 +63,7 @@ it('shows the active my-project space with reference, renewal date and downloads
         ->assertSee('€333') // montant paye, affiche apres l'etape Payment
         ->assertSee(now()->isoFormat('D MMMM YYYY')) // date du paiement, dans les memes parentheses
         ->assertSee('Your documents')
-        ->assertSee('Signed Responsible Person mandate')
+        ->assertSee('Signed Responsible Person agreement')
         ->assertSee('Download')
         ->assertDontSee('Resume my project'); // rien a reprendre : c'est actif
 });
@@ -107,7 +107,7 @@ it('downloads the signed mandate for the dossier', function () {
 
     get(route('get-started.starter.mandate', ['dossier' => 'mydossier']))
         ->assertOk()
-        ->assertDownload('festilaw-mandate-'.$submission->reference.'.pdf');
+        ->assertDownload('festilaw-agreement-'.$submission->reference.'.pdf');
 });
 
 it('downloads an uploaded document for the dossier', function () {

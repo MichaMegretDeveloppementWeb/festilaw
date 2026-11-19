@@ -62,9 +62,9 @@ final class SignWellSignatureGateway implements SignatureGatewayInterface
 
         $payload = [
             'test_mode' => $this->isTesting(),
-            'name' => 'GPSR mandate - '.($submission->company_name ?: $this->signerName($contract)),
+            'name' => 'Responsible Person agreement - '.($submission->company_name ?: $this->signerName($contract)),
             'files' => [[
-                'name' => 'mandate.pdf',
+                'name' => 'agreement.pdf',
                 'file_base64' => base64_encode($pdf),
             ]],
             'recipients' => [[

@@ -686,7 +686,7 @@ it('offers a recovery button when the mandate is signed but its PDF is missing',
     actingAs(User::factory()->create());
 
     Livewire::test(SubmissionDetail::class, ['submission' => dossierWithSignedMandateMissingPdf()])
-        ->assertSee('Mandat signé, PDF manquant')
+        ->assertSee('Contrat signé, PDF manquant')
         ->assertSee('Récupérer le PDF signé');
 });
 
@@ -700,8 +700,8 @@ it('does not offer the recovery button once the signed PDF is present', function
     ]);
 
     Livewire::test(SubmissionDetail::class, ['submission' => $submission->fresh()])
-        ->assertDontSee('Mandat signé, PDF manquant')
-        ->assertSee('Mandat signé'); // le document, pas l'alerte
+        ->assertDontSee('Contrat signé, PDF manquant')
+        ->assertSee('Signé par le client'); // le document, pas l'alerte
 });
 
 it('re-downloads the signed PDF from the recovery button', function () {

@@ -25,7 +25,7 @@ final class AdminActionException extends BaseAppException
     {
         return new self(
             technicalMessage: "Cannot issue the Responsible Person for submission [{$submissionId}]: mandate not signed.",
-            userMessage: 'Impossible de délivrer la Personne Responsable : le mandat n\'est pas signé.',
+            userMessage: 'Impossible de délivrer la Personne Responsable : le contrat n\'est pas signé.',
         );
     }
 
