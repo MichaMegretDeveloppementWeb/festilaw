@@ -27,9 +27,11 @@ final class RenewalReminder extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: __('Time to renew your Festilaw :pack', [
-            'pack' => __($this->submission->type->label()),
-        ]));
+        $pack = ['pack' => __($this->submission->type->label())];
+
+        return new Envelope(subject: $this->overdue
+            ? __('Your Festilaw :pack renewal is overdue', $pack)
+            : __('Time to renew your Festilaw :pack', $pack));
     }
 
     public function content(): Content

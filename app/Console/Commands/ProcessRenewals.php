@@ -24,8 +24,9 @@ use Throwable;
 /**
  * Traite les renouvellements annuels (renouvellement manuel, cf. contrat) : rappel au client quand son
  * annee de service est due, recap groupe a Festilaw des dossiers a renouveler, puis alerte groupee des
- * retards une fois la fenetre de grace depassee. Un client n'est rappele qu'une fois par an et chaque
- * digest admin n'est envoye qu'une fois par an (anti-doublon via meta du dossier). Applique d'abord les
+ * retards une fois la fenetre de grace depassee. Un client recoit un rappel par an, et une seule relance
+ * quand il passe en retard (reponse de Laetitia du 20/11). Chaque digest admin n'est envoye qu'une fois par an
+ * (anti-doublon via meta du dossier). Applique d'abord les
  * retours au Creator valides par Festilaw dont l'annee d'effet est arrivee (SC12), pour que le rappel et le
  * bouton de renouvellement annoncent deja le tarif Creator.
  *
@@ -66,12 +67,13 @@ final class ProcessRenewals extends Command
         /** @var list<Submission> $overdueToMark */
         $overdueToMark = [];
         $clientReminders = 0;
+        $overdueReminders = 0;
 
         Submission::query()
             ->whereIn('type', [SubmissionType::Starter, SubmissionType::Pro])
             ->active()
             ->with('payments')
-            ->chunkById(100, function (Collection $dossiers) use ($now, $year, $dry, &$dueRows, &$overdueRows, &$dueToMark, &$overdueToMark, &$clientReminders): void {
+            ->chunkById(100, function (Collection $dossiers) use ($now, $year, $dry, &$dueRows, &$overdueRows, &$dueToMark, &$overdueToMark, &$clientReminders, &$overdueReminders): void {
                 foreach ($dossiers as $dossier) {
                     $status = $this->renewals->status($dossier, $now);
                     if ($status === RenewalStatus::UpToDate) {
@@ -83,12 +85,26 @@ final class ProcessRenewals extends Command
 
                     // Rappel client : une seule fois par an, marque SEULEMENT si l'envoi a reussi (sinon
                     // le jalon annuel ne doit pas etre pose, pour que le prochain passage reessaie).
+                    // Un premier rappel qui part deja en retard vaut aussi relance : le client n'en recoit pas deux.
                     if (($renewalMeta['reminded_year'] ?? null) !== $year) {
                         if ($dry) {
                             $clientReminders++;
                         } elseif ($this->sendClientReminder($dossier, $year, $overdue)) {
                             $clientReminders++;
                             $this->markRenewalMeta($dossier, 'reminded_year', $year);
+
+                            if ($overdue) {
+                                $this->markRenewalMeta($dossier, 'overdue_reminded_year', $year);
+                            }
+                        }
+                    } elseif ($overdue && ($renewalMeta['overdue_reminded_year'] ?? null) !== $year) {
+                        // Relance du client passe en retard, une seule par an, le lendemain de la fin de la fenetre
+                        // de grace (Laetitia, 20/11 : « faites au mieux »). Marquee seulement si l'envoi a reussi.
+                        if ($dry) {
+                            $overdueReminders++;
+                        } elseif ($this->sendClientReminder($dossier, $year, true)) {
+                            $overdueReminders++;
+                            $this->markRenewalMeta($dossier, 'overdue_reminded_year', $year);
                         }
                     }
 
@@ -120,7 +136,7 @@ final class ProcessRenewals extends Command
             }
         }
 
-        $this->info('Rappels client : '.$clientReminders.' · admin a renouveler : '.count($dueRows).' · admin en retard : '.count($overdueRows));
+        $this->info('Rappels client : '.$clientReminders.' · relances client en retard : '.$overdueReminders.' · admin a renouveler : '.count($dueRows).' · admin en retard : '.count($overdueRows));
 
         return self::SUCCESS;
     }

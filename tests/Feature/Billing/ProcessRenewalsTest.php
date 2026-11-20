@@ -114,3 +114,58 @@ it('dry run sends nothing and writes no meta', function () {
     Mail::assertNothingSent();
     expect($dossier->fresh()->meta['renewal'] ?? null)->toBeNull();
 });
+
+it('reminds the client once more when the renewal becomes overdue, then never again that year', function () {
+    // Reponse de Laetitia du 20/11 (« faites au mieux ») : une seule relance au client, le lendemain de la fin
+    // de la fenetre de grace, s'il n'a toujours pas paye.
+    Mail::fake();
+    $year = (int) now()->year;
+    $dossier = renewalDossier($year - 1);
+
+    $this->artisan('festilaw:process-renewals', ['--now' => "{$year}-01-05"])->assertOk();
+    $this->artisan('festilaw:process-renewals', ['--now' => "{$year}-01-30"])->assertOk();
+    Mail::assertSent(RenewalReminder::class, 1);
+
+    $this->artisan('festilaw:process-renewals', ['--now' => "{$year}-02-01"])->assertOk();
+    $this->artisan('festilaw:process-renewals', ['--now' => "{$year}-02-10"])->assertOk();
+
+    Mail::assertSent(RenewalReminder::class, 2);
+    Mail::assertSent(RenewalReminder::class, fn (RenewalReminder $mail): bool => $mail->overdue
+        && $mail->hasTo('client@example.com')
+        && $mail->envelope()->subject === 'Your Festilaw Creator Pack renewal is overdue');
+    expect($dossier->fresh()->meta['renewal']['overdue_reminded_year'])->toBe($year);
+});
+
+it('sends no overdue reminder to a client who paid within the grace window, nor a second one to a client first reminded late', function () {
+    Mail::fake();
+    $year = (int) now()->year;
+    $paid = renewalDossier($year - 1, 'paid@example.com');
+    $late = renewalDossier($year - 1, 'late@example.com');
+
+    $this->artisan('festilaw:process-renewals', ['--now' => "{$year}-01-05"])->assertOk();
+    Payment::factory()->succeeded()->for($paid)->create(['type' => PaymentType::AnnualRenewal, 'service_year' => $year]);
+    // Un dossier que le premier passage n'a pas vu (cron arrete en janvier) recoit son premier rappel deja en retard.
+    $late->update(['meta' => null]);
+    Mail::fake();
+
+    $this->artisan('festilaw:process-renewals', ['--now' => "{$year}-02-01"])->assertOk();
+    $this->artisan('festilaw:process-renewals', ['--now' => "{$year}-02-02"])->assertOk();
+
+    Mail::assertNotSent(RenewalReminder::class, fn (RenewalReminder $mail): bool => $mail->hasTo('paid@example.com'));
+    Mail::assertSent(RenewalReminder::class, fn (RenewalReminder $mail): bool => $mail->hasTo('late@example.com') && $mail->overdue);
+    Mail::assertSent(RenewalReminder::class, 1);
+});
+
+it('counts the overdue reminder in a dry run without sending it', function () {
+    Mail::fake();
+    $year = (int) now()->year;
+    renewalDossier($year - 1);
+    $this->artisan('festilaw:process-renewals', ['--now' => "{$year}-01-05"])->assertOk();
+    Mail::fake();
+
+    $this->artisan('festilaw:process-renewals', ['--now' => "{$year}-02-01", '--dry' => true])
+        ->expectsOutputToContain('relances client en retard : 1')
+        ->assertOk();
+
+    Mail::assertNothingSent();
+});
