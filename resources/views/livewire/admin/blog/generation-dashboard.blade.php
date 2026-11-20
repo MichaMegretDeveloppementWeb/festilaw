@@ -22,6 +22,10 @@
             <x-ui::alert type="warning" class="mb-6" :title="__('Les générations ne démarrent pas pour le moment')">{{ __('Un article demandé maintenant restera en attente. Si cela persiste, contactez l\'assistance technique.') }}</x-ui::alert>
         @endunless
 
+        @if ($overview->rulesReferenceDue)
+            <x-ui::alert type="warning" class="mb-6" :title="__('La fiche des règles européennes est à relire')" data-rules-reference-due>{{ __('La génération s\'appuie sur une fiche des règles européennes qui a dépassé sa date de relecture. Le droit a pu changer depuis. Contactez l\'assistance technique pour la relire ensemble.') }}</x-ui::alert>
+        @endif
+
         @if ($overview->monthlyWarning)
             @include('livewire.admin.blog.generation.monthly-warning', ['warning' => $overview->monthlyWarning, 'class' => 'mb-6'])
         @endif
@@ -36,8 +40,13 @@
             </x-admin.stats.item>
 
             <x-admin.stats.item icon="clock" :label="__('Génération automatique')" data-stat="automatic">
-                {{ $overview->settings->enabled ? __('Activée') : __('Désactivée') }}
-                <x-slot:extra>{{ $overview->automaticRhythm }}</x-slot:extra>
+                @if ($overview->automaticPaused())
+                    {{ __('En pause') }}
+                    <x-slot:extra>{{ __('Reprend quand les brouillons sont relus') }}</x-slot:extra>
+                @else
+                    {{ $overview->settings->enabled ? __('Activée') : __('Désactivée') }}
+                    <x-slot:extra>{{ $overview->automaticRhythm }}</x-slot:extra>
+                @endif
             </x-admin.stats.item>
 
             <x-admin.stats.item icon="document-text" :label="__('Brouillons à relire')" data-stat="drafts">
@@ -75,7 +84,8 @@
         </x-admin.section>
 
         {{-- Pour qui veille sur le site : les generations peuvent-elles demarrer, la cle du fournisseur est-elle en
-             place. La cle elle-meme n'est jamais affichee. Le mode d'essai (etapes factices, en local seulement) se
+             place, la verification quotidienne des services a-t-elle trouve un probleme (le detail technique ne va
+             qu'au prestataire, par le rapport d'erreurs du matin). La cle elle-meme n'est jamais affichee. Le mode d'essai (etapes factices, en local seulement) se
              dit ici, en texte neutre, et nulle part ailleurs. --}}
         <p class="mt-10 flex flex-wrap items-center gap-x-5 gap-y-1 text-[12px] text-muted" data-service-state>
             <span class="font-medium text-secondary">{{ __('État du service') }}</span>
@@ -87,6 +97,14 @@
                 <span @class(['h-1.5 w-1.5 rounded-full', 'bg-emerald-500' => $overview->apiKeyPresent, 'bg-amber-500' => ! $overview->apiKeyPresent])></span>
                 {{ $overview->apiKeyPresent ? __('Clé du fournisseur d\'IA en place') : __('Clé du fournisseur d\'IA absente') }}
             </span>
+            @if ($overview->health)
+                <span class="inline-flex items-center gap-1.5" data-service="checks">
+                    <span @class(['h-1.5 w-1.5 rounded-full', 'bg-emerald-500' => $overview->health->isHealthy(), 'bg-amber-500' => ! $overview->health->isHealthy()])></span>
+                    {{ $overview->health->isHealthy()
+                        ? __('Services vérifiés le :date', ['date' => $overview->health->checkedAt->format('d/m')])
+                        : __('Problème technique signalé à l\'assistance technique') }}
+                </span>
+            @endif
             @if ($overview->simulated)
                 <span class="inline-flex items-center gap-1.5" data-service="trial">
                     <span class="h-1.5 w-1.5 rounded-full bg-gray-400"></span>

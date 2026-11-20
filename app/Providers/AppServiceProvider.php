@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Actions\Blog\Category\SaveBlogCategoryAction;
 use App\Actions\Blog\Post\SaveBlogPostAction;
+use App\Actions\System\SendDailyErrorReportAction;
 use App\Contracts\Analytics\AudienceTracker;
 use App\Enums\Submission\SubmissionType;
 use App\Exceptions\Web\DossierLinkInvalidException;
@@ -30,6 +31,7 @@ use App\Services\Blog\Post\BlogAuthorProvider;
 use App\Services\Blog\Post\BlogPostReadinessCalculator;
 use App\Services\Blog\Slug\BlogPostSlugAssigner;
 use App\Services\Blog\Slug\BlogSlugGenerator;
+use App\Services\System\ErrorLogReader;
 use App\Services\System\SchedulerHealthService;
 use App\Services\Web\Blog\BlogArticlePageAssembler;
 use App\Services\Web\Blog\BlogCategoryPageService;
@@ -63,7 +65,20 @@ class AppServiceProvider extends ServiceProvider
         $this->app->when(AdminNavigation::class)->needs('$searchConsoleConfigured')
             ->give(static fn (): bool => trim((string) config('analytics.search_console.client_id')) !== '');
 
+        $this->registerErrorReportSettings();
         $this->registerBlogSettings();
+    }
+
+    /**
+     * Rapport d'erreurs du matin : le dossier du journal, l'environnement dont on lit les erreurs, et le
+     * destinataire technique, sans repli vers l'adresse de la cliente.
+     */
+    private function registerErrorReportSettings(): void
+    {
+        $this->app->when(ErrorLogReader::class)->needs('$directory')->give(static fn (): string => storage_path('logs'));
+        $this->app->when(ErrorLogReader::class)->needs('$environment')->giveConfig('app.env');
+        $this->app->when(ErrorLogReader::class)->needs('$basePath')->give(static fn (): string => base_path());
+        $this->app->when(SendDailyErrorReportAction::class)->needs('$recipient')->giveConfig('festilaw.tech_alert_email');
     }
 
     /**

@@ -447,6 +447,34 @@ return [
         'consecutive_failures_alert' => 3,
 
         /*
+         | Verification quotidienne des services de la generation (festilaw:blog-health-check, controle du
+         | 20/11), sans aucun appel a un modele. Chaque probleme est journalise en erreur, donc repris par le
+         | rapport d'erreurs du matin tant qu'il dure.
+         | - `price_drift_percent` : un prix du fournisseur le moins cher au-dessus du catalogue de plus de ce
+         |   pourcentage signale un catalogue a revoir (le site demande toujours le meilleur prix) ;
+         | - `key_remaining_percent` : sous ce reste de la limite de la cle OpenRouter, la limite approche ;
+         | - `expiry_warning_days` : un modele qu'OpenRouter retire dans moins de ces jours est signale ;
+         | - `stalled_after_minutes` : une generation en attente ou en cours qui n'a pas bouge depuis ce temps.
+         */
+        'health' => [
+            'price_drift_percent' => 25,
+            'key_remaining_percent' => 20,
+            'expiry_warning_days' => 30,
+            'stalled_after_minutes' => 120,
+        ],
+
+        /*
+         | La reference des regles europeennes (resources/prompts/blog/eu-product-rules.md) prime sur le dossier de
+         | recherche. Elle vieillit avec le droit : passee la date de relecture, la verification quotidienne le
+         | signale au prestataire technique et le tableau de bord a la cliente, jusqu'a sa relecture. Les deux
+         | dates changent ensemble, avec la ligne de date du fichier.
+         */
+        'rules_reference' => [
+            'checked_on' => '2026-11-19',
+            'review_by' => '2027-11-19',
+        ],
+
+        /*
          | Banc d'essai des modeles (festilaw:blog-bench, SC7, cahier des charges § 13). Il rejoue le pipeline sur
          | des sujets fixes et plusieurs configurations de modeles, sans rien creer dans le site. Le sujet et la
          | recherche sont faits une fois par sujet avec `shared_models`, puis partages : seule l'ecriture change

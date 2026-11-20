@@ -14,14 +14,19 @@ use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogGenerationTrigger;
 use App\Enums\Blog\Generation\BlogGenerationType;
+use App\Mail\BlogGenerationPaused;
 use App\Models\BlogGeneration;
 use App\Repositories\Blog\ScheduledBlogGenerationRepository;
 use App\Services\Blog\Generation\BlogAiSettingsService;
 use App\Services\Blog\Generation\BlogGenerationBudget;
 use App\Services\Blog\Generation\BlogGenerationCostForecaster;
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use Throwable;
 
 /**
  * La generation automatique : une fois par periode, met en file un lot d'articles. Appelee chaque jour par
@@ -42,6 +47,7 @@ final readonly class PlanScheduledBlogGenerationsAction
         private BlogGenerationBudget $budget,
         private ScheduledBlogGenerationRepository $scheduled,
         private BlogGenerationCostForecaster $forecaster,
+        private UrlGenerator $url,
     ) {}
 
     /** @param  bool  $dryRun  dit ce qui serait fait, sans rien ecrire ni envoyer */
@@ -64,7 +70,7 @@ final readonly class PlanScheduledBlogGenerationsAction
         $count = min($settings->articlesPerRun, $this->budget->remainingDraftRoom($settings));
 
         if ($count === 0) {
-            return $this->block(BlogGenerationOutcomeReason::PendingDraftsCapReached, $dryRun);
+            return $this->block(BlogGenerationOutcomeReason::PendingDraftsCapReached, $settings, $dryRun);
         }
 
         if (! $dryRun) {
@@ -113,7 +119,11 @@ final readonly class PlanScheduledBlogGenerationsAction
         });
     }
 
-    private function block(BlogGenerationOutcomeReason $reason, bool $dryRun): ScheduledGenerationPlan
+    /**
+     * Inscrit le lot retenu au journal, une fois par pause, et previent alors le destinataire des
+     * notifications : sans ce message, une pause se lirait comme une panne (controle du 20/11).
+     */
+    private function block(BlogGenerationOutcomeReason $reason, BlogAiSettings $settings, bool $dryRun): ScheduledGenerationPlan
     {
         if (! $dryRun && $this->scheduled->lastSkippedReason() !== $reason) {
             $now = CarbonImmutable::now();
@@ -127,8 +137,22 @@ final readonly class PlanScheduledBlogGenerationsAction
                 'batch_notified_at' => $now,
                 'finished_at' => $now,
             ]);
+
+            $this->announcePause($settings);
         }
 
         return ScheduledGenerationPlan::blocked($reason);
+    }
+
+    private function announcePause(BlogAiSettings $settings): void
+    {
+        try {
+            Mail::to($settings->notificationEmail)->send(new BlogGenerationPaused(
+                $this->budget->pendingDrafts(),
+                $this->url->route('admin.blog.posts.index', ['origin' => 'ai', 'status' => 'draft']),
+            ));
+        } catch (Throwable $e) {
+            Log::error('Blog generation pause message failed to send.', ['exception' => $e]);
+        }
     }
 }

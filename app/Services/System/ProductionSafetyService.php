@@ -75,7 +75,25 @@ final class ProductionSafetyService
             $violations[] = 'La mesure d\'audience est eteinte : ANALYTICS_ENABLED doit valoir true.';
         }
 
+        // Surveillance (controle du 20/11) : sans adresse technique, le rapport d'erreurs du matin ne part
+        // pas, et un journal en fichier unique grossit sans fin sur l'hebergement.
+        if (trim((string) config('festilaw.tech_alert_email')) === '') {
+            $violations[] = 'FESTILAW_TECH_ALERT_EMAIL est vide, donc le rapport d\'erreurs du matin ne part pas et les alertes techniques vont a l\'adresse de notification.';
+        }
+
+        if ($this->logsInOneFile()) {
+            $violations[] = 'Le journal tient en un seul fichier qui grossit sans fin. Mettez LOG_STACK=daily et LOG_DAILY_DAYS=30.';
+        }
+
         return $violations;
+    }
+
+    private function logsInOneFile(): bool
+    {
+        $default = (string) config('logging.default');
+        $channels = $default === 'stack' ? (array) config('logging.channels.stack.channels', []) : [$default];
+
+        return in_array('single', $channels, true);
     }
 
     private function canProcessBlogImages(): bool

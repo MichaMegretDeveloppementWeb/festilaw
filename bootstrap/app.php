@@ -10,6 +10,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Middleware\SubstituteBindings;
+use Illuminate\Routing\Route;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -59,4 +60,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
         );
+
+        // Une erreur non attrapee dit sur quelle page elle est arrivee (rapport d'erreurs du matin) : le nom
+        // de la route, a defaut son modele d'adresse, jamais l'adresse elle-meme, qui porte les jetons des
+        // dossiers clients.
+        $exceptions->context(static function (): array {
+            $route = request()->route();
+
+            return $route instanceof Route ? ['route' => $route->getName() ?? $route->uri(), 'method' => request()->method()] : [];
+        });
     })->create();

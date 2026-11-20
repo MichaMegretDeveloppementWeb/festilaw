@@ -101,6 +101,31 @@ final readonly class PixabayStockImageProvider implements StockImageProvider
         return $images;
     }
 
+    /**
+     * Une recherche d'essai, hors du cache, pour la verification quotidienne : la cle est-elle acceptee, l'API
+     * repond-elle encore avec sa liste de photos ? Leve la meme exception qu'une recherche ratee.
+     */
+    public function probe(): void
+    {
+        if (blank($this->apiKey)) {
+            throw BlogEditorialException::imageSourceFailed('no Pixabay API key (PIXABAY_API_KEY)');
+        }
+
+        try {
+            $response = Http::timeout(15)->connectTimeout(5)->get(self::ENDPOINT, ['key' => $this->apiKey, 'q' => 'product', 'per_page' => 3]);
+        } catch (Throwable $e) {
+            throw BlogEditorialException::imageSourceFailed('Pixabay did not answer: '.str_replace((string) $this->apiKey, '[PIXABAY_API_KEY]', $e->getMessage()));
+        }
+
+        if (! $response->successful()) {
+            throw BlogEditorialException::imageSourceFailed("Pixabay answered HTTP {$response->status()}");
+        }
+
+        if (! is_array($response->json('hits'))) {
+            throw BlogEditorialException::imageSourceFailed('Pixabay answered without its list of photos');
+        }
+    }
+
     public function download(StockImage $image): string
     {
         $host = strtolower((string) parse_url($image->downloadUrl, PHP_URL_HOST));

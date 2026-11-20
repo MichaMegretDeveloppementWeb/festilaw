@@ -252,10 +252,12 @@ final readonly class RunBlogGenerationAction
             return;
         }
 
-        if ($status === BlogGenerationStatus::Failed) {
-            $reason === BlogGenerationOutcomeReason::CreditExhausted
-                ? $this->alerts->creditExhausted($settings)
-                : $this->alerts->afterFailure();
+        if ($reason === BlogGenerationOutcomeReason::CreditExhausted) {
+            $this->alerts->creditExhausted($settings);
+        }
+
+        if ($status === BlogGenerationStatus::Failed || $status === BlogGenerationStatus::Abandoned) {
+            $this->alerts->afterArticleWithoutDraft();
         }
 
         $this->alerts->monthlySpend($settings);

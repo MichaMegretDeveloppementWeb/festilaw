@@ -67,6 +67,20 @@ Schedule::command('festilaw:blog-purge-orphan-images')->dailyAt('03:30')->withou
 Schedule::command('festilaw:scheduler-heartbeat')->everyMinute();
 
 /*
+ | Blog, generation par IA : verification quotidienne de ses services (cle et modeles chez OpenRouter, Pixabay,
+ | file des generations, date de relecture de la reference des regles de l'UE), sans aucun appel a un modele.
+ | Juste avant le rapport d'erreurs, qui en reprend chaque probleme.
+ */
+Schedule::command('festilaw:blog-health-check')->dailyAt('05:45')->withoutOverlapping(30);
+
+/*
+ | Rapport d'erreurs du matin : les erreurs du journal du serveur depuis le dernier rapport, au prestataire
+ | technique, rien quand il n'y en a pas. A heure fixe en UTC (7 h a Paris l'hiver, 8 h l'ete) : planifiee
+ | dans un fuseau a heure d'ete, une tache peut tourner deux fois ou pas du tout. Rejouable.
+ */
+Schedule::command('festilaw:error-report')->dailyAt('06:00')->withoutOverlapping(30);
+
+/*
  | Blog, generation par IA : chaque jour, met en file le lot d'articles quand la periode reglee au
  | back-office est echue. Elle ne genere rien elle-meme (c'est le worker ci-dessous). Rejouable.
  */

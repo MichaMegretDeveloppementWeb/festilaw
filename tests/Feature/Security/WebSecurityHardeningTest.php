@@ -26,6 +26,9 @@ function cleanProductionConfig(): void
     config()->set('services.pixabay.key', 'px_x');
     config()->set('blog.ai.pipeline', 'editorial');
     config()->set('analytics.enabled', true);
+    config()->set('festilaw.tech_alert_email', 'tech@example.com');
+    config()->set('logging.default', 'stack');
+    config()->set('logging.channels.stack.channels', ['daily']);
 }
 
 // Les pages publiques lisent la base : lien "Blog" de l'en-tete et du pied de page, bloc de l'accueil.
@@ -107,6 +110,17 @@ it('flags a production configuration without the keys of the generation, or with
         ->and($violations)->toContain('PIXABAY_API_KEY')
         ->and($violations)->toContain('BLOG_AI_PIPELINE')
         ->and($violations)->toContain('ANALYTICS_ENABLED');
+});
+
+it('flags a production configuration without a technical address, or with the log in one ever-growing file', function () {
+    cleanProductionConfig();
+    config()->set('festilaw.tech_alert_email', ' ');
+    config()->set('logging.channels.stack.channels', ['single']);
+
+    $violations = implode("\n", app(ProductionSafetyService::class)->violations());
+
+    expect($violations)->toContain('FESTILAW_TECH_ALERT_EMAIL')
+        ->and($violations)->toContain('LOG_STACK=daily');
 });
 
 it('fails the go-live check command when the configuration is unfit', function () {

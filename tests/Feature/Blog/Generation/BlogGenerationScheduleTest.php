@@ -11,6 +11,7 @@ use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogGenerationTrigger;
 use App\Exceptions\Blog\BlogGenerationException;
+use App\Mail\BlogGenerationPaused;
 use App\Models\BlogGeneration;
 use App\Models\BlogPost;
 use App\Services\Blog\Generation\BlogGenerationCostForecaster;
@@ -149,22 +150,36 @@ it('queues the batch as soon as the holding reason falls, and writes a later hol
 it('only queues what the pending drafts cap leaves room for', function () {
     BlogAi::saveSettings(['enabled' => true, 'articles_per_run' => 3, 'pending_drafts_cap' => 3]);
     BlogPost::factory()->fromAi()->count(2)->create();
-    // Ne comptent pas : un brouillon saisi a la main, un article genere deja publie.
+    // Ne comptent pas : un brouillon saisi a la main, un article genere deja publie, un article genere puis
+    // depublie (controle du 20/11 : depublier de vieux articles ne doit pas arreter la generation).
     BlogPost::factory()->create();
     BlogPost::factory()->fromAi()->published()->create();
+    BlogPost::factory()->fromAi()->create(['published_at' => now()->subMonth()]);
 
     expect(planScheduledGenerations()->launched)->toBe(1);
 });
 
-it('does not queue anything while too many generated drafts wait for a review', function () {
-    BlogAi::saveSettings(['enabled' => true, 'pending_drafts_cap' => 2]);
+it('does not queue anything while too many generated drafts wait for a review, and says so once', function () {
+    BlogAi::saveSettings(['enabled' => true, 'pending_drafts_cap' => 2, 'notification_email' => 'owner@example.com']);
     BlogPost::factory()->fromAi()->count(2)->create();
 
     $plan = planScheduledGenerations();
+    planScheduledGenerations();
 
     expect($plan->blockedBy)->toBe(BlogGenerationOutcomeReason::PendingDraftsCapReached)
         ->and(BlogGeneration::query()->sole()->outcome_reason)->toBe(BlogGenerationOutcomeReason::PendingDraftsCapReached);
-    Mail::assertNothingSent();
+    Mail::assertSent(BlogGenerationPaused::class, 1);
+    Mail::assertSent(BlogGenerationPaused::class, fn (BlogGenerationPaused $mail): bool => $mail->hasTo('owner@example.com')
+        && $mail->pendingDrafts === 2
+        && $mail->draftsUrl === route('admin.blog.posts.index', ['origin' => 'ai', 'status' => 'draft']));
+});
+
+it('writes a pause message that says how the generation starts again', function () {
+    $html = (new BlogGenerationPaused(3, 'https://example.test/admin/blog/posts?origin=ai&status=draft'))->render();
+
+    expect($html)->toContain('3 brouillons générés attendent votre relecture')
+        ->toContain('Dès qu\'un brouillon est publié ou supprimé, la génération reprend d\'elle-même')
+        ->toContain('href="https://example.test/admin/blog/posts?origin=ai&amp;status=draft"');
 });
 
 it('tells what it would do, without writing or sending anything, on a dry run', function () {

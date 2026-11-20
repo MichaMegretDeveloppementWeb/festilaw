@@ -51,12 +51,17 @@ final readonly class BlogGenerationBudget
         return $this->warningPercent;
     }
 
-    /** Articles d'origine IA encore en brouillon : ceux que personne n'a encore publies ni supprimes. */
+    /**
+     * Articles d'origine IA en brouillon et jamais publies : ceux qui attendent leur premiere relecture. Un
+     * article depublie redevient un brouillon mais n'en fait pas partie, sinon depublier de vieux articles
+     * arreterait la generation automatique pour toujours (controle du 20/11).
+     */
     public function pendingDrafts(): int
     {
         return BlogPost::query()
             ->where('origin', BlogPostOrigin::Ai->value)
             ->where('status', BlogPostStatus::Draft->value)
+            ->whereNull('published_at')
             ->count();
     }
 

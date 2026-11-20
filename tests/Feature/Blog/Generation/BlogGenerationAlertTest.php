@@ -1,10 +1,13 @@
 <?php
 
 use App\Actions\Blog\Generation\ProcessNextBlogGenerationAction;
+use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
+use App\Enums\Blog\Generation\BlogGenerationType;
 use App\Mail\BlogGenerationFailuresAlert;
 use App\Mail\BlogMonthlySpendWarning;
 use App\Mail\BlogSpendLimitReached;
 use App\Models\BlogGeneration;
+use App\Repositories\SettingRepository;
 use App\Services\Blog\Generation\BlogGenerationAlertService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -69,6 +72,38 @@ it('starts a new series after a success', function () {
 
     processGenerationThat(fails: true);
     Mail::assertSent(BlogGenerationFailuresAlert::class, 1);
+});
+
+it('counts every article generation that ended without a draft, whatever stopped it', function () {
+    BlogGeneration::factory()->completed()->create();
+    BlogGeneration::factory()->failed()->create();
+    BlogGeneration::factory()->abandoned(BlogGenerationOutcomeReason::SafetyStop)->create(['started_at' => now()]);
+    BlogGeneration::factory()->cancelled()->create(['started_at' => now()]);
+    BlogGeneration::factory()->failed()->create(['type' => BlogGenerationType::Translation]);
+    BlogGeneration::factory()->abandoned(BlogGenerationOutcomeReason::PendingDraftsCapReached)->scheduled()->create();
+    $alerts = app(BlogGenerationAlertService::class);
+
+    $alerts->afterArticleWithoutDraft();
+    Mail::assertNotSent(BlogGenerationFailuresAlert::class);
+
+    BlogGeneration::factory()->abandoned(BlogGenerationOutcomeReason::NoRelevantTopic)->create(['started_at' => now()]);
+    $alerts->afterArticleWithoutDraft();
+
+    Mail::assertSent(BlogGenerationFailuresAlert::class, fn (BlogGenerationFailuresAlert $mail): bool => $mail->failures === 3
+        && array_column($mail->rows, 'outcome') === [
+            'Aucun sujet assez pertinent',
+            BlogGenerationOutcomeReason::SafetyStop->label(),
+            'La génération a échoué',
+        ]);
+});
+
+it('tries the series alert again at the next generation when it could not be sent', function () {
+    BlogGeneration::factory()->count(3)->failed()->create();
+    Mail::shouldReceive('to')->andThrow(new RuntimeException('Mail transport down.'));
+
+    app(BlogGenerationAlertService::class)->afterArticleWithoutDraft();
+
+    expect(app(SettingRepository::class)->get(BlogGenerationAlertService::SERIES_ALERT_KEY))->toBeNull();
 });
 
 it('falls back on the notification address when no technical contact is set', function () {
@@ -141,7 +176,7 @@ it('renders the alert messages', function () {
         ->toContain('Labels on Etsy')
         ->toContain('étape « Recherche »')
         ->toContain('href="https://example.test/admin/blog/generation/4"')
-        ->toContain('storage/logs/laravel.log')
+        ->toContain('storage/logs, fichier laravel du jour')
         ->and($credit)->toContain('Crédit d\'IA épuisé')->toContain('4,20 $')
         ->and($near)->toContain('La dépense du mois approche du plafond')->toContain('85 %')->toContain('Dépasser le plafond ne bloque pas la génération.')->not->toContain('par lot')
         ->and($over)->toContain('Plafond de dépense du mois dépassé')->toContain('12,00 $')

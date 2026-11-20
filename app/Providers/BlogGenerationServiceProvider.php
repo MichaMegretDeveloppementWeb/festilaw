@@ -39,6 +39,8 @@ use App\Services\Blog\Generation\Editorial\Steps\StyleStep;
 use App\Services\Blog\Generation\Editorial\Steps\TopicScanStep;
 use App\Services\Blog\Generation\Editorial\Steps\TranslationStep;
 use App\Services\Blog\Generation\Editorial\Steps\WritingStep;
+use App\Services\Blog\Generation\Health\BlogGenerationHealthCheck;
+use App\Services\Blog\Generation\Health\OpenRouterCatalogReader;
 use App\Services\Blog\Generation\Simulation\SimulatedGenerationPipeline;
 use App\Services\Blog\Generation\UnavailableGenerationPipeline;
 use Illuminate\Contracts\Foundation\Application;
@@ -69,6 +71,7 @@ final class BlogGenerationServiceProvider extends ServiceProvider
         $this->app->when(BlogAiModelCatalog::class)->needs('$imageModels')->giveConfig('blog.ai.image_models');
         // La cle n'est lue que pour dire a l'ecran si elle est presente ; elle n'est jamais affichee.
         $this->app->when(BlogGenerationOverviewService::class)->needs('$apiKey')->giveConfig('ai.providers.openrouter.key');
+        $this->app->when(BlogGenerationOverviewService::class)->needs('$rulesReviewBy')->giveConfig('blog.ai.rules_reference.review_by');
 
         $this->app->when(BlogGenerationStepRunner::class)->needs('$maxAttempts')->giveConfig('blog.ai.step.max_attempts');
         $this->app->when(BlogGenerationStepRunner::class)->needs('$retryWaitSeconds')->giveConfig('blog.ai.step.retry_wait_seconds');
@@ -99,6 +102,18 @@ final class BlogGenerationServiceProvider extends ServiceProvider
         $this->app->when(GenerateBlogDraftImagesAction::class)->needs('$photoChecks')->giveConfig('blog.ai.stock_photo_checks');
         $this->app->when(BlogPromptLibrary::class)->needs('$directory')->giveConfig('blog.ai.prompts_directory');
         $this->app->when(BlogAiCostEstimator::class)->needs('$webSearchMicrousd')->giveConfig('blog.ai.web_search.price_microusd');
+
+        // Verification quotidienne des services (controle du 20/11) : les adresses gratuites d'OpenRouter, a la
+        // meme adresse de base que le SDK.
+        $this->app->when(OpenRouterCatalogReader::class)->needs('$apiKey')->giveConfig('ai.providers.openrouter.key');
+        $this->app->when(OpenRouterCatalogReader::class)->needs('$baseUrl')
+            ->give(static fn (): string => (string) (config('ai.providers.openrouter.url') ?: 'https://openrouter.ai/api/v1'));
+        $this->app->when(BlogGenerationHealthCheck::class)->needs('$openRouterKey')->giveConfig('ai.providers.openrouter.key');
+        $this->app->when(BlogGenerationHealthCheck::class)->needs('$pipeline')->giveConfig('blog.ai.pipeline');
+        $this->app->when(BlogGenerationHealthCheck::class)->needs('$textCatalog')->giveConfig('blog.ai.models');
+        $this->app->when(BlogGenerationHealthCheck::class)->needs('$imageCatalog')->giveConfig('blog.ai.image_models');
+        $this->app->when(BlogGenerationHealthCheck::class)->needs('$thresholds')->giveConfig('blog.ai.health');
+        $this->app->when(BlogGenerationHealthCheck::class)->needs('$rulesReference')->giveConfig('blog.ai.rules_reference');
 
         $this->app->bind(BlogBenchPlan::class, static fn (): BlogBenchPlan => BlogBenchPlan::fromConfig((array) config('blog.ai.bench')));
         $this->app->when(BlogBenchStepRunner::class)->needs('$maxAttempts')->giveConfig('blog.ai.step.max_attempts');

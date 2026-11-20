@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Data\Admin\Blog\Generation;
 
 use App\Data\Blog\Generation\BlogAiSettings;
+use App\Data\Blog\Generation\Health\BlogGenerationHealth;
 use App\Enums\Blog\Generation\MonthlySpendLevel;
 use Carbon\CarbonImmutable;
 
@@ -33,7 +34,15 @@ final readonly class BlogGenerationOverview
         public ?CarbonImmutable $workerStartedAt,
         public bool $simulated,
         public ?string $unavailableReason,
+        public ?BlogGenerationHealth $health = null,
+        public bool $rulesReferenceDue = false,
     ) {}
+
+    /** La generation automatique est activee, mais retenue tant que les brouillons a relire atteignent leur plafond. */
+    public function automaticPaused(): bool
+    {
+        return $this->settings->enabled && $this->pendingDrafts >= $this->settings->pendingDraftsCap;
+    }
 
     /** Les couleurs que la barre du kit connait : ambre a l'approche du plafond du mois, rouge au-dela. */
     public function spendBarColor(): string

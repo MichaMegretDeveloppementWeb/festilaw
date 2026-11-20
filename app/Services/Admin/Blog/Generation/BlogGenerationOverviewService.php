@@ -8,6 +8,7 @@ use App\Contracts\Blog\Generation\GenerationPipeline;
 use App\Data\Admin\Blog\Generation\BlogGenerationOverview;
 use App\Enums\Blog\Generation\BlogGenerationType;
 use App\Exceptions\Blog\BlogGenerationException;
+use App\Repositories\Blog\BlogGenerationHealthRepository;
 use App\Services\Blog\Generation\BlogAiCostFormatter;
 use App\Services\Blog\Generation\BlogAiSettingsService;
 use App\Services\Blog\Generation\BlogGenerationBudget;
@@ -18,14 +19,15 @@ use Carbon\CarbonImmutable;
 /**
  * La vue d'ensemble de la generation par IA.
  *
- * Plan de requetes (verifie par un test de budget) : 6.
+ * Plan de requetes (verifie par un test de budget) : 7.
  *   1. reglages
  *   2. depense du mois
  *   3. inscription du dernier worker
- *   4. brouillons generes qui attendent une relecture
- *   5. dernieres generations
- *   6. etape en echec de ces generations
- * Sans aucune generation : 5 (la sixieme n'a rien a lire).
+ *   4. resultat de la derniere verification quotidienne des services
+ *   5. brouillons generes qui attendent une relecture
+ *   6. dernieres generations
+ *   7. etape en echec de ces generations
+ * Sans aucune generation : 6 (la septieme n'a rien a lire).
  */
 final readonly class BlogGenerationOverviewService
 {
@@ -46,7 +48,9 @@ final readonly class BlogGenerationOverviewService
         private BlogAiCostFormatter $costs,
         private GenerationPipeline $pipeline,
         private BlogGenerationPresenter $presenter,
+        private BlogGenerationHealthRepository $health,
         private ?string $apiKey,
+        private string $rulesReviewBy,
     ) {}
 
     public function overview(): BlogGenerationOverview
@@ -55,6 +59,7 @@ final readonly class BlogGenerationOverviewService
         $spent = $this->budget->spentThisMonthMicrousd();
         $cap = $settings->monthlySpendCapMicrousd();
         $workerStartedAt = $this->workers->lastStartedAt();
+        $health = $this->health->latest();
 
         return new BlogGenerationOverview(
             settings: $settings,
@@ -71,6 +76,8 @@ final readonly class BlogGenerationOverviewService
             workerStartedAt: $workerStartedAt,
             simulated: $this->pipeline instanceof SimulatedGenerationPipeline,
             unavailableReason: $this->unavailableReason(),
+            health: $health,
+            rulesReferenceDue: CarbonImmutable::now()->startOfDay()->greaterThan(CarbonImmutable::parse($this->rulesReviewBy)->startOfDay()),
         );
     }
 

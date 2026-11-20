@@ -117,6 +117,16 @@ it('shows the spend of the month against its cap, the automatic rhythm and the d
         ->assertDontSeeHtml('ui-pagination');
 });
 
+it('shows the automatic generation as paused while the drafts to review fill their cap', function () {
+    BlogAi::saveSettings(['enabled' => true, 'pending_drafts_cap' => 2]);
+    BlogPost::factory()->count(2)->create(['origin' => BlogPostOrigin::Ai]);
+
+    Livewire::test(GenerationDashboard::class)
+        ->assertSee('En pause')
+        ->assertSee('Reprend quand les brouillons sont relus')
+        ->assertDontSee('Activée');
+});
+
 it('says when a worker is listening, and warns when none is', function () {
     // Dit avec les mots de la personne qui ecrit des articles : ni « traitement », ni « a l'ecoute ».
     Livewire::test(GenerationDashboard::class)
@@ -220,7 +230,7 @@ it('shows a load failure instead of the overview when the data cannot be read', 
     Schema::rename('blog_generations_unavailable', 'blog_generations');
 });
 
-it('loads the overview in 6 queries, plus 1 for the activity tile, whatever the number of generations', function () {
+it('loads the overview in 7 queries, plus 1 for the activity tile, whatever the number of generations', function () {
     BlogGeneration::factory()->count(40)->completed()->create()->each(function (BlogGeneration $generation): void {
         BlogGenerationStep::factory()->for($generation, 'generation')->named('topic', 1)->completed()->create();
         BlogGenerationStep::factory()->for($generation, 'generation')->named('writing', 2)->completed()->create();
@@ -229,9 +239,10 @@ it('loads the overview in 6 queries, plus 1 for the activity tile, whatever the 
     DB::enableQueryLog();
     Livewire::test(GenerationDashboard::class);
 
-    // Reglages, depense du mois, worker, brouillons a relire, dernieres generations, etape en echec de celles-ci ;
-    // plus la tuile « En cours » (une requete : aucune generation active). Le bouton de lancement n'en fait aucune.
-    expect(count(DB::getQueryLog()))->toBe(7);
+    // Reglages, depense du mois, worker, verification quotidienne des services (controle du 20/11), brouillons a
+    // relire, dernieres generations, etape en echec de celles-ci ; plus la tuile « En cours » (une requete :
+    // aucune generation active). Le bouton de lancement n'en fait aucune.
+    expect(count(DB::getQueryLog()))->toBe(8);
 });
 
 // --- Tuile « En cours » ---------------------------------------------------------------------------

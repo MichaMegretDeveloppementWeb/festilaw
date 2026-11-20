@@ -397,7 +397,9 @@ avant de passer à la suivante.
   la commande `festilaw:process-renewals` (avec `--dry` pour ne rien envoyer)
   liste ce qui serait fait.
 - **En cas de souci** : les logs sont dans `storage/logs/` (dont un journal dédié
-  aux paiements et à la signature). C'est le premier endroit où regarder.
+  aux paiements et à la signature). C'est le premier endroit où regarder. Chaque matin,
+  `festilaw:error-report` envoie à `FESTILAW_TECH_ALERT_EMAIL` les erreurs de la veille, s'il y en a
+  (`--dry` les affiche sans rien envoyer).
 
 ---
 
@@ -466,13 +468,18 @@ publication) et la mesure d'audience Falcon Analytics. Elle se déploie par `dep
 - [ ] La base est sauvegardée.
 - [ ] Le `.env` de production reçoit `OPENROUTER_API_KEY` (avec une limite mensuelle posée sur la clé chez
       OpenRouter), `PIXABAY_API_KEY` et `ANALYTICS_ENABLED=true`. `BLOG_AI_PIPELINE` reste absent.
+- [ ] Le `.env` de production passe le journal à un fichier par jour (`LOG_STACK=daily`, `LOG_DAILY_DAYS=30`)
+      et donne l'adresse du prestataire technique à `FESTILAW_TECH_ALERT_EMAIL`. Cette adresse reçoit chaque
+      matin le rapport des erreurs du serveur, seulement s'il y en a eu.
 
 **Ce que le déploiement change**
 
-- Des tables nouvelles seulement (`blog_*`, `falcon_analytics_*`). Aucune table existante n'est modifiée.
+- Des tables nouvelles (`blog_*`, `falcon_analytics_*`), et une colonne nouvelle, facultative, dans `payments`
+  (`analytics_reference`). Aucune autre table existante n'est modifiée.
 - De nouvelles tâches planifiées, portées par la même ligne de cron : publication des articles programmés,
   génération planifiée et son worker (chaque minute), ménage des images orphelines, maintenance de la mesure
-  (tous les quarts d'heure). `php artisan schedule:list` les montre.
+  (tous les quarts d'heure), vérification des services de la génération et rapport d'erreurs (chaque matin).
+  `php artisan schedule:list` les montre.
 - La politique de confidentialité mentionne la mesure d'audience.
 
 **Après le déploiement**
