@@ -6,6 +6,7 @@ use App\Ai\Agents\Blog\WebSearchAgent;
 use App\Data\Blog\Generation\BlogAgentReply;
 use App\Enums\Blog\Generation\BlogEffortLevel;
 use App\Exceptions\Blog\BlogAiProviderException;
+use App\Services\Blog\Generation\BlogEffortLevels;
 use App\Services\Blog\Generation\Editorial\BlogAgentCaller;
 use GuzzleHttp\Psr7\Response as Psr7Response;
 use Illuminate\Http\Client\RequestException;
@@ -141,38 +142,49 @@ it('asks for the reasoning effort of the step and the cheapest provider, and for
     $sent = Http::recorded()->map(fn (array $pair) => $pair[0]->data())->values();
     // Au niveau d'effort Moyen, le choix du sujet reflechit un cran en dessous des autres etapes. Au 17/11, rien ne
     // demandait le fournisseur le moins cher.
-    expect($sent[0]['reasoning'])->toBe(['effort' => 'low'])
+    expect($sent[0]['reasoning'])->toBe(['effort' => 'medium'])
         ->and($sent[0]['provider'])->toBe(['sort' => 'price', 'require_parameters' => true])
-        ->and($sent[1]['reasoning'])->toBe(['effort' => 'medium'])
+        ->and($sent[1]['reasoning'])->toBe(['effort' => 'high'])
         ->and($sent[1]['provider'])->toBe(['sort' => 'price'])
         ->and($sent[1]['tools'][0]['type'])->toBe('openrouter:web_search')
         ->and($sent[1]['tools'][0]['parameters'])->toBe(['max_uses' => 3, 'engine' => 'exa', 'max_results' => 5, 'max_characters' => 1_500, 'max_total_results' => 15]);
 });
 
 it('asks for the reasoning of the effort level, and the lowest effort a model accepts when it may refuse none', function () {
-    // Regle de Micha du 19/11 : baisser d'un niveau baisse la reflexion de chaque etape, monter la monte.
+    // Regles de Micha du 19/11 et du 20/11 : baisser d'un niveau baisse la reflexion de chaque etape, monter la
+    // monte, et le choix du sujet comme le dossier restent un cran en dessous, sauf au niveau Eleve.
     config(['ai.providers.openrouter.key' => 'test-key']);
     Http::fake(['openrouter.ai/*' => Http::response(openRouterCompletion('Text.'))]);
     $caller = app(BlogAgentCaller::class);
 
     $caller->call('writing', new TestBlogAgent, 'Write.', 'openai/gpt-6-luna', 90, effort: BlogEffortLevel::Low);
     $caller->call('topic', new TestBlogAgent, 'Topic.', 'anthropic/claude-haiku-5.5', 90, effort: BlogEffortLevel::Low);
-    $caller->call('topic', new TestBlogAgent, 'Topic.', 'deepseek/deepseek-v4.1-flash', 90, effort: BlogEffortLevel::Low);
     $caller->call('writing', new TestBlogAgent, 'Write.', 'openai/gpt-6-luna', 90, effort: BlogEffortLevel::Medium);
+    $caller->call('topic', new TestBlogAgent, 'Topic.', 'anthropic/claude-haiku-5.5', 90, effort: BlogEffortLevel::Medium);
     $caller->call('writing', new TestBlogAgent, 'Write.', 'openai/gpt-6-luna', 90, effort: BlogEffortLevel::High);
     $caller->call('topic', new TestBlogAgent, 'Topic.', 'anthropic/claude-haiku-5.5', 90, effort: BlogEffortLevel::High);
     $caller->call('photo_check', new TestBlogAgent, 'Photo.', 'anthropic/claude-haiku-5.5', 90, effort: BlogEffortLevel::Low);
-    $caller->call('photo_check', new TestBlogAgent, 'Photo.', 'anthropic/claude-haiku-5.5', 90, effort: BlogEffortLevel::Medium);
+    $caller->call('photo_check', new TestBlogAgent, 'Photo.', 'anthropic/claude-haiku-5.5', 90, effort: BlogEffortLevel::High);
+
+    // Aucun niveau ne demande plus l'absence de reflexion. Un reglage qui la demanderait l'obtient, sauf pour un
+    // modele qui pourrait la refuser (DeepSeek), qui recoit le plus petit effort qu'il accepte.
+    config(['blog.ai.effort.levels.low.reasoning.topic' => 'none']);
+    app()->forgetInstance(BlogEffortLevels::class);
+    app()->forgetInstance(BlogAgentCaller::class);
+    $caller = app(BlogAgentCaller::class);
+    $caller->call('topic', new TestBlogAgent, 'Topic.', 'anthropic/claude-haiku-5.5', 90, effort: BlogEffortLevel::Low);
+    $caller->call('topic', new TestBlogAgent, 'Topic.', 'deepseek/deepseek-v4.1-flash', 90, effort: BlogEffortLevel::Low);
 
     expect(Http::recorded()->map(fn (array $pair): mixed => $pair[0]->data()['reasoning'] ?? null)->values()->all())->toBe([
-        ['effort' => 'low'],
-        ['effort' => 'none'],
-        // DeepSeek pourrait refuser l'absence de reflexion : il recoit le plus petit effort qu'il accepte.
-        ['effort' => 'low'],
         ['effort' => 'medium'],
+        ['effort' => 'low'],
         ['effort' => 'high'],
         ['effort' => 'medium'],
-        // Le controle des photos reste un cran en dessous, comme le choix du sujet.
+        ['effort' => 'high'],
+        ['effort' => 'high'],
+        // Le controle des photos reste un cran en dessous, meme au niveau Eleve.
+        ['effort' => 'low'],
+        ['effort' => 'medium'],
         ['effort' => 'none'],
         ['effort' => 'low'],
     ]);

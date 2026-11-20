@@ -98,10 +98,14 @@ final readonly class BlogGenerationCostForecaster
             [$lowCalls, $highCalls] = $profile['calls'] ?? [1, 1];
             $highCalls = $perStockPhoto ? (int) $highCalls * $images->maxImages : $highCalls;
             $measured = $this->models->priceMarginPercent($model);
-            $searches = $this->prices->webSearchesMicrousd($searchCount);
+            // Au-dela de cinq recherches, la borne haute en compte une de plus que la limite : OpenRouter en a laisse
+            // passer une a chaque appel de l'etalonnage du 20/11 (11 pour 10, 9 pour 8, 19 pour 18, 16 pour 15),
+            // jamais avec une limite de trois ou de cinq (generations 92 a 95 du 19/11, banc du 18/11).
+            $searchesLow = $this->prices->webSearchesMicrousd($searchCount);
+            $searchesHigh = $this->prices->webSearchesMicrousd($searchCount > 5 ? $searchCount + 1 : $searchCount);
 
-            $low += $searches + $this->calls($model, $input, $visible, $lowReasoning, (int) $lowCalls, $measured ?? 100);
-            $high += $searches + $this->calls($model, $input, $visible, $highReasoning, (int) $highCalls, $measured ?? $this->defaultMarginPercent);
+            $low += $searchesLow + $this->calls($model, $input, $visible, $lowReasoning, (int) $lowCalls, $measured ?? 100);
+            $high += $searchesHigh + $this->calls($model, $input, $visible, $highReasoning, (int) $highCalls, $measured ?? $this->defaultMarginPercent);
         }
 
         if ($images->mode === BlogAiImageMode::Generated) {

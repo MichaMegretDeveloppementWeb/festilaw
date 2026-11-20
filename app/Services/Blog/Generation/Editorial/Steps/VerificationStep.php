@@ -16,8 +16,9 @@ use App\Services\Blog\Generation\Editorial\BlogPromptLibrary;
 use App\Services\Blog\Generation\Editorial\EditorialMarkdown;
 
 /**
- * Etape 6 · la verification. L'agent relit l'article contre le dossier et la fiche des regles de l'UE, et
- * retire toute affirmation que ni l'un ni l'autre n'etaye. Il ne doit rien ajouter : une version qui apporte
+ * La verification. L'agent relit l'article contre le dossier, la fiche des regles de l'UE et les preuves
+ * trouvees sur le web juste avant (FactSearchStep, 20/11), et retire toute affirmation qu'aucun n'etaye. La
+ * fiche l'emporte toujours ; une affirmation que les preuves contredisent est corrigee ou retiree. Il ne doit rien ajouter : une version qui apporte
  * un chiffre, un lien ou un jeton absent du texte de depart, ou qui perd un emplacement d'image, lui est
  * renvoyee une fois avec ce qu'elle ajoute, puis refusee. Un renvoi cible coute moins qu'un nouvel essai a
  * l'aveugle, qui refaisait la meme faute (generation 79 du 18/11, numeros d'articles de la fiche ajoutes
@@ -65,8 +66,10 @@ final class VerificationStep extends EditorialStep
             array_filter(EditorialMarkdown::linkTokens($written->body), static fn (string $token): bool => str_starts_with($token, 'festilaw:post/')),
         ))));
         $claims = (array) ($context->output('writing')['claims'] ?? []);
+        $evidence = trim((string) ($context->output('fact_search')['notes'] ?? ''));
         $prompt = implode("\n\n", array_filter([
             $this->block('Research file', ['sources' => $research['sources'] ?? [], 'facts' => $research['facts'] ?? []]),
+            $evidence === '' ? null : $this->block('Web evidence on the statements of the article, searched after writing', $evidence),
             $linked === [] ? null : $this->block('Blog articles the text links to (festilaw:post/ID)', $linked),
             $claims === [] ? null : $this->block('Statements of the article and their basis, as the writer listed them (RULES: the reference of EU product rules)', $claims),
             $this->block('Article to check', $written->forPrompt()),

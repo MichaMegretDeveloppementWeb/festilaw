@@ -23,6 +23,7 @@ final readonly class BlogGenerationLabels
             'research_notes' => __('Recherche sur le web'),
             'research' => __('Dossier de faits'),
             'writing' => __('Rédaction'),
+            'fact_search' => __('Recherche des preuves'),
             'verification' => __('Vérification'),
             'style' => __('Relecture du style'),
             'translation' => __('Traduction'),

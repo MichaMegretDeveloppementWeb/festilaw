@@ -9,6 +9,7 @@ use App\Data\Blog\Generation\GenerationImageOptions;
 use App\Enums\Blog\Generation\BlogAiImageMode;
 use App\Enums\Blog\Generation\BlogEffortLevel;
 use App\Services\Blog\Generation\BlogAiSettingsService;
+use App\Services\Blog\Generation\BlogEffortLevels;
 use App\Services\Blog\Generation\BlogGenerationCostForecaster;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -40,13 +41,16 @@ function stockImage(): GenerationImageOptions
 
 it('brackets what each article of the model bench cost, the high staying under one and a half times the low', function (array $models, array $realCosts, float $width) {
     // Banc d'essai du 18/11 : sujet impose, 1 000 mots, sujet prepare compris, image a part, et les etapes que le
-    // banc jouait alors (le controle des versions est venu ensuite). Sa reflexion est celle du niveau Faible, mais
-    // il faisait une recherche de sources de plus : elle s'ajoute a l'estimation de ce niveau.
+    // banc jouait alors (le controle des versions et la recherche des preuves sont venus ensuite). Sa reflexion est
+    // celle du niveau Faible d'alors, et il faisait trois recherches de sources : ces conditions sont posees ici.
+    config(['blog.ai.effort.levels.low' => ['reasoning' => ['default' => 'low', 'topic' => 'none', 'research' => 'none'], 'searches' => ['research_notes' => 3]]]);
+    app()->forgetInstance(BlogEffortLevels::class);
+    app()->forgetInstance(BlogGenerationCostForecaster::class);
     $forecast = app(BlogGenerationCostForecaster::class)->forecast([
         'topic' => 'anthropic/claude-haiku-5.5', 'research' => 'anthropic/claude-haiku-5.5', 'verification' => 'anthropic/claude-haiku-5.5', ...$models,
     ], 1_000, new GenerationImageOptions(BlogAiImageMode::None, 1), topicImposed: true, onlySteps: ['topic', 'research_notes', 'research', 'writing', 'verification', 'style', 'translation_fr', 'translation_es'], effort: BlogEffortLevel::Low);
-    $low = $forecast->lowMicrousd + config('blog.ai.web_search.price_microusd');
-    $high = $forecast->highMicrousd + config('blog.ai.web_search.price_microusd');
+    $low = $forecast->lowMicrousd;
+    $high = $forecast->highMicrousd;
 
     expect($low)->toBeLessThanOrEqual(min($realCosts))
         ->and($high)->toBeGreaterThanOrEqual(max($realCosts))
@@ -87,48 +91,62 @@ it('follows the price of the models chosen, and leaves the web scan out when the
         ->and($imposed->lowMicrousd)->toBeLessThan($cheap->lowMicrousd);
 });
 
-it('keeps the default settings at a few cents an article, a model billed at its catalog price counting at that price', function () {
+it('keeps the default settings around thirty cents an article, a model billed at its catalog price counting at that price', function () {
     $settings = app(BlogAiSettingsService::class)->current();
     $forecast = app(BlogGenerationCostForecaster::class)->forSettings($settings);
 
     // Une premiere version appliquait a tous les modeles l'ecart de prix mesure sur DeepSeek (2,8 fois le
-    // catalogue) : les reglages par defaut, tout en Haiku, depassaient alors 15 centimes.
+    // catalogue). Depuis le 20/11, le niveau Moyen vise un haut de fourchette vers 0,30 $ (decision de Micha) : 0,33 $
+    // pour un sujet libre, avec sa recherche de pistes.
     expect($settings->articleWords)->toBe(1_000)
-        ->and($forecast->highMicrousd)->toBeLessThan(150_000);
+        ->and($forecast->highMicrousd)->toBeLessThan(350_000);
 });
 
-it('brackets what each effort level cost with the recommended models, at the calibration of 19/11', function (BlogEffortLevel $effort, int $extraSearches, array $realCosts) {
-    // Sujets imposes (personne responsable, jouets), 1 000 mots, une image de la banque. Le niveau Faible reprend
-    // la reflexion du banc d'essai du 19/11 (2 articles), qui faisait une recherche de sources de plus, ajoutee a
-    // l'estimation a son prix mesure. Les niveaux Moyen (generations 94 et 95) et Eleve (92 et 93) sont mesures tels
-    // quels.
-    // Les generations mesurees prenaient leur photo sans controle : il ne compte pas ici.
-    $forecast = app(BlogGenerationCostForecaster::class)->forecast(config('blog.ai.defaults.models'), 1_000, new GenerationImageOptions(BlogAiImageMode::None, 1), topicImposed: true, effort: $effort);
-    $extra = $extraSearches * config('blog.ai.web_search.price_microusd');
+it('brackets what each effort level cost with the recommended models, at the calibration of 20/11', function (BlogEffortLevel $effort, BlogAiImageMode $images, bool $withEvidence, array $realCosts) {
+    // Niveaux du 20/11, sujets imposes (personne responsable, jouets), 1 000 mots. Moyen : generations 96 et 97,
+    // une photo de la banque controlee. Eleve : generation 98, sans le premier essai de sa recherche des preuves,
+    // coupe par la limite de 8 000 jetons relevee depuis (11,3 centimes). Faible n'a pas ete rejoue : hors
+    // recherche des preuves, il reprend tel quel le Moyen du 19/11 (generations 94 et 95, photo prise sans
+    // controle), et ses preuves restent estimees.
+    $steps = $withEvidence ? null : array_values(array_diff(array_keys(config('blog.ai.forecast.steps')), ['fact_search']));
+    $forecast = app(BlogGenerationCostForecaster::class)->forecast(config('blog.ai.defaults.models'), 1_000, new GenerationImageOptions($images, 1), topicImposed: true, onlySteps: $steps, effort: $effort);
 
-    expect($forecast->lowMicrousd + $extra)->toBeLessThanOrEqual(min($realCosts))
-        ->and($forecast->highMicrousd + $extra)->toBeGreaterThanOrEqual(max($realCosts))
+    expect($forecast->lowMicrousd)->toBeLessThanOrEqual(min($realCosts))
+        ->and($forecast->highMicrousd)->toBeGreaterThanOrEqual(max($realCosts))
         ->and($forecast->highMicrousd)->toBeLessThanOrEqual((int) ($forecast->lowMicrousd * 1.6));
 })->with([
-    'Faible' => [BlogEffortLevel::Low, 1, [64_912, 66_162]],
-    'Moyen' => [BlogEffortLevel::Medium, 0, [77_354, 89_765]],
-    'Eleve' => [BlogEffortLevel::High, 0, [120_223, 123_433]],
+    'Faible' => [BlogEffortLevel::Low, BlogAiImageMode::None, false, [77_354, 89_765]],
+    'Moyen' => [BlogEffortLevel::Medium, BlogAiImageMode::Stock, true, [224_840, 233_748]],
+    'Eleve' => [BlogEffortLevel::High, BlogAiImageMode::Stock, true, [325_434]],
 ]);
 
+it('counts one web search more than a limit above five at the top of the range, as OpenRouter let one pass', function () {
+    // Etalonnage du 20/11 : 11 recherches pour 10, 9 pour 8, 19 pour 18, 16 pour 15.
+    $forecaster = app(BlogGenerationCostForecaster::class);
+    $search = config('blog.ai.web_search.price_microusd');
+    $models = config('blog.ai.defaults.models');
+    $research = $forecaster->forecast($models, 1_000, new GenerationImageOptions(BlogAiImageMode::None, 1), topicImposed: true, onlySteps: ['research_notes'], effort: BlogEffortLevel::Medium);
+    $dossier = $forecaster->forecast($models, 1_000, new GenerationImageOptions(BlogAiImageMode::None, 1), topicImposed: true, onlySteps: ['research'], effort: BlogEffortLevel::Medium);
+
+    expect($research->lowMicrousd)->toBeGreaterThan(10 * $search)
+        ->and($research->highMicrousd)->toBeGreaterThan(11 * $search)
+        ->and($dossier->highMicrousd)->toBeLessThan($search);
+});
+
 it('costs less at a low effort and more at a high one, both in searches and in reasoning', function () {
-    // Regle de Micha du 19/11 : chaque niveau change les recherches (1 + 2, 2 + 3, 3 + 5) et la reflexion, Moyen
-    // par defaut.
+    // Regles de Micha du 19/11 et du 20/11 : chaque niveau change les recherches (pistes, sources et preuves :
+    // 2 + 3 + 3, 4 + 10 + 8, 6 + 18 + 15) et la reflexion, Moyen par defaut.
     $forecaster = app(BlogGenerationCostForecaster::class);
     $at = fn (BlogEffortLevel $effort): GenerationCostForecast => $forecaster->forecast(trialModels(), 1_000, stockImage(), effort: $effort);
     $search = config('blog.ai.web_search.price_microusd');
 
     expect($forecaster->forecast(trialModels(), 1_000, stockImage()))->toEqual($at(BlogEffortLevel::Medium))
-        // Deux recherches de moins (pistes et sources), et moins de reflexion par-dessus.
-        ->and($at(BlogEffortLevel::Medium)->lowMicrousd - $at(BlogEffortLevel::Low)->lowMicrousd)->toBeGreaterThan(2 * $search)
-        ->and($at(BlogEffortLevel::Medium)->highMicrousd - $at(BlogEffortLevel::Low)->highMicrousd)->toBeGreaterThan(2 * $search)
-        // Trois recherches de plus, et plus de reflexion par-dessus.
-        ->and($at(BlogEffortLevel::High)->lowMicrousd - $at(BlogEffortLevel::Medium)->lowMicrousd)->toBeGreaterThan(3 * $search)
-        ->and($at(BlogEffortLevel::High)->highMicrousd - $at(BlogEffortLevel::Medium)->highMicrousd)->toBeGreaterThan(3 * $search);
+        // Quatorze recherches de moins, et moins de reflexion par-dessus.
+        ->and($at(BlogEffortLevel::Medium)->lowMicrousd - $at(BlogEffortLevel::Low)->lowMicrousd)->toBeGreaterThan(14 * $search)
+        ->and($at(BlogEffortLevel::Medium)->highMicrousd - $at(BlogEffortLevel::Low)->highMicrousd)->toBeGreaterThan(14 * $search)
+        // Dix-sept recherches de plus, et plus de reflexion par-dessus.
+        ->and($at(BlogEffortLevel::High)->lowMicrousd - $at(BlogEffortLevel::Medium)->lowMicrousd)->toBeGreaterThan(17 * $search)
+        ->and($at(BlogEffortLevel::High)->highMicrousd - $at(BlogEffortLevel::Medium)->highMicrousd)->toBeGreaterThan(17 * $search);
 });
 
 it('counts a model never measured at its catalog price at the bottom, and with a margin at the top', function () {
@@ -152,13 +170,17 @@ it('counts the tokens of an Anthropic model one and a half times, as the bench m
         'test/reference' => ['name' => 'Reference', 'provider' => 'Test', 'input' => 10, 'output' => 50, 'price_margin_percent' => 100],
         'test/anthropic-like' => ['name' => 'Anthropic like', 'provider' => 'Test', 'input' => 10, 'output' => 50, 'price_margin_percent' => 100, 'token_factor_percent' => 145],
     ]]);
+    // Sans reflexion au dossier de faits (reglage pose pour ce test : aucun niveau ne la retire plus).
+    config(['blog.ai.effort.levels.low.reasoning.research' => 'none']);
+    app()->forgetInstance(BlogEffortLevels::class);
+    app()->forgetInstance(BlogGenerationCostForecaster::class);
     $forecaster = app(BlogGenerationCostForecaster::class);
     $models = static fn (string $model): array => ['topic' => $model, 'research' => $model, 'writing' => $model, 'verification' => $model, 'translation' => $model];
 
     $reference = $forecaster->forecast($models('test/reference'), 1_000, new GenerationImageOptions(BlogAiImageMode::None, 1), topicImposed: true, onlySteps: ['research'], effort: BlogEffortLevel::Low);
     $anthropic = $forecaster->forecast($models('test/anthropic-like'), 1_000, new GenerationImageOptions(BlogAiImageMode::None, 1), topicImposed: true, onlySteps: ['research'], effort: BlogEffortLevel::Low);
 
-    // Au niveau Faible, l'etape du dossier de faits ne reflechit pas : son cout suit les seuls jetons.
+    // Le dossier de faits ne reflechit pas : son cout suit les seuls jetons.
     expect($anthropic->lowMicrousd)->toBe(intdiv($reference->lowMicrousd * 145, 100));
 });
 

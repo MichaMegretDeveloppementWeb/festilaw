@@ -28,6 +28,7 @@ abstract class EditorialStep implements GenerationStep
         'research_notes' => 'research',
         'research' => 'research',
         'writing' => 'writing',
+        'fact_search' => 'research',
         'verification' => 'verification',
         'style' => 'writing',
         'translation_en' => 'translation',

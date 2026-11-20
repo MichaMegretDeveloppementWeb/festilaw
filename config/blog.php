@@ -215,7 +215,11 @@ return [
          |   modele qui le suit a sa facon, et pour un effort une paire par etape quand elles different
          |   (`default`, puis l'etape). Mesures de l'etalonnage du 19/11 (generations 89, 91, 92 et 93) : Luna
          |   presque aucune en `low`, environ 2 000 jetons pour rediger en `medium` et 9 000 en `high`, moins
-         |   de 2 300 par appel pour les autres etapes ; Terra environ 3 000 pour verifier en `high`.
+         |   de 2 300 par appel pour les autres etapes ; Terra environ 3 000 pour verifier en `high`. Etalonnage
+         |   du 20/11 (generations 96 a 98, nouveaux niveaux) : Luna redige avec 4 000 a 9 000 jetons en `high`,
+         |   cherche les preuves avec 7 000 a 8 500 (10 700 pour quinze recherches) et les sources avec 4 000 a
+         |   6 500 ; Terra controle chaque version avec 1 000 a 2 000. Terra a coute ce jour-la de 85 a 112 % de
+         |   son catalogue : sa marge reste celle du 19/11, et ses fourchettes de reflexion couvrent l'ecart.
          | `lowest_effort` : le plus petit effort qu'un modele accepte, quand il pourrait refuser `none`
          | (DeepSeek, par prudence : rien ne dit qu'il l'accepte).
          */
@@ -224,8 +228,8 @@ return [
             'anthropic/claude-sonnet-5.5' => ['name' => 'Claude Sonnet 5.5', 'provider' => 'Anthropic', 'input' => 200, 'output' => 1_000, 'price_margin_percent' => 100, 'token_factor_percent' => 145, 'reasoning_tokens' => [0, 0]],
             'anthropic/claude-haiku-5.5' => ['name' => 'Claude Haiku 5.5', 'provider' => 'Anthropic', 'input' => 10, 'output' => 50, 'price_margin_percent' => 100, 'token_factor_percent' => 145],
             'openai/gpt-6.1-sol' => ['name' => 'GPT-6.1 Sol', 'provider' => 'OpenAI', 'input' => 200, 'output' => 1_000],
-            'openai/gpt-6.1-terra' => ['name' => 'GPT-6.1 Terra', 'provider' => 'OpenAI', 'input' => 100, 'output' => 500, 'price_margin_percent' => 80, 'reasoning_tokens' => ['low' => [30, 200], 'medium' => [250, 750], 'high' => ['default' => [250, 1_700], 'verification' => [2_300, 3_100]]]],
-            'openai/gpt-6-luna' => ['name' => 'GPT-6 Luna', 'provider' => 'OpenAI', 'input' => 10, 'output' => 50, 'price_margin_percent' => 114, 'reasoning_tokens' => ['low' => [0, 300], 'medium' => ['default' => [250, 900], 'writing' => [1_900, 2_300], 'research_notes' => [650, 1_000]], 'high' => ['default' => [700, 2_300], 'writing' => [8_500, 10_000], 'research_notes' => [3_500, 4_000]]]],
+            'openai/gpt-6.1-terra' => ['name' => 'GPT-6.1 Terra', 'provider' => 'OpenAI', 'input' => 100, 'output' => 500, 'price_margin_percent' => 80, 'reasoning_tokens' => ['low' => [30, 200], 'medium' => [250, 750], 'high' => ['default' => [250, 1_700], 'verification' => [1_000, 3_100], 'version_check_fr' => [1_000, 2_200], 'version_check_es' => [1_000, 2_200]]]],
+            'openai/gpt-6-luna' => ['name' => 'GPT-6 Luna', 'provider' => 'OpenAI', 'input' => 10, 'output' => 50, 'price_margin_percent' => 114, 'reasoning_tokens' => ['low' => [0, 300], 'medium' => ['default' => [250, 900], 'writing' => [1_900, 2_300], 'research_notes' => [650, 1_000], 'fact_search' => [1_500, 4_000]], 'high' => ['default' => [700, 4_000], 'writing' => [4_000, 10_000], 'research_notes' => [3_500, 7_000], 'fact_search' => [4_000, 11_000]]]],
             'google/gemini-4-carbon' => ['name' => 'Gemini 4 Carbon', 'provider' => 'Google', 'input' => 200, 'output' => 1_000],
             'google/gemini-4-hydrogen' => ['name' => 'Gemini 4 Hydrogen', 'provider' => 'Google', 'input' => 150, 'output' => 750],
             'google/gemini-3.1-flash-lite' => ['name' => 'Gemini 3.1 Flash Lite', 'provider' => 'Google', 'input' => 25, 'output' => 150],
@@ -284,32 +288,35 @@ return [
          | Niveaux d'effort d'une generation (demande de Micha du 19/11, chantier C8) : faible, moyen, eleve,
          | moyen par defaut. Chacun fixe, par etape, la reflexion demandee au modele (`reasoning.effort`
          | d'OpenRouter, facturee comme du texte ecrit et comptee dans la meme limite que la reponse) et le
-         | nombre de recherches web, a 0,7 centime l'une. Regle de Micha (19/11, apres l'etalonnage) : baisser
+         | nombre de recherches web, a 0,65 centime l'une. Regle de Micha (19/11, apres l'etalonnage) : baisser
          | d'un niveau baisse a la fois la reflexion et la profondeur des recherches, et monter les monte.
-         | - Faible : 1 recherche de pistes et 2 de sources, reflexion `low`, `none` pour le choix du sujet et
-         |   le dossier, qui ne font que mettre des notes en forme. C'est la reflexion etalonnee par le banc
-         |   d'essai du 18/11. Sans aucune reflexion, GPT-6 Luna rendait trois fois de suite un JSON illisible a
-         |   la relecture du style, et les traductions demandaient deux fois plus de corrections (generations
-         |   88 et 90 du 19/11) : ce niveau ne coutait pas moins.
-         | - Moyen : 2 et 3 recherches, reflexion `medium`, `low` pour le choix du sujet et le dossier.
-         | - Eleve : 3 et 5 recherches, reflexion `high`, `medium` pour le choix du sujet et le dossier.
-         | Le controle des photos de la banque (`photo_check`) reste, comme le choix du sujet, un cran en dessous.
+         | Le 20/11, Micha a juge le Moyen trop timore (7,7 a 9 centimes) : il doit vraiment travailler plus,
+         | pour un haut de fourchette vers 0,30 $, l'Eleve vers 0,40 $, et le Faible monte un peu. L'argent va
+         | aux recherches et a la recherche des preuves (`fact_search`), ou il sert le plus a un article de
+         | conformite : avec GPT-6 Luna, lire et reflechir coutent tres peu.
+         | - Faible : 2 recherches de pistes, 3 de sources et 3 de preuves, reflexion `medium`, `low` pour le
+         |   choix du sujet et le dossier, qui ne font que mettre des notes en forme. C'etait le Moyen du 19/11,
+         |   plus les preuves. Sans aucune reflexion, GPT-6 Luna rendait un JSON illisible a la relecture du
+         |   style (generations 88 et 90 du 19/11) : aucun niveau ne descend a `none`.
+         | - Moyen : 4, 10 et 8 recherches, reflexion `high`, `medium` pour le choix du sujet et le dossier.
+         | - Eleve : 6, 18 et 15 recherches, reflexion `high` partout.
+         | Le controle des photos de la banque (`photo_check`) reste un cran en dessous, `high` excepte.
          | Ces niveaux sont lus par l'appel au modele, les etapes qui cherchent sur le web et l'estimation du
          | cout (BlogEffortLevels).
          */
         'effort' => [
             'levels' => [
                 'low' => [
-                    'reasoning' => ['default' => 'low', 'topic' => 'none', 'research' => 'none', 'photo_check' => 'none'],
-                    'searches' => ['topic_scan' => 1, 'research_notes' => 2],
+                    'reasoning' => ['default' => 'medium', 'topic' => 'low', 'research' => 'low', 'photo_check' => 'low'],
+                    'searches' => ['topic_scan' => 2, 'research_notes' => 3, 'fact_search' => 3],
                 ],
                 'medium' => [
-                    'reasoning' => ['default' => 'medium', 'topic' => 'low', 'research' => 'low', 'photo_check' => 'low'],
-                    'searches' => ['topic_scan' => 2, 'research_notes' => 3],
+                    'reasoning' => ['default' => 'high', 'topic' => 'medium', 'research' => 'medium', 'photo_check' => 'medium'],
+                    'searches' => ['topic_scan' => 4, 'research_notes' => 10, 'fact_search' => 8],
                 ],
                 'high' => [
-                    'reasoning' => ['default' => 'high', 'topic' => 'medium', 'research' => 'medium', 'photo_check' => 'medium'],
-                    'searches' => ['topic_scan' => 3, 'research_notes' => 5],
+                    'reasoning' => ['default' => 'high', 'photo_check' => 'medium'],
+                    'searches' => ['topic_scan' => 6, 'research_notes' => 18, 'fact_search' => 15],
                 ],
             ],
         ],
@@ -367,8 +374,10 @@ return [
          | `default_price_margin_percent` en haut. Avec ce profil, chacun des 17 articles du banc tombe dans
          | la fourchette de sa configuration au niveau Faible, et le haut ne depasse pas une fois et demie le
          | bas. Avec les modeles recommandes, chaque niveau d'effort encadre ce que l'etalonnage du 19/11 a
-         | coute (BlogGenerationCostForecastTest). La recherche de pistes (`topic_scan`), absente du banc ou
-         | les sujets etaient imposes, garde la mesure de la generation 77 ramenee aux jetons de ce profil.
+         | coute (BlogGenerationCostForecastTest), et depuis le 20/11 les generations 96 a 98 des nouveaux niveaux.
+         | La recherche des preuves (`fact_search`) lit environ 8 000 jetons par recherche, ses extraits s'ajoutant
+         | a chaque tour. La recherche de pistes (`topic_scan`), absente du banc ou les sujets etaient imposes,
+         | garde la mesure de la generation 77 ramenee aux jetons de ce profil.
          | Les jetons lus par la recherche sur le web suivent le nombre de recherches : environ 13 000 pour
          | deux, 19 000 pour trois, 32 000 a 40 000 pour cinq (19/11).
          */
@@ -380,11 +389,12 @@ return [
                 'research_notes' => ['setting' => 'research', 'input' => 1_500, 'input_per_search' => 6_000, 'output' => 1_800, 'reasoning' => ['low' => [250, 600], 'medium' => [625, 1_500], 'high' => [1_000, 2_400]], 'calls' => [1, 1]],
                 'research' => ['setting' => 'research', 'input' => 6_000, 'output' => 1_800, 'reasoning' => ['low' => [250, 600], 'medium' => [625, 1_500], 'high' => [1_000, 2_400]], 'calls' => [1, 1]],
                 'writing' => ['setting' => 'writing', 'input' => 11_400, 'output_per_1000_words' => 1_700, 'reasoning' => ['low' => [1_200, 3_200], 'medium' => [3_000, 8_000], 'high' => [4_800, 12_800]], 'calls' => [1, 2]],
+                'fact_search' => ['setting' => 'research', 'input' => 3_000, 'input_per_1000_words' => 2_000, 'input_per_search' => 8_000, 'output' => 1_200, 'reasoning' => ['low' => [250, 600], 'medium' => [625, 1_500], 'high' => [1_000, 2_400]], 'calls' => [1, 1]],
                 'verification' => ['setting' => 'verification', 'input' => 6_700, 'input_per_1000_words' => 1_500, 'output_per_1000_words' => 1_680, 'reasoning' => ['low' => [300, 4_400], 'medium' => [750, 11_000], 'high' => [1_200, 17_600]], 'calls' => [1, 2]],
                 'style' => ['setting' => 'writing', 'input' => 5_700, 'input_per_1000_words' => 1_500, 'output_per_1000_words' => 1_350, 'reasoning' => ['low' => [400, 1_400], 'medium' => [1_000, 3_500], 'high' => [1_600, 5_600]], 'calls' => [2, 2]],
                 'translation_fr' => ['setting' => 'translation', 'input' => 8_300, 'input_per_1000_words' => 1_500, 'output_per_1000_words' => 1_800, 'reasoning' => ['low' => [1_000, 5_000], 'medium' => [2_500, 12_500], 'high' => [4_000, 20_000]], 'calls' => [2, 2]],
-                'version_check_fr' => ['setting' => 'verification', 'input' => 2_200, 'input_per_1000_words' => 3_300, 'output' => 300, 'reasoning' => ['low' => [300, 2_000], 'medium' => [750, 5_000], 'high' => [1_200, 8_000]], 'calls' => [1, 1]],
-                'version_check_es' => ['setting' => 'verification', 'input' => 2_200, 'input_per_1000_words' => 3_300, 'output' => 300, 'reasoning' => ['low' => [300, 2_000], 'medium' => [750, 5_000], 'high' => [1_200, 8_000]], 'calls' => [1, 1]],
+                'version_check_fr' => ['setting' => 'verification', 'input' => 2_200, 'input_per_1000_words' => 3_300, 'output' => 1_000, 'reasoning' => ['low' => [300, 2_000], 'medium' => [750, 5_000], 'high' => [1_200, 8_000]], 'calls' => [1, 1]],
+                'version_check_es' => ['setting' => 'verification', 'input' => 2_200, 'input_per_1000_words' => 3_300, 'output' => 1_000, 'reasoning' => ['low' => [300, 2_000], 'medium' => [750, 5_000], 'high' => [1_200, 8_000]], 'calls' => [1, 1]],
                 'photo_check' => ['setting' => 'topic', 'input' => 1_500, 'output' => 150, 'reasoning' => ['low' => [0, 300], 'medium' => [0, 750]], 'calls' => [1, 4], 'stock_photos' => true],
                 'translation_es' => ['setting' => 'translation', 'input' => 7_700, 'input_per_1000_words' => 1_500, 'output_per_1000_words' => 1_750, 'reasoning' => ['low' => [1_000, 5_000], 'medium' => [2_500, 12_500], 'high' => [4_000, 20_000]], 'calls' => [2, 2]],
             ],

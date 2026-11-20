@@ -14,7 +14,10 @@ use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogTopicKind;
 use App\Exceptions\Blog\BlogAiProviderException;
+use App\Exceptions\Blog\BlogEditorialException;
 use App\Models\BlogGeneration;
+use App\Services\Blog\Generation\BlogEffortLevels;
+use App\Services\Blog\Generation\Editorial\Steps\FactSearchStep;
 use App\Services\Blog\Generation\Editorial\Steps\ResearchNotesStep;
 use App\Services\Blog\Generation\Editorial\Steps\ResearchStep;
 use App\Services\Blog\Generation\Editorial\Steps\StyleStep;
@@ -76,7 +79,7 @@ it('chooses a topic from the request and every known title, and keeps it on the 
     WebSearchAgent::assertNeverPrompted();
 });
 
-it('scans the web for a free topic with two bounded searches, and keeps the notes for the editor', function () {
+it('scans the web for a free topic with four bounded searches, and keeps the notes for the editor', function () {
     WebSearchAgent::fake(['Notes from the web scan.'])->preventStrayPrompts();
 
     $scan = app(TopicScanStep::class)->execute(Fixtures::context());
@@ -85,9 +88,9 @@ it('scans the web for a free topic with two bounded searches, and keeps the note
     // Des extraits courts du moteur Exa : la recherche native d'Haiku rendait des pages entieres (17/11).
     WebSearchAgent::assertPrompted(fn ($prompt): bool => ! $prompt->contains('Priority topics')
         && ! str_contains($prompt->agent->instructions(), 'priority topics')
-        && str_contains($prompt->agent->instructions(), 'at most 2 web searches')
-        && collect($prompt->agent->tools())->sole()->maxSearches === 2
-        && collect($prompt->agent->tools())->sole()->providerOptions('openrouter') === ['engine' => 'exa', 'max_results' => 5, 'max_characters' => 1_500, 'max_total_results' => 10]);
+        && str_contains($prompt->agent->instructions(), 'at most 4 web searches')
+        && collect($prompt->agent->tools())->sole()->maxSearches === 4
+        && collect($prompt->agent->tools())->sole()->providerOptions('openrouter') === ['engine' => 'exa', 'max_results' => 5, 'max_characters' => 1_500, 'max_total_results' => 20]);
 });
 
 it('chooses the topic from the stored notes of the web scan, without searching again', function () {
@@ -202,23 +205,26 @@ it('keeps the paid web scan when the topic choice fails, and never pays it again
 
 // --- Recherche
 
-it('reads fewer sources at a low effort and more at a high one, in the scan and in the research', function () {
-    // Decision de Micha du 19/11 : chaque niveau d'effort change aussi les sources lues (1 + 2, 2 + 3, 3 + 5).
-    WebSearchAgent::fake(['Notes.', 'Notes.', Fixtures::notesCiting(), Fixtures::notesCiting()])->preventStrayPrompts();
+it('reads fewer sources at a low effort and more at a high one, in the scan, the research and the evidence', function () {
+    // Decisions de Micha du 19/11 et du 20/11 : chaque niveau d'effort change aussi les sources lues (pistes,
+    // sources et preuves : 2 + 3 + 3, 4 + 10 + 8, 6 + 18 + 15).
+    WebSearchAgent::fake(['Notes.', 'Notes.', Fixtures::notesCiting(), Fixtures::notesCiting(), 'Evidence.', 'Evidence.'])->preventStrayPrompts();
 
     app(TopicScanStep::class)->execute(Fixtures::context(effort: BlogEffortLevel::Low));
     app(TopicScanStep::class)->execute(Fixtures::context(effort: BlogEffortLevel::High));
     app(ResearchNotesStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic()], effort: BlogEffortLevel::Low));
     app(ResearchNotesStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic()], effort: BlogEffortLevel::High));
+    app(FactSearchStep::class)->execute(Fixtures::context(['research' => Fixtures::research(), 'writing' => Fixtures::writingOutput()], effort: BlogEffortLevel::Low));
+    app(FactSearchStep::class)->execute(Fixtures::context(['research' => Fixtures::research(), 'writing' => Fixtures::writingOutput()], effort: BlogEffortLevel::High));
 
-    foreach ([['find leads', 1], ['find leads', 3], ['research the topic', 2], ['research the topic', 5]] as [$task, $count]) {
+    foreach ([['find leads', 2], ['find leads', 6], ['research the topic', 3], ['research the topic', 18], ['find the evidence', 3], ['find the evidence', 15]] as [$task, $count]) {
         WebSearchAgent::assertPrompted(fn ($prompt): bool => str_contains($prompt->agent->instructions(), $task)
             && str_contains($prompt->agent->instructions(), "at most {$count} web searches")
             && collect($prompt->agent->tools())->sole()->maxSearches === $count);
     }
 });
 
-it('searches the web for the chosen topic with three bounded searches, and keeps the notes', function () {
+it('searches the web for the chosen topic with ten bounded searches, and keeps the notes', function () {
     WebSearchAgent::fake([Fixtures::notesCiting()])->preventStrayPrompts();
 
     $result = app(ResearchNotesStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic()]));
@@ -226,11 +232,62 @@ it('searches the web for the chosen topic with three bounded searches, and keeps
     expect($result->output['notes'])->toBe(Fixtures::notesCiting())
         ->and($result->output['cut_off'])->toBeFalse();
     WebSearchAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Adding an economic operator on Etsy')
-        && str_contains($prompt->agent->instructions(), 'at most 3 web searches')
+        && str_contains($prompt->agent->instructions(), 'at most 10 web searches')
         // Decision de Micha du 18/11 : la recherche trouve assez de sources, puis s'arrete.
         && str_contains($prompt->agent->instructions(), 'Know when you have enough.')
-        && collect($prompt->agent->tools())->sole()->maxSearches === 3
+        && collect($prompt->agent->tools())->sole()->maxSearches === 10
         && collect($prompt->agent->tools())->sole()->providerOptions('openrouter')['engine'] === 'exa');
+});
+
+it('looks on the web for the evidence of the written statements, with eight bounded searches, and keeps the notes', function () {
+    // Demande de Micha du 20/11 : la verification ne relisait l'article que contre le dossier de faits.
+    WebSearchAgent::fake(['Etsy economic operator field : CONFIRMED, https://help.etsy.com/x'])->preventStrayPrompts();
+
+    $result = app(FactSearchStep::class)->execute(Fixtures::context(['research' => Fixtures::research(), 'writing' => Fixtures::writingOutput()]));
+
+    expect($result->output['notes'])->toBe('Etsy economic operator field : CONFIRMED, https://help.etsy.com/x')
+        ->and($result->output['skipped'])->toBeFalse()
+        ->and($result->output['cut_off'])->toBeFalse();
+    WebSearchAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Adding an economic operator on Etsy')
+        && $prompt->contains('Sources of the research file')
+        && str_contains($prompt->agent->instructions(), 'find the evidence')
+        && str_contains($prompt->agent->instructions(), 'at most 8 web searches')
+        && collect($prompt->agent->tools())->sole()->maxSearches === 8);
+});
+
+it('skips the evidence search, without any call, at an effort level that allows no search', function () {
+    config()->set('blog.ai.effort.levels.low.searches.fact_search', 0);
+    app()->forgetInstance(BlogEffortLevels::class);
+    WebSearchAgent::fake()->preventStrayPrompts();
+
+    $result = app(FactSearchStep::class)->execute(Fixtures::context(['research' => Fixtures::research(), 'writing' => Fixtures::writingOutput()], effort: BlogEffortLevel::Low));
+
+    expect($result->output['skipped'])->toBeTrue()
+        ->and($result->usage->costMicrousd)->toBe(0);
+    WebSearchAgent::assertNeverPrompted();
+});
+
+it('fails the evidence search when it brings back no notes, or without a written article', function () {
+    WebSearchAgent::fake(['  '])->preventStrayPrompts();
+
+    expect(fn () => app(FactSearchStep::class)->execute(Fixtures::context(['research' => Fixtures::research(), 'writing' => Fixtures::writingOutput()])))
+        ->toThrow(BlogAiProviderException::class, 'no evidence notes')
+        ->and(fn () => app(FactSearchStep::class)->execute(Fixtures::context(['research' => Fixtures::research()])))
+        ->toThrow(BlogEditorialException::class);
+});
+
+it('gives the web evidence to the fact-checker, and nothing when the evidence search was skipped', function () {
+    FactCheckAgent::fake([
+        [...Fixtures::article(), 'removed_claims' => [], 'attention_points' => [], 'report_fr' => 'x'],
+        [...Fixtures::article(), 'removed_claims' => [], 'attention_points' => [], 'report_fr' => 'x'],
+    ])->preventStrayPrompts();
+
+    app(VerificationStep::class)->execute(Fixtures::context(['research' => Fixtures::research(), 'writing' => Fixtures::articleOutput(), 'fact_search' => ['notes' => 'Etsy field : CONTRADICTED, https://help.etsy.com/x']]));
+    app(VerificationStep::class)->execute(Fixtures::context(['research' => Fixtures::research(), 'writing' => Fixtures::articleOutput(), 'fact_search' => ['skipped' => true, 'notes' => '']]));
+
+    FactCheckAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Web evidence on the statements of the article')
+        && $prompt->contains('Etsy field : CONTRADICTED'));
+    FactCheckAgent::assertPrompted(fn ($prompt): bool => ! $prompt->contains('Web evidence on the statements of the article'));
 });
 
 it('fails the web search step when it brings back no notes, so the engine tries again', function () {
@@ -704,7 +761,7 @@ it('gives the reference of EU product rules to the writer and the fact-checker o
     WriterAgent::assertPrompted(fn ($prompt): bool => $withReference($prompt)
         && str_contains($prompt->agent->instructions(), 'Use only facts from the research file and from the reference of EU product rules.'));
     FactCheckAgent::assertPrompted(fn ($prompt): bool => $withReference($prompt)
-        && str_contains($prompt->agent->instructions(), 'Keep a statement only if the research file or the reference supports it.'));
+        && str_contains($prompt->agent->instructions(), 'Keep a statement only if the research file, the reference or an official source of the web evidence supports it.'));
     StyleAgent::assertPrompted(fn ($prompt): bool => ! str_contains($prompt->agent->instructions(), '# Reference of EU product rules'));
 });
 

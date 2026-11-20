@@ -388,7 +388,7 @@ function fakeWholeEditorialPipeline(): void
     config(['blog.ai.pipeline' => 'editorial']);
     fakePixabay();
     $french = str_replace(['The details Etsy asks for', 'Gather the details first'], ['Les informations demandées par Etsy', 'Les informations à rassembler'], Fixtures::body());
-    WebSearchAgent::fake(['Notes from the web scan.', Fixtures::notesCiting()])->preventStrayPrompts();
+    WebSearchAgent::fake(['Notes from the web scan.', Fixtures::notesCiting(), 'Etsy economic operator field : CONFIRMED, https://help.etsy.com/x'])->preventStrayPrompts();
     TopicAgent::fake([[...Fixtures::topic(), 'report_fr' => 'Sujet demandé par les vendeurs.']])->preventStrayPrompts();
     ResearchAgent::fake([[...Fixtures::research(), 'report_fr' => 'Deux sources officielles.']])->preventStrayPrompts();
     // Le texte d'exemple est plus court que les 1 000 mots par defaut : la redaction demande une correction.
@@ -411,7 +411,7 @@ it('runs the whole editorial pipeline through the worker and delivers a draft to
     $generation->refresh();
     $post = BlogPost::query()->sole();
     expect($generation->status)->toBe(BlogGenerationStatus::Completed)
-        ->and($generation->steps()->pluck('step')->all())->toBe(['topic_scan', 'topic', 'research_notes', 'research', 'writing', 'verification', 'style', 'translation_fr', 'version_check_fr', 'translation_es', 'version_check_es', 'images', 'assembly'])
+        ->and($generation->steps()->pluck('step')->all())->toBe(['topic_scan', 'topic', 'research_notes', 'research', 'writing', 'fact_search', 'verification', 'style', 'translation_fr', 'version_check_fr', 'translation_es', 'version_check_es', 'images', 'assembly'])
         ->and($generation->topic_title)->toBe('Adding an economic operator on Etsy')
         ->and($generation->blog_post_id)->toBe($post->id)
         ->and($post->generation_id)->toBe($generation->id)
