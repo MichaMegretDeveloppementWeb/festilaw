@@ -1,13 +1,13 @@
-{{-- Le retour aux modeles recommandes, a droite du titre « Modèles » (sous les listes sur telephone). Tant qu'un
-     modele differe de nos recommandations, un bouton les remet dans les listes, sans rien enregistrer ; sinon,
-     une mention grise dit qu'elles sont en place (demande de Micha du 19/11). $recommended : les modeles a
-     l'ecran sont ceux que nous recommandons. --}}
-@if ($recommended)
-    <span class="inline-flex items-center gap-1.5 text-[13px] text-muted" data-models-recommended>
-        <x-ui::icon name="check" class="h-4 w-4" /> {{ __('Modèles recommandés') }}
-    </span>
-@else
-    <x-ui::button variant="secondary" size="compact" wire:click="restoreRecommendedModels" :loading="true" target="restoreRecommendedModels" data-restore-recommended-models>
-        <x-ui::icon name="arrow-uturn-left" /> {{ __('Remettre les modèles recommandés') }}
-    </x-ui::button>
-@endif
+{{-- Le retour aux modeles recommandes, sous les listes des modeles, au meme endroit sur ordinateur et sur
+     telephone. Un simple lien « Réinitialiser », de la forme de « Reprendre l'adresse depuis le titre » de
+     l'editeur, et seulement tant qu'un modele differe de nos recommandations : il les remet dans les listes,
+     sans rien enregistrer (demandes de Micha du 19/11 et du 20/11). $recommended : les modeles a l'ecran sont
+     ceux que nous recommandons. --}}
+@unless ($recommended)
+    <p class="mt-4 text-[12px]">
+        <button type="button" wire:click="restoreRecommendedModels" data-restore-recommended-models
+            class="font-medium text-secondary underline underline-offset-2 hover:text-primary">
+            {{ __('Réinitialiser') }}
+        </button>
+    </p>
+@endunless

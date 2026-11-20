@@ -841,9 +841,11 @@ it('shows the rhythm of the automatic generation only once it is enabled, and ke
 it('puts the recommended models back in the lists without saving them, and follows our recommendations', function () {
     BlogAi::saveSettings(['models' => ['writing' => 'anthropic/claude-sonnet-5.5']]);
 
+    // Un simple lien « Réinitialiser » sous les listes, seulement quand un modele differe (Micha, 20/11).
     $settings = Livewire::test(GenerationSettings::class)
         ->assertSeeHtml('data-restore-recommended-models')
-        ->assertDontSeeHtml('data-models-recommended');
+        ->assertSeeText('Réinitialiser')
+        ->assertDontSeeText('Remettre les modèles recommandés');
 
     // La mention en haut de la section suffit : les listes des modeles ne repetent pas « (recommandé) » (Micha, 19/11).
     $modelLists = collect(array_keys(config('blog.ai.defaults.models')))
@@ -853,9 +855,9 @@ it('puts the recommended models back in the lists without saving them, and follo
 
     $settings->call('restoreRecommendedModels')
         ->assertSet('models.writing', config('blog.ai.defaults.models.writing'))
-        ->assertDispatched('ui-toast', type: 'info', title: 'Modèles recommandés remis. Enregistrez les réglages pour les garder.')
-        ->assertSeeHtml('data-models-recommended')
-        ->assertDontSeeHtml('data-restore-recommended-models');
+        ->assertDispatched('ui-toast', type: 'info', title: 'Modèles réinitialisés. Enregistrez les réglages pour les garder.')
+        ->assertDontSeeHtml('data-restore-recommended-models')
+        ->assertDontSeeText('Modèles recommandés');
 
     // Rien n'est garde avant « Enregistrer les reglages ».
     expect(app(BlogAiSettingsService::class)->current()->modelFor('writing'))->toBe('anthropic/claude-sonnet-5.5');
@@ -867,7 +869,7 @@ it('puts the recommended models back in the lists without saving them, and follo
         ->assertSeeHtml('data-restore-recommended-models')
         ->call('restoreRecommendedModels')
         ->assertSet('models.verification', 'anthropic/claude-haiku-5.5')
-        ->assertSeeHtml('data-models-recommended');
+        ->assertDontSeeHtml('data-restore-recommended-models');
 });
 
 it('offers only image models for the image step, and only text models for the others', function () {

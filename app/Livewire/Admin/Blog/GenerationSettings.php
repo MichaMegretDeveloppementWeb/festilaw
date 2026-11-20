@@ -209,7 +209,7 @@ class GenerationSettings extends Component
         $this->models = [...$this->models, ...$settings->recommendedModels()];
         $this->resetValidation('models.*');
 
-        $this->dispatch('ui-toast', title: __('Modèles recommandés remis. Enregistrez les réglages pour les garder.'), type: 'info', life: 6000);
+        $this->dispatch('ui-toast', title: __('Modèles réinitialisés. Enregistrez les réglages pour les garder.'), type: 'info', life: 6000);
     }
 
     public function render(

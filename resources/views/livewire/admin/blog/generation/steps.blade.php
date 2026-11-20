@@ -1,7 +1,8 @@
 {{-- Les etapes d'une generation, en frise, dans l'ordre du pipeline. $steps : liste de BlogGenerationStepView.
      Chaque etape se lit toujours de la meme facon : sa pastille d'etat sur le trait de la frise, son titre, a
-     droite sa duree et son cout, puis une ligne de donnees (modele, tokens, recherches web), puis son compte
-     rendu en une ou deux phrases. Une etape en echec se reconnait a sa pastille et a son nombre d'essais ; sa
+     droite sa duree et son cout (toujours dessous sur telephone, quelle que soit la longueur du titre, demande
+     de Micha du 20/11), puis une ligne de donnees (modele, tokens, recherches web), puis son compte rendu en une
+     ou deux phrases. Une etape en echec se reconnait a sa pastille et a son nombre d'essais ; sa
      cause technique ne s'affiche pas (journal du serveur). --}}
 @php
     $stepStatus = \App\Enums\Blog\Generation\BlogGenerationStepStatus::class;
@@ -33,7 +34,7 @@
             </span>
 
             <div class="min-w-0 flex-1 pt-0.5">
-                <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5">
+                <div class="flex flex-col gap-y-0.5 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-4">
                     <h3 @class(['text-[15px] leading-snug', 'font-semibold text-primary' => $step->status !== $stepStatus::Pending, 'font-medium text-muted' => $step->status === $stepStatus::Pending])>
                         {{ $step->label }}
                         @if ($step->attempt > 1)

@@ -14,12 +14,6 @@
     <form wire:submit="save" id="generation-settings-form" class="pb-10">
         <x-admin.section data-settings-section="models" :spaced="false" :title="__('Modèles')"
             :description="__('Le modèle d\'IA de chaque étape, pour tous les articles, lancés par vous ou automatiquement. Les deux prix sont ceux d\'un million de tokens lus et d\'un million de tokens écrits.')">
-            <x-slot:actions>
-                <div class="max-sm:hidden">
-                    @include('livewire.admin.blog.generation.recommended-models', ['recommended' => $modelsAreRecommended])
-                </div>
-            </x-slot:actions>
-
             <div class="grid grid-cols-1 gap-5 pt-6 md:grid-cols-2 xl:grid-cols-3">
                 @foreach ($modelLabels as $step => $label)
                     <x-ui::form-group :label="$label" :for="'ai-model-'.$step" :error="$errors->first('models.'.$step)" wire:key="ai-model-{{ $step }}">
@@ -28,10 +22,7 @@
                 @endforeach
             </div>
 
-            {{-- Sur telephone, le bouton serrerait le titre : il passe sous les listes. --}}
-            <div class="mt-5 sm:hidden">
-                @include('livewire.admin.blog.generation.recommended-models', ['recommended' => $modelsAreRecommended])
-            </div>
+            @include('livewire.admin.blog.generation.recommended-models', ['recommended' => $modelsAreRecommended])
         </x-admin.section>
 
         <x-admin.section data-settings-section="length" :title="__('Longueur, images et effort')"
