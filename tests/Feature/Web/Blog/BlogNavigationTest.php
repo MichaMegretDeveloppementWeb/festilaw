@@ -96,3 +96,27 @@ it('still serves the site, without the blog link nor the home block, when the bl
 
     Schema::rename('blog_posts_unavailable', 'blog_posts');
 });
+
+it('takes an unpublished post off the blog, its category and the home page, in the three languages', function () {
+    // Recette du CDC (§ 19) : publie, l'article parait partout ; depublie, il en disparait, dans chaque langue.
+    $post = BlogContent::published('guide', BlogContent::category('rules'));
+    $pages = [
+        ['/blog', '/blog/category/rules-en', '/', 'Guide en'],
+        ['/fr/blog', '/fr/blog/categorie/rules-fr', '/fr', 'Guide fr'],
+        ['/es/blog', '/es/blog/categoria/rules-es', '/es', 'Guide es'],
+    ];
+
+    foreach ($pages as [$hub, $category, $home, $title]) {
+        get($hub)->assertOk()->assertSee($title);
+        get($category)->assertOk()->assertSee($title);
+        get($home)->assertOk()->assertSee('class="latest-posts"', false);
+    }
+
+    app(UnpublishBlogPostAction::class)->execute($post->id);
+
+    foreach ($pages as [$hub, $category, $home, $title]) {
+        get($hub)->assertDontSee($title);
+        get($category)->assertNotFound();
+        get($home)->assertOk()->assertDontSee('class="latest-posts"', false);
+    }
+});

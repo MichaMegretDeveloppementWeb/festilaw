@@ -4,6 +4,7 @@ use App\Data\Blog\Generation\GenerationStepResult;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Models\BlogGeneration;
 use App\Services\Blog\Generation\BlogGenerationWorkerRegistry;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Foundation\MaintenanceMode;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -162,4 +163,14 @@ it('goes on by itself, one step at a time, when no newer worker shows up', funct
         ->and($pipeline->calls('topic'))->toBe(1)
         ->and($pipeline->calls('writing'))->toBe(1)
         ->and($pipeline->calls('assembly'))->toBe(1);
+});
+
+it('is run by the scheduler every minute, and the batch check every day at the set hour', function () {
+    // Recette du CDC (point P1) : sans ces deux inscriptions, rien ne genere sur l'hebergement.
+    $events = collect(app(Schedule::class)->events());
+    $worker = $events->first(fn ($event): bool => str_contains((string) $event->command, 'festilaw:blog-generation-worker'));
+    $batch = $events->first(fn ($event): bool => str_contains((string) $event->command, 'festilaw:blog-generation-schedule'));
+
+    expect($worker?->expression)->toBe('* * * * *')
+        ->and($batch?->expression)->toBe('0 6 * * *');
 });

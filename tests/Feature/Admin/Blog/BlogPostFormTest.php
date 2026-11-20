@@ -5,6 +5,7 @@ use App\Livewire\Admin\Blog\PostForm;
 use App\Models\BlogCategory;
 use App\Models\BlogGeneration;
 use App\Models\BlogGenerationStep;
+use App\Models\BlogImage;
 use App\Models\BlogPost;
 use App\Models\BlogPostRetiredSlug;
 use App\Models\User;
@@ -576,4 +577,14 @@ it('tells the browser the weight limit of an image, so a file too heavy is refus
     config(['blog.images.max_upload_kilobytes' => 2048]);
 
     expect(Livewire::test(PostForm::class)->html())->toContain('maxUploadBytes: 2097152');
+});
+
+it('warns in the form about an image of the article that is not described in every language', function () {
+    // Recette du CDC (§ 19) : une image sans description declenche une alerte, sans bloquer la publication.
+    $post = BlogContent::draft('pending');
+    BlogImage::factory()->create(['blog_post_id' => $post->id, 'alt' => ['en' => 'Only english']]);
+
+    Livewire::test(PostForm::class, ['post' => $post->id])
+        ->assertSee('Conseillé, sans être obligatoire')
+        ->assertSee('description d\'une image');
 });

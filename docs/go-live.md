@@ -447,3 +447,40 @@ Actions manuelles (hors `.env`) :
 - [ ] Déploiement : `composer install --no-dev`, `key:generate` (1re fois), `npm run build`, `migrate --force`, caches
 - [ ] Droits d'écriture OK sur `storage/` et `bootstrap/cache/`
 - [ ] Recette : signature réelle + paiement réel (webhook 200) + email reçu OK
+
+---
+
+## 10. Mise à jour de novembre 2026 (blog, génération d'articles, mesure d'audience)
+
+Cette mise à jour ajoute le blog en trois langues, la génération d'articles par IA (brouillons relus avant
+publication) et la mesure d'audience Falcon Analytics. Elle se déploie par `deploy.sh`, comme le reste.
+
+**Avant le déploiement**
+
+- [ ] La base est en **MySQL 8.0.16 ou plus, ou MariaDB 10.11 ou plus**, car Falcon Analytics refuse un
+      moteur plus ancien. `php artisan db:show` affiche la version.
+- [ ] L'accès GitHub du serveur ouvre les **deux dépôts privés** de la suite Falcon (`falcon-ui-kit` et
+      `falcon-analytics`). Sans cela, `composer install` échoue sur « Could not find package ».
+- [ ] La base est sauvegardée.
+- [ ] Le `.env` de production reçoit `OPENROUTER_API_KEY` (avec une limite mensuelle posée sur la clé chez
+      OpenRouter), `PIXABAY_API_KEY` et `ANALYTICS_ENABLED=true`. `BLOG_AI_PIPELINE` reste absent.
+
+**Ce que le déploiement change**
+
+- Des tables nouvelles seulement (`blog_*`, `falcon_analytics_*`). Aucune table existante n'est modifiée.
+- De nouvelles tâches planifiées, portées par la même ligne de cron : publication des articles programmés,
+  génération planifiée et son worker (chaque minute), ménage des images orphelines, maintenance de la mesure
+  (tous les quarts d'heure). `php artisan schedule:list` les montre.
+- La politique de confidentialité mentionne la mesure d'audience.
+
+**Après le déploiement**
+
+- [ ] `php artisan festilaw:check-production` (configuration du site).
+- [ ] `php artisan analytics:check` ne montre aucun point bloquant. Relancé une fois quelques pages ouvertes, sa
+      ligne « Proxy » dit s'il faut déclarer un proxy.
+- [ ] Le back-office affiche les sections Blog, Audience et Marketing, et « Tâches automatiques · il y a 1 min ».
+- [ ] La génération IA dit « Clé du fournisseur d'IA en place » dans son état du service.
+
+**À chaque déploiement suivant**, relancer `php artisan analytics:check`. La mesure échoue en silence, et un
+tableau de bord vide se lit « personne n'est venu » plutôt que « rien n'a été mesuré ».
+
