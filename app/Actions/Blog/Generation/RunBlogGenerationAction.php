@@ -10,20 +10,28 @@ use App\Data\Blog\Generation\ArticleLengthRules;
 use App\Data\Blog\Generation\BlogAiSettings;
 use App\Data\Blog\Generation\GenerationEffort;
 use App\Data\Blog\Generation\GenerationLength;
+use App\Data\Blog\Generation\GenerationModels;
 use App\Data\Blog\Generation\GenerationSafetyStop;
 use App\Data\Blog\Generation\GenerationStepContext;
+use App\Data\Blog\Generation\GenerationStepOutcome;
+use App\Enums\Blog\Generation\BlogAiFailureKind;
 use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogGenerationStepStatus;
+use App\Enums\Blog\Generation\BlogGenerationTrigger;
+use App\Enums\Blog\Generation\BlogGenerationType;
 use App\Models\BlogGeneration;
 use App\Models\BlogGenerationStep;
+use App\Repositories\Blog\BlogGenerationCancelRepository;
 use App\Repositories\Blog\BlogGenerationLockRepository;
+use App\Repositories\Blog\BlogGenerationRequeueRepository;
 use App\Repositories\Blog\BlogGenerationSpendRepository;
 use App\Services\Blog\Generation\BlogAiSettingsService;
 use App\Services\Blog\Generation\BlogGenerationAlertService;
 use App\Services\Blog\Generation\BlogGenerationCostForecaster;
 use App\Services\Blog\Generation\BlogGenerationStepRunner;
 use Carbon\CarbonImmutable;
+use Closure;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -47,11 +55,16 @@ use Throwable;
  */
 final readonly class RunBlogGenerationAction
 {
+    /** La marque, dans le `payload`, d'une generation automatique deja relancee une fois apres une panne passagere. */
+    public const AUTO_RELAUNCHED = 'auto_relaunched';
+
     public function __construct(
         private GenerationPipeline $pipeline,
         private BlogGenerationStepRunner $runner,
         private BlogGenerationLockRepository $locks,
         private BlogGenerationSpendRepository $spend,
+        private BlogGenerationCancelRepository $cancellations,
+        private BlogGenerationRequeueRepository $requeue,
         private ArticleLengthRules $length,
         private GenerationSafetyStop $safetyStop,
         private BlogGenerationCostForecaster $forecaster,
@@ -60,6 +73,7 @@ final readonly class RunBlogGenerationAction
         private NotifyFinishedBlogGenerationBatchAction $notifyBatch,
         private Application $app,
         private int $lockMarginSeconds,
+        private int $autoRelaunchMinutes = 60,
     ) {}
 
     /** @param  CarbonImmutable|null  $handOverAt  heure a partir de laquelle rendre la generation entre deux etapes (nul : jamais) */
@@ -71,9 +85,11 @@ final readonly class RunBlogGenerationAction
             return;
         }
 
-        $settings = $this->settings->current();
+        $settings = null;
 
         try {
+            // Les modeles sont ceux figes au lancement (controle du 20/11), comme l'arret de securite.
+            $settings = GenerationModels::applyTo($this->settings->current(), $generation->payload);
             $ceiling = $this->safetyStop->ceiling($this->announcedHigh($generation, $settings));
             $this->runSteps($generation, $owner, $settings, $ceiling, $handOverAt);
         } catch (Throwable $e) {
@@ -100,7 +116,7 @@ final readonly class RunBlogGenerationAction
                 continue;
             }
 
-            if ($this->cancelRequested($generation->id)) {
+            if ($this->cancellations->isRequested($generation->id)) {
                 $this->finish($generation, $owner, $settings, BlogGenerationStatus::Cancelled, BlogGenerationOutcomeReason::CancelledByUser, null);
 
                 return;
@@ -126,12 +142,24 @@ final readonly class RunBlogGenerationAction
                 $generation->id,
                 $step,
                 $index + 1,
-                fn (int $attempt): GenerationStepContext => $this->context($generation, $settings, $outputs, $attempt, $ceiling),
+                fn (int $attempt): GenerationStepContext => $this->context($generation, $settings, $outputs, $attempt, $ceiling, fn (): bool => $this->holdLock($generation->id, $owner, $step)),
                 fn (): bool => $this->holdLock($generation->id, $owner, $step),
                 fn (): bool => $this->budgetLeft($generation->id, $ceiling) > 0,
             );
 
             if ($outcome->lockLost) {
+                return;
+            }
+
+            if ($outcome->cancelled) {
+                $this->finish($generation, $owner, $settings, BlogGenerationStatus::Cancelled, BlogGenerationOutcomeReason::CancelledByUser, null);
+
+                return;
+            }
+
+            if ($outcome->retryInSeconds !== null) {
+                $this->locks->deferUntil($generation->id, $owner, CarbonImmutable::now()->addSeconds($outcome->retryInSeconds));
+
                 return;
             }
 
@@ -141,21 +169,23 @@ final readonly class RunBlogGenerationAction
                     'step' => $step->key(),
                     'ceiling_microusd' => $ceiling,
                     'left_microusd' => $this->budgetLeft($generation->id, $ceiling),
+                    'before_call' => $outcome->stoppedBeforeCall,
                 ]);
 
-                $this->finish($generation, $owner, $settings, BlogGenerationStatus::Abandoned, BlogGenerationOutcomeReason::SafetyStop, null);
+                $reason = $outcome->stoppedBeforeCall ? BlogGenerationOutcomeReason::SafetyStopBeforeCall : BlogGenerationOutcomeReason::SafetyStop;
+                $this->finish($generation, $owner, $settings, BlogGenerationStatus::Abandoned, $reason, null);
 
                 return;
             }
 
             if (! $outcome->succeeded()) {
+                if ($this->relaunchLater($generation, $owner, $outcome)) {
+                    return;
+                }
+
                 Log::error('Blog generation failed.', ['generation_id' => $generation->id, 'step' => $step->key(), 'exception' => $outcome->error]);
 
-                $this->finish(
-                    $generation, $owner, $settings, BlogGenerationStatus::Failed,
-                    $outcome->creditExhausted ? BlogGenerationOutcomeReason::CreditExhausted : BlogGenerationOutcomeReason::StepFailed,
-                    $outcome->error?->getMessage(),
-                );
+                $this->finish($generation, $owner, $settings, BlogGenerationStatus::Failed, $this->failureReason($outcome), $outcome->error?->getMessage());
 
                 return;
             }
@@ -173,8 +203,45 @@ final readonly class RunBlogGenerationAction
         $this->finish($generation, $owner, $settings, BlogGenerationStatus::Completed, null, null);
     }
 
-    /** @param  array<string, array<string, mixed>>  $outputs */
-    private function context(BlogGeneration $generation, BlogAiSettings $settings, array $outputs, int $attempt, int $ceiling): GenerationStepContext
+    /** La raison affichee d'un echec, d'apres la sorte de la panne du fournisseur (controle du 20/11). */
+    private function failureReason(GenerationStepOutcome $outcome): BlogGenerationOutcomeReason
+    {
+        return match ($outcome->failureKind()) {
+            BlogAiFailureKind::Credit => BlogGenerationOutcomeReason::CreditExhausted,
+            BlogAiFailureKind::KeyRejected => BlogGenerationOutcomeReason::AiKeyRejected,
+            BlogAiFailureKind::ModelUnavailable => BlogGenerationOutcomeReason::AiModelUnavailable,
+            default => $outcome->creditExhausted ? BlogGenerationOutcomeReason::CreditExhausted : BlogGenerationOutcomeReason::StepFailed,
+        };
+    }
+
+    /**
+     * Une generation automatique tombee sur une panne passagere du fournisseur, tous essais faits, est relancee
+     * une seule fois, une heure plus tard (controle du 20/11) : une panne de quelques minutes a l'heure du lot ne
+     * coute plus l'article de la periode. Ses etapes terminees sont gardees. Vrai : elle est remise en file.
+     */
+    private function relaunchLater(BlogGeneration $generation, string $owner, GenerationStepOutcome $outcome): bool
+    {
+        $payload = $generation->payload ?? [];
+
+        if ($outcome->failureKind() !== BlogAiFailureKind::Transient
+            || $generation->trigger !== BlogGenerationTrigger::Scheduled
+            || $generation->type !== BlogGenerationType::Article
+            || ($payload[self::AUTO_RELAUNCHED] ?? false) === true) {
+            return false;
+        }
+
+        Log::warning('Blog generation failed on a passing provider outage; it is relaunched once, later.', ['generation_id' => $generation->id, 'exception' => $outcome->error]);
+
+        $this->requeue->requeueLater($generation->id, $owner, CarbonImmutable::now()->addMinutes($this->autoRelaunchMinutes), [...$payload, self::AUTO_RELAUNCHED => true]);
+
+        return true;
+    }
+
+    /**
+     * @param  array<string, array<string, mixed>>  $outputs
+     * @param  Closure(): bool  $keepLock
+     */
+    private function context(BlogGeneration $generation, BlogAiSettings $settings, array $outputs, int $attempt, int $ceiling, Closure $keepLock): GenerationStepContext
     {
         return new GenerationStepContext(
             generationId: $generation->id,
@@ -188,6 +255,7 @@ final readonly class RunBlogGenerationAction
             budgetLeftMicrousd: $this->budgetLeft($generation->id, $ceiling),
             length: $this->length->for(GenerationLength::wordsFromPayload($generation->payload) ?? $settings->articleWords),
             effort: GenerationEffort::forRun($generation->payload),
+            keepLock: $keepLock,
         );
     }
 
@@ -222,15 +290,11 @@ final readonly class RunBlogGenerationAction
         );
     }
 
-    private function cancelRequested(int $generationId): bool
-    {
-        return BlogGeneration::query()->whereKey($generationId)->whereNotNull('cancel_requested_at')->exists();
-    }
-
+    /** @param  BlogAiSettings|null  $settings  nuls quand leur lecture a echoue : les avertissements d'argent attendent la generation suivante */
     private function finish(
         BlogGeneration $generation,
         string $owner,
-        BlogAiSettings $settings,
+        ?BlogAiSettings $settings,
         BlogGenerationStatus $status,
         ?BlogGenerationOutcomeReason $reason,
         ?string $error,
@@ -252,7 +316,7 @@ final readonly class RunBlogGenerationAction
             return;
         }
 
-        if ($reason === BlogGenerationOutcomeReason::CreditExhausted) {
+        if ($settings !== null && $reason === BlogGenerationOutcomeReason::CreditExhausted) {
             $this->alerts->creditExhausted($settings);
         }
 
@@ -260,7 +324,10 @@ final readonly class RunBlogGenerationAction
             $this->alerts->afterArticleWithoutDraft();
         }
 
-        $this->alerts->monthlySpend($settings);
+        if ($settings !== null) {
+            $this->alerts->monthlySpend($settings);
+        }
+
         $this->notifyBatch->execute($generation->batch_uuid);
     }
 }

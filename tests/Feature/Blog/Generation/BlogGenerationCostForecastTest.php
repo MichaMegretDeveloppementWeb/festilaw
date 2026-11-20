@@ -30,7 +30,7 @@ function trialModels(): array
         'writing' => 'deepseek/deepseek-v4.1-flash',
         'verification' => 'anthropic/claude-haiku-5.5',
         'translation' => 'deepseek/deepseek-v4.1-flash',
-        'image' => 'openai/gpt-5-image-mini',
+        'image' => 'openai/gpt-5.4-image-2',
     ];
 }
 
@@ -76,9 +76,9 @@ it('costs more for a longer article and with generated images, and less than a c
         // appel en bas et jusqu'a quatre par image en haut, moins d'un centime pour trois images.
         ->and($stock->lowMicrousd)->toBeGreaterThan($none->lowMicrousd)
         ->and($stock->highMicrousd - $none->highMicrousd)->toBeLessThan(10_000)
-        // GPT-5 Image Mini, prix mesures le 18/11 : l'image principale a 0,0127 $ en bas, trois images a 0,0498 $ en haut.
-        ->and($generated->lowMicrousd - $short->lowMicrousd)->toBe(12_700)
-        ->and($generated->highMicrousd - $short->highMicrousd)->toBe(149_400);
+        // GPT-5.4 Image 2, prix mesures le 19/11 : l'image principale a 0,0053 $ en bas, trois images a 0,0109 $ en haut.
+        ->and($generated->lowMicrousd - $short->lowMicrousd)->toBe(5_300)
+        ->and($generated->highMicrousd - $short->highMicrousd)->toBe(32_700);
 });
 
 it('follows the price of the models chosen, and leaves the web scan out when the topic is imposed', function () {

@@ -22,6 +22,12 @@ final readonly class BlogAgentReply
         public bool $cutOff = false,
     ) {}
 
+    /** La meme reponse, avec en plus ce qu'un appel precedent de la meme demande a coute (reponse coupee reprise). */
+    public function withEarlierUsage(GenerationUsage $earlier): self
+    {
+        return new self($this->response, $earlier->plus($this->usage), $this->cutOff);
+    }
+
     /** @return array<string, mixed> */
     public function structured(): array
     {

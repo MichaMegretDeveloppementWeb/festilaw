@@ -244,8 +244,7 @@ return [
          | refuse le reglage de resolution que le SDK lui envoie.
          |
          | `price_microusd` : le prix d'une image paysage, bas et haut, tel qu'on l'a mesure. Il sert a
-         | l'estimation. GPT-5 Image Mini a coute 0,0127 $ ou 0,0498 $ pour la meme taille (banc du 18/11) ;
-         | GPT-5.4 Image 2 de 0,0053 a 0,0109 $ et Nano Banana 2.1 de 0,0604 a 0,0640 $ sur les memes prompts
+         | l'estimation. GPT-5.4 Image 2 a coute de 0,0053 a 0,0109 $ et Nano Banana 2.1 de 0,0604 a 0,0640 $ sur les memes prompts
          | (banc d'images du 19/11, `festilaw:blog-bench-images`).
          | `reserve_microusd` : ce qu'il doit rester avant l'arret de securite pour demander une image. Pour
          | Nano Banana 2, mesure du 17/11 (6,7 a 10 centimes) doublee. Pour Nano Banana 2.1, sa mesure du 19/11
@@ -254,7 +253,6 @@ return [
          | haut.
          */
         'image_models' => [
-            'openai/gpt-5-image-mini' => ['name' => 'GPT-5 Image Mini', 'provider' => 'OpenAI', 'price_microusd' => [12_700, 49_800], 'reserve_microusd' => 50_000],
             'google/gemini-3.1-flash-image' => ['name' => 'Nano Banana 2', 'provider' => 'Google', 'reserve_microusd' => 120_000],
             'google/gemini-nano-banana-2.1' => ['name' => 'Nano Banana 2.1', 'provider' => 'Google', 'price_microusd' => [60_400, 64_000], 'reserve_microusd' => 80_000],
             'google/gemini-3-pro-image' => ['name' => 'Nano Banana Pro', 'provider' => 'Google', 'reserve_microusd' => 240_000],
@@ -422,11 +420,18 @@ return [
          | Etapes. Nombre d'essais avant l'echec de la generation, attente entre deux essais, et marge
          | ajoutee au delai de l'etape pour la duree du verrou : passe ce delai, la generation est tenue
          | pour abandonnee par son worker et reprise par un autre.
+         | Apres une panne passagere du fournisseur (429, 5xx, coupure), l'attente est plus longue
+         | (`transient_wait_seconds`, avant le 2e puis le 3e essai) et le worker rend la generation au lieu de
+         | dormir. Une generation automatique encore en echec pour cette raison est relancee une seule fois,
+         | `auto_relaunch_after_minutes` plus tard (controle du 20/11) : une panne de quelques minutes a l'heure
+         | du lot ne coute plus l'article de la periode.
          */
         'step' => [
             'max_attempts' => 3,
             'retry_wait_seconds' => 5,
             'lock_margin_seconds' => 60,
+            'transient_wait_seconds' => [120, 600],
+            'auto_relaunch_after_minutes' => 60,
         ],
 
         /*
@@ -494,7 +499,7 @@ return [
                 'topic' => 'anthropic/claude-haiku-5.5',
                 'research' => 'openai/gpt-6-luna',
             ],
-            'image_model' => 'openai/gpt-5-image-mini',
+            'image_model' => 'openai/gpt-5.4-image-2',
             'topics' => [
                 'responsible-person' => ['kind' => 'evergreen', 'topic' => 'Who can be the EU responsible person for a seller established outside the EU'],
                 'amazon-listing' => ['kind' => 'evergreen', 'topic' => 'The product safety information an Amazon listing must show to EU buyers'],

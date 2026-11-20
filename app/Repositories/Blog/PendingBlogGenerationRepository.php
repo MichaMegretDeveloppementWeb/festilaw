@@ -18,7 +18,8 @@ final readonly class PendingBlogGenerationRepository
 {
     /**
      * La plus ancienne generation a traiter : en attente, ou en cours avec un verrou expire (son worker
-     * est mort). Rien tant qu'une autre generation tourne sous un verrou valable : une seule a la fois.
+     * est mort). Rien tant qu'une autre generation tourne sous un verrou valable : une seule a la fois. Une
+     * generation qui attend un nouvel essai (`not_before`) laisse passer les suivantes.
      */
     public function nextId(CarbonImmutable $now): ?int
     {
@@ -27,6 +28,7 @@ final readonly class PendingBlogGenerationRepository
             ->where(static function (Builder $query) use ($now): void {
                 $query->whereNull('locked_until')->orWhere('locked_until', '<=', $now);
             })
+            ->where(static fn (Builder $query) => BlogGenerationLockRepository::dueBy($query, $now))
             ->whereNotExists(static function (QueryBuilder $query) use ($now): void {
                 $query->selectRaw('1')
                     ->from('blog_generations as live')

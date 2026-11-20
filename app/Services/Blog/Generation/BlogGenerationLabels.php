@@ -61,6 +61,7 @@ final readonly class BlogGenerationLabels
             $reason === BlogGenerationOutcomeReason::StepFailed && $step !== null => __('Échec à l\'étape « :step »', ['step' => $step]),
             $reason === BlogGenerationOutcomeReason::StepFailed => __('La génération a échoué'),
             $reason === BlogGenerationOutcomeReason::CreditExhausted && $step !== null => __('Crédit épuisé chez le fournisseur d\'IA, à l\'étape « :step »', ['step' => $step]),
+            $reason === BlogGenerationOutcomeReason::AiModelUnavailable && $step !== null => __('Modèle retiré par le fournisseur d\'IA, à l\'étape « :step »', ['step' => $step]),
             default => $reason->label(),
         };
     }
@@ -74,6 +75,9 @@ final readonly class BlogGenerationLabels
             BlogGenerationOutcomeReason::CreditExhausted => __('Aucun article n\'a été créé. Rechargez le crédit du compte chez le fournisseur d\'IA, puis relancez la génération. Elle reprendra à l\'étape qui a échoué. Si l\'échec se répète, contactez l\'assistance technique.'),
             BlogGenerationOutcomeReason::ForecastAboveArticleCap => __('Aucun article n\'a été créé. Avec les réglages en vigueur, un article peut coûter plus que le plafond par article. Baissez la longueur, choisissez des modèles moins chers ou relevez le plafond dans les réglages.'),
             BlogGenerationOutcomeReason::SafetyStop => __('Aucun article n\'a été créé. La génération s\'est arrêtée par sécurité, car son coût allait dépasser le double du coût annoncé au lancement. Vous pouvez en lancer une autre. Si l\'arrêt se répète, contactez l\'assistance technique.'),
+            BlogGenerationOutcomeReason::SafetyStopBeforeCall => __('Aucun article n\'a été créé. La génération s\'est arrêtée par sécurité avant un appel à l\'IA, car cet appel aurait pu dépasser le double du coût annoncé au lancement. Vous pouvez en lancer une autre, avec un niveau d\'effort plus bas si l\'arrêt se répète.'),
+            BlogGenerationOutcomeReason::AiKeyRejected => __('Aucun article n\'a été créé. Le fournisseur d\'IA refuse la clé du site. L\'assistance technique doit la remplacer, puis vous pourrez relancer la génération.'),
+            BlogGenerationOutcomeReason::AiModelUnavailable => __('Aucun article n\'a été créé. Le fournisseur d\'IA ne propose plus le modèle choisi pour cette étape. Choisissez-en un autre dans les réglages, ou cliquez sur « Réinitialiser » sous les listes, enregistrez, puis relancez la génération. Elle reprendra à l\'étape qui a échoué.'),
             BlogGenerationOutcomeReason::ArticleSpendCapReached => __('Aucun article n\'a été créé. La génération s\'est arrêtée avant un appel à l\'IA qui risquait de dépasser le plafond par article fixé dans les réglages. Vérifiez les modèles choisis dans les réglages avant d\'en lancer une autre.'),
             default => __('Aucun article n\'a été créé.'),
         };

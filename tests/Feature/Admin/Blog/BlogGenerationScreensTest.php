@@ -497,7 +497,7 @@ it('queues a generation with its topic, its instructions and its own images, the
         ->and($generation->instructions)->toBe('Short, for beginners.')
         ->and($generation->requested_by)->toBe($user->id)
         // Les images sont celles de cette generation, pas celles des reglages ; la longueur, celle des reglages.
-        ->and($generation->payload)->toBe(['images' => ['mode' => 'generated', 'max' => 2], 'effort' => 'medium', 'length' => ['words' => 1_000]])
+        ->and($generation->payload)->toBe(['images' => ['mode' => 'generated', 'max' => 2], 'effort' => 'medium', 'models' => config('blog.ai.defaults.models'), 'length' => ['words' => 1_000]])
         ->and(session('toast-success'))->toBe('Génération lancée.');
 });
 

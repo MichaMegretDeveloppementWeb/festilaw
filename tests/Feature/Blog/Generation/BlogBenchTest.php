@@ -300,7 +300,7 @@ function seedImageBench(): void
 {
     Storage::fake('local');
     $topic = ['key' => 'etsy', 'kind' => 'news', 'topic' => 'Adding an economic operator on Etsy'];
-    Storage::disk('local')->put('blog-bench/test/articles/etsy--current.json', json_encode(['topic' => $topic, 'image' => ['generated' => true, 'prompt' => 'A parcel on a wooden workbench.', 'model' => 'openai/gpt-5-image-mini']]));
+    Storage::disk('local')->put('blog-bench/test/articles/etsy--current.json', json_encode(['topic' => $topic, 'image' => ['generated' => true, 'prompt' => 'A parcel on a wooden workbench.', 'model' => 'openai/gpt-5.4-image-2']]));
     Storage::disk('local')->put('blog-bench/test/articles/etsy--haiku.json', json_encode(['topic' => $topic, 'image' => ['generated' => false, 'reason' => 'shared']]));
 }
 
@@ -336,7 +336,7 @@ it('gives the cost of an image bench without any call, and refuses a topic, a mo
     seedImageBench();
     Image::fake()->preventStrayImages();
 
-    $this->artisan('festilaw:blog-bench-images', ['run' => 'test', '--model' => ['openai/gpt-5-image-mini'], '--dry' => true])
+    $this->artisan('festilaw:blog-bench-images', ['run' => 'test', '--model' => ['openai/gpt-5.4-image-2'], '--dry' => true])
         ->expectsOutputToContain('1 sujet(s), 1 modele(s)')
         ->assertSuccessful();
     $this->artisan('festilaw:blog-bench-images', ['run' => 'test', '--model' => ['openai/gpt-5.4-image-2'], '--topic' => ['nope']])

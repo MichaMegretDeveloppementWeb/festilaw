@@ -8,17 +8,24 @@ use App\Ai\Agents\Blog\BlogAgent;
 use App\Ai\Agents\Blog\WebSearchAgent;
 use App\Data\Blog\Generation\BlogAgentReply;
 use App\Data\Blog\Generation\GenerationUsage;
+use App\Enums\Blog\Generation\BlogAiFailureKind;
 use App\Enums\Blog\Generation\BlogEffortLevel;
 use App\Exceptions\Blog\BlogAiProviderException;
 use App\Exceptions\Blog\BlogEditorialException;
+use App\Repositories\Blog\BlogGenerationCancelRepository;
 use App\Services\Blog\Generation\BlogAiCostEstimator;
 use App\Services\Blog\Generation\BlogAiModelCatalog;
 use App\Services\Blog\Generation\BlogEffortLevels;
 use App\Services\Blog\Generation\OpenRouterUsageReader;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Log;
 use Laravel\Ai\Contracts\HasStructuredOutput;
+use Laravel\Ai\Exceptions\AiException;
 use Laravel\Ai\Exceptions\InsufficientCreditsException;
+use Laravel\Ai\Exceptions\ProviderConnectionException;
+use Laravel\Ai\Exceptions\ProviderOverloadedException;
+use Laravel\Ai\Exceptions\RateLimitedException;
 use Laravel\Ai\Files\File;
 use Laravel\Ai\Gateway\StepResponse;
 use Laravel\Ai\Responses\Data\FinishReason;
@@ -50,6 +57,7 @@ final readonly class BlogAgentCaller
         private string $provider,
         private BlogAiModelCatalog $models,
         private BlogEffortLevels $effort,
+        private BlogGenerationCancelRepository $cancellations,
         private int $defaultMarginPercent = 150,
     ) {}
 
@@ -62,6 +70,43 @@ final readonly class BlogAgentCaller
      * @throws BlogAiProviderException
      */
     public function call(string $step, BlogAgent $agent, string $prompt, string $model, int $timeoutSeconds, ?int $generationId = null, ?int $budgetLeftMicrousd = null, BlogEffortLevel $effort = BlogEffortLevel::Medium, array $attachments = []): BlogAgentReply
+    {
+        if ($generationId !== null && $this->cancellations->isRequested($generationId)) {
+            throw BlogAiProviderException::cancelled($step);
+        }
+
+        try {
+            return $this->send($step, $agent, $prompt, $model, $timeoutSeconds, $generationId, $budgetLeftMicrousd, $effort, $attachments);
+        } catch (BlogAiProviderException $e) {
+            $lower = $effort->lower();
+
+            if ($e->kind !== BlogAiFailureKind::CutOff || $lower === null) {
+                throw $e;
+            }
+
+            // Une reponse coupee a sa limite le serait encore a l'identique : la reprise demande moins de
+            // reflexion, qui prend sa part des memes jetons (controle du 20/11). Une seule reprise.
+            Log::warning('Blog AI answer cut off at its limit, asked again with less reasoning.', ['generation_id' => $generationId, 'step' => $step, 'model' => $model, 'effort' => $lower->value]);
+            $spent = $e->usage ?? GenerationUsage::none();
+            $budgetLeft = $budgetLeftMicrousd === null ? null : $budgetLeftMicrousd - $spent->costMicrousd;
+
+            try {
+                return $this->send($step, $agent, $prompt, $model, $timeoutSeconds, $generationId, $budgetLeft, $lower, $attachments)->withEarlierUsage($spent);
+            } catch (BlogAiProviderException $retry) {
+                throw $retry->withEarlierUsage($spent);
+            }
+        }
+    }
+
+    /**
+     * Un appel, et la sorte de son echec : la cle refusee, un modele retire, un refus du fournisseur et une
+     * reponse coupee ne se reessaient pas comme une panne passagere (controle du 20/11).
+     *
+     * @param  list<File>  $attachments
+     *
+     * @throws BlogAiProviderException
+     */
+    private function send(string $step, BlogAgent $agent, string $prompt, string $model, int $timeoutSeconds, ?int $generationId, ?int $budgetLeftMicrousd, BlogEffortLevel $effort, array $attachments): BlogAgentReply
     {
         if ($budgetLeftMicrousd !== null) {
             $reserved = $this->reserve($agent, $prompt, $model, count($attachments));
@@ -78,14 +123,13 @@ final readonly class BlogAgentCaller
             $response = $agent->observeStepsWith($recorder)->prompt($prompt, $attachments, provider: $this->provider, model: $model, timeout: $timeoutSeconds);
         } catch (InsufficientCreditsException $e) {
             throw BlogAiProviderException::creditExhausted($e, $this->consumption($step, $agent, $generationId, $recorder, $model));
+        } catch (RateLimitedException|ProviderOverloadedException|ProviderConnectionException|ConnectionException $e) {
+            throw BlogAiProviderException::callFailed($step, $e, $this->consumption($step, $agent, $generationId, $recorder, $model), BlogAiFailureKind::Transient);
         } catch (RequestException $e) {
-            $usage = $this->consumption($step, $agent, $generationId, $recorder, $model);
-
-            if ($e->response->status() === 403) {
-                throw BlogAiProviderException::creditExhausted($e, $usage);
-            }
-
-            throw BlogAiProviderException::callFailed($step, $e, $usage);
+            throw $this->classified($step, $model, $e, $this->consumption($step, $agent, $generationId, $recorder, $model));
+        } catch (AiException $e) {
+            // Une erreur dans une reponse 200 (« OpenRouter Error: ... ») : le fournisseur a flanche en route.
+            throw BlogAiProviderException::callFailed($step, $e, $this->consumption($step, $agent, $generationId, $recorder, $model), BlogAiFailureKind::Transient);
         } catch (Throwable $e) {
             throw BlogAiProviderException::callFailed($step, $e, $this->consumption($step, $agent, $generationId, $recorder, $model));
         }
@@ -96,7 +140,7 @@ final readonly class BlogAgentCaller
 
         if ($agent instanceof HasStructuredOutput) {
             if ($cutOff) {
-                throw BlogAiProviderException::callFailed($step, BlogEditorialException::cutOff($step, $agent->maxOutputTokens()), $usage);
+                throw BlogAiProviderException::callFailed($step, BlogEditorialException::cutOff($step, $agent->maxOutputTokens()), $usage, BlogAiFailureKind::CutOff);
             }
 
             if ((new BlogAgentReply($response, $usage))->structured() === []) {
@@ -105,6 +149,27 @@ final readonly class BlogAgentCaller
         }
 
         return new BlogAgentReply($response, $usage, $cutOff);
+    }
+
+    /**
+     * La sorte d'un refus HTTP que le SDK n'a pas deja classe. OpenRouter renvoie 401 pour une cle refusee, 400
+     * ou 404 pour un modele inconnu ou que plus aucun fournisseur ne sert avec les parametres demandes, 403
+     * pour une limite de cle atteinte comme pour un texte refuse par sa moderation.
+     */
+    private function classified(string $step, string $model, RequestException $e, GenerationUsage $usage): BlogAiProviderException
+    {
+        $status = $e->response->status();
+        $message = $e->response->json('error.message');
+        $message = is_string($message) ? $message : '';
+
+        return match (true) {
+            $status === 401 => BlogAiProviderException::keyRejected($step, $e, $usage),
+            $status === 403 && preg_match('/limit|credit/i', $message) === 1 => BlogAiProviderException::creditExhausted($e, $usage),
+            $status === 403 => BlogAiProviderException::callFailed($step, $e, $usage, BlogAiFailureKind::Refused),
+            in_array($status, [400, 404], true) && preg_match('/model|endpoint/i', $message) === 1 => BlogAiProviderException::modelUnavailable($step, $model, $e, $usage),
+            $status === 408 || $status === 429 || $status >= 500 => BlogAiProviderException::callFailed($step, $e, $usage, BlogAiFailureKind::Transient),
+            default => BlogAiProviderException::callFailed($step, $e, $usage),
+        };
     }
 
     /**

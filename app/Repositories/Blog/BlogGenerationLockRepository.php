@@ -25,6 +25,7 @@ final readonly class BlogGenerationLockRepository
             ->where(static function (Builder $query) use ($now): void {
                 $query->whereNull('locked_until')->orWhere('locked_until', '<=', $now);
             })
+            ->where(static fn (Builder $query) => self::dueBy($query, $now))
             ->update([
                 'status' => BlogGenerationStatus::Running->value,
                 'locked_until' => $until,
@@ -68,5 +69,28 @@ final readonly class BlogGenerationLockRepository
             ->whereKey($generationId)
             ->where('lock_owner', $owner)
             ->update(['locked_until' => null, 'lock_owner' => null]);
+    }
+
+    /**
+     * Rend la generation pour un nouvel essai apres une panne passagere du fournisseur, pas avant `$notBefore`
+     * (controle du 20/11). Le worker ne dort pas en tenant le verrou : les autres generations passent en attendant.
+     */
+    public function deferUntil(int $generationId, string $owner, CarbonImmutable $notBefore): void
+    {
+        BlogGeneration::query()
+            ->whereKey($generationId)
+            ->where('lock_owner', $owner)
+            ->update(['locked_until' => null, 'lock_owner' => null, 'not_before' => $notBefore]);
+    }
+
+    /**
+     * Une generation peut etre prise : elle n'attend pas un nouvel essai, ou son attente est finie, ou elle a
+     * ete arretee a la main (l'arret s'enregistre tout de suite, sans attendre la fin de l'attente).
+     *
+     * @param  Builder<BlogGeneration>  $query
+     */
+    public static function dueBy(Builder $query, CarbonImmutable $now): void
+    {
+        $query->whereNull('not_before')->orWhere('not_before', '<=', $now)->orWhereNotNull('cancel_requested_at');
     }
 }

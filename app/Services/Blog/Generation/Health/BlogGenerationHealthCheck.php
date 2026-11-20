@@ -181,7 +181,7 @@ final readonly class BlogGenerationHealthCheck
         $problems = [];
         $soon = $now->addDays($this->thresholds['expiry_warning_days'])->toDateString();
         $images = $this->openRouter->listedModels(imageOutput: true);
-        $chosenImage = $settings->modelFor(BlogAiModelCatalog::IMAGE_SETTING);
+        $chosenImage = (string) $settings->modelFor(BlogAiModelCatalog::IMAGE_SETTING);
 
         if ($chosenImage !== '' && ! array_key_exists($chosenImage, $images)) {
             $problems[] = "Image model [{$chosenImage}] chosen for the images is no longer offered by OpenRouter.";

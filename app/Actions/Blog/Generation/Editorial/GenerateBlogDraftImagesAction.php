@@ -46,6 +46,15 @@ final readonly class GenerateBlogDraftImagesAction implements GenerationStep
 
     private const CONTENT_MIN_HEIGHT = 450;
 
+    /** Pourquoi une image manque (controle du 20/11), dans la sortie de l'etape et dans son resume. */
+    private const CAUSE_NONE_FIT = 'none_fit';
+
+    private const CAUSE_CHECK = 'check_failed';
+
+    private const CAUSE_BANK = 'bank_unavailable';
+
+    private const CAUSE_FAILED = 'failed';
+
     public function __construct(
         private StockImageProvider $stock,
         private BlogAiImageGenerator $generator,
@@ -91,9 +100,13 @@ final readonly class GenerateBlogDraftImagesAction implements GenerationStep
         $usage = new GenerationUsage(model: $model);
         $images = [];
         $warnings = [];
+        $causes = [];
         $usedStockIds = [];
 
         foreach ($requests as $number => $request) {
+            // Une image peut prendre plusieurs minutes (recherches, telechargements, controles) : le verrou est
+            // prolonge entre deux images, pour qu'aucun autre worker ne reprenne l'etape et ne la paie deux fois.
+            $context->keepLock();
             $left = $context->budgetLeftAfter($usage);
 
             if ($model !== null && $left !== null && $this->models->imageReserveMicrousd($model) > $left) {
@@ -132,6 +145,7 @@ final readonly class GenerateBlogDraftImagesAction implements GenerationStep
 
             if ($stored === null || $stored['image'] === null) {
                 $warnings[] = $number === 0 ? 'no main image' : "no image {$number}";
+                $causes[$number] = $stored['cause'] ?? self::CAUSE_FAILED;
 
                 continue;
             }
@@ -140,9 +154,9 @@ final readonly class GenerateBlogDraftImagesAction implements GenerationStep
         }
 
         return GenerationStepResult::continue(
-            ['mode' => $options->mode->value, 'images' => $images, 'warnings' => $warnings],
+            ['mode' => $options->mode->value, 'images' => $images, 'warnings' => $warnings, 'causes' => $causes],
             $usage,
-            $this->summary($options->mode, count($images), in_array('no main image', $warnings, true)),
+            $this->summary($options->mode, count($images), in_array('no main image', $warnings, true), $causes[0] ?? null),
         );
     }
 
@@ -153,10 +167,15 @@ final readonly class GenerateBlogDraftImagesAction implements GenerationStep
      * dans tous les cas. Une photo qui n'a pas pu etre controlee n'est pas prise : une photo fausse vaut moins
      * qu'aucune photo.
      *
+     * Sans image, la cause est rendue (controle du 20/11) : la banque n'a pas repondu, le controle n'a pas pu se
+     * faire, ou aucune photo ne convenait. Le resume de l'etape le dit, et une banque en panne est journalisee en
+     * erreur, donc reprise par le rapport d'erreurs du matin. Le cout des controles deja faits est rendu meme
+     * quand une recherche ou un telechargement echoue ensuite.
+     *
      * @param  array<string, mixed>  $request
      * @param  GenerationUsage  $spent  ce que l'etape a deja depense, pour l'arret de securite
      * @param  list<string>  $usedStockIds
-     * @return array{image: BlogImage|null, usage: GenerationUsage}
+     * @return array{image: BlogImage|null, usage: GenerationUsage, cause?: string}
      *
      * @throws BlogAiProviderException quand le credit est epuise, avec le cout des controles deja faits
      */
@@ -169,15 +188,32 @@ final readonly class GenerateBlogDraftImagesAction implements GenerationStep
             $number === 0 ? implode(' ', array_slice($context->output('topic')['keywords'] ?? [], 0, 2)) : '',
         ])));
         $checks = GenerationUsage::none();
+        $cause = self::CAUSE_NONE_FIT;
 
         foreach ($queries as $query) {
-            $candidates = collect($this->stock->search($query, $minWidth, $minHeight))
+            try {
+                $found = $this->stock->search($query, $minWidth, $minHeight);
+            } catch (BlogEditorialException $e) {
+                Log::error('Blog generation stock photos could not be searched.', ['generation' => $context->generationId, 'image' => $number, 'exception' => $e]);
+
+                return ['image' => null, 'usage' => $checks, 'cause' => self::CAUSE_BANK];
+            }
+
+            $candidates = collect($found)
                 ->reject(fn ($image): bool => in_array($image->id, $usedStockIds, true))
                 ->take($this->photoChecks);
 
             foreach ($candidates as $candidate) {
                 $usedStockIds[] = $candidate->id;
-                $path = $this->stock->download($candidate);
+
+                try {
+                    $path = $this->stock->download($candidate);
+                } catch (BlogEditorialException $e) {
+                    Log::warning('Blog generation stock photo could not be downloaded.', ['generation' => $context->generationId, 'image' => $number, 'photo' => $candidate->pageUrl, 'exception' => $e]);
+                    $cause = self::CAUSE_BANK;
+
+                    continue;
+                }
 
                 try {
                     $verdict = $this->checker->check($path, $request, $context, $spent->plus($checks));
@@ -209,14 +245,14 @@ final readonly class GenerateBlogDraftImagesAction implements GenerationStep
 
                     Log::warning('Blog generation stock photo could not be checked, so it is not used.', ['generation' => $context->generationId, 'image' => $number, 'exception' => $e]);
 
-                    return ['image' => null, 'usage' => $checks->plus($e->usage ?? GenerationUsage::none())];
+                    return ['image' => null, 'usage' => $checks->plus($e->usage ?? GenerationUsage::none()), 'cause' => self::CAUSE_CHECK];
                 } finally {
                     @unlink($path);
                 }
             }
         }
 
-        return ['image' => null, 'usage' => $checks];
+        return ['image' => null, 'usage' => $checks, 'cause' => $cause];
     }
 
     /**
@@ -249,11 +285,15 @@ final readonly class GenerateBlogDraftImagesAction implements GenerationStep
         return ['image' => $image, 'usage' => $usage];
     }
 
-    private function summary(BlogAiImageMode $mode, int $count, bool $missingMain): string
+    /** @param  string|null  $mainCause  pourquoi l'image principale manque, quand elle manque */
+    private function summary(BlogAiImageMode $mode, int $count, bool $missingMain, ?string $mainCause): string
     {
-        $done = $mode === BlogAiImageMode::Stock
-            ? trans_choice('{0} Aucune photo de banque ne convenait.|{1} Une photo de banque a été choisie, avec le nom de son auteur.|[2,*] :count photos de banque ont été choisies, avec le nom de leur auteur.', $count, ['count' => $count])
-            : trans_choice('{0} Aucune image n\'a pu être générée.|{1} Une image a été générée par l\'IA.|[2,*] :count images ont été générées par l\'IA.', $count, ['count' => $count]);
+        $done = match (true) {
+            $mode !== BlogAiImageMode::Stock => trans_choice('{0} Aucune image n\'a pu être générée.|{1} Une image a été générée par l\'IA.|[2,*] :count images ont été générées par l\'IA.', $count, ['count' => $count]),
+            $count === 0 && $mainCause === self::CAUSE_BANK => __('La banque de photos n\'a pas répondu, aucune photo n\'a pu être choisie.'),
+            $count === 0 && $mainCause === self::CAUSE_CHECK => __('Les photos trouvées n\'ont pas pu être contrôlées, aucune n\'a été prise.'),
+            default => trans_choice('{0} Aucune photo de banque ne convenait.|{1} Une photo de banque a été choisie, avec le nom de son auteur.|[2,*] :count photos de banque ont été choisies, avec le nom de leur auteur.', $count, ['count' => $count]),
+        };
 
         return $missingMain ? $done.' '.__('Il manque l\'image principale, à ajouter avant de publier.') : $done;
     }

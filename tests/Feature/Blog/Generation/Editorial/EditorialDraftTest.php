@@ -197,7 +197,10 @@ it('does not take a photo it could not check, goes on with the draft, and stops 
     $result = app(GenerateBlogDraftImagesAction::class)->execute(Fixtures::context(textOutputs()));
 
     expect(BlogImage::query()->count())->toBe(0)
-        ->and($result->output['warnings'])->toBe(['no main image', 'no image 1']);
+        ->and($result->output['warnings'])->toBe(['no main image', 'no image 1'])
+        // Controle du 20/11 : le resume dit pourquoi la photo manque.
+        ->and($result->output['causes'])->toBe([0 => 'check_failed', 1 => 'check_failed'])
+        ->and($result->summary)->toBe('Les photos trouvées n\'ont pas pu être contrôlées, aucune n\'a été prise. Il manque l\'image principale, à ajouter avant de publier.');
     Log::shouldHaveReceived('warning')->with('Blog generation stock photo could not be checked, so it is not used.', Mockery::any())->atLeast()->once();
 
     PhotoCheckAgent::fake(fn () => throw InsufficientCreditsException::forProvider('openrouter', 402));
@@ -213,7 +216,21 @@ it('delivers the draft without a main image when no stock photo fits, and says s
 
     expect(BlogImage::query()->count())->toBe(0)
         ->and($result->output['warnings'])->toBe(['no main image', 'no image 1'])
+        ->and($result->output['causes'])->toBe([0 => 'none_fit', 1 => 'none_fit'])
         ->and($result->summary)->toBe('Aucune photo de banque ne convenait. Il manque l\'image principale, à ajouter avant de publier.');
+});
+
+it('says when the image bank did not answer, logs it as an error for the morning report, and delivers the draft without photo', function () {
+    // Controle du 20/11 : une cle Pixabay revoquee passait pour « aucune photo ne convenait », sans alerte.
+    Http::fake(['https://pixabay.com/api/*' => Http::response(['error' => '[ERROR 400] Invalid or missing API key'], 400), '*' => Http::response('ok')]);
+    Log::spy();
+
+    $result = app(GenerateBlogDraftImagesAction::class)->execute(Fixtures::context(textOutputs()));
+
+    expect(BlogImage::query()->count())->toBe(0)
+        ->and($result->output['causes'])->toBe([0 => 'bank_unavailable', 1 => 'bank_unavailable'])
+        ->and($result->summary)->toBe('La banque de photos n\'a pas répondu, aucune photo n\'a pu être choisie. Il manque l\'image principale, à ajouter avant de publier.');
+    Log::shouldHaveReceived('error')->with('Blog generation stock photos could not be searched.', Mockery::any())->twice();
 });
 
 it('never downloads a stock photo from another host than the image bank', function () {
@@ -256,7 +273,7 @@ it('generates the images with the image model of the settings when the generatio
 it('does not ask for a generated image whose reserve no longer fits before the safety stop, and delivers the draft without it', function () {
     Image::fake()->preventStrayImages();
 
-    // GPT-5 Image Mini reserve 0,03 $ ; il n'en reste que 0,02 $.
+    // GPT-5.4 Image 2 reserve 0,06 $ ; il n'en reste que 0,02 $.
     $result = app(GenerateBlogDraftImagesAction::class)->execute(Fixtures::context(textOutputs(), payload: ['images' => ['mode' => 'generated', 'max' => 1]], budgetLeft: 20_000));
 
     expect(BlogImage::query()->count())->toBe(0)
@@ -434,7 +451,7 @@ it('stops by safety before a call that could pass twice the announced cost, with
     // La veille reserve deux recherches a 0,007 $ : plus que l'arret de securite de 0,01 $. Au 17/11, la limite ne
     // se verifiait qu'entre deux essais, et un seul essai de recherche a coute 0,1078 $.
     expect($generation->refresh()->status)->toBe(BlogGenerationStatus::Abandoned)
-        ->and($generation->outcome_reason)->toBe(BlogGenerationOutcomeReason::SafetyStop)
+        ->and($generation->outcome_reason)->toBe(BlogGenerationOutcomeReason::SafetyStopBeforeCall)
         ->and($generation->cost_microusd)->toBe(0);
     WebSearchAgent::assertNeverPrompted();
 });

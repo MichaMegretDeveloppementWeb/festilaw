@@ -26,6 +26,12 @@ enum BlogGenerationOutcomeReason: string
     case ForecastAboveArticleCap = 'forecast_above_article_cap';
     /** Le cout allait depasser le double du haut annonce au lancement (decision de Micha du 18/11). */
     case SafetyStop = 'safety_stop';
+    /** L'appel suivant n'est pas parti : son cout maximal ne tenait plus avant l'arret de securite (controle du 20/11). */
+    case SafetyStopBeforeCall = 'safety_stop_before_call';
+    /** Le fournisseur d'IA refuse la cle du site (HTTP 401, controle du 20/11). */
+    case AiKeyRejected = 'ai_key_rejected';
+    /** Le fournisseur d'IA ne propose plus le modele choisi pour une etape (controle du 20/11). */
+    case AiModelUnavailable = 'ai_model_unavailable';
 
     public function label(): string
     {
@@ -41,6 +47,9 @@ enum BlogGenerationOutcomeReason: string
             self::CancelledByUser => __('Arrêtée avant la fin'),
             self::ForecastAboveArticleCap => __('Coût estimé au-dessus du plafond par article'),
             self::SafetyStop => __('Arrêtée par sécurité, coût bien au-delà de l\'estimation'),
+            self::SafetyStopBeforeCall => __('Arrêtée par sécurité avant un appel trop coûteux'),
+            self::AiKeyRejected => __('Clé du fournisseur d\'IA refusée'),
+            self::AiModelUnavailable => __('Modèle retiré par le fournisseur d\'IA'),
         };
     }
 }

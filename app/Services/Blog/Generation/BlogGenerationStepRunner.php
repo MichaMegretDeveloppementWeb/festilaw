@@ -7,6 +7,7 @@ namespace App\Services\Blog\Generation;
 use App\Contracts\Blog\Generation\GenerationStep;
 use App\Data\Blog\Generation\GenerationStepContext;
 use App\Data\Blog\Generation\GenerationStepOutcome;
+use App\Enums\Blog\Generation\BlogAiFailureKind;
 use App\Exceptions\Blog\BlogAiProviderException;
 use Closure;
 use Illuminate\Support\Facades\Log;
@@ -25,10 +26,14 @@ use Throwable;
  */
 final readonly class BlogGenerationStepRunner
 {
+    /**
+     * @param  list<int>  $transientWaitSeconds  l'attente avant le 2e essai, puis avant le 3e, apres une panne passagere
+     */
     public function __construct(
         private BlogGenerationStepRecorder $recorder,
         private int $maxAttempts,
         private int $retryWaitSeconds,
+        private array $transientWaitSeconds = [120, 600],
     ) {}
 
     /**
@@ -66,14 +71,25 @@ final readonly class BlogGenerationStepRunner
                 $this->recorder->fail($row, $e->getMessage(), $e->usage, $this->elapsedMs($startedAt));
 
                 if ($e->overBudget) {
-                    return GenerationStepOutcome::overBudget();
+                    return GenerationStepOutcome::overBudget(beforeCall: true);
                 }
 
-                if ($e->creditExhausted || $row->attempt >= $this->maxAttempts) {
+                if ($e->kind === BlogAiFailureKind::Cancelled) {
+                    return GenerationStepOutcome::cancelled();
+                }
+
+                if ($e->kind->isFinal() || $row->attempt >= $this->maxAttempts) {
                     return GenerationStepOutcome::failed($e, $e->creditExhausted);
                 }
 
                 $this->logRetry($generationId, $step, $row->attempt, $e);
+
+                // Une panne passagere du fournisseur dure souvent plus que quelques secondes : la generation
+                // est rendue et reprise plus tard, sans que le worker dorme en tenant son verrou.
+                if ($e->kind === BlogAiFailureKind::Transient) {
+                    return GenerationStepOutcome::retryLater($this->transientWait($row->attempt));
+                }
+
                 Sleep::for($this->retryWaitSeconds)->seconds();
 
                 continue;
@@ -113,6 +129,13 @@ final readonly class BlogGenerationStepRunner
             'attempt' => $attempt,
             'exception' => $e,
         ]);
+    }
+
+    private function transientWait(int $attempt): int
+    {
+        $waits = array_values($this->transientWaitSeconds);
+
+        return $waits === [] ? $this->retryWaitSeconds : (int) $waits[min($attempt, count($waits)) - 1];
     }
 
     private function elapsedMs(int $startedAt): int

@@ -75,7 +75,9 @@ final class BlogGenerationServiceProvider extends ServiceProvider
 
         $this->app->when(BlogGenerationStepRunner::class)->needs('$maxAttempts')->giveConfig('blog.ai.step.max_attempts');
         $this->app->when(BlogGenerationStepRunner::class)->needs('$retryWaitSeconds')->giveConfig('blog.ai.step.retry_wait_seconds');
+        $this->app->when(BlogGenerationStepRunner::class)->needs('$transientWaitSeconds')->giveConfig('blog.ai.step.transient_wait_seconds');
         $this->app->when(RunBlogGenerationAction::class)->needs('$lockMarginSeconds')->giveConfig('blog.ai.step.lock_margin_seconds');
+        $this->app->when(RunBlogGenerationAction::class)->needs('$autoRelaunchMinutes')->giveConfig('blog.ai.step.auto_relaunch_after_minutes');
         $this->app->when(StyleStep::class)->needs('$maxFlaggedSentences')->giveConfig('blog.ai.style.max_flagged_sentences');
         $this->app->when(TranslationStep::class)->needs('$maxFlaggedSentences')->giveConfig('blog.ai.style.max_flagged_sentences');
         $this->app->when(WritingStep::class)->needs('$maxSources')->giveConfig('blog.ai.displayed_sources.max');

@@ -49,6 +49,7 @@ class BlogGeneration extends Model
         'started_at',
         'finished_at',
         'locked_until',
+        'not_before',
         'lock_owner',
         'cancel_requested_at',
         'cancel_requested_by',
@@ -80,6 +81,7 @@ class BlogGeneration extends Model
             'started_at' => 'immutable_datetime',
             'finished_at' => 'immutable_datetime',
             'locked_until' => 'immutable_datetime',
+            'not_before' => 'immutable_datetime',
             'cancel_requested_at' => 'immutable_datetime',
         ];
     }

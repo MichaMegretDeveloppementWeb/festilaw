@@ -161,14 +161,14 @@ it('compares the catalog with the cheapest provider that accepts what the site s
 it('reports catalog models that OpenRouter no longer lists or will soon retire, and a chosen image model that left', function () {
     $services = healthyServices();
     unset($services['listed']['x-ai/grok-4.7'], $services['images']['openai/gpt-5.4-image-2']);
-    $services['images']['openai/gpt-5-image-mini'] = '2026-12-01';
+    $services['images']['google/gemini-3-pro-image'] = '2026-12-01';
     $services['listed']['google/gemini-4-carbon'] = '2027-06-01';
     fakeServices($services);
 
     expect(healthProblems())->toBe([
         'Image model [openai/gpt-5.4-image-2] chosen for the images is no longer offered by OpenRouter.',
         'Catalog model [x-ai/grok-4.7] is no longer listed by OpenRouter.',
-        'Model [openai/gpt-5-image-mini] of the catalog will be retired by OpenRouter on 2026-12-01.',
+        'Model [google/gemini-3-pro-image] of the catalog will be retired by OpenRouter on 2026-12-01.',
         'Catalog model [openai/gpt-5.4-image-2] is no longer listed by OpenRouter.',
     ]);
 });

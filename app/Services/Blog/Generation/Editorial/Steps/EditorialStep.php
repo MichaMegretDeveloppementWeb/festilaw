@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Blog\Generation\Editorial\Steps;
 
 use App\Ai\Agents\Blog\BlogAgent;
+use App\Ai\Agents\Blog\WebSearchAgent;
 use App\Contracts\Blog\Generation\GenerationStep;
 use App\Data\Blog\Generation\BlogAgentReply;
 use App\Data\Blog\Generation\GenerationStepContext;
@@ -21,6 +22,9 @@ use App\Services\Blog\Generation\Editorial\BlogPromptLibrary;
  */
 abstract class EditorialStep implements GenerationStep
 {
+    /** Le temps ajoute au delai d'une requete pour chaque recherche web qu'elle enchaine. */
+    private const SECONDS_PER_SEARCH = 10;
+
     /** Le reglage de modele de chaque etape (la passe de style emploie le modele de la redaction). */
     private const MODEL_SETTINGS = [
         'topic_scan' => 'topic',
@@ -69,9 +73,13 @@ abstract class EditorialStep implements GenerationStep
      */
     protected function ask(GenerationStepContext $context, BlogAgent $agent, string $prompt, ?GenerationUsage $spent = null): BlogAgentReply
     {
+        // Les recherches d'un agent s'enchainent dans la meme requete : son delai grandit avec leur nombre
+        // (controle du 20/11), sinon une recherche d'effort eleve serait coupee avant la fin, et payee.
+        $timeout = $this->turnTimeoutSeconds() + ($agent instanceof WebSearchAgent ? self::SECONDS_PER_SEARCH * $agent->searches() : 0);
+
         try {
             return $this->caller->call(
-                $this->key(), $agent, $prompt, $this->model($context), $this->turnTimeoutSeconds(),
+                $this->key(), $agent, $prompt, $this->model($context), $timeout,
                 $context->generationId, $context->budgetLeftAfter($spent), $context->effort,
             );
         } catch (BlogAiProviderException $e) {

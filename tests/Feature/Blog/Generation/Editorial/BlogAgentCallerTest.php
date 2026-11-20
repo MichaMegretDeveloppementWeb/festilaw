@@ -4,11 +4,13 @@ use App\Ai\Agents\Blog\FactCheckAgent;
 use App\Ai\Agents\Blog\TopicAgent;
 use App\Ai\Agents\Blog\WebSearchAgent;
 use App\Data\Blog\Generation\BlogAgentReply;
+use App\Enums\Blog\Generation\BlogAiFailureKind;
 use App\Enums\Blog\Generation\BlogEffortLevel;
 use App\Exceptions\Blog\BlogAiProviderException;
 use App\Services\Blog\Generation\BlogEffortLevels;
 use App\Services\Blog\Generation\Editorial\BlogAgentCaller;
 use GuzzleHttp\Psr7\Response as Psr7Response;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -31,6 +33,9 @@ use Tests\Support\TestBlogAgent;
  | tous les tours de l'agent, erreurs du fournisseur traduites pour le moteur. Agents simules par le SDK,
  | aucun appel reel.
  */
+
+// L'appel verifie l'arret a la main d'une generation en base avant de partir (controle du 20/11).
+uses(RefreshDatabase::class);
 
 beforeEach(function () {
     Http::preventStrayRequests();
@@ -230,15 +235,28 @@ it('writes one line per call to the log, with its tokens and cost but no text', 
         && ! str_contains((string) json_encode($line), 'A secret prompt.')))->once();
 });
 
-it('refuses a structured answer cut off at its length limit, and keeps what it cost', function () {
+it('asks a structured answer cut off at its length limit once more with less reasoning, then refuses it and keeps what both cost', function () {
+    // Controle du 20/11 : la meme demande serait coupee a l'identique ; la reprise demande moins de reflexion.
     config(['ai.providers.openrouter.key' => 'test-key']);
     Http::fake(['openrouter.ai/*' => Http::response(openRouterCompletion('{"decision": "top', 'length'))]);
 
-    expect(fn () => app(BlogAgentCaller::class)->call('topic', new TopicAgent('Choose.'), 'Topic.', 'anthropic/claude-haiku-5.5', 90))
+    expect(fn () => app(BlogAgentCaller::class)->call('topic', new TopicAgent('Choose.'), 'Topic.', 'anthropic/claude-haiku-5.5', 90, effort: BlogEffortLevel::Medium))
         ->toThrow(function (BlogAiProviderException $e): void {
             expect($e->getMessage())->toContain('cut off at its limit of 4000 tokens')
-                ->and($e->usage->costMicrousd)->toBe(12_300);
+                ->and($e->kind)->toBe(BlogAiFailureKind::CutOff)
+                ->and($e->usage->costMicrousd)->toBe(24_600);
         });
+    Http::assertSentCount(2);
+    expect(Http::recorded()[1][0]->data()['reasoning']['effort'])->not->toBe(Http::recorded()[0][0]->data()['reasoning']['effort']);
+});
+
+it('does not ask again a structured answer cut off at the lowest effort', function () {
+    config(['ai.providers.openrouter.key' => 'test-key']);
+    Http::fake(['openrouter.ai/*' => Http::response(openRouterCompletion('{"decision": "top', 'length'))]);
+
+    expect(fn () => app(BlogAgentCaller::class)->call('topic', new TopicAgent('Choose.'), 'Topic.', 'anthropic/claude-haiku-5.5', 90, effort: BlogEffortLevel::Low))
+        ->toThrow(fn (BlogAiProviderException $e) => expect($e->kind)->toBe(BlogAiFailureKind::CutOff));
+    Http::assertSentCount(1);
 });
 
 it('refuses a structured answer that is not JSON, which the SDK hands back empty', function () {
