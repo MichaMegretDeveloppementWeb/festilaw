@@ -266,6 +266,13 @@ return [
          | 19/11 sur six generations : 6 470 a 6 580 millioniemes de dollar, d'ou `price_microusd`. Le contenu
          | des extraits est facture en plus, comme du texte lu.
          */
+        /*
+         | Controle des photos de la banque d'images (remarque de Micha du 20/11) : le modele du choix du sujet
+         | regarde au plus ce nombre de photos par recherche, et ne garde que la premiere qui convient a
+         | l'article, decrite telle qu'elle est. Environ 0,03 centime par photo regardee.
+         */
+        'stock_photo_checks' => 4,
+
         'web_search' => [
             'engine' => 'exa',
             'max_results' => 5,
@@ -286,21 +293,22 @@ return [
          |   88 et 90 du 19/11) : ce niveau ne coutait pas moins.
          | - Moyen : 2 et 3 recherches, reflexion `medium`, `low` pour le choix du sujet et le dossier.
          | - Eleve : 3 et 5 recherches, reflexion `high`, `medium` pour le choix du sujet et le dossier.
+         | Le controle des photos de la banque (`photo_check`) reste, comme le choix du sujet, un cran en dessous.
          | Ces niveaux sont lus par l'appel au modele, les etapes qui cherchent sur le web et l'estimation du
          | cout (BlogEffortLevels).
          */
         'effort' => [
             'levels' => [
                 'low' => [
-                    'reasoning' => ['default' => 'low', 'topic' => 'none', 'research' => 'none'],
+                    'reasoning' => ['default' => 'low', 'topic' => 'none', 'research' => 'none', 'photo_check' => 'none'],
                     'searches' => ['topic_scan' => 1, 'research_notes' => 2],
                 ],
                 'medium' => [
-                    'reasoning' => ['default' => 'medium', 'topic' => 'low', 'research' => 'low'],
+                    'reasoning' => ['default' => 'medium', 'topic' => 'low', 'research' => 'low', 'photo_check' => 'low'],
                     'searches' => ['topic_scan' => 2, 'research_notes' => 3],
                 ],
                 'high' => [
-                    'reasoning' => ['default' => 'high', 'topic' => 'medium', 'research' => 'medium'],
+                    'reasoning' => ['default' => 'high', 'topic' => 'medium', 'research' => 'medium', 'photo_check' => 'medium'],
                     'searches' => ['topic_scan' => 3, 'research_notes' => 5],
                 ],
             ],
@@ -377,6 +385,7 @@ return [
                 'translation_fr' => ['setting' => 'translation', 'input' => 8_300, 'input_per_1000_words' => 1_500, 'output_per_1000_words' => 1_800, 'reasoning' => ['low' => [1_000, 5_000], 'medium' => [2_500, 12_500], 'high' => [4_000, 20_000]], 'calls' => [2, 2]],
                 'version_check_fr' => ['setting' => 'verification', 'input' => 2_200, 'input_per_1000_words' => 3_300, 'output' => 300, 'reasoning' => ['low' => [300, 2_000], 'medium' => [750, 5_000], 'high' => [1_200, 8_000]], 'calls' => [1, 1]],
                 'version_check_es' => ['setting' => 'verification', 'input' => 2_200, 'input_per_1000_words' => 3_300, 'output' => 300, 'reasoning' => ['low' => [300, 2_000], 'medium' => [750, 5_000], 'high' => [1_200, 8_000]], 'calls' => [1, 1]],
+                'photo_check' => ['setting' => 'topic', 'input' => 1_500, 'output' => 150, 'reasoning' => ['low' => [0, 300], 'medium' => [0, 750]], 'calls' => [1, 4], 'stock_photos' => true],
                 'translation_es' => ['setting' => 'translation', 'input' => 7_700, 'input_per_1000_words' => 1_500, 'output_per_1000_words' => 1_750, 'reasoning' => ['low' => [1_000, 5_000], 'medium' => [2_500, 12_500], 'high' => [4_000, 20_000]], 'calls' => [2, 2]],
             ],
         ],

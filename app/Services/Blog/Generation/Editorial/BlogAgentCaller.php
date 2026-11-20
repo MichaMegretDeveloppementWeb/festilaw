@@ -19,6 +19,7 @@ use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Log;
 use Laravel\Ai\Contracts\HasStructuredOutput;
 use Laravel\Ai\Exceptions\InsufficientCreditsException;
+use Laravel\Ai\Files\File;
 use Laravel\Ai\Gateway\StepResponse;
 use Laravel\Ai\Responses\Data\FinishReason;
 use Throwable;
@@ -37,7 +38,12 @@ use Throwable;
  */
 final readonly class BlogAgentCaller
 {
-    /** @param  array<string, string>  $reasoning  effort de reflexion par cle d'etape, et `default` */
+    /**
+     * Jetons comptes pour une image jointe : une photo de 1 280 pixels en coute environ 1 500 chez Anthropic
+     * (largeur fois hauteur divisees par 750), un peu moins chez OpenAI.
+     */
+    private const TOKENS_PER_IMAGE = 1_600;
+
     public function __construct(
         private OpenRouterUsageReader $usageReader,
         private BlogAiCostEstimator $estimator,
@@ -51,13 +57,14 @@ final readonly class BlogAgentCaller
      * @param  int  $timeoutSeconds  delai d'une requete au fournisseur, pas de l'appel entier
      * @param  int|null  $budgetLeftMicrousd  nul : aucun arret de securite
      * @param  BlogEffortLevel  $effort  le niveau d'effort de la generation, qui fixe la reflexion demandee
+     * @param  list<File>  $attachments  pieces jointes, comme la photo que le controle des photos regarde
      *
      * @throws BlogAiProviderException
      */
-    public function call(string $step, BlogAgent $agent, string $prompt, string $model, int $timeoutSeconds, ?int $generationId = null, ?int $budgetLeftMicrousd = null, BlogEffortLevel $effort = BlogEffortLevel::Medium): BlogAgentReply
+    public function call(string $step, BlogAgent $agent, string $prompt, string $model, int $timeoutSeconds, ?int $generationId = null, ?int $budgetLeftMicrousd = null, BlogEffortLevel $effort = BlogEffortLevel::Medium, array $attachments = []): BlogAgentReply
     {
         if ($budgetLeftMicrousd !== null) {
-            $reserved = $this->reserve($agent, $prompt, $model);
+            $reserved = $this->reserve($agent, $prompt, $model, count($attachments));
 
             if ($reserved > $budgetLeftMicrousd) {
                 throw BlogAiProviderException::overBudget($step, $reserved, max(0, $budgetLeftMicrousd));
@@ -68,7 +75,7 @@ final readonly class BlogAgentCaller
         $agent->withRequestOptions($this->requestOptions($step, $agent, $model, $effort));
 
         try {
-            $response = $agent->observeStepsWith($recorder)->prompt($prompt, provider: $this->provider, model: $model, timeout: $timeoutSeconds);
+            $response = $agent->observeStepsWith($recorder)->prompt($prompt, $attachments, provider: $this->provider, model: $model, timeout: $timeoutSeconds);
         } catch (InsufficientCreditsException $e) {
             throw BlogAiProviderException::creditExhausted($e, $this->consumption($step, $agent, $generationId, $recorder, $model));
         } catch (RequestException $e) {
@@ -103,13 +110,13 @@ final readonly class BlogAgentCaller
     /**
      * OpenRouter enchaine les recherches d'un agent dans une meme requete, et sa documentation ne dit pas si
      * chaque tour relit ce qui precede : on compte le pire, chaque tour relisant tout. Trois caracteres par
-     * jeton surestiment volontairement un texte anglais.
+     * jeton surestiment volontairement un texte anglais. Une image jointe compte un nombre fixe de jetons.
      */
-    private function reserve(BlogAgent $agent, string $prompt, string $model): int
+    private function reserve(BlogAgent $agent, string $prompt, string $model, int $images = 0): int
     {
         $searches = $agent instanceof WebSearchAgent ? $agent->searches() : 0;
         $perSearch = $agent instanceof WebSearchAgent ? $agent->tokensPerSearch() : 0;
-        $sent = intdiv(strlen($agent->instructions()) + strlen($prompt), 3);
+        $sent = intdiv(strlen($agent->instructions()) + strlen($prompt), 3) + $images * self::TOKENS_PER_IMAGE;
         $input = $sent * ($searches + 1) + intdiv($perSearch * $searches * ($searches + 1), 2);
 
         return $this->estimator->reserveMicrousd($model, $input, $agent->maxOutputTokens(), $searches, $this->models->priceMarginPercent($model) ?? $this->defaultMarginPercent);

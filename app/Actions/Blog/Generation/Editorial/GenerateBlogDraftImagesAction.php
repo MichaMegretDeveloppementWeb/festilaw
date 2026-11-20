@@ -20,13 +20,16 @@ use App\Exceptions\Blog\BlogEditorialException;
 use App\Models\BlogImage;
 use App\Services\Blog\Generation\BlogAiModelCatalog;
 use App\Services\Blog\Generation\Editorial\Images\BlogAiImageGenerator;
+use App\Services\Blog\Generation\Editorial\Images\StockPhotoChecker;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
  * Etape 10 · les images d'un article genere (taches 6.8 a 6.10). L'image principale toujours, sauf si la
  * generation n'en demande aucune, puis les images du texte prevues par le redacteur, dans la limite reglee.
- * Selon la generation, une photo de banque (avec son credit) ou une image generee par IA. Chaque image passe
+ * Selon la generation, une photo de banque (avec son credit) ou une image generee par IA. Une photo de banque
+ * n'est prise qu'apres un controle qui la regarde et la decrit telle qu'elle est (StockPhotoChecker, remarque de
+ * Micha du 20/11) ; aucune ne convient, et l'article arrive sans elle. Chaque image passe
  * par le meme enregistrement qu'une image envoyee au back-office, avec ses descriptions dans les trois
  * langues ; elle reste en attente jusqu'a l'assemblage, et part au menage si la generation n'aboutit pas.
  *
@@ -48,8 +51,10 @@ final readonly class GenerateBlogDraftImagesAction implements GenerationStep
         private BlogAiImageGenerator $generator,
         private StoreBlogImageAction $storeImage,
         private BlogAiModelCatalog $models,
+        private StockPhotoChecker $checker,
         private int $featuredMinWidth = 1200,
         private int $featuredMinHeight = 630,
+        private int $photoChecks = 4,
     ) {}
 
     public function key(): string
@@ -106,7 +111,7 @@ final readonly class GenerateBlogDraftImagesAction implements GenerationStep
 
             try {
                 $stored = $options->mode === BlogAiImageMode::Stock
-                    ? $this->fromStock($request, $number, $alt, $context, $usedStockIds)
+                    ? $this->fromStock($request, $number, $context, $usage, $usedStockIds)
                     : $this->generated($request, $number, $alt, (string) $model);
             } catch (BlogAiProviderException $e) {
                 if ($e->creditExhausted) {
@@ -121,14 +126,14 @@ final readonly class GenerateBlogDraftImagesAction implements GenerationStep
                 Log::warning('Blog generation image could not be found or stored.', ['generation' => $context->generationId, 'image' => $number, 'exception' => $e]);
             }
 
-            if ($stored === null) {
+            if ($stored !== null && $stored['usage'] !== null) {
+                $usage = $usage->plus($stored['usage']);
+            }
+
+            if ($stored === null || $stored['image'] === null) {
                 $warnings[] = $number === 0 ? 'no main image' : "no image {$number}";
 
                 continue;
-            }
-
-            if ($stored['usage'] !== null) {
-                $usage = $usage->plus($stored['usage']);
             }
 
             $images[] = ['number' => $number, 'image_id' => $stored['image']->id, 'source' => $options->mode->value, 'credit_author' => $stored['image']->credit_author, 'credit_url' => $stored['image']->credit_url];
@@ -142,12 +147,20 @@ final readonly class GenerateBlogDraftImagesAction implements GenerationStep
     }
 
     /**
+     * La premiere photo de la banque que le controle juge convenable, rangee avec ce qu'elle montre pour texte
+     * alternatif. Au plus `photoChecks` photos regardees par requete ; une photo regardee ne sert plus pour une
+     * autre image de l'article. Sans photo convenable, l'image est nulle ; le cout des controles est rendu
+     * dans tous les cas. Une photo qui n'a pas pu etre controlee n'est pas prise : une photo fausse vaut moins
+     * qu'aucune photo.
+     *
      * @param  array<string, mixed>  $request
-     * @param  array<string, string>  $alt
+     * @param  GenerationUsage  $spent  ce que l'etape a deja depense, pour l'arret de securite
      * @param  list<string>  $usedStockIds
-     * @return array{image: BlogImage, usage: null}|null
+     * @return array{image: BlogImage|null, usage: GenerationUsage}
+     *
+     * @throws BlogAiProviderException quand le credit est epuise, avec le cout des controles deja faits
      */
-    private function fromStock(array $request, int $number, array $alt, GenerationStepContext $context, array &$usedStockIds): ?array
+    private function fromStock(array $request, int $number, GenerationStepContext $context, GenerationUsage $spent, array &$usedStockIds): array
     {
         [$minWidth, $minHeight] = $number === 0 ? [$this->featuredMinWidth, $this->featuredMinHeight] : [self::CONTENT_MIN_WIDTH, self::CONTENT_MIN_HEIGHT];
         $queries = array_values(array_unique(array_filter([
@@ -155,38 +168,55 @@ final readonly class GenerateBlogDraftImagesAction implements GenerationStep
             // A defaut, pour l'image principale, les mots-cles du sujet.
             $number === 0 ? implode(' ', array_slice($context->output('topic')['keywords'] ?? [], 0, 2)) : '',
         ])));
+        $checks = GenerationUsage::none();
 
         foreach ($queries as $query) {
-            $choice = collect($this->stock->search($query, $minWidth, $minHeight))
-                ->first(fn ($image): bool => ! in_array($image->id, $usedStockIds, true));
+            $candidates = collect($this->stock->search($query, $minWidth, $minHeight))
+                ->reject(fn ($image): bool => in_array($image->id, $usedStockIds, true))
+                ->take($this->photoChecks);
 
-            if ($choice === null) {
-                continue;
+            foreach ($candidates as $candidate) {
+                $usedStockIds[] = $candidate->id;
+                $path = $this->stock->download($candidate);
+
+                try {
+                    $verdict = $this->checker->check($path, $request, $context, $spent->plus($checks));
+                    $checks = $checks->plus($verdict->usage);
+
+                    if (! $verdict->fits) {
+                        Log::info('Blog generation stock photo set aside by the photo check.', ['generation' => $context->generationId, 'image' => $number, 'photo' => $candidate->pageUrl, 'reason' => $verdict->reason]);
+
+                        continue;
+                    }
+
+                    $image = $this->storeImage->execute(new StoreBlogImageData(
+                        path: $path,
+                        usage: $number === 0 ? BlogImageUsage::Featured : BlogImageUsage::Content,
+                        alt: $verdict->alt,
+                        nameHint: $verdict->alt['en'] ?? null,
+                        creditSource: BlogImageCreditSource::Stock,
+                        creditAuthor: $candidate->author ?: null,
+                        creditUrl: $candidate->pageUrl ?: null,
+                        creditLicense: $candidate->license,
+                        keepSource: $number !== 0,
+                    ));
+
+                    return ['image' => $image, 'usage' => $checks];
+                } catch (BlogAiProviderException $e) {
+                    if ($e->creditExhausted) {
+                        throw $e->withEarlierUsage($checks);
+                    }
+
+                    Log::warning('Blog generation stock photo could not be checked, so it is not used.', ['generation' => $context->generationId, 'image' => $number, 'exception' => $e]);
+
+                    return ['image' => null, 'usage' => $checks->plus($e->usage ?? GenerationUsage::none())];
+                } finally {
+                    @unlink($path);
+                }
             }
-
-            $usedStockIds[] = $choice->id;
-            $path = $this->stock->download($choice);
-
-            try {
-                $image = $this->storeImage->execute(new StoreBlogImageData(
-                    path: $path,
-                    usage: $number === 0 ? BlogImageUsage::Featured : BlogImageUsage::Content,
-                    alt: $alt,
-                    nameHint: $alt['en'] ?? null,
-                    creditSource: BlogImageCreditSource::Stock,
-                    creditAuthor: $choice->author ?: null,
-                    creditUrl: $choice->pageUrl ?: null,
-                    creditLicense: $choice->license,
-                    keepSource: $number !== 0,
-                ));
-            } finally {
-                @unlink($path);
-            }
-
-            return ['image' => $image, 'usage' => null];
         }
 
-        return null;
+        return ['image' => null, 'usage' => $checks];
     }
 
     /**

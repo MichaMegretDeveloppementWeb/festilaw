@@ -13,12 +13,14 @@ use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Laravel\Ai\Exceptions\InsufficientCreditsException;
+use Laravel\Ai\Files\Image;
 use Laravel\Ai\Responses\Data\Meta;
 use Laravel\Ai\Responses\Data\TextUsage;
 use Laravel\Ai\Responses\Data\ToolCall;
 use Laravel\Ai\Responses\Data\UrlCitation;
 use Laravel\Ai\Responses\StructuredTextResponse;
 use Laravel\Ai\Responses\TextResponse;
+use Tests\Support\BlogImageFiles;
 use Tests\Support\EditorialFixtures;
 use Tests\Support\EditorialFixtures as Fixtures;
 use Tests\Support\TestBlogAgent;
@@ -159,6 +161,8 @@ it('asks for the reasoning of the effort level, and the lowest effort a model ac
     $caller->call('writing', new TestBlogAgent, 'Write.', 'openai/gpt-6-luna', 90, effort: BlogEffortLevel::Medium);
     $caller->call('writing', new TestBlogAgent, 'Write.', 'openai/gpt-6-luna', 90, effort: BlogEffortLevel::High);
     $caller->call('topic', new TestBlogAgent, 'Topic.', 'anthropic/claude-haiku-5.5', 90, effort: BlogEffortLevel::High);
+    $caller->call('photo_check', new TestBlogAgent, 'Photo.', 'anthropic/claude-haiku-5.5', 90, effort: BlogEffortLevel::Low);
+    $caller->call('photo_check', new TestBlogAgent, 'Photo.', 'anthropic/claude-haiku-5.5', 90, effort: BlogEffortLevel::Medium);
 
     expect(Http::recorded()->map(fn (array $pair): mixed => $pair[0]->data()['reasoning'] ?? null)->values()->all())->toBe([
         ['effort' => 'low'],
@@ -168,7 +172,33 @@ it('asks for the reasoning of the effort level, and the lowest effort a model ac
         ['effort' => 'medium'],
         ['effort' => 'high'],
         ['effort' => 'medium'],
+        // Le controle des photos reste un cran en dessous, comme le choix du sujet.
+        ['effort' => 'none'],
+        ['effort' => 'low'],
     ]);
+});
+
+it('sends an attached photo to the model, and counts it in what the call may cost', function () {
+    config(['ai.providers.openrouter.key' => 'test-key']);
+    Http::fake(['openrouter.ai/*' => Http::response(openRouterCompletion('Text.'))]);
+    $photo = Image::fromPath(BlogImageFiles::jpeg(640, 427));
+    $reserved = static function (array $attachments): int {
+        try {
+            app(BlogAgentCaller::class)->call('photo_check', new TestBlogAgent, 'Photo.', 'anthropic/claude-haiku-5.5', 90, budgetLeftMicrousd: 0, attachments: $attachments);
+        } catch (BlogAiProviderException $e) {
+            preg_match('/up to (\d+) microusd/', $e->getMessage(), $matches);
+
+            return (int) $matches[1];
+        }
+
+        return 0;
+    };
+
+    app(BlogAgentCaller::class)->call('photo_check', new TestBlogAgent, 'Photo.', 'anthropic/claude-haiku-5.5', 90, attachments: [$photo]);
+
+    $content = Http::recorded()->first()[0]->data()['messages'][1]['content'] ?? [];
+    expect(collect($content)->pluck('type')->all())->toContain('image_url')
+        ->and($reserved([$photo]))->toBeGreaterThan($reserved([]));
 });
 
 it('writes one line per call to the log, with its tokens and cost but no text', function () {

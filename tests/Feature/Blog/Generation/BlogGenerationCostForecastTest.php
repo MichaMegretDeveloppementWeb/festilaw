@@ -58,16 +58,20 @@ it('brackets what each article of the model bench cost, the high staying under o
     'Haiku + Sonnet' => [['writing' => 'anthropic/claude-sonnet-5.5', 'translation' => 'anthropic/claude-sonnet-5.5'], [426_158, 434_544], 1.5],
 ]);
 
-it('costs more for a longer article and with generated images, and nothing more for stock photos', function () {
+it('costs more for a longer article and with generated images, and less than a cent more for stock photos', function () {
     $forecaster = app(BlogGenerationCostForecaster::class);
-    $short = $forecaster->forecast(trialModels(), 400, stockImage());
-    $long = $forecaster->forecast(trialModels(), 2_000, stockImage());
-    $generated = $forecaster->forecast(trialModels(), 400, new GenerationImageOptions(BlogAiImageMode::Generated, 3));
     $none = $forecaster->forecast(trialModels(), 400, new GenerationImageOptions(BlogAiImageMode::None, 1));
+    $short = $forecaster->forecast(trialModels(), 400, new GenerationImageOptions(BlogAiImageMode::None, 1));
+    $long = $forecaster->forecast(trialModels(), 2_000, new GenerationImageOptions(BlogAiImageMode::None, 1));
+    $stock = $forecaster->forecast(trialModels(), 400, new GenerationImageOptions(BlogAiImageMode::Stock, 3));
+    $generated = $forecaster->forecast(trialModels(), 400, new GenerationImageOptions(BlogAiImageMode::Generated, 3));
 
     expect($long->lowMicrousd)->toBeGreaterThan($short->lowMicrousd)
         ->and($long->highMicrousd)->toBeGreaterThan($short->highMicrousd)
-        ->and($none->highMicrousd)->toBe($short->highMicrousd)
+        // Une photo de la banque est gratuite ; le controle qui la regarde (remarque de Micha du 20/11) coute un
+        // appel en bas et jusqu'a quatre par image en haut, moins d'un centime pour trois images.
+        ->and($stock->lowMicrousd)->toBeGreaterThan($none->lowMicrousd)
+        ->and($stock->highMicrousd - $none->highMicrousd)->toBeLessThan(10_000)
         // GPT-5 Image Mini, prix mesures le 18/11 : l'image principale a 0,0127 $ en bas, trois images a 0,0498 $ en haut.
         ->and($generated->lowMicrousd - $short->lowMicrousd)->toBe(12_700)
         ->and($generated->highMicrousd - $short->highMicrousd)->toBe(149_400);
@@ -98,7 +102,8 @@ it('brackets what each effort level cost with the recommended models, at the cal
     // la reflexion du banc d'essai du 19/11 (2 articles), qui faisait une recherche de sources de plus, ajoutee a
     // l'estimation a son prix mesure. Les niveaux Moyen (generations 94 et 95) et Eleve (92 et 93) sont mesures tels
     // quels.
-    $forecast = app(BlogGenerationCostForecaster::class)->forecast(config('blog.ai.defaults.models'), 1_000, stockImage(), topicImposed: true, effort: $effort);
+    // Les generations mesurees prenaient leur photo sans controle : il ne compte pas ici.
+    $forecast = app(BlogGenerationCostForecaster::class)->forecast(config('blog.ai.defaults.models'), 1_000, new GenerationImageOptions(BlogAiImageMode::None, 1), topicImposed: true, effort: $effort);
     $extra = $extraSearches * config('blog.ai.web_search.price_microusd');
 
     expect($forecast->lowMicrousd + $extra)->toBeLessThanOrEqual(min($realCosts))

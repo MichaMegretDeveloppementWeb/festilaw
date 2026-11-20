@@ -27,7 +27,7 @@ final class WriterAgent extends BlogAgent implements HasStructuredOutput
     {
         $image = static fn (JsonSchema $schema) => $schema->object([
             'description' => $schema->string()->description('What the image shows, used as its alt text.')->required(),
-            'search_query' => $schema->string()->description('A few English words to search a stock photo.')->required(),
+            'search_query' => $schema->string()->description('Two or three English words naming the main subject, to search a stock photo.')->required(),
             'generation_prompt' => $schema->string()->description('A short prompt to generate the image.')->required(),
         ]);
 

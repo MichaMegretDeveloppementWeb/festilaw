@@ -81,6 +81,13 @@ final readonly class BlogGenerationCostForecaster
                 continue;
             }
 
+            // Le controle des photos ne regarde que des photos de la banque, jusqu'a quatre par image en haut.
+            $perStockPhoto = (bool) ($profile['stock_photos'] ?? false);
+
+            if ($perStockPhoto && $images->mode !== BlogAiImageMode::Stock) {
+                continue;
+            }
+
             $model = $models[(string) $profile['setting']] ?? null;
             $factor = $this->models->tokenFactorPercent($model);
             $searchCount = $this->effort->searches($effort, (string) $step);
@@ -89,6 +96,7 @@ final readonly class BlogGenerationCostForecaster
             $visible = intdiv(((int) ($profile['output'] ?? 0) + intdiv((int) ($profile['output_per_1000_words'] ?? 0) * $words, 1_000)) * $factor, 100);
             [$lowReasoning, $highReasoning] = $this->reasoning($model, (string) $step, $this->effort->reasoning($effort, (string) $step, $model), (array) ($profile['reasoning'] ?? []));
             [$lowCalls, $highCalls] = $profile['calls'] ?? [1, 1];
+            $highCalls = $perStockPhoto ? (int) $highCalls * $images->maxImages : $highCalls;
             $measured = $this->models->priceMarginPercent($model);
             $searches = $this->prices->webSearchesMicrousd($searchCount);
 

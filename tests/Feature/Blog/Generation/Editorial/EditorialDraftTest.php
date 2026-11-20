@@ -5,6 +5,7 @@ use App\Actions\Blog\Generation\Editorial\GenerateBlogDraftImagesAction;
 use App\Actions\Blog\Generation\ProcessNextBlogGenerationAction;
 use App\Actions\Blog\Post\DeleteBlogPostAction;
 use App\Ai\Agents\Blog\FactCheckAgent;
+use App\Ai\Agents\Blog\PhotoCheckAgent;
 use App\Ai\Agents\Blog\ResearchAgent;
 use App\Ai\Agents\Blog\StyleAgent;
 use App\Ai\Agents\Blog\TopicAgent;
@@ -69,15 +70,36 @@ function pixabayHits(): array
     ]];
 }
 
-function fakePixabay(): void
+/**
+ * La banque d'images simulee, et le controle des photos : par defaut, il accepte chaque photo et la decrit.
+ *
+ * @param  array<string, mixed>|null  $hits  la reponse de l'API, celle de pixabayHits() par defaut
+ */
+function fakePixabay(?array $hits = null, bool $checkAccepts = true): void
 {
     $photo = file_get_contents(BlogImageFiles::jpeg(1280, 853));
 
     Http::fake([
-        'https://pixabay.com/api/*' => Http::response(pixabayHits()),
+        'https://pixabay.com/api/*' => Http::response($hits ?? pixabayHits()),
         'https://pixabay.com/get/*' => Http::response($photo, 200, ['Content-Type' => 'image/jpeg']),
         '*' => Http::response('ok'),
     ]);
+
+    if ($checkAccepts) {
+        PhotoCheckAgent::fake(fn (): array => photoVerdict(true))->preventStrayPrompts();
+    }
+}
+
+/** @return array<string, mixed> la reponse du controle des photos */
+function photoVerdict(bool $fits, string $alt = 'A brown parcel on a wooden table'): array
+{
+    return [
+        'fits' => $fits,
+        'reason' => $fits ? 'A parcel suits an article on shipping.' : 'Tools do not show the subject.',
+        'alt_en' => $alt,
+        'alt_fr' => 'Un colis brun sur une table en bois',
+        'alt_es' => 'Un paquete marrón sobre una mesa de madera',
+    ];
 }
 
 /** Les sorties des etapes de texte, comme le journal les garde a l'arrivee des images. */
@@ -110,7 +132,8 @@ it('takes a stock photo for the main image and one for the text, downloaded and 
         ->and($images[0]->credit_author)->toBe('Anna')
         ->and($images[0]->credit_url)->toBe('https://pixabay.com/photos/parcel-2/')
         ->and($images[0]->credit_license)->toBe('Pixabay Content License')
-        ->and($images[0]->alt)->toBe(['en' => 'A parcel on a workbench', 'fr' => 'Un colis sur un établi', 'es' => 'Un paquete sobre un banco'])
+        // Le texte alternatif decrit la photo trouvee, tel que le controle l'a vue, et non l'image voulue (Micha, 20/11).
+        ->and($images[0]->alt)->toBe(['en' => 'A brown parcel on a wooden table', 'fr' => 'Un colis brun sur une table en bois', 'es' => 'Un paquete marrón sobre una mesa de madera'])
         ->and($images[0]->hasShareVariant())->toBeTrue()
         // La photo trop petite pour l'image principale convient dans le texte, et ce n'est pas la meme photo.
         ->and($images[1]->credit_author)->toBe('Small')
@@ -119,6 +142,68 @@ it('takes a stock photo for the main image and one for the text, downloaded and 
         ->and($result->summary)->toBe('2 photos de banque ont été choisies, avec le nom de leur auteur.');
     // La recherche est gardee 24 heures : la meme requete ne repart pas chez Pixabay.
     Http::assertSent(fn (Request $request): bool => str_starts_with($request->url(), 'https://pixabay.com/api/') && $request['safesearch'] === 'true' && $request['orientation'] === 'horizontal');
+});
+
+it('shows each stock photo to the check with the article and the wanted image, and sets aside the ones that do not fit', function () {
+    // Remarque de Micha du 20/11 : des outils sur un etabli illustraient un article sur les jouets.
+    fakePixabay(checkAccepts: false);
+    $answers = [photoVerdict(false), photoVerdict(true, 'A wooden toy car beside a cardboard box'), photoVerdict(true)];
+    PhotoCheckAgent::fake(function () use (&$answers): array {
+        return array_shift($answers);
+    })->preventStrayPrompts();
+
+    $result = app(GenerateBlogDraftImagesAction::class)->execute(Fixtures::context(textOutputs()));
+
+    $images = BlogImage::query()->orderBy('id')->get();
+    // La premiere photo assez grande (Anna) est ecartee, la suivante (Ben) illustre l'article, decrite telle qu'elle est.
+    expect($images[0]->credit_author)->toBe('Ben')
+        ->and($images[0]->alt['en'])->toBe('A wooden toy car beside a cardboard box')
+        ->and($images->pluck('credit_author')->all())->not->toContain('Anna')
+        ->and($result->output['images'])->toHaveCount(2);
+    PhotoCheckAgent::assertPrompted(fn ($prompt): bool => $prompt->attachments->count() === 1
+        && $prompt->contains('A parcel on a workbench')
+        && $prompt->contains('Adding an economic operator on Etsy')
+        && str_contains($prompt->agent->instructions(), 'Look at the photo itself, not at what was asked for'));
+});
+
+it('looks at four photos at most per search, and delivers the draft without a main image when none fits', function () {
+    $hits = ['hits' => array_map(static fn (int $id): array => [
+        'id' => $id, 'pageURL' => "https://pixabay.com/photos/tools-{$id}/", 'largeImageURL' => "https://pixabay.com/get/tools_{$id}_1280.jpg", 'imageWidth' => 4000, 'imageHeight' => 2667, 'user' => "Author {$id}",
+    ], range(1, 6))];
+    fakePixabay($hits, checkAccepts: false);
+    $checked = 0;
+    PhotoCheckAgent::fake(function () use (&$checked): array {
+        $checked++;
+
+        return photoVerdict(false);
+    })->preventStrayPrompts();
+
+    $result = app(GenerateBlogDraftImagesAction::class)->execute(Fixtures::context(textOutputs()));
+
+    // Quatre photos pour la recherche de la redaction, les deux restantes pour les mots-cles du sujet ; aucune
+    // nouvelle pour l'image du texte, toutes ayant deja ete regardees.
+    expect($checked)->toBe(6)
+        ->and(BlogImage::query()->count())->toBe(0)
+        ->and($result->output['warnings'])->toBe(['no main image', 'no image 1'])
+        ->and($result->summary)->toBe('Aucune photo de banque ne convenait. Il manque l\'image principale, à ajouter avant de publier.');
+});
+
+it('does not take a photo it could not check, goes on with the draft, and stops everything when the credit runs out', function () {
+    fakePixabay(checkAccepts: false);
+    Log::spy();
+    // Une reponse vide : le controle n'a pas pu se faire.
+    PhotoCheckAgent::fake([[], [], []])->preventStrayPrompts();
+
+    $result = app(GenerateBlogDraftImagesAction::class)->execute(Fixtures::context(textOutputs()));
+
+    expect(BlogImage::query()->count())->toBe(0)
+        ->and($result->output['warnings'])->toBe(['no main image', 'no image 1']);
+    Log::shouldHaveReceived('warning')->with('Blog generation stock photo could not be checked, so it is not used.', Mockery::any())->atLeast()->once();
+
+    PhotoCheckAgent::fake(fn () => throw InsufficientCreditsException::forProvider('openrouter', 402));
+
+    expect(fn () => app(GenerateBlogDraftImagesAction::class)->execute(Fixtures::context(textOutputs())))
+        ->toThrow(fn (BlogAiProviderException $e) => expect($e->creditExhausted)->toBeTrue());
 });
 
 it('delivers the draft without a main image when no stock photo fits, and says so', function () {
