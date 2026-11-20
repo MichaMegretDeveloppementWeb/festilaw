@@ -4,7 +4,7 @@
     "name": "slug-field"
   },
   "resources/css/admin.css": {
-    "file": "assets/admin-D0T0kvWm.css",
+    "file": "assets/admin-HKjZu3io.css",
     "name": "admin",
     "names": [
       "admin.css"
@@ -139,7 +139,7 @@
     "isEntry": true
   },
   "resources/js/admin.js": {
-    "file": "assets/admin-DTqy4Jo2.js",
+    "file": "assets/admin-DHMYc5uz.js",
     "name": "admin",
     "src": "resources/js/admin.js",
     "isEntry": true
@@ -154,7 +154,7 @@
     ]
   },
   "resources/js/admin/blog-post-form.js": {
-    "file": "assets/blog-post-form-Awwk5Bq_.js",
+    "file": "assets/blog-post-form-DIcyAng1.js",
     "name": "blog-post-form",
     "src": "resources/js/admin/blog-post-form.js",
     "isEntry": true,
@@ -193,7 +193,7 @@
     "isEntry": true
   },
   "resources/js/web/quiz.js": {
-    "file": "assets/quiz-rGup2Wed.js",
+    "file": "assets/quiz-hKOwBr14.js",
     "name": "quiz",
     "src": "resources/js/web/quiz.js",
     "isEntry": true
