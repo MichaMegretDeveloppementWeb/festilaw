@@ -22,6 +22,10 @@ function cleanProductionConfig(): void
     config()->set('signature.drivers.signwell.test_mode', false);
     config()->set('mail.default', 'smtp');
     config()->set('app.debug', false);
+    config()->set('ai.providers.openrouter.key', 'or_x');
+    config()->set('services.pixabay.key', 'px_x');
+    config()->set('blog.ai.pipeline', 'editorial');
+    config()->set('analytics.enabled', true);
 }
 
 // Les pages publiques lisent la base : lien "Blog" de l'en-tete et du pied de page, bloc de l'accueil.
@@ -84,16 +88,25 @@ it('accepts Resend as a production mail transport and can build it (native SDK i
 });
 
 it('passes a clean production configuration', function () {
-    config()->set('payment.enabled', ['stripe']);
-    config()->set('payment.drivers.stripe.secret_key', 'sk_live_x');
-    config()->set('payment.drivers.stripe.webhook_secret', 'whsec_x');
-    config()->set('signature.default', 'signwell');
-    config()->set('signature.drivers.signwell.api_key', 'key_x');
-    config()->set('signature.drivers.signwell.test_mode', false);
-    config()->set('mail.default', 'smtp');
-    config()->set('app.debug', false);
+    cleanProductionConfig();
 
     expect(app(ProductionSafetyService::class)->violations())->toBe([]);
+});
+
+it('flags a production configuration without the keys of the generation, or with the measure switched off', function () {
+    // SC9 : la commande de mise en ligne verifie aussi la generation d'articles et la mesure d'audience.
+    cleanProductionConfig();
+    config()->set('ai.providers.openrouter.key', '');
+    config()->set('services.pixabay.key', null);
+    config()->set('blog.ai.pipeline', 'simulated');
+    config()->set('analytics.enabled', '1');
+
+    $violations = implode("\n", app(ProductionSafetyService::class)->violations());
+
+    expect($violations)->toContain('OPENROUTER_API_KEY')
+        ->and($violations)->toContain('PIXABAY_API_KEY')
+        ->and($violations)->toContain('BLOG_AI_PIPELINE')
+        ->and($violations)->toContain('ANALYTICS_ENABLED');
 });
 
 it('fails the go-live check command when the configuration is unfit', function () {

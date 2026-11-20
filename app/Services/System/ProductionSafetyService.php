@@ -57,6 +57,24 @@ final class ProductionSafetyService
             $violations[] = 'L\'extension PHP GD avec le support WebP est absente : les images du blog ne peuvent pas etre traitees.';
         }
 
+        // Generation d'articles et mesure d'audience (SC9) : sans elles, le site tourne, mais la generation
+        // ne peut appeler aucun modele ou rend des brouillons sans photo, et la mesure ne compte rien.
+        if ((string) config('ai.providers.openrouter.key') === '') {
+            $violations[] = 'OPENROUTER_API_KEY est manquante : la generation d\'articles ne peut appeler aucun modele.';
+        }
+
+        if ((string) config('services.pixabay.key') === '') {
+            $violations[] = 'PIXABAY_API_KEY est manquante : les brouillons generes arrivent sans photo de la banque d\'images.';
+        }
+
+        if (config('blog.ai.pipeline') !== 'editorial') {
+            $violations[] = 'BLOG_AI_PIPELINE vaut "'.config('blog.ai.pipeline').'" : la generation ne passe pas par le pipeline editorial. Laissez la variable absente.';
+        }
+
+        if (config('analytics.enabled') !== true) {
+            $violations[] = 'La mesure d\'audience est eteinte : ANALYTICS_ENABLED doit valoir true.';
+        }
+
         return $violations;
     }
 

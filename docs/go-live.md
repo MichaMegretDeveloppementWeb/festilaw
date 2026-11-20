@@ -475,7 +475,7 @@ publication) et la mesure d'audience Falcon Analytics. Elle se déploie par `dep
 
 **Après le déploiement**
 
-- [ ] `php artisan festilaw:check-production` (configuration du site).
+- [ ] `php artisan festilaw:check-production` (configuration du site, clés OpenRouter et Pixabay, pipeline de la génération, interrupteur de la mesure).
 - [ ] `php artisan analytics:check` ne montre aucun point bloquant. Relancé une fois quelques pages ouvertes, sa
       ligne « Proxy » dit s'il faut déclarer un proxy.
 - [ ] Le back-office affiche les sections Blog, Audience et Marketing, et « Tâches automatiques · il y a 1 min ».
