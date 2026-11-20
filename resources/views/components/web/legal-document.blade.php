@@ -11,8 +11,10 @@
 @if ($view !== $englishView)
     <p class="legal__translation-note">
         {{ __('This page is a translation provided for your convenience. In case of any discrepancy, the English version prevails.') }}
-        <a href="{{ localized_route($document, [], 'en') }}" hreflang="en">{{ __('Read the English version') }}</a>
+        <a data-track-label="Page légale, version anglaise" href="{{ localized_route($document, [], 'en') }}" hreflang="en">{{ __('Read the English version') }}</a>
     </p>
 @endif
 
-@include($view)
+<div data-track-label="Page légale, lien">
+    @include($view)
+</div>

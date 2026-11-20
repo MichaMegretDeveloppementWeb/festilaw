@@ -34,7 +34,7 @@
                 <p>{{ __('You pay :amount today: the difference with your :current for the rest of :year. From 1 January, your plan renews at :price per year.', ['amount' => $quote, 'current' => $current, 'year' => $panel->year, 'price' => $otherPrice]) }}</p>
                 <p>{{ __('You\'ll first sign a new agreement for the :pack, right on this page.', ['pack' => $other]) }}</p>
                 <div class="journey-switch__actions">
-                    <button data-track-label="Passage au Pro Pack, confirmation" type="button" class="btn btn--coral btn--sm" wire:click="startUpgrade" wire:loading.attr="disabled" wire:target="startUpgrade">
+                    <button data-track-event="upgrade.confirmed" type="button" class="btn btn--coral btn--sm" wire:click="startUpgrade" wire:loading.attr="disabled" wire:target="startUpgrade">
                         <span wire:loading.remove wire:target="startUpgrade">{{ __('Switch to the :pack', ['pack' => $other]) }}</span>
                         <span wire:loading wire:target="startUpgrade">{{ __('Switching') }}&hellip;</span>
                     </button>
@@ -42,7 +42,7 @@
                 </div>
             </div>
         @else
-            <p class="journey-switch-link">{{ __('More than 9 products?') }} <button data-track-label="Passage au Pro Pack, ouverture" type="button" wire:click="$set('confirmingUpgrade', true)">{{ __('Switch to the :pack', ['pack' => $other]) }}</button></p>
+            <p class="journey-switch-link">{{ __('More than 9 products?') }} <button data-track-event="upgrade.opened" type="button" wire:click="$set('confirmingUpgrade', true)">{{ __('Switch to the :pack', ['pack' => $other]) }}</button></p>
         @endif
     @elseif ($panel->mode === Panel::UPGRADE_SIGN)
         <div class="journey-switch">

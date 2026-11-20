@@ -9,7 +9,7 @@
             </div>
             <div class="post-grid">
                 @foreach ($posts as $card)
-                    @include('web.blog.partials.card', ['card' => $card, 'heading' => 'h3'])
+                    @include('web.blog.partials.card', ['card' => $card, 'heading' => 'h3', 'from' => 'l\'accueil'])
                 @endforeach
             </div>
             <p class="latest-posts__more">

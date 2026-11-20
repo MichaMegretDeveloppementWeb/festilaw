@@ -68,6 +68,7 @@
                         'is-navigable' => $navigable,
                         'is-viewing' => $reviewing && $key === $step,
                     ])
+                    data-track-label="Parcours, étape {{ ['documents' => 'Documents', 'sign' => 'Signature', 'payment' => 'Paiement'][$key] ?? $key }}"
                     @if ($navigable) wire:click="goToStep('{{ $key }}')" role="button" tabindex="0" @endif>
                     <span class="journey-progress__num">{{ $loop->iteration }}</span>
                     <span class="journey-progress__label">{{ $labels[$key] }}</span>
@@ -225,7 +226,7 @@
                                 <button data-track-label="Retrait d'un document" type="button" class="dropzone-file__remove" wire:click="removeDocument('{{ $doc->value }}')" aria-label="{{ __('Remove :document', ['document' => $doc->label()]) }}">&times;</button>
                             </div>
                         @else
-                            <div class="dropzone"
+                            <div class="dropzone" data-track-label="Dépôt d'un document"
                                  x-data="{ over: false }"
                                  @dragover.prevent="over = true"
                                  @dragleave.prevent="over = false"

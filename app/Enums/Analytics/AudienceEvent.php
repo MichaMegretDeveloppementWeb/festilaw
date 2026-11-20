@@ -11,7 +11,7 @@ use App\Enums\Submission\SubmissionType;
 /**
  * Les evenements nommes du site, decrits une seule fois (plan SC8 approuve par Micha le 20/11). La valeur est
  * le nom technique, que les vues ecrivent dans `data-track-event` et que le serveur enregistre : il ne change
- * jamais. Le libelle est celui que Laetitia lit dans Audience et Marketing.
+ * jamais. Le libelle est celui qu'on lit dans Audience et Marketing.
  *
  * Deux familles : les clics qui comptent (aucun n'est une conversion) et les faits que le serveur enregistre
  * quand ils sont acquis. Seuls les faits de vente et de prise de contact sont des conversions, et seul
@@ -33,6 +33,8 @@ enum AudienceEvent: string
     case ArticleToPricing = 'article.to_pricing';
     case SignatureOpened = 'signature.opened';
     case PaymentOpened = 'payment.opened';
+    case UpgradeOpened = 'upgrade.opened';
+    case UpgradeConfirmed = 'upgrade.confirmed';
 
     case QuizConcerned = 'quiz.concerned';
     case QuizExcluded = 'quiz.excluded';
@@ -69,6 +71,8 @@ enum AudienceEvent: string
             self::ArticleToPricing => __('Vers les tarifs, depuis un article'),
             self::SignatureOpened => __('Ouverture de la signature'),
             self::PaymentOpened => __('Ouverture du paiement'),
+            self::UpgradeOpened => __('Passage au Pro Pack, ouverture'),
+            self::UpgradeConfirmed => __('Passage au Pro Pack, confirmation'),
             self::QuizConcerned => __('Quiz terminé, concerné'),
             self::QuizExcluded => __('Quiz terminé, catégorie exclue'),
             self::QuizNotConcerned => __('Quiz terminé, non concerné'),

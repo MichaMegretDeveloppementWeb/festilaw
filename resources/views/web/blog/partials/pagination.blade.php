@@ -1,7 +1,7 @@
 {{-- Pagination d'une liste d'articles. $pagination : BlogPaginationData.
      La cle « Pagination » est a eviter : elle designe le groupe lang/*/pagination.php et rend un tableau. --}}
 @if ($pagination->hasPages())
-    <nav class="blog-pagination" aria-label="{{ __('Article pages') }}">
+    <nav class="blog-pagination" aria-label="{{ __('Article pages') }}" data-track-label="Blog, pagination">
         @if ($pagination->previousUrl())
             <a href="{{ $pagination->previousUrl() }}" class="blog-pagination__step" rel="prev">← {{ __('Newer articles') }}</a>
         @endif

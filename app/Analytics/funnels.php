@@ -47,6 +47,24 @@ Funnel::define('scale_request', 'Demande Scale Pack')
     ->step('Audit payé', value: (int) AudienceEvent::ScaleAuditPaid->points(), event: AudienceEvent::ScaleAuditPaid->value)
     ->step('Rendez-vous demandé', value: 0, event: AudienceEvent::ScaleBooked->value);
 
+// Renouvellement et passage au Pro (cartographie du 20/11) : un client y arrive souvent depuis un e-mail, dans une
+// visite courte. Le renouvellement paye vaut 33 ou 120 points selon la formule, et une etape n'a qu'une valeur :
+// la sienne reste a 0, ses points se lisent dans les conversions.
+Funnel::define('renewal', 'Renouvellement')
+    ->step('Mon projet', value: 0, route: 'my-project')
+    ->step('Paiement ouvert', value: 0, event: AudienceEvent::PaymentOpened->value)
+    ->step('Renouvellement payé', value: 0, anyOf: [
+        FunnelBranch::event('Creator Pack', AudienceEvent::CreatorRenewalPaid->value),
+        FunnelBranch::event('Pro Pack', AudienceEvent::ProRenewalPaid->value),
+    ]);
+
+Funnel::define('upgrade', 'Passage au Pro Pack')
+    ->step('Ouverture', value: 0, event: AudienceEvent::UpgradeOpened->value)
+    ->step('Confirmation', value: 0, event: AudienceEvent::UpgradeConfirmed->value)
+    ->step('Signature ouverte', value: 0, event: AudienceEvent::SignatureOpened->value)
+    ->step('Paiement ouvert', value: 0, event: AudienceEvent::PaymentOpened->value)
+    ->step('Passage au Pro payé', value: (int) AudienceEvent::UpgradePaid->points(), event: AudienceEvent::UpgradePaid->value);
+
 Funnel::define('offers_to_dossier', 'Des offres au dossier')
     ->step('Offres consultées', value: 0, anyOf: [
         FunnelBranch::route('Tarifs, anglais', 'pricing'),

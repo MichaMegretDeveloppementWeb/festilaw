@@ -8,6 +8,7 @@
 <div {{ $attributes->merge(['class' => 'lang-switch']) }}>
     @foreach ($localizedUrls->switcherLinks() as $code => $url)
         <a
+            data-track-label="Langue, {{ ['en' => 'anglais', 'fr' => 'français', 'es' => 'espagnol'][$code] ?? $code }}"
             href="{{ $url }}"
             @class(['is-active' => app()->getLocale() === $code])
         >{{ $labels[$code] ?? strtoupper($code) }}</a>

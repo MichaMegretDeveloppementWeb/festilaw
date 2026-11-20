@@ -26,7 +26,7 @@
                 <p class="contact__lead">{{ __('A dedicated duo of experts, from entrepreneurs to entrepreneurs. Tell us about your situation and we\'ll get back to you quickly.') }}</p>
 
                 <div class="contact__coords">
-                    <a href="mailto:team@festilaw.com" class="contact__coord">
+                    <a data-track-label="Contact, e-mail" href="mailto:team@festilaw.com" class="contact__coord">
                         <span class="contact__coord-icon">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
                         </span>

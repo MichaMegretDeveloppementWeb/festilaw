@@ -29,7 +29,7 @@ it('serves the translated legal pages with the English-prevails notice and a lin
         ->assertSee($needle, false)
         ->assertSee($notice, false)
         // La version qui fait foi : l'adresse anglaise de la MEME page.
-        ->assertSee('<a href="'.route($routeName).'" hreflang="en">', false)
+        ->assertSee('<a data-track-label="Page légale, version anglaise" href="'.route($routeName).'" hreflang="en">', false)
         ->assertDontSee('working draft', false);
 })->with([
     'fr legal-notice' => ['fr', 'legal-notice', '8. Droit applicable', 'la version anglaise prévaut'],

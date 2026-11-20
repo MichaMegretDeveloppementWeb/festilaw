@@ -7,7 +7,7 @@
 @php
     $breadcrumbs = [
         ['name' => __('Home'), 'url' => localized_route('home')],
-        ['name' => __('Blog'), 'url' => localized_route('blog.index')],
+        ['name' => __('Blog'), 'url' => localized_route('blog.index'), 'track' => 'Fil d\'Ariane, Blog'],
         ['name' => $page->name, 'url' => $page->pagination->url(1)],
     ];
     $jsonLdNodes = [$collectionNode];
@@ -34,7 +34,7 @@
 
             <div class="post-grid">
                 @foreach ($page->cards as $card)
-                    @include('web.blog.partials.card', ['card' => $card, 'heading' => 'h2'])
+                    @include('web.blog.partials.card', ['card' => $card, 'heading' => 'h2', 'from' => 'une catégorie'])
                 @endforeach
             </div>
 

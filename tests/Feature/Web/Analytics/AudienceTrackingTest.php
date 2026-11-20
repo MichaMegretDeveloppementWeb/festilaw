@@ -186,12 +186,12 @@ it('puts on the buttons of the site exactly the clicks it declares', function ()
         ->flatMap(fn ($file): array => preg_match_all('/data-track-event="([^"]+)"/', $file->getContents(), $matches) ? $matches[1] : [])
         ->unique()->values()->all();
 
-    // Les douze clics nommes ; les faits viennent du serveur, jamais d'un attribut.
+    // Les quatorze clics nommes ; les faits viennent du serveur, jamais d'un attribut.
     expect($used)->toEqualCanonicalizing([
         'header.to_offers', 'home.to_offers', 'closing.to_offers',
         'offer.creator.chosen', 'offer.pro.chosen', 'offer.scale.chosen',
         'home.to_quiz', 'quiz.answered', 'article.to_quiz', 'article.to_pricing',
-        'signature.opened', 'payment.opened',
+        'signature.opened', 'payment.opened', 'upgrade.opened', 'upgrade.confirmed',
     ]);
 });
 
@@ -201,7 +201,7 @@ it('builds every funnel step from a declared event or an existing route', functi
 
     expect($funnels->failure())->toBeNull()
         ->and(array_map(fn ($funnel): string => $funnel->key, $funnels->all()))->toBe([
-            'subscription_creator', 'subscription_pro', 'scale_request', 'offers_to_dossier', 'quiz_to_dossier', 'blog_to_dossier',
+            'subscription_creator', 'subscription_pro', 'scale_request', 'renewal', 'upgrade', 'offers_to_dossier', 'quiz_to_dossier', 'blog_to_dossier',
         ]);
 
     foreach ($funnels->all() as $funnel) {

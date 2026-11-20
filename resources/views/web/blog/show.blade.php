@@ -20,8 +20,8 @@
     $locale = app()->getLocale();
     $breadcrumbs = array_values(array_filter([
         ['name' => __('Home'), 'url' => localized_route('home')],
-        ['name' => __('Blog'), 'url' => localized_route('blog.index')],
-        $page->category ? ['name' => $page->category->name, 'url' => $page->category->url] : null,
+        ['name' => __('Blog'), 'url' => localized_route('blog.index'), 'track' => 'Fil d\'Ariane, Blog'],
+        $page->category ? ['name' => $page->category->name, 'url' => $page->category->url, 'track' => 'Fil d\'Ariane, catégorie'] : null,
         ['name' => $page->title, 'url' => $page->url],
     ]));
     $jsonLdNodes = array_values(array_filter([$articleNode ?? null]));
@@ -83,10 +83,10 @@
 
         <div class="article__main">
             {{-- HTML produit et echappe par le serveur a l'enregistrement (BlogContentRenderer) : rendu tel quel. --}}
-            <div class="prose">{!! $page->html !!}</div>
+            <div class="prose" data-track-label="Lien dans le texte d'un article">{!! $page->html !!}</div>
 
             @if ($page->sources !== [])
-                <section class="article__sources" aria-labelledby="article-sources">
+                <section class="article__sources" aria-labelledby="article-sources" data-track-label="Source d'un article">
                     <h2 id="article-sources" class="article__sources-title">{{ __('Sources') }}</h2>
                     <ol class="article__sources-list">
                         @foreach ($page->sources as $source)
@@ -113,7 +113,7 @@
                 <h2 id="article-related-title" class="article-related__title">{{ __('Related articles') }}</h2>
                 <div class="post-grid">
                     @foreach ($page->related as $card)
-                        @include('web.blog.partials.card', ['card' => $card, 'heading' => 'h3'])
+                        @include('web.blog.partials.card', ['card' => $card, 'heading' => 'h3', 'from' => 'les articles liés'])
                     @endforeach
                 </div>
             </div>
