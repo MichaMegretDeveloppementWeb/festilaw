@@ -12,6 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
+use Tests\Support\FakeAudienceTracker;
 
 use function Pest\Laravel\post;
 
@@ -152,4 +153,14 @@ it('never leaks an unexpected error: friendly message, no 500', function () {
         ->assertSessionHas('renewal_error');
 
     expect($dossier->fresh()->status)->toBe(SubmissionStatus::Paid); // dossier intact, pas de 500
+});
+
+it('keeps the audience session of the client on the renewal payment', function () {
+    // Le paiement se compte a l'encaissement, dans cette session (mesure d'audience, 20/11).
+    $dossier = renewableDossier(now()->year - 1);
+    FakeAudienceTracker::bind()->currentSession = 'visit-ref';
+
+    post(route('get-started.starter.renew', ['dossier' => 'renewme']))->assertRedirect();
+
+    expect($dossier->payments()->where('type', PaymentType::AnnualRenewal)->sole()->analytics_reference)->toBe('visit-ref');
 });

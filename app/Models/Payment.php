@@ -24,6 +24,7 @@ class Payment extends Model
         'currency',
         'provider',
         'provider_reference',
+        'analytics_reference',
         'status',
         'paid_at',
     ];

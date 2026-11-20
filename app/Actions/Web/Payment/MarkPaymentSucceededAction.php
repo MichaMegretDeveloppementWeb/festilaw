@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Actions\Web\Payment;
 
 use App\Actions\Web\Starter\ApplyPackUpgradeAction;
+use App\Contracts\Analytics\AudienceTracker;
+use App\Enums\Analytics\AudienceEvent;
 use App\Enums\Notification\FunnelNotificationReason;
 use App\Enums\Payment\PaymentStatus;
 use App\Enums\Payment\PaymentType;
@@ -26,7 +28,8 @@ use Throwable;
  * two redelivered webhooks transitions the state and notifies. Advances the submission to "paid". A pack
  * upgrade payment (SC12) also applies the switch to Pro, in the same transaction. Once confirmed, the payment
  * is reviewed (ReviewConfirmedPaymentAction): a double payment or a charged amount that differs from the
- * expected one alerts Festilaw, and a double payment sends the buyer no second confirmation.
+ * expected one alerts Festilaw, and a double payment sends the buyer no second confirmation. The payment is
+ * also counted for the audience at that moment, in the client's funnel (countPayment).
  */
 final readonly class MarkPaymentSucceededAction
 {
@@ -34,6 +37,7 @@ final readonly class MarkPaymentSucceededAction
         private TeamNotifier $teamNotifier,
         private ApplyPackUpgradeAction $applyPackUpgrade,
         private ReviewConfirmedPaymentAction $reviewConfirmedPayment,
+        private AudienceTracker $audience,
     ) {}
 
     /**
@@ -120,10 +124,33 @@ final readonly class MarkPaymentSucceededAction
             $review = $this->reviewConfirmedPayment->execute($payment, $chargedCents);
             if (! $review->isDuplicate()) {
                 $this->emailBuyerConfirmation($payment, $upgraded);
+                $this->countPayment($payment);
             }
         }
 
         return $payment;
+    }
+
+    /**
+     * Compte le paiement pour l'audience a l'encaissement confirme, une seule fois, dans la visite gardee au clic
+     * sur « payer » ou au retour reussi (decision de Micha du 20/11, Falcon Analytics 599edd0) : le webhook, la
+     * verification au retour, la reconciliation et le back-office passent tous par ici. Le fait prend la date de
+     * la reference. Dans la requete du client, le package garde son visiteur et ignore la reference. Sans
+     * reference, le client n'etait pas mesure et rien ne se compte, car un webhook sans elle compterait un faux
+     * visiteur. Le fait s'ecrit apres l'enregistrement du paiement. Un double paiement, rembourse, ne compte pas.
+     */
+    private function countPayment(Payment $payment): void
+    {
+        if ($payment->analytics_reference === null || $payment->submission === null) {
+            return;
+        }
+
+        $this->audience->record(
+            AudienceEvent::paidFor($payment->type, $payment->submission->type),
+            $payment->analytics_reference,
+        );
+
+        $payment->update(['analytics_reference' => null]);
     }
 
     /**

@@ -25,6 +25,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
+use Tests\Support\FakeAudienceTracker;
 
 use function Pest\Laravel\get;
 
@@ -851,4 +852,19 @@ it('rejects an invalid replacement file and keeps the original document', functi
         ->assertHasErrors('replacements.turnover_proof');
 
     expect($doc->fresh()->original_filename)->toBe('ok.pdf'); // inchange
+});
+
+it('keeps the audience session of the client on the payment started from the journey', function () {
+    // Le paiement se compte a l'encaissement, dans cette session (mesure d'audience, 20/11).
+    Http::fake(['*/v1/checkout/sessions' => Http::response(['id' => 'cs_s', 'url' => 'https://checkout.stripe.test/cs_s'])]);
+    $submission = storeRequiredDocuments(openStarterDossier());
+    $submission->update(['status' => SubmissionStatus::AwaitingPayment]);
+    $submission->contract->update(['signature_status' => SignatureStatus::Signed, 'signed_at' => now()]);
+    FakeAudienceTracker::bind()->currentSession = 'visit-ref';
+
+    Livewire::test(StarterJourney::class, ['submission' => $submission->fresh()])
+        ->call('pay')
+        ->assertRedirect('https://checkout.stripe.test/cs_s');
+
+    expect($submission->payments()->sole()->analytics_reference)->toBe('visit-ref');
 });

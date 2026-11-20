@@ -12,6 +12,7 @@ use App\Actions\Web\Starter\StartContractSigningAction;
 use App\Actions\Web\Starter\StartPackUpgradeAction;
 use App\Actions\Web\Starter\StartPackUpgradePaymentAction;
 use App\Actions\Web\Starter\WithdrawPackDowngradeAction;
+use App\Contracts\Analytics\AudienceTracker;
 use App\Contracts\Signature\SignatureGatewayInterface;
 use App\Enums\Contract\ContractRole;
 use App\Enums\Contract\SignatureEventOutcome;
@@ -250,10 +251,10 @@ final class PackChangePanel extends Component
     }
 
     /** Paiement de la difference : redirection vers la page de paiement du prestataire. */
-    public function pay(StartPackUpgradePaymentAction $startPayment, PaymentGatewayRegistry $gateways): void
+    public function pay(StartPackUpgradePaymentAction $startPayment, PaymentGatewayRegistry $gateways, AudienceTracker $audience): void
     {
         try {
-            $session = $startPayment->execute($this->submission, (string) array_key_first($gateways->options()));
+            $session = $startPayment->execute($this->submission, (string) array_key_first($gateways->options()), $audience->currentSession());
         } catch (BaseAppException $e) {
             Log::error($e->getMessage(), ['exception' => $e]);
             $this->addError('pack', __($e->getUserMessage()));

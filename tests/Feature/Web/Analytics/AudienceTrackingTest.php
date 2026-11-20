@@ -1,5 +1,8 @@
 <?php
 
+use App\Actions\Web\Payment\MarkPaymentExpiredAction;
+use App\Actions\Web\Payment\MarkPaymentFailedAction;
+use App\Actions\Web\Payment\MarkPaymentSucceededAction;
 use App\Actions\Web\Starter\CreateStarterSubmissionAction;
 use App\Contracts\Signature\SignatureGatewayInterface;
 use App\Data\Signature\SignatureWebhookData;
@@ -42,7 +45,8 @@ use function Pest\Laravel\postJson;
 
 /*
  | Mesure d'audience (plan SC8 du 20/11) : les evenements declares, les boutons qui les portent, et les faits
- | du parcours enregistres une seule fois, dans la requete du visiteur, quand ils sont acquis.
+ | du parcours enregistres une seule fois, dans la requete du visiteur, quand ils sont acquis. Un paiement se
+ | compte a l'encaissement, dans la session de mesure gardee au clic sur « payer » (decision du 20/11).
  */
 
 uses(RefreshDatabase::class);
@@ -113,6 +117,17 @@ function bindAudienceSignatureProvider(bool $signed): void
             return null;
         }
     });
+}
+
+/** Un paiement en attente chez Stripe, lance au clic sur « payer » par un client mesure dans la session donnee. */
+function audiencePendingPayment(string $pack, PaymentType $type, ?string $session = 'visit-ref'): Payment
+{
+    $submission = Submission::factory()->{$pack}()->create(['resume_token' => Str::random(40), 'resume_expires_at' => now()->addDays(30)]);
+
+    return $submission->payments()->create([
+        'type' => $type, 'amount_cents' => 1000, 'service_year' => 2026, 'currency' => 'EUR', 'provider' => 'stripe',
+        'status' => PaymentStatus::Pending, 'analytics_reference' => $session,
+    ]);
 }
 
 /** Un paiement en attente chez Stripe, et ses adresses de retour signees (reussite, annulation). */
@@ -205,9 +220,18 @@ it('records a fact once per visitor and key, through Falcon Analytics', function
         /** @var list<string> */
         public array $names = [];
 
-        public function record(string $name, ?int $value = null, array $props = []): void
+        /** @var list<?string> */
+        public array $sessions = [];
+
+        public function record(string $name, ?int $value = null, array $props = [], ?string $session = null): void
         {
             $this->names[] = $name;
+            $this->sessions[] = $session;
+        }
+
+        public function currentSession(): ?string
+        {
+            return 'sealed-visit';
         }
     };
     Analytics::swap($spy);
@@ -216,8 +240,12 @@ it('records a fact once per visitor and key, through Falcon Analytics', function
     $tracker->recordOnce(AudienceEvent::CreatorPaid, 'payment:7');
     $tracker->recordOnce(AudienceEvent::CreatorPaid, 'payment:7');
     $tracker->recordOnce(AudienceEvent::CreatorPaid, 'payment:8');
+    // Un paiement confirme plus tard passe la reference de la visite du client (Falcon Analytics 599edd0).
+    $tracker->record(AudienceEvent::ProPaid, 'kept-visit');
 
-    expect($spy->names)->toBe(['creator.paid', 'creator.paid']);
+    expect($spy->names)->toBe(['creator.paid', 'creator.paid', 'pro.paid'])
+        ->and($spy->sessions)->toBe([null, null, 'kept-visit'])
+        ->and($tracker->currentSession())->toBe('sealed-visit');
 });
 
 it('measures the public pages of a visitor, never those of a signed-in account', function () {
@@ -249,7 +277,8 @@ it('counts a new Creator or Pro dossier, and a link asked again for an existing 
 ]);
 
 it('opens the new dossier page and the Scale space with a full page load, so the collector counts them', function () {
-    // Le collecteur du package ne compte pas une page ouverte par navigation Livewire (essai du 20/11).
+    // Jusqu'a Falcon Analytics 599edd0, le collecteur ne comptait pas une page ouverte par navigation Livewire
+    // (essai du 20/11) : ces deux pages se chargent en entier, ce que ce test garde.
     $starter = Livewire::test(StarterForm::class, ['type' => 'starter'])
         ->set('company_name', 'Wildthread')->set('first_name', 'Maya')->set('last_name', 'Thornton')
         ->set('email', 'maya@example.com')->call('submit')
@@ -349,13 +378,15 @@ it('counts a pack switched before payment', function () {
     expect($this->audience->recorded)->toBe(['dossier.pack_switched']);
 });
 
-it('counts a payment on the return from Stripe, once, by its kind', function (string $pack, PaymentType $type, string $paid) {
-    [$successUrl] = audiencePaymentReturnUrls($pack, $type);
+it('counts a payment once the money is in, by its kind, in the session kept when the client clicked pay', function (string $pack, PaymentType $type, string $paid) {
+    $payment = audiencePendingPayment($pack, $type);
 
-    get($successUrl)->assertRedirect();
-    get($successUrl)->assertRedirect();
+    // Le webhook redelivre le meme evenement : la seconde confirmation ne compte pas.
+    app(MarkPaymentSucceededAction::class)->execute($payment, 'cs_paid');
+    app(MarkPaymentSucceededAction::class)->execute($payment->fresh(), 'cs_paid');
 
-    expect($this->audience->recorded)->toBe([$paid]);
+    expect($this->audience->sessions)->toBe([['event' => $paid, 'session' => 'visit-ref']])
+        ->and($payment->fresh()->analytics_reference)->toBeNull();
 })->with([
     'creator, first year' => ['starter', PaymentType::StarterSubscription, 'creator.paid'],
     'pro, first year' => ['pro', PaymentType::StarterSubscription, 'pro.paid'],
@@ -364,6 +395,61 @@ it('counts a payment on the return from Stripe, once, by its kind', function (st
     'switch to pro' => ['starter', PaymentType::PackUpgrade, 'upgrade.paid'],
     'scale audit' => ['scale', PaymentType::ScaleAudit, 'scale.audit_paid'],
 ]);
+
+it('no longer counts a payment on the return from Stripe, which may come before the money is in', function () {
+    [$successUrl] = audiencePaymentReturnUrls('starter', PaymentType::StarterSubscription);
+
+    get($successUrl)->assertRedirect();
+
+    expect($this->audience->recorded)->toBe([]);
+});
+
+it('keeps the visit of a buyer back from Stripe on a payment still pending, the last one winning, and never on a settled one', function () {
+    $pending = audiencePendingPayment('starter', PaymentType::StarterSubscription, 'click-visit');
+    $settled = audiencePendingPayment('starter', PaymentType::StarterSubscription, null);
+    $settled->update(['status' => PaymentStatus::Succeeded]);
+    $unmeasured = audiencePendingPayment('scale', PaymentType::ScaleAudit, 'click-visit');
+    $this->audience->currentSession = 'return-visit';
+
+    get(app(PaymentReturnService::class)->returnUrls($pending)[0])->assertRedirect();
+    get(app(PaymentReturnService::class)->returnUrls($settled)[0])->assertRedirect();
+    get(app(PaymentReturnService::class)->returnUrls($pending)[1])->assertRedirect();
+    // Un retour sans visite mesuree garde la reference prise au clic.
+    $this->audience->currentSession = null;
+    get(app(PaymentReturnService::class)->returnUrls($unmeasured)[0])->assertRedirect();
+
+    expect($pending->fresh()->analytics_reference)->toBe('return-visit')
+        ->and($settled->fresh()->analytics_reference)->toBeNull()
+        ->and($unmeasured->fresh()->analytics_reference)->toBe('click-visit');
+});
+
+it('counts neither a double payment nor a payment started without an audience session', function () {
+    $unmeasured = audiencePendingPayment('starter', PaymentType::StarterSubscription, session: null);
+    $double = audiencePendingPayment('starter', PaymentType::StarterSubscription);
+    $double->submission->payments()->create([
+        'type' => PaymentType::StarterSubscription, 'amount_cents' => 1000, 'service_year' => 2026, 'currency' => 'EUR',
+        'provider' => 'stripe', 'status' => PaymentStatus::Succeeded, 'paid_at' => now(),
+    ]);
+
+    app(MarkPaymentSucceededAction::class)->execute($unmeasured, 'cs_unmeasured');
+    app(MarkPaymentSucceededAction::class)->execute($double, 'cs_double');
+
+    expect($this->audience->recorded)->toBe([])
+        ->and($unmeasured->fresh()->status)->toBe(PaymentStatus::Succeeded)
+        ->and($double->fresh()->status)->toBe(PaymentStatus::Succeeded);
+});
+
+it('drops the audience session of a payment that fails or expires', function () {
+    $failed = audiencePendingPayment('starter', PaymentType::StarterSubscription);
+    $expired = audiencePendingPayment('scale', PaymentType::ScaleAudit);
+
+    app(MarkPaymentFailedAction::class)->execute($failed);
+    app(MarkPaymentExpiredAction::class)->execute($expired);
+
+    expect($failed->fresh()->analytics_reference)->toBeNull()
+        ->and($expired->fresh()->analytics_reference)->toBeNull()
+        ->and($this->audience->recorded)->toBe([]);
+});
 
 it('counts a payment abandoned at Stripe', function () {
     [, $cancelUrl] = audiencePaymentReturnUrls('starter', PaymentType::StarterSubscription);

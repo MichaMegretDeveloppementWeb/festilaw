@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Web\Funnel;
 
 use App\Actions\Web\Scale\StartScaleAuditPaymentAction;
+use App\Contracts\Analytics\AudienceTracker;
 use App\Enums\Submission\SubmissionType;
 use App\Exceptions\BaseAppException;
 use App\Http\Controllers\Controller;
@@ -25,6 +26,7 @@ final class ScaleAuditPaymentController extends Controller
     public function __construct(
         private readonly StartScaleAuditPaymentAction $startAudit,
         private readonly PaymentGatewayRegistry $gateways,
+        private readonly AudienceTracker $audience,
     ) {}
 
     public function __invoke(Request $request, Submission $dossier): RedirectResponse
@@ -35,7 +37,7 @@ final class ScaleAuditPaymentController extends Controller
         $provider = (string) $request->input('provider', array_key_first($options) ?? '');
 
         try {
-            $checkout = $this->startAudit->execute($dossier, $provider);
+            $checkout = $this->startAudit->execute($dossier, $provider, $this->audience->currentSession());
         } catch (BaseAppException $e) {
             Log::channel('payments')->warning($e->getMessage(), ['exception' => $e, 'submission' => $dossier->id]);
 

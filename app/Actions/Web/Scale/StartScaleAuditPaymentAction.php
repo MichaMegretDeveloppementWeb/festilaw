@@ -25,7 +25,11 @@ final readonly class StartScaleAuditPaymentAction
 {
     public function __construct(private PaymentGatewayRegistry $gateways) {}
 
-    public function execute(Submission $submission, string $providerKey): CheckoutSessionData
+    /**
+     * @param  ?string  $analyticsReference  the reference of the client's visit when they click "pay", kept on the
+     *                                       payment so it is counted in that visit once the money is in
+     */
+    public function execute(Submission $submission, string $providerKey, ?string $analyticsReference = null): CheckoutSessionData
     {
         // Un dossier annule ne paie pas d'audit : garde au bord (le POST reste atteignable avec un token
         // valide meme si l'UI masque le bouton). Reactiver un dossier annule ne passe que par le menu admin.
@@ -45,7 +49,7 @@ final readonly class StartScaleAuditPaymentAction
         // Verrou anti double-debit : serialise deux paiements concurrents (double clic / deux onglets) pour
         // ce dossier. Le verrou (table cache_locks) ne tient AUCUNE transaction DB pendant l'appel HTTP au
         // prestataire ; il serialise seulement les demarrages. 15s de bail, 10s d'attente.
-        return Cache::lock('checkout:'.$submission->getKey(), 15)->block(10, function () use ($submission, $providerKey): CheckoutSessionData {
+        return Cache::lock('checkout:'.$submission->getKey(), 15)->block(10, function () use ($submission, $providerKey, $analyticsReference): CheckoutSessionData {
             // Reprise : reutiliser un checkout d'audit deja en cours plutot que d'en creer un second
             // (anti double-debit, crucial sur un double clic ou un moyen asynchrone).
             $existing = $this->existingAuditCheckout($submission);
@@ -66,6 +70,7 @@ final readonly class StartScaleAuditPaymentAction
                 'currency' => 'EUR',
                 'provider' => $gateway->key(),
                 'status' => PaymentStatus::Pending,
+                'analytics_reference' => $analyticsReference,
             ]);
 
             $session = $gateway->createCheckout($payment);

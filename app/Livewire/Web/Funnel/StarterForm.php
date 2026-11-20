@@ -139,8 +139,8 @@ class StarterForm extends Component
         }
 
         // Nouveau dossier : on enchaine directement sur le parcours (televerser -> signer -> payer). Une page
-        // complete, et non une navigation Livewire : le collecteur de Falcon Analytics ne compte pas une page
-        // ouverte par navigation (essai du 20/11).
+        // complete, et non une navigation Livewire : jusqu'a Falcon Analytics 599edd0 (20/11), le collecteur ne
+        // comptait pas une page ouverte par navigation. Il la compte depuis, et la page complete reste sans gene.
         $audience->record(AudienceEvent::openedFor($this->packType()));
         $this->redirectRoute('get-started.starter.journey', [
             'dossier' => $outcome->submission->resume_token,

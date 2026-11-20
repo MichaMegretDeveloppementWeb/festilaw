@@ -831,12 +831,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:MichaMegretDeveloppementWeb/falcon-analytics.git",
-                "reference": "35b2ca06d1c8bb57979d1ce2facc97fbfee08a13"
+                "reference": "599edd095e033e193d5405a485965df31b508537"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/MichaMegretDeveloppementWeb/falcon-analytics/zipball/35b2ca06d1c8bb57979d1ce2facc97fbfee08a13",
-                "reference": "35b2ca06d1c8bb57979d1ce2facc97fbfee08a13",
+                "url": "https://api.github.com/repos/MichaMegretDeveloppementWeb/falcon-analytics/zipball/599edd095e033e193d5405a485965df31b508537",
+                "reference": "599edd095e033e193d5405a485965df31b508537",
                 "shasum": ""
             },
             "require": {
@@ -925,7 +925,7 @@
                 "source": "https://github.com/MichaMegretDeveloppementWeb/falcon-analytics/tree/main",
                 "issues": "https://github.com/MichaMegretDeveloppementWeb/falcon-analytics/issues"
             },
-            "time": "2026-11-19T17:33:40+00:00"
+            "time": "2026-11-20T19:19:25+00:00"
         },
         {
             "name": "falcon/ui-kit",
@@ -933,12 +933,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:MichaMegretDeveloppementWeb/falcon-ui-kit.git",
-                "reference": "4a5dd538c3f7bff4523411258df05f712e458a12"
+                "reference": "e89b7b06efd9e4071caeb9ce8775e94f0690520f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/MichaMegretDeveloppementWeb/falcon-ui-kit/zipball/4a5dd538c3f7bff4523411258df05f712e458a12",
-                "reference": "4a5dd538c3f7bff4523411258df05f712e458a12",
+                "url": "https://api.github.com/repos/MichaMegretDeveloppementWeb/falcon-ui-kit/zipball/e89b7b06efd9e4071caeb9ce8775e94f0690520f",
+                "reference": "e89b7b06efd9e4071caeb9ce8775e94f0690520f",
                 "shasum": ""
             },
             "require": {
@@ -1020,7 +1020,7 @@
                 "source": "https://github.com/MichaMegretDeveloppementWeb/falcon-ui-kit/tree/main",
                 "issues": "https://github.com/MichaMegretDeveloppementWeb/falcon-ui-kit/issues"
             },
-            "time": "2026-11-20T10:36:56+00:00"
+            "time": "2026-11-20T16:44:44+00:00"
         },
         {
             "name": "fruitcake/php-cors",

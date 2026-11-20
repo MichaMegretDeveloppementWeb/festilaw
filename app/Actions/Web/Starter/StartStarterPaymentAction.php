@@ -29,7 +29,11 @@ final readonly class StartStarterPaymentAction
         private AnnualFeeProrator $prorator,
     ) {}
 
-    public function execute(Submission $submission, string $providerKey): CheckoutSessionData
+    /**
+     * @param  ?string  $analyticsReference  the reference of the client's visit when they click "pay", kept on the
+     *                                       payment so it is counted in that visit once the money is in
+     */
+    public function execute(Submission $submission, string $providerKey, ?string $analyticsReference = null): CheckoutSessionData
     {
         // load() (pas loadMissing) : force le rafraichissement des relations, meme si deja chargees.
         $submission->load(['contract', 'uploadedDocuments']);
@@ -41,7 +45,7 @@ final readonly class StartStarterPaymentAction
         // Verrou anti double-debit : serialise deux "Payer" concurrents (double clic / deux onglets) pour ce
         // dossier. Le verrou (table cache_locks) ne tient AUCUNE transaction DB pendant l'appel HTTP au
         // prestataire ; il serialise seulement les demarrages. 15s de bail, 10s d'attente.
-        return Cache::lock('checkout:'.$submission->getKey(), 15)->block(10, function () use ($submission, $providerKey): CheckoutSessionData {
+        return Cache::lock('checkout:'.$submission->getKey(), 15)->block(10, function () use ($submission, $providerKey, $analyticsReference): CheckoutSessionData {
             // Reprise : un checkout d'abonnement deja en cours (Pending) -> reutiliser sa session plutot
             // que d'en creer une 2e (anti double-debit, crucial notamment sur un double clic).
             $existing = $this->existingCheckout($submission);
@@ -66,6 +70,7 @@ final readonly class StartStarterPaymentAction
                 'currency' => 'EUR',
                 'provider' => $gateway->key(),
                 'status' => PaymentStatus::Pending,
+                'analytics_reference' => $analyticsReference,
             ]);
 
             // La reference provider est stockee apres l'appel externe. En cas d'echec de cet update

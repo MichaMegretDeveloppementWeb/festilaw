@@ -30,9 +30,13 @@ final readonly class StartPackUpgradePaymentAction
         private PaymentGatewayRegistry $gateways,
     ) {}
 
-    public function execute(Submission $submission, string $providerKey): CheckoutSessionData
+    /**
+     * @param  ?string  $analyticsReference  la reference de la visite du client au clic sur « payer », gardee
+     *                                       sur le paiement pour le compter dans cette visite a l'encaissement
+     */
+    public function execute(Submission $submission, string $providerKey, ?string $analyticsReference = null): CheckoutSessionData
     {
-        return Cache::lock('checkout:'.$submission->getKey(), 15)->block(10, function () use ($submission, $providerKey): CheckoutSessionData {
+        return Cache::lock('checkout:'.$submission->getKey(), 15)->block(10, function () use ($submission, $providerKey, $analyticsReference): CheckoutSessionData {
             $upgrade = $this->packChanges->openUpgrade($submission)
                 ?? throw StarterException::packUpgradeUnavailable($submission->id, 'no open upgrade');
 
@@ -63,6 +67,7 @@ final readonly class StartPackUpgradePaymentAction
                 'currency' => 'EUR',
                 'provider' => $gateway->key(),
                 'status' => PaymentStatus::Pending,
+                'analytics_reference' => $analyticsReference,
             ]);
             $upgrade->update(['payment_id' => $payment->id, 'amount_cents' => $amount]);
 

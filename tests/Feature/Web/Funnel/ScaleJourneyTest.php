@@ -21,6 +21,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
+use Tests\Support\FakeAudienceTracker;
 
 use function Pest\Laravel\get;
 use function Pest\Laravel\post;
@@ -355,4 +356,15 @@ it('sends an expired Scale space link to the link-expired page (capability bindi
     Submission::factory()->scale()->create(['resume_token' => 'expiredtok', 'resume_expires_at' => now()->subDay()]);
 
     get(route('get-started.scale.space', ['dossier' => 'expiredtok']))->assertRedirect(route('link-expired'));
+});
+
+it('keeps the audience session of the client on the audit payment', function () {
+    // Le paiement se compte a l'encaissement, dans cette session (mesure d'audience, 20/11).
+    fakeStripeCreate();
+    scaleDossier();
+    FakeAudienceTracker::bind()->currentSession = 'visit-ref';
+
+    post(route('get-started.scale.pay', ['dossier' => 'scaletok']))->assertRedirect('https://checkout.stripe.test/cs_scale');
+
+    expect(Payment::where('type', PaymentType::ScaleAudit)->sole()->analytics_reference)->toBe('visit-ref');
 });

@@ -30,7 +30,11 @@ final readonly class StartRenewalPaymentAction
         private RenewalService $renewals,
     ) {}
 
-    public function execute(Submission $submission, string $providerKey): CheckoutSessionData
+    /**
+     * @param  ?string  $analyticsReference  the reference of the client's visit when they click "pay", kept on the
+     *                                       payment so it is counted in that visit once the money is in
+     */
+    public function execute(Submission $submission, string $providerKey, ?string $analyticsReference = null): CheckoutSessionData
     {
         // Un dossier annule ne se renouvelle pas : on refuse au bord (seul chemin serveur qui cree un
         // checkout de renouvellement). Verifie AVANT dueYear pour donner un message clair quelle que soit
@@ -68,7 +72,7 @@ final readonly class StartRenewalPaymentAction
         // Verrou anti double-debit : serialise deux paiements concurrents (double clic / deux onglets) pour
         // ce dossier. Le verrou (table cache_locks) ne tient AUCUNE transaction DB pendant l'appel HTTP au
         // prestataire ; il serialise seulement les demarrages. 15s de bail, 10s d'attente.
-        return Cache::lock('checkout:'.$submission->getKey(), 15)->block(10, function () use ($submission, $providerKey, $dueYear): CheckoutSessionData {
+        return Cache::lock('checkout:'.$submission->getKey(), 15)->block(10, function () use ($submission, $providerKey, $analyticsReference, $dueYear): CheckoutSessionData {
             // Reprise : un paiement de renouvellement deja en cours (Pending) -> reutiliser sa session plutot
             // que d'en creer une 2e (anti double-debit, crucial notamment sur un double clic).
             $existing = $this->existingRenewalCheckout($submission);
@@ -91,6 +95,7 @@ final readonly class StartRenewalPaymentAction
                 'currency' => 'EUR',
                 'provider' => $gateway->key(),
                 'status' => PaymentStatus::Pending,
+                'analytics_reference' => $analyticsReference,
             ]);
 
             $session = $gateway->createCheckout($payment);

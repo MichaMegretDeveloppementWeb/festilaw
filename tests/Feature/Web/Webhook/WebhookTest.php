@@ -524,8 +524,9 @@ it('acknowledges the webhook when the signed PDF is not generated yet (the minut
         ->and($contract->fresh()->signature_status)->toBe(SignatureStatus::Signed);
 });
 
-it('never counts a payment or a signature for the audience from a webhook, which has no visitor', function () {
-    // Un webhook a une session (groupe web) : un enregistrement fait la compterait un faux visiteur (SC8).
+it('never counts a signature, nor a payment started without an audience session, from a webhook', function () {
+    // Un webhook a une session (groupe web) sans visiteur : sans session de mesure gardee, il compterait un faux
+    // visiteur (SC8).
     $audience = FakeAudienceTracker::bind();
     Storage::fake('local');
     Http::fake(['*/api/v1/documents/*/completed_pdf*' => Http::response('SIGNED-PDF', 200)]);
@@ -550,4 +551,27 @@ it('never counts a payment or a signature for the audience from a webhook, which
     expect($payment->fresh()->status)->toBe(PaymentStatus::Succeeded)
         ->and($contract->fresh()->signature_status)->toBe(SignatureStatus::Signed)
         ->and($audience->recorded)->toBe([]);
+});
+
+it('counts a payment from the webhook in the audience session kept when the client clicked pay, once', function () {
+    // Decision du 20/11 : le paiement se compte a l'encaissement, dans le tunnel du client.
+    $audience = FakeAudienceTracker::bind();
+    $submission = Submission::factory()->starter()->create();
+    $payment = $submission->payments()->create([
+        'type' => PaymentType::StarterSubscription,
+        'amount_cents' => 33300,
+        'currency' => 'EUR',
+        'provider' => 'stripe',
+        'provider_reference' => 'cs_kept',
+        'status' => PaymentStatus::Pending,
+        'analytics_reference' => 'visit-ref',
+    ]);
+    $completed = ['type' => 'checkout.session.completed', 'data' => ['object' => ['id' => 'cs_kept', 'payment_status' => 'paid']]];
+
+    postStripeWebhook($completed)->assertNoContent();
+    postStripeWebhook($completed)->assertNoContent();
+
+    expect($payment->fresh()->status)->toBe(PaymentStatus::Succeeded)
+        ->and($payment->fresh()->analytics_reference)->toBeNull()
+        ->and($audience->sessions)->toBe([['event' => 'creator.paid', 'session' => 'visit-ref']]);
 });

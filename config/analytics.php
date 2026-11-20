@@ -256,6 +256,14 @@ return [
 
     'default_period' => 30,
 
+    // The zone the figures' days are cut in and their hours shown · a name
+    // like 'Europe/Paris'. Null: the application's. Changing it rebuilds the
+    // days at the next passes of the maintenance, and the screens say it
+    // meanwhile. Every instant stays written in UTC.
+    // Festilaw (20/11) : l'application reste en UTC, la mesure coupe ses jours et affiche ses heures a Paris,
+    // comme le conseille le developpeur du package (Festilaw B.V. est aux Pays-Bas, meme fuseau).
+    'timezone' => 'Europe/Paris',
+
     'session' => [
         // A session is open while its last activity is less than this many
         // minutes old · two activities further apart belong to two sessions.
@@ -333,6 +341,14 @@ return [
         // params (utm_*, gclid, fbclid, custom ad params) are kept; only likely
         // PII is removed. Set to [] to store URLs verbatim.
         'redact_query_params' => ['token', 'access_token', 'auth', 'password', 'secret', 'apikey', 'api_key', 'otp', 'signature', 'email'],
+
+        // Route parameters whose value is replaced by their name in stored URLs,
+        // `/my-project/{dossier}` · a token a personal link carries in its path,
+        // for instance. Matched against the application's routes, so a page of
+        // the same model is one page. Empty: no path is masked.
+        // Festilaw (20/11) : `dossier` porte le jeton qui ouvre un dossier client sans compte (parcours, espace
+        // Scale, espace client). Aucune autre route publique ne porte de jeton dans son chemin.
+        'redact_route_parameters' => ['dossier'],
     ],
 
     /*

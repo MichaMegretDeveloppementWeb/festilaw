@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Web\Funnel;
 
 use App\Actions\Web\Starter\StartRenewalPaymentAction;
+use App\Contracts\Analytics\AudienceTracker;
 use App\Exceptions\BaseAppException;
 use App\Http\Controllers\Controller;
 use App\Models\Submission;
@@ -25,6 +26,7 @@ final class StarterRenewalController extends Controller
     public function __construct(
         private readonly StartRenewalPaymentAction $startRenewal,
         private readonly PaymentGatewayRegistry $gateways,
+        private readonly AudienceTracker $audience,
     ) {}
 
     public function __invoke(Request $request, Submission $dossier): RedirectResponse
@@ -35,7 +37,7 @@ final class StarterRenewalController extends Controller
         $provider = (string) $request->input('provider', array_key_first($options) ?? '');
 
         try {
-            $checkout = $this->startRenewal->execute($dossier, $provider);
+            $checkout = $this->startRenewal->execute($dossier, $provider, $this->audience->currentSession());
         } catch (BaseAppException $e) {
             Log::channel('payments')->warning($e->getMessage(), ['exception' => $e, 'submission' => $dossier->id]);
 

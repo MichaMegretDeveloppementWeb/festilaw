@@ -32,6 +32,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
+use Tests\Support\FakeAudienceTracker;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\get;
@@ -519,4 +520,17 @@ it('asks Festilaw to confirm in a window, with the amount, before cancelling a p
 
     // Ouvrir la fenetre ne rembourse rien.
     Http::assertNotSent(fn ($request) => str_ends_with($request->url(), '/v1/refunds'));
+});
+
+it('keeps the audience session of the client on the payment of the switch to Pro', function () {
+    // Le paiement se compte a l'encaissement, dans cette session (mesure d'audience, 20/11).
+    Http::fake(['*/v1/checkout/sessions' => Http::response(['id' => 'cs_up', 'url' => 'https://checkout.stripe.test/cs_up'])]);
+    $dossier = activeCreator();
+    Livewire::test(PackChangePanel::class, ['submission' => $dossier])->call('startUpgrade');
+    PackChange::sole()->contract->update(['signature_status' => SignatureStatus::Signed, 'signed_at' => now()]);
+    FakeAudienceTracker::bind()->currentSession = 'visit-ref';
+
+    Livewire::test(PackChangePanel::class, ['submission' => $dossier])->call('pay')->assertRedirect('https://checkout.stripe.test/cs_up');
+
+    expect(Payment::where('type', PaymentType::PackUpgrade)->sole()->analytics_reference)->toBe('visit-ref');
 });

@@ -538,7 +538,7 @@ class StarterJourney extends Component
         session()->now('starter_status', 'document_replaced');
     }
 
-    public function pay(StartStarterPaymentAction $startStarterPayment, PaymentGatewayRegistry $gateways): mixed
+    public function pay(StartStarterPaymentAction $startStarterPayment, PaymentGatewayRegistry $gateways, AudienceTracker $audience): mixed
     {
         if ($this->step() !== 'payment') {
             return null;
@@ -552,7 +552,7 @@ class StarterJourney extends Component
         }
 
         try {
-            $checkout = $startStarterPayment->execute($this->submission, $this->paymentProvider);
+            $checkout = $startStarterPayment->execute($this->submission, $this->paymentProvider, $audience->currentSession());
         } catch (BaseAppException $e) {
             Log::error($e->getMessage(), ['exception' => $e]);
             $this->addError('journey', __($e->getUserMessage()));

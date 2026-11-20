@@ -11,7 +11,8 @@ use App\Models\Payment;
  * Records that a checkout session expired without payment (buyer abandoned): confirmable → Expired.
  * Distinct from Failed (a decline) for back-office clarity. The submission stays "awaiting payment";
  * a retry creates a fresh payment. Only a confirmable payment transitions (never overwrites a settled
- * state · a session that expires *after* an async success must not undo the payment).
+ * state · a session that expires *after* an async success must not undo the payment). Its audience session
+ * is dropped: a payment that does not go through is never counted.
  */
 final readonly class MarkPaymentExpiredAction
 {
@@ -20,7 +21,7 @@ final readonly class MarkPaymentExpiredAction
         Payment::query()
             ->whereKey($payment->getKey())
             ->whereIn('status', PaymentStatus::confirmable())
-            ->update(['status' => PaymentStatus::Expired]);
+            ->update(['status' => PaymentStatus::Expired, 'analytics_reference' => null]);
 
         return $payment->refresh();
     }
