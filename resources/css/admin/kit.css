@@ -13,11 +13,13 @@
         display: none;
     }
 
-    /* Un bouton ou un champ fait 44 px de haut au plus (decision de Micha du 16/11/2026). Le kit (a477194) les
-       monte a 48 px des que l'ecran depasse 950 px de haut ; ils continuent de se reduire sur un ecran moins
-       haut, comme le kit le prevoit. */
+    /* L'echelle des titres du back-office (decision de Micha du 19/11/2026) : titre de page 22 px, titre de
+       fenetre 18 px, de confirmation 16 px, au-dessus des 13 px du texte et des libelles. Le kit (4a5dd53) regle
+       ses titres par ces jetons ; les titres de section et d'etat vide gardent ceux du kit (15 et 14 px). */
     :root {
-        --ui-field: min(calc((var(--ui-touch) * 4 - 2rem) / 3), 2.75rem);
+        --ui-title-page: 22px;
+        --ui-title-modal: 18px;
+        --ui-title-confirm: 16px;
     }
 
     /* Un en-tete de colonne ne passe jamais a la ligne (decision de Micha du 16/11/2026) : sur un ecran etroit,
@@ -43,12 +45,5 @@
     /* La pagination sous un tableau suit le meme bord, pour la meme raison. */
     .ui-pagination {
         padding-inline: 0;
-    }
-
-    /* Titre de page : 22 px au lieu de 18. */
-    .ui-page-header h1 {
-        font-size: 1.375rem;
-        line-height: 1.75rem;
-        letter-spacing: -0.01em;
     }
 }

@@ -745,12 +745,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:MichaMegretDeveloppementWeb/falcon-ui-kit.git",
-                "reference": "a477194d566322affe84d1e1a26a315233259a77"
+                "reference": "4a5dd538c3f7bff4523411258df05f712e458a12"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/MichaMegretDeveloppementWeb/falcon-ui-kit/zipball/a477194d566322affe84d1e1a26a315233259a77",
-                "reference": "a477194d566322affe84d1e1a26a315233259a77",
+                "url": "https://api.github.com/repos/MichaMegretDeveloppementWeb/falcon-ui-kit/zipball/4a5dd538c3f7bff4523411258df05f712e458a12",
+                "reference": "4a5dd538c3f7bff4523411258df05f712e458a12",
                 "shasum": ""
             },
             "require": {
@@ -832,7 +832,7 @@
                 "source": "https://github.com/MichaMegretDeveloppementWeb/falcon-ui-kit/tree/main",
                 "issues": "https://github.com/MichaMegretDeveloppementWeb/falcon-ui-kit/issues"
             },
-            "time": "2026-11-14T08:17:44+00:00"
+            "time": "2026-11-20T10:36:56+00:00"
         },
         {
             "name": "fruitcake/php-cors",
