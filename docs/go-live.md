@@ -459,6 +459,8 @@ publication) et la mesure d'audience Falcon Analytics. Elle se déploie par `dep
 
 - [ ] La base est en **MySQL 8.0.16 ou plus, ou MariaDB 10.11 ou plus**, car Falcon Analytics refuse un
       moteur plus ancien. `php artisan db:show` affiche la version.
+- [ ] L'extension **intl** est active pour PHP 8.5, en ligne de commande comme pour le site, car Falcon
+      Analytics l'exige et `composer install` refuse sans elle.
 - [ ] L'accès GitHub du serveur ouvre les **deux dépôts privés** de la suite Falcon (`falcon-ui-kit` et
       `falcon-analytics`). Sans cela, `composer install` échoue sur « Could not find package ».
 - [ ] La base est sauvegardée.
