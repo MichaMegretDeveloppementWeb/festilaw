@@ -100,8 +100,8 @@
                 <h2 id="article-cta-title" class="article-cta__title">{{ __('Does this apply to your products?') }}</h2>
                 <p class="article-cta__text">{{ __('Check in 30 seconds whether you need an EU Responsible Person, or see what Festilaw includes.') }}</p>
                 <div class="article-cta__actions">
-                    <a href="{{ localized_route('home') }}#quiz" class="btn btn--coral">{{ __('Take the eligibility quiz') }}</a>
-                    <a href="{{ localized_route('pricing') }}" class="btn btn--outline-dark">{{ __('View plans and pricing') }}</a>
+                    <a data-track-event="article.to_quiz" href="{{ localized_route('home') }}#quiz" class="btn btn--coral">{{ __('Take the eligibility quiz') }}</a>
+                    <a data-track-event="article.to_pricing" href="{{ localized_route('pricing') }}" class="btn btn--outline-dark">{{ __('View plans and pricing') }}</a>
                 </div>
             </aside>
         </div>

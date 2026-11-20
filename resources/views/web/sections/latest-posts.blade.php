@@ -13,7 +13,7 @@
                 @endforeach
             </div>
             <p class="latest-posts__more">
-                <a href="{{ localized_route('blog.index') }}" class="latest-posts__more-link">{{ __('See all articles') }} →</a>
+                <a data-track-label="Vers le blog, depuis les derniers articles" href="{{ localized_route('blog.index') }}" class="latest-posts__more-link">{{ __('See all articles') }} →</a>
             </p>
         </div>
     </section>

@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
+use Tests\Support\FakeAudienceTracker;
 
 use function Pest\Laravel\postJson;
 
@@ -521,4 +522,32 @@ it('acknowledges the webhook when the signed PDF is not generated yet (the minut
 
     expect($contract->fresh()->signed_file_path)->toBeNull()
         ->and($contract->fresh()->signature_status)->toBe(SignatureStatus::Signed);
+});
+
+it('never counts a payment or a signature for the audience from a webhook, which has no visitor', function () {
+    // Un webhook a une session (groupe web) : un enregistrement fait la compterait un faux visiteur (SC8).
+    $audience = FakeAudienceTracker::bind();
+    Storage::fake('local');
+    Http::fake(['*/api/v1/documents/*/completed_pdf*' => Http::response('SIGNED-PDF', 200)]);
+    $submission = Submission::factory()->starter()->create();
+    $payment = $submission->payments()->create([
+        'type' => PaymentType::StarterSubscription,
+        'amount_cents' => 33300,
+        'currency' => 'EUR',
+        'provider' => 'stripe',
+        'provider_reference' => 'cs_audience',
+        'status' => PaymentStatus::Pending,
+    ]);
+    $contract = Contract::factory()->for($submission)->create([
+        'signature_status' => SignatureStatus::Pending,
+        'signature_provider' => 'signwell',
+        'signature_provider_reference' => 'DOC_AUDIENCE',
+    ]);
+
+    postStripeWebhook(['type' => 'checkout.session.completed', 'data' => ['object' => ['id' => 'cs_audience', 'payment_status' => 'paid']]])->assertNoContent();
+    postSignwellWebhook('document_completed', 'DOC_AUDIENCE', 'Completed')->assertNoContent();
+
+    expect($payment->fresh()->status)->toBe(PaymentStatus::Succeeded)
+        ->and($contract->fresh()->signature_status)->toBe(SignatureStatus::Signed)
+        ->and($audience->recorded)->toBe([]);
 });

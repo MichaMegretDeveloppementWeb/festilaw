@@ -3,8 +3,8 @@
         <h2 class="final-cta__title">{{ __('Ready to secure your sales in Europe?') }}</h2>
         <p class="final-cta__text">{{ __('Get compliant in 24h with Festilaw.') }}</p>
         <div class="final-cta__actions">
-            <a href="{{ route('get-started.index') }}" class="btn btn--coral btn--lg">{{ __('Get my Responsible Person') }}</a>
-            <a href="{{ localized_route('contact') }}" class="btn btn--outline-light btn--lg">{{ __('Talk to us') }}</a>
+            <a data-track-event="closing.to_offers" href="{{ route('get-started.index') }}" class="btn btn--coral btn--lg">{{ __('Get my Responsible Person') }}</a>
+            <a data-track-label="Vers le contact, depuis la fin de page" href="{{ localized_route('contact') }}" class="btn btn--outline-light btn--lg">{{ __('Talk to us') }}</a>
         </div>
     </div>
 </section>

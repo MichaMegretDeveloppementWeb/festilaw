@@ -6,7 +6,7 @@
             <h2 class="risks__title">{{ __('The GPSR is now') }} <span class="risks__title-em">{{ __('mandatory') }}</span></h2>
             <p class="risks__intro">{{ __('Compliance is no longer optional. The EU General Product Safety Regulation (GPSR) is fully in effect. Any business selling consumer products to the EU must have an economic operator established in the EU who is responsible for those products. If you sell from outside the EU, that means appointing an EU Responsible Person and meeting strict traceability rules.') }}</p>
             @unless ($localizedUrls->isCurrent('understand-gpsr'))
-                <p class="risks__more"><a href="{{ localized_route('understand-gpsr') }}">{{ __('Understand the GPSR in plain language') }} →</a></p>
+                <p class="risks__more"><a data-track-label="Vers Comprendre le GPSR, depuis la section GPSR" href="{{ localized_route('understand-gpsr') }}">{{ __('Understand the GPSR in plain language') }} →</a></p>
             @endunless
         </div>
 

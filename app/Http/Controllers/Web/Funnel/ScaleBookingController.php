@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Web\Funnel;
 
 use App\Actions\Web\Scale\RecordAppointmentAction;
+use App\Contracts\Analytics\AudienceTracker;
+use App\Enums\Analytics\AudienceEvent;
 use App\Enums\Submission\SubmissionType;
 use App\Exceptions\BaseAppException;
 use App\Http\Controllers\Controller;
@@ -21,14 +23,17 @@ use Throwable;
  */
 final class ScaleBookingController extends Controller
 {
-    public function __construct(private readonly RecordAppointmentAction $recordAppointment) {}
+    public function __construct(
+        private readonly RecordAppointmentAction $recordAppointment,
+        private readonly AudienceTracker $audience,
+    ) {}
 
     public function __invoke(Submission $dossier): RedirectResponse
     {
         abort_unless($dossier->type === SubmissionType::Scale, 404);
 
         try {
-            $this->recordAppointment->execute($dossier);
+            $appointment = $this->recordAppointment->execute($dossier);
         } catch (BaseAppException $e) {
             Log::channel('payments')->warning($e->getMessage(), ['exception' => $e, 'submission' => $dossier->id]);
 
@@ -37,6 +42,11 @@ final class ScaleBookingController extends Controller
             Log::channel('payments')->error($e->getMessage(), ['exception' => $e, 'submission' => $dossier->id]);
 
             return $this->backToSpace($dossier, __('Something went wrong on our end. Please try again. If the problem persists, contact us.'));
+        }
+
+        // Un second envoi rend le rendez-vous deja demande : il ne compte pas deux fois.
+        if ($appointment->wasRecentlyCreated) {
+            $this->audience->record(AudienceEvent::ScaleBooked);
         }
 
         return redirect()

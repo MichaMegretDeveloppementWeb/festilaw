@@ -148,8 +148,9 @@ it('forbids public views from linking to a localized page with route()', functio
     foreach (File::allFiles(resource_path('views')) as $file) {
         $path = str_replace('\\', '/', $file->getRelativePathname());
 
-        // Le back-office (francais, une seule langue) pointe volontairement vers le site anglais.
-        if ($path === 'layouts/admin.blade.php' || str_starts_with($path, 'livewire/admin/')) {
+        // Le back-office (francais, une seule langue) pointe volontairement vers le site anglais : sa mise en
+        // page, ses ecrans et ses composants (le menu du compte mene au site public).
+        if ($path === 'layouts/admin.blade.php' || str_starts_with($path, 'livewire/admin/') || str_starts_with($path, 'components/admin/')) {
             continue;
         }
 

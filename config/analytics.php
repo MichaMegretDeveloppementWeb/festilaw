@@ -1,0 +1,367 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
+use Illuminate\Cookie\Middleware\EncryptCookies;
+use Illuminate\Session\Middleware\StartSession;
+
+// An environment variable left empty counts as an absent one: it reads back as
+// `''`, and that is not a path to a database.
+$geoipDatabase = env('ANALYTICS_GEOIP_DATABASE');
+
+return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Master switch
+    |--------------------------------------------------------------------------
+    |
+    | When disabled, no event is ingested and the collector is not rendered.
+    |
+    */
+
+    'enabled' => env('ANALYTICS_ENABLED', true),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Log channel
+    |--------------------------------------------------------------------------
+    |
+    | Channel for every log line the package writes: ingestion, screen reads,
+    | downloads, Search Console, erasures, maintenance, marketing edits. Null
+    | uses the application's default channel. An empty string is not null:
+    | Laravel reads it as an undefined channel and writes to its emergency log.
+    |
+    */
+
+    // Festilaw : un fichier a lui (config/logging.php, canal analytics).
+    'log_channel' => 'analytics',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Funnels & tracked events
+    |--------------------------------------------------------------------------
+    |
+    | Paths to the code-declared funnels and tracked-events files, loaded lazily.
+    | Null falls back to app/Analytics/funnels.php and app/Analytics/events.php in
+    | the host. The events file is the single source of truth for the events
+    | offered as conversion objectives (name + label + optional value); keep it in
+    | sync with the code via `php artisan analytics:events:scan`.
+    |
+    */
+
+    'funnels_path' => null,
+
+    'events_path' => null,
+
+    // Paths (relative to the base path) scanned by analytics:events:scan for
+    // data-track-event attributes and Analytics::record calls.
+    'events_scan_paths' => ['app', 'resources/views'],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Ingestion endpoint
+    |--------------------------------------------------------------------------
+    |
+    | Path the collector posts batches to, its rate limit (requests,minutes),
+    | and IPs/CIDRs excluded entirely from tracking (internal staff, monitors).
+    |
+    */
+
+    'endpoint' => '__analytics',
+
+    'throttle' => '120,1',
+
+    'exclude_ips' => [],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Host identity (zero-code integration)
+    |--------------------------------------------------------------------------
+    |
+    | The package resolves the subject, exclusions and consent from these
+    | declarative values, so a host only needs @analyticsCollector and these
+    | settings. For advanced logic, register closures on the Analytics manager
+    | from a service provider (they take precedence):
+    |
+    |   Analytics::resolveSubjectUsing(...); consentUsing(...); excludeUsing(...);
+    |
+    */
+
+    'identity' => [
+        // Guards whose authenticated user is the tracked subject (type = guard name).
+        // Festilaw : les clients n'ont pas de compte, personne n'est nomme.
+        'subject_guards' => [],
+
+        // Guards whose authenticated user is excluded entirely (internal staff).
+        // Festilaw : un compte du back-office connecte n'est jamais compte sur le site public.
+        'exclude_guards' => ['web'],
+
+        // Cookie whose value "1" grants the persistent visitor id (null = always session-scoped).
+        'consent_cookie' => null,
+
+        // Display metadata per subject guard, resolved at render time only (never
+        // stored). For each guard: an optional 'label' shown instead of the guard
+        // name, and a 'name' list of columns concatenated into a display name,
+        // read from the guard's own model (derived from the auth config, or an
+        // explicit 'model'/'table'/'key'). An optional 'fallback' list of columns
+        // is used when the name columns are all empty.
+        //   'client' => ['label' => 'Client', 'name' => ['first_name', 'last_name']],
+        'subjects' => [],
+
+        // What the visitors filter calls the visitors no guard named, beside the
+        // guards above. Null keeps « Non connectés ».
+        'anonymous_label' => null,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | The shell each area is drawn in
+    |--------------------------------------------------------------------------
+    |
+    | One key per area, named after it. The value is a Blade COMPONENT — a
+    | screen opens it as a tag and fills its slot, so name it the way you would
+    | write it: 'layout.admin' for <x-layout.admin>. null uses the package's own
+    | shell, which is a complete, self-contained administration.
+    |
+    | Marketing has no key of its own: the layout belongs to the AREA, and
+    | marketing is the same administration, drawn in the same chrome.
+    |
+    */
+    'layouts' => [
+        // Festilaw : nos ecrans, notre barre laterale (resources/views/components/admin/analytics-layout).
+        'admin' => 'admin.analytics-layout',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Administration area
+    |--------------------------------------------------------------------------
+    |
+    | Where the screens mount, and behind what. The route NAMES are not
+    | configurable: they are fixed (analytics.admin.overview,
+    | analytics.admin.marketing.campaigns, ...) so that a menu or a redirect can
+    | write one down. Only the addresses move.
+    |
+    */
+
+    'admin' => [
+        // What appears in the URL for every analytics page (e.g. /admin/analytics).
+        'route_prefix' => 'admin/analytics',
+
+        // Middleware protecting the screens. The default suits a single-guard
+        // app; override to match the project (e.g. ['web', 'auth:admin']).
+        'middleware' => ['web', 'auth'],
+
+        /*
+        | Marketing: a second entity of the administration, with its own
+        | address, its own guard and its own place in the menu — a host can
+        | mount it elsewhere than the analytics screens, or not at all. A
+        | campaign or ad is matched to a session by free conditions on the
+        | URL parameters it arrived with.
+        */
+        'marketing' => [
+            'route_prefix' => 'admin/marketing',
+            'middleware' => ['web', 'auth'],
+        ],
+
+        // Extra middleware for one branch of the ability tree, keyed by ability
+        // name (e.g. ['analytics.marketing' => ['password.confirm']]). Every
+        // screen of that branch takes it after the door and its ability, and
+        // every click on those screens replays it. Empty, no screen takes more
+        // than the door. Who may open or do what is not set here: see
+        // docs/autorisation.md.
+        'middleware_for' => [],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | The roles of the team
+    |--------------------------------------------------------------------------
+    |
+    | The host's class that declares its roles and what each opens in
+    | analytics · it implements
+    | Falcon\Analytics\Contracts\Authorization\DeclaresRoles, see
+    | docs/autorisation.md. While no class answers to this name, every
+    | signed-in account opens what the rules leave open. Once one does, an
+    | account whose role it does not declare opens nothing of analytics.
+    |
+    | The role is read in this column of the signed-in account · a host may
+    | share one role between its packages, or give each package its own.
+    |
+    */
+
+    'roles' => 'App\Analytics\Roles',
+
+    'roles_column' => 'role',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Public area
+    |--------------------------------------------------------------------------
+    |
+    | The collector posts to the ingestion endpoint, and that is the whole of
+    | this area. The session stack below is what the package lays in front of
+    | it; the package routes are registered outside the host's route groups, so
+    | they inherit nothing and the stack has to be complete.
+    |
+    | There is no CSRF here, and there cannot be: a beacon carries no token.
+    | The origin check and the rate limit hold that role instead, and neither
+    | can be REMOVED — they are appended after this list, so emptying it takes
+    | away the session and leaves both of them standing. The rate limit's value
+    | is still yours to set, under `throttle`; it is the origin check that has
+    | no setting at all.
+    |
+    | StartSession is swapped by the package for a reading of the session that
+    | does not prolong it: a send writes the session back only when it changed
+    | something in it, so an open tab no longer keeps your users signed in. The
+    | `web` group, or a session middleware of your own, escapes the swap, and
+    | analytics:check says so.
+    |
+    */
+
+    'web' => [
+        'middleware' => [
+            EncryptCookies::class,
+            AddQueuedCookiesToResponse::class,
+            StartSession::class,
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Periods
+    |--------------------------------------------------------------------------
+    |
+    | The periods the screens offer, in days · 'all' offers the whole history.
+    | Strings from the environment are read too. A table names the labels,
+    | [7 => null, 365 => '12 derniers mois', 'all' => null], null keeping the
+    | package's · "7 derniers jours", "Toute la période".
+    |
+    | They decide how long the detail is kept · twice the longest period, so
+    | a period and the one before it are always read whole · no session is
+    | erased when 'all' is offered. Lengthening a period keeps more at once ·
+    | shortening one erases nothing on its own · analytics:check says the
+    | reduction waits, and analytics:shorten applies it.
+    |
+    | default_period is the period a screen opens on · one of those offered.
+    | A setting that cannot be read erases no session · analytics:check says
+    | why, and the screens offer 7, 30 and 90 days meanwhile.
+    |
+    */
+
+    // A list, so a published copy replaces it whole and never gets these back.
+    'periods' => [7, 30, 90],
+
+    'default_period' => 30,
+
+    'session' => [
+        // A session is open while its last activity is less than this many
+        // minutes old · two activities further apart belong to two sessions.
+        'timeout_minutes' => 5,
+        // At most one activity signal per this many seconds, sent only after a
+        // gesture (mouse, keyboard, wheel, touch) · it keeps last_activity_at fresh.
+        'heartbeat_seconds' => 20,
+        // How often the collector flushes its buffered event batch to the server.
+        'flush_seconds' => 5,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Realtime screen
+    |--------------------------------------------------------------------------
+    |
+    | The realtime page refreshes through plain Livewire polling (no worker,
+    | websocket or external service), suspended while the tab is hidden.
+    |
+    */
+
+    'realtime' => [
+        // Refresh interval of the realtime page.
+        'poll_seconds' => 10,
+
+        // A session is "online now" when its last activity is within this
+        // window (the collector heartbeats every heartbeat_seconds).
+        'online_seconds' => 60,
+
+        // The window the figures, the feed, the charts and the map read · the
+        // list of recent sessions reads the last day.
+        'window_minutes' => 30,
+
+        // Hard bound of the activity feed and of the recent sessions, so a tick
+        // never grows with traffic.
+        'feed_limit' => 25,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Google Search Console (organic search queries)
+    |--------------------------------------------------------------------------
+    |
+    | Google strips the search query from referrers, so organic keywords are
+    | only available through the Search Console API, authorised by the admin
+    | via OAuth (read-only). The host provides a Google Cloud OAuth 2.0 web
+    | client with the Search Console API enabled; while the credentials are
+    | empty the whole feature stays hidden. The redirect URI defaults to the
+    | package callback route and must be registered on the OAuth client.
+    |
+    */
+
+    'search_console' => [
+        'client_id' => env('ANALYTICS_GSC_CLIENT_ID', ''),
+        'client_secret' => env('ANALYTICS_GSC_CLIENT_SECRET', ''),
+
+        // Absolute redirect URI registered on the OAuth client. Null uses the
+        // package callback route ({admin.route_prefix}/integrations/search-console/callback).
+        'redirect' => env('ANALYTICS_GSC_REDIRECT'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Privacy
+    |--------------------------------------------------------------------------
+    */
+
+    'privacy' => [
+        // The IP is truncated before it is stored. The country and the city are
+        // read before that, so the screens lose nothing but the exact address.
+        // Set false to store it whole.
+        'anonymize_ip' => true,
+
+        // Query parameters (case-insensitive) redacted from stored URLs. Tracking
+        // params (utm_*, gclid, fbclid, custom ad params) are kept; only likely
+        // PII is removed. Set to [] to store URLs verbatim.
+        'redact_query_params' => ['token', 'access_token', 'auth', 'password', 'secret', 'apikey', 'api_key', 'otp', 'signature', 'email'],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Geolocation (local database, no third-party call)
+    |--------------------------------------------------------------------------
+    |
+    | MaxMind GeoLite2 City: free, accurate and fully local, so a visitor's IP
+    | never leaves the server. Get a free licence key at
+    | https://www.maxmind.com/en/geolite2/signup, then run analytics:geoip:download.
+    |
+    */
+
+    'geoip' => [
+        'license_key' => env('ANALYTICS_GEOIP_LICENSE_KEY', ''),
+        'edition' => env('ANALYTICS_GEOIP_EDITION', 'GeoLite2-City'),
+
+        // Where analytics:geoip:download writes the extracted .mmdb.
+        'database_path' => is_string($geoipDatabase) && $geoipDatabase !== ''
+            ? $geoipDatabase
+            : storage_path('app/analytics/GeoLite2-City.mmdb'),
+
+        // Local development: public IP substituted for private/reserved request
+        // IPs (127.0.0.1 can never be located). Inert in production, since real
+        // public IPs are never overridden.
+        'dev_ip' => env('ANALYTICS_GEOIP_DEV_IP'),
+
+        // MaxMind permalink ({edition} and {license_key} are substituted).
+        'download_url' => 'https://download.maxmind.com/app/geoip_download?edition_id={edition}&license_key={license_key}&suffix=tar.gz',
+    ],
+
+];

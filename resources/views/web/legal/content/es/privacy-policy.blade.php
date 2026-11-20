@@ -1,5 +1,5 @@
 {{-- Politica de privacidad (ES) · traduction de la version anglaise de reference (qui prevaut en cas de divergence). --}}
-<p class="legal__updated">Última actualización: 5 de octubre de 2026</p>
+<p class="legal__updated">Última actualización: 20 de noviembre de 2026</p>
 
 <h2>1. Responsable del tratamiento</h2>
 <p>El responsable del tratamiento de sus datos personales es Festilaw B.V., sociedad de responsabilidad limitada constituida conforme al Derecho neerlandés, con domicilio social en Nimega, Spoorstraat 30A, 6511 AN Nijmegen, Países Bajos, inscrita en la Cámara de Comercio de los Países Bajos (KvK) con el número 77058720.</p>
@@ -12,6 +12,7 @@
 <p><strong>Área de cliente y firma electrónica.</strong> Nuestros clientes pueden acceder, a través de un área de cliente segura, a los documentos que nos han enviado. Para ello, los clientes acceden a su expediente mediante un enlace personal seguro enviado por correo electrónico, sin cuenta ni contraseña; tratamos el nombre y la dirección de correo electrónico de la persona de contacto, los datos de conexión y los documentos puestos a disposición en el área de cliente. Los contratos y determinados documentos se firman electrónicamente; el servicio de firma electrónica registra los nombres, las direcciones de correo electrónico y las direcciones IP de los firmantes, así como el registro de auditoría con sello de tiempo de la firma. Este tratamiento es necesario para la ejecución del contrato celebrado con su empresa (artículo 6, apartado 1, letra b)) y para nuestro interés legítimo en ofrecer a los representantes de nuestros clientes un acceso seguro a sus documentos (artículo 6, apartado 1, letra f)).</p>
 <p><strong>Obligaciones reglamentarias.</strong> Como operador económico responsable en el sentido del artículo 16 del Reglamento (UE) 2023/988 y del artículo 4 del Reglamento (UE) 2019/1020, Festilaw B.V. está obligada a conservar determinados documentos y a cooperar con las autoridades de vigilancia del mercado. Los datos personales contenidos en estos documentos se tratan sobre la base de dichas obligaciones legales (artículo 6, apartado 1, letra c)). Lo mismo se aplica a las obligaciones contables y fiscales neerlandesas.</p>
 <p><strong>Funcionamiento y seguridad del sitio web.</strong> Nuestro proveedor de alojamiento registra los datos técnicos de conexión (dirección IP, fecha y hora, páginas visitadas, tipo de navegador) necesarios para el funcionamiento y la seguridad del sitio web. Este tratamiento se basa en nuestro interés legítimo en garantizar la disponibilidad y la seguridad del sitio web (artículo 6, apartado 1, letra f)).</p>
+<p><strong>Medición de audiencia.</strong> Para entender cómo se utiliza nuestro sitio web y mejorarlo, medimos las páginas consultadas, los botones utilizados y las etapas de nuestras páginas de ofertas (cuestionario de elegibilidad, apertura de un expediente, firma, pago). Esta medición se realiza con una herramienta instalada en nuestros propios servidores, y no se comunica ningún dato a terceros. La dirección IP se trunca antes de almacenarse, y estos datos no se utilizan para identificarle. Este tratamiento se basa en nuestro interés legítimo en medir y mejorar la audiencia de nuestro sitio web (artículo 6, apartado 1, letra f)).</p>
 <p>No llevamos a cabo decisiones automatizadas ni elaboración de perfiles.</p>
 
 <h2>3. Destinatarios</h2>
@@ -39,6 +40,7 @@
     <li>Documentos conservados en nuestra condición de operador económico responsable: durante toda la vigencia del mandato. A su término, los documentos se devuelven al cliente o se transfieren al nuevo operador económico responsable que este designe, y nuestras copias se destruyen, salvo aquellas que estemos obligados a conservar en virtud de la legislación aplicable a los productos de que se trate, por regla general hasta diez años después de la introducción en el mercado del último producto cubierto por el mandato.</li>
     <li>Contratos firmados y su registro de auditoría de firma: durante toda la relación contractual y, después, durante el plazo de prescripción aplicable.</li>
     <li>Datos de conexión: durante un periodo limitado fijado por nuestro proveedor de alojamiento y no más de lo necesario para garantizar la seguridad del sitio web.</li>
+    <li>Datos de medición de audiencia: 180 días, tras los cuales se suprimen.</li>
 </ul>
 
 <h2>6. Sus derechos</h2>
@@ -50,7 +52,7 @@
 <p>Festilaw B.V. aplica medidas técnicas y organizativas adecuadas para proteger sus datos contra la pérdida, el acceso no autorizado o la divulgación, entre ellas el cifrado de las conexiones al sitio web (HTTPS), el acceso al área de cliente mediante enlaces personales únicos y seguros y la restricción del acceso a las personas que lo necesitan.</p>
 
 <h2>8. Cookies</h2>
-<p>Este sitio web solo utiliza cookies estrictamente necesarias para su funcionamiento, que no requieren consentimiento, incluida una cookie de sesión necesaria para el funcionamiento del sitio web y del área de cliente.</p>
+<p>Este sitio web no utiliza cookies publicitarias ni cookies de terceros. Utiliza una cookie de sesión, necesaria para el funcionamiento del sitio web y del área de cliente, que también vincula las páginas consultadas durante una misma visita para la medición de audiencia descrita en la sección 2. Estos usos no requieren su consentimiento.</p>
 
 <h2>9. Modificaciones</h2>
 <p>Podemos modificar la presente política para reflejar cambios en nuestras actividades de tratamiento o en la normativa aplicable. La fecha de la última actualización figura al principio de este documento.</p>

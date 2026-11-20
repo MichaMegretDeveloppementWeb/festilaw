@@ -90,6 +90,17 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // Falcon Analytics (config/analytics.php, log_channel) : envois refuses, declarations mal formees,
+        // maintenance en echec. Un fichier a lui, comme le conseille sa documentation, pour en retrouver
+        // vite la cause quand ses ecrans signalent un probleme de mesure.
+        'analytics' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/analytics.log'),
+            'level' => 'info',
+            'days' => env('LOG_DAILY_DAYS', 14),
+            'replace_placeholders' => true,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),

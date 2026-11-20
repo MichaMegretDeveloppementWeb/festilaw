@@ -23,8 +23,7 @@
     }
 
     /* Icone au trait en degrade : le degrade est dessine une fois dans la mise en page (#ai-gradient). */
-    .ai-icon,
-    [data-nav-icon='sparkles'] svg {
+    .ai-icon {
         stroke: url(#ai-gradient);
     }
 }

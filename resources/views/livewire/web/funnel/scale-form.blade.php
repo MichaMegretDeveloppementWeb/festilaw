@@ -53,7 +53,7 @@
                 <input type="text" id="scf-products" wire:model="product_types" placeholder="{{ __('e.g. electronics, toys') }}">
             </div>
 
-            <button type="submit" class="btn btn--coral" wire:loading.attr="disabled" wire:target="submit">
+            <button data-track-label="Envoi du formulaire Scale Pack" type="submit" class="btn btn--coral" wire:loading.attr="disabled" wire:target="submit">
                 <span wire:loading.remove wire:target="submit">{{ __('Request my audit') }}</span>
                 <span wire:loading wire:target="submit">{{ __('Sending') }}&hellip;</span>
             </button>

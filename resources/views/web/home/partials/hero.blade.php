@@ -7,8 +7,8 @@
             <span>{{ __('Your official EU Responsible Person address, ready within 24 hours.') }}</span>
         </div>
         <div class="hero__actions">
-            <a href="{{ route('get-started.index') }}" class="btn btn--coral btn--lg">{{ __('Get compliant in 24h') }}</a>
-            <a href="{{ localized_route('home') }}#quiz" class="btn btn--outline-light btn--lg">{{ __('Am I eligible? Take the quiz') }}</a>
+            <a data-track-event="home.to_offers" href="{{ route('get-started.index') }}" class="btn btn--coral btn--lg">{{ __('Get compliant in 24h') }}</a>
+            <a data-track-event="home.to_quiz" href="{{ localized_route('home') }}#quiz" class="btn btn--outline-light btn--lg">{{ __('Am I eligible? Take the quiz') }}</a>
         </div>
     </div>
 </section>

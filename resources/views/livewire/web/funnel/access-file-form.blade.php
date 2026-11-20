@@ -23,7 +23,7 @@
                 @error('email') <span class="funnel-form__error">{{ $message }}</span> @enderror
             </div>
 
-            <button type="submit" class="btn btn--coral" wire:loading.attr="disabled" wire:target="submit">
+            <button data-track-label="Envoi du formulaire d'accès au dossier" type="submit" class="btn btn--coral" wire:loading.attr="disabled" wire:target="submit">
                 <span wire:loading.remove wire:target="submit">{{ __('Email me my link') }}</span>
                 <span wire:loading wire:target="submit">{{ __('Sending') }}&hellip;</span>
             </button>

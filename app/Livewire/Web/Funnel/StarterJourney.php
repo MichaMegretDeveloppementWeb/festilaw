@@ -14,8 +14,10 @@ use App\Actions\Web\Starter\StartContractSigningAction;
 use App\Actions\Web\Starter\StartStarterPaymentAction;
 use App\Actions\Web\Starter\SubmitStarterDocumentsAction;
 use App\Actions\Web\SyncDossierLocaleAction;
+use App\Contracts\Analytics\AudienceTracker;
 use App\Contracts\Signature\SignatureGatewayInterface;
 use App\Data\Web\Starter\DossierStatusData;
+use App\Enums\Analytics\AudienceEvent;
 use App\Enums\Contract\SignatureEventOutcome;
 use App\Enums\Contract\SignatureStatus;
 use App\Enums\Document\DocumentType;
@@ -31,6 +33,7 @@ use App\Services\Payment\PaymentGatewayRegistry;
 use App\Services\Web\Starter\StarterDossierResolver;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
@@ -97,6 +100,13 @@ class StarterJourney extends Component
 
     public string $activity = '';
 
+    /**
+     * Le contrat etait-il deja signe a l'ouverture de la page : la signature ne se compte pour l'audience
+     * que si cette page la voit arriver, qu'elle vienne du visiteur ou du webhook, et une seule fois.
+     */
+    #[Locked]
+    public bool $signedWhenOpened = false;
+
     public function mount(Submission $submission, PaymentGatewayRegistry $gateways, SyncDossierLocaleAction $syncLocale): void
     {
         // La langue d'affichage courante devient celle du dossier (la derniere utilisee gagne · un
@@ -107,6 +117,7 @@ class StarterJourney extends Component
         $this->paymentOptions = $gateways->options();
         $this->paymentProvider = (string) array_key_first($this->paymentOptions);
         $this->autoConfirm = $this->signatureInFlight();
+        $this->signedWhenOpened = $this->dossierStatus()->contractSigned;
         $this->loadMandateDetails();
     }
 
@@ -155,10 +166,13 @@ class StarterJourney extends Component
      * Manual confirmation (the "I have signed" button): polls the provider and advances if signed,
      * otherwise tells the signer it is not recorded yet.
      */
-    public function confirmSignature(SignatureGatewayInterface $signatureGateway, MarkContractSignedAction $markContractSigned): void
+    public function confirmSignature(SignatureGatewayInterface $signatureGateway, MarkContractSignedAction $markContractSigned, AudienceTracker $audience): void
     {
         try {
-            if (! $this->tryConfirmSignature($signatureGateway, $markContractSigned) && $this->step() === 'sign') {
+            $confirmed = $this->tryConfirmSignature($signatureGateway, $markContractSigned);
+            $this->countSignatureOnce($audience);
+
+            if (! $confirmed && $this->step() === 'sign') {
                 $this->addError('journey', __('Your signature has not been recorded yet. If you have just signed, wait a few seconds and check again.'));
             }
         } catch (BaseAppException $e) {
@@ -179,16 +193,32 @@ class StarterJourney extends Component
      * signature, otherwise does nothing (the signer can still sign or check manually). Self-heals the
      * "signed but the browser closed before the redirect completed" case.
      */
-    public function autoConfirmSignature(SignatureGatewayInterface $signatureGateway, MarkContractSignedAction $markContractSigned): void
+    public function autoConfirmSignature(SignatureGatewayInterface $signatureGateway, MarkContractSignedAction $markContractSigned, AudienceTracker $audience): void
     {
         $this->autoConfirm = false;
 
         try {
             $this->tryConfirmSignature($signatureGateway, $markContractSigned);
+            $this->countSignatureOnce($audience);
         } catch (Throwable $e) {
             // Best effort : un echec ne montre rien ici, le signataire garde le bouton manuel.
             Log::error('STARTER auto signature confirmation failed.', ['exception' => $e]);
         }
+    }
+
+    /**
+     * Compte la signature pour l'audience quand cette page la voit arriver : le contrat est signe
+     * maintenant et ne l'etait pas a l'ouverture. Le webhook peut l'avoir confirmee avant la page ; un
+     * rechargement apres la signature ne la compte pas, et elle ne se compte qu'une fois par page.
+     */
+    private function countSignatureOnce(AudienceTracker $audience): void
+    {
+        if ($this->signedWhenOpened || ! $this->dossierStatus()->contractSigned) {
+            return;
+        }
+
+        $this->signedWhenOpened = true;
+        $audience->record(AudienceEvent::ContractSigned);
     }
 
     /**
@@ -274,19 +304,21 @@ class StarterJourney extends Component
      * lag a few seconds behind the iframe, so if it is not signed yet the view keeps polling
      * (pollSignature, bounded) before falling back to the manual "check now" button.
      */
-    public function signingCompleted(SignatureGatewayInterface $signatureGateway, MarkContractSignedAction $markContractSigned): void
+    public function signingCompleted(SignatureGatewayInterface $signatureGateway, MarkContractSignedAction $markContractSigned, AudienceTracker $audience): void
     {
         if ($this->step() !== 'sign') {
+            $this->countSignatureOnce($audience);
+
             return;
         }
 
         $this->confirmingSignature = true;
         $this->signatureChecks = 0;
-        $this->pollSignature($signatureGateway, $markContractSigned);
+        $this->pollSignature($signatureGateway, $markContractSigned, $audience);
     }
 
     /** One bounded confirmation attempt of the "finalising your signature" loop. */
-    public function pollSignature(SignatureGatewayInterface $signatureGateway, MarkContractSignedAction $markContractSigned): void
+    public function pollSignature(SignatureGatewayInterface $signatureGateway, MarkContractSignedAction $markContractSigned, AudienceTracker $audience): void
     {
         if (! $this->confirmingSignature || $this->signatureChecks >= self::MAX_SIGNATURE_POLLS) {
             return;
@@ -298,6 +330,8 @@ class StarterJourney extends Component
             if ($this->tryConfirmSignature($signatureGateway, $markContractSigned)) {
                 $this->confirmingSignature = false;
             }
+
+            $this->countSignatureOnce($audience);
         } catch (Throwable $e) {
             // Best effort : le bouton manuel, le webhook et la reconciliation restent les filets.
             Log::error('STARTER signature poll failed.', ['exception' => $e]);
@@ -402,7 +436,7 @@ class StarterJourney extends Component
     }
 
     /** Validates every required document is staged + valid, then persists them all and advances. */
-    public function submitDocuments(SubmitStarterDocumentsAction $submitStarterDocuments): void
+    public function submitDocuments(SubmitStarterDocumentsAction $submitStarterDocuments, AudienceTracker $audience): void
     {
         if ($this->step() !== 'documents') {
             return;
@@ -450,6 +484,7 @@ class StarterJourney extends Component
         $this->reset('documents');
         $this->submission->refresh();
         session()->now('starter_status', 'documents_saved');
+        $audience->record(AudienceEvent::DocumentsSent);
 
         // Dossier dont la signature avait ete ouverte avant ses pieces (ancien ordre) : on verifie en
         // silence si elle a deja abouti chez le prestataire.
@@ -537,7 +572,7 @@ class StarterJourney extends Component
      * by a new one at that pack (details and documents carried over, mandate to sign again) and the
      * visitor is taken straight into it. Its link was their access; the new one is also emailed.
      */
-    public function changePack(ChangeStarterPackAction $changePack): mixed
+    public function changePack(ChangeStarterPackAction $changePack, AudienceTracker $audience): mixed
     {
         if (! $this->canChangePack()) {
             return null;
@@ -555,6 +590,11 @@ class StarterJourney extends Component
             $this->reportUnexpectedError($e, 'journey', 'STARTER pack change');
 
             return null;
+        }
+
+        // Un double clic rend le dossier de remplacement deja cree : il ne compte pas deux fois.
+        if ($replacement->wasRecentlyCreated) {
+            $audience->record(AudienceEvent::PackSwitched);
         }
 
         session()->flash('starter_status', 'pack_changed');

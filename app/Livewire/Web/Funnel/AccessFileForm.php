@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Livewire\Web\Funnel;
 
 use App\Actions\Web\Starter\SendStarterResumeLinkAction;
+use App\Contracts\Analytics\AudienceTracker;
+use App\Enums\Analytics\AudienceEvent;
 use App\Livewire\Concerns\HandlesUnexpectedErrors;
 use App\Livewire\Concerns\HasSpamProtection;
 use App\Services\Starter\StarterDossierFinder;
@@ -41,7 +43,7 @@ class AccessFileForm extends Component
         ];
     }
 
-    public function submit(SendStarterResumeLinkAction $sendResumeLink, StarterDossierFinder $finder): void
+    public function submit(SendStarterResumeLinkAction $sendResumeLink, StarterDossierFinder $finder, AudienceTracker $audience): void
     {
         if ($this->looksLikeSpam()) {
             $this->sent = true;
@@ -60,6 +62,7 @@ class AccessFileForm extends Component
         $dossier = $finder->mostRelevantResumableForEmail($this->email);
         if ($dossier !== null) {
             $sendResumeLink->execute($dossier);
+            $audience->record(AudienceEvent::DossierLinkRequested);
         }
 
         $this->sent = true;

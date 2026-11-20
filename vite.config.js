@@ -19,6 +19,8 @@ export default defineConfig({
                 'resources/js/admin/blog-post-form.js',
                 'resources/js/admin/blog-category-form.js',
                 'resources/js/admin/tag-input.js',
+                // Back-office : la barre laterale par-dessus le contenu entre lg et 1 400 pixels.
+                'resources/js/admin.js',
                 // Manifeste CSS de l'espace public (base + coquille), charge sur toutes les pages web.
                 'resources/css/web.css',
                 // Back-office (auth) : la feuille de nos propres vues, a cote de celle du kit Falcon.

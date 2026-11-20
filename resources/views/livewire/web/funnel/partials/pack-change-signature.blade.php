@@ -13,12 +13,12 @@
         <p class="journey-note">{{ __('Your signature is taking a little longer to be confirmed. Check again below in a moment.') }}</p>
     @endif
     <div class="journey-switch__actions">
-        <button type="button" class="btn btn--coral btn--sm" wire:click="sign" wire:loading.attr="disabled" wire:target="sign">
+        <button data-track-event="signature.opened" type="button" class="btn btn--coral btn--sm" wire:click="sign" wire:loading.attr="disabled" wire:target="sign">
             <span wire:loading.remove wire:target="sign">{{ __('Sign the agreement') }}</span>
             <span wire:loading wire:target="sign">{{ __('Opening') }}&hellip;</span>
         </button>
         @if ($panel->signatureStarted)
-            <button type="button" class="btn btn--outline-dark btn--sm" wire:click="confirmSignature" wire:loading.attr="disabled" wire:target="confirmSignature">
+            <button data-track-label="Vérification de la signature" type="button" class="btn btn--outline-dark btn--sm" wire:click="confirmSignature" wire:loading.attr="disabled" wire:target="confirmSignature">
                 <span wire:loading.remove wire:target="confirmSignature">{{ __('I have signed · check now') }}</span>
                 <span wire:loading wire:target="confirmSignature">{{ __('Checking') }}&hellip;</span>
             </button>

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Livewire\Web\Funnel;
 
 use App\Actions\Web\Scale\CreateScaleSubmissionAction;
+use App\Contracts\Analytics\AudienceTracker;
+use App\Enums\Analytics\AudienceEvent;
 use App\Exceptions\BaseAppException;
 use App\Livewire\Concerns\HandlesUnexpectedErrors;
 use App\Livewire\Concerns\HasSpamProtection;
@@ -21,7 +23,7 @@ class ScaleForm extends Component
 
     public bool $sent = false;
 
-    public function submit(CreateScaleSubmissionAction $action): void
+    public function submit(CreateScaleSubmissionAction $action, AudienceTracker $audience): void
     {
         if ($this->looksLikeSpam()) {
             $this->sent = true;
@@ -48,6 +50,7 @@ class ScaleForm extends Component
             return;
         }
 
+        $audience->record(AudienceEvent::ScaleRequested);
         $this->resetContactFields();
 
         // On enchaine directement sur l'espace SCALE (payer l'audit puis reserver) ; le token vaut acces.

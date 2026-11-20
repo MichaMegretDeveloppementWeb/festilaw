@@ -1,0 +1,366 @@
+/*
+ | La barre laterale du back-office, reprise de Chouchoute-toi (demande de Micha du 20/11) : la barre du
+ | kit, atteinte par ses classes crochets, avec des lignes sur toute sa largeur, un filet entre elles, et
+ | la page courante remplie de la couleur d'action. Seules les couleurs sont celles de Festilaw.
+ |
+ | Dans `components`, apres les utilitaires du kit et avant les notres : les classes du kit cedent sans
+ | `!important`, et un utilitaire ecrit dans nos balises garde le dernier mot.
+ */
+
+@layer components {
+    /* En clair, la ligne courante en encre et texte blanc, le survol teinte de corail. En sombre, la ligne
+       courante en corail et texte encre : un texte blanc sur corail manque de contraste. */
+    :root {
+        --admin-sidebar-action: #0e1326;
+        --admin-sidebar-on-action: #fff;
+        --admin-sidebar-ink: #0e1326;
+        --admin-sidebar-soft: color-mix(in oklab, #fe776a 14%, transparent);
+    }
+
+    .dark {
+        --admin-sidebar-action: #fe776a;
+        --admin-sidebar-on-action: #0e1326;
+        --admin-sidebar-ink: color-mix(in oklab, #fe776a 55%, white);
+        --admin-sidebar-soft: color-mix(in oklab, #fe776a 18%, transparent);
+    }
+
+    /* Le menu se tient sur l'axe de ses icones, a 31 pixels du bord : le milieu de la barre repliee, les
+       22 d'une ligne et la moitie de ses 18. Le logo et l'avatar du compte, larges de 32 a 20, reculent de 5. */
+    .admin-brand-logo,
+    .admin-account > :first-child {
+        margin-inline-start: -5px;
+    }
+
+    /* Le compte sur toute la barre, comme dans le tiroir : la ligne touche les bords, et son bouton garde
+       son contenu a distance. */
+    .ui-sidebar li:has(.admin-account) {
+        margin-inline: -20px;
+    }
+
+    .ui-sidebar-group {
+        margin-inline: -20px;
+    }
+
+    .ui-sidebar-group > ul {
+        margin-inline: 0;
+    }
+
+    .ui-sidebar-group > ul > li {
+        margin-block: 0;
+    }
+
+    .ui-sidebar-link {
+        max-width: none;
+        min-height: 48px;
+        padding: 13px 22px;
+        border-radius: 0;
+        border-bottom: 1px solid var(--ui-border-subtle);
+        color: var(--ui-text-secondary);
+    }
+
+    /* Une ligne de la largeur que prend la barre : elle change d'un coup quand la barre se replie, donc
+       elle suit sur le temps que met la barre. */
+    .ui-sidebar :is(.ui-sidebar-link, .ui-sidebar-collapsible) {
+        width: var(--ui-sidebar-w);
+        transition: width .3s ease-in-out, column-gap .3s ease-in-out, background-color .3s ease-in-out, color .3s ease-in-out;
+    }
+
+    .ui-sidebar-link:hover {
+        background: var(--admin-sidebar-soft);
+        color: var(--admin-sidebar-ink);
+    }
+
+    .ui-sidebar-link[aria-current='page'] {
+        background: var(--admin-sidebar-action);
+        color: var(--admin-sidebar-on-action);
+    }
+
+    .ui-sidebar-link .ui-icon {
+        color: inherit;
+        opacity: .75;
+    }
+
+    .ui-sidebar-link[aria-current='page'] .ui-icon {
+        opacity: 1;
+    }
+
+    .ui-sidebar-link:focus-visible {
+        outline: 2px solid var(--admin-sidebar-action);
+        outline-offset: -3px;
+    }
+
+    /* 14 px sous l'en-tete du tiroir, dont la bordure separe deja. */
+    .ui-sidebar-drawer > div > nav {
+        overflow-y: auto;
+        padding-top: 14px;
+    }
+
+    /*
+     | Une section du menu, taillee comme un lien : sa ligne, son nom et son chevron, qui portent la marge
+     | et remplissent la ligne, pour qu'un clic tombe sur l'un d'eux ou qu'il tombe.
+     |
+     | Une de ses pages ouverte, la barre le dit : depliee, le nom plus sombre et plus gras, et la page
+     | elle-meme remplie dessous ; repliee, la ligne remplie comme un lien courant, la page etant cachee.
+     */
+    .ui-sidebar-collapsible {
+        max-width: none;
+        min-height: 48px;
+        padding: 0;
+        column-gap: 0;
+        border-radius: 0;
+        border-bottom: 1px solid var(--ui-border-subtle);
+        color: var(--ui-text-secondary);
+        font-weight: 400;
+    }
+
+    .ui-sidebar-collapsible > :is(.ui-sidebar-gap, .ui-sidebar-chevron) {
+        align-self: stretch;
+        min-height: 0;
+        height: auto;
+        margin-block: 0;
+    }
+
+    .ui-sidebar-collapsible > .ui-sidebar-gap {
+        padding: 13px 0 13px 22px;
+    }
+
+    .ui-sidebar-collapsible > .ui-sidebar-chevron {
+        width: auto;
+        padding: 0 22px 0 12px;
+    }
+
+    .ui-sidebar-collapsible .ui-icon {
+        color: inherit;
+        opacity: .75;
+    }
+
+    .ui-sidebar-collapsible.ui-sidebar-badge {
+        color: var(--ui-text-primary);
+        font-weight: 600;
+    }
+
+    .ui-sidebar-collapsible:hover {
+        background: var(--admin-sidebar-soft);
+        color: var(--admin-sidebar-ink);
+    }
+
+    .ui-sidebar-collapsible :focus-visible {
+        outline: 2px solid var(--admin-sidebar-action);
+        outline-offset: -3px;
+    }
+
+    /* Depliee, la section et ses pages font un seul bloc : le filet quitte la ligne pour la fin de la liste. */
+    .ui-sidebar-collapsible:has(.ui-sidebar-chevron[aria-expanded='true']) {
+        border-bottom-color: transparent;
+    }
+
+    /* Ses pages, de la largeur de la barre, leur texte sous celui de la section : quarante pixels et aucun
+       filet entre elles. */
+    .ui-sidebar-submenu {
+        margin: 0;
+        padding: 0;
+        border: 0;
+        border-bottom: 1px solid var(--ui-border-subtle);
+    }
+
+    .ui-sidebar-submenu > li {
+        margin-block: 0;
+    }
+
+    .ui-sidebar-submenu .ui-sidebar-link {
+        min-height: 40px;
+        padding: 10px 22px 10px 52px;
+        border-bottom: 0;
+    }
+
+    /* Une section dans une section : sa ligne de la hauteur des liens voisins, son nom sur leur colonne, et
+       ses pages un cran plus loin. Un seul filet ferme toute la liste ; depliee, la section a le sien sous
+       son nom, depuis la colonne de son nom, pour que ses pages se lisent un niveau plus bas. */
+    .ui-sidebar-submenu .ui-sidebar-collapsible {
+        position: relative;
+        min-height: 40px;
+        border-bottom: 0;
+    }
+
+    .ui-sidebar-submenu .ui-sidebar-collapsible:has(.ui-sidebar-chevron[aria-expanded='true'])::after {
+        content: '';
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 52px;
+        height: 1px;
+        background: var(--ui-border-subtle);
+    }
+
+    .ui-sidebar-submenu .ui-sidebar-collapsible > .ui-sidebar-gap {
+        padding: 10px 0 10px 52px;
+    }
+
+    .ui-sidebar-submenu .ui-sidebar-submenu {
+        border-bottom: 0;
+    }
+
+    .ui-sidebar-submenu .ui-sidebar-submenu .ui-sidebar-link {
+        padding-left: 66px;
+    }
+
+    /* Repliee : la ligne d'un lien courant, le nom seul sur sa largeur, le chevron cache sans sa marge. */
+    @media (width < 93.75rem) {
+        .ui-sidebar-frame:not([data-ui-sidebar]) .ui-sidebar .ui-sidebar-chevron {
+            padding: 0;
+        }
+
+        .ui-sidebar-frame:not([data-ui-sidebar]) .ui-sidebar .ui-sidebar-collapsible {
+            border-bottom-color: var(--ui-border-subtle);
+        }
+
+        .ui-sidebar-frame:not([data-ui-sidebar]) .ui-sidebar .ui-sidebar-badge {
+            background: var(--admin-sidebar-action);
+            color: var(--admin-sidebar-on-action);
+        }
+
+        .ui-sidebar-frame:not([data-ui-sidebar]) .ui-sidebar .ui-sidebar-badge .ui-icon {
+            opacity: 1;
+        }
+    }
+
+    .ui-sidebar-frame[data-ui-sidebar='collapsed'] .ui-sidebar .ui-sidebar-chevron {
+        padding: 0;
+    }
+
+    .ui-sidebar-frame[data-ui-sidebar='collapsed'] .ui-sidebar .ui-sidebar-collapsible {
+        border-bottom-color: var(--ui-border-subtle);
+    }
+
+    .ui-sidebar-frame[data-ui-sidebar='collapsed'] .ui-sidebar .ui-sidebar-badge {
+        background: var(--admin-sidebar-action);
+        color: var(--admin-sidebar-on-action);
+    }
+
+    .ui-sidebar-frame[data-ui-sidebar='collapsed'] .ui-sidebar .ui-sidebar-badge .ui-icon {
+        opacity: 1;
+    }
+
+    /* Le panneau qu'ouvre la barre repliee : les memes quarante pixels, dans une boite a lui. */
+    .ui-sidebar-panel .ui-sidebar-link {
+        min-height: 40px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        border-bottom: 0;
+    }
+
+    /* Son titre, le nom de la section, sur un filet discret. */
+    .ui-sidebar-panel-title {
+        margin-bottom: 4px;
+        padding: 4px 12px 10px;
+        border-bottom: 1px solid var(--ui-border-subtle);
+        font-size: 14px;
+        color: var(--ui-text-primary);
+        text-transform: none;
+        letter-spacing: 0;
+    }
+
+    /* Une section dans le panneau : un sous-titre sur ses pages, un cran plus loin. Il mene a sa premiere
+       page tant qu'on n'y est pas. */
+    .ui-sidebar-panel .ui-sidebar-collapsible {
+        min-height: 36px;
+        border-bottom: 0;
+        color: var(--ui-text-primary);
+        font-weight: 600;
+    }
+
+    .ui-sidebar-panel .ui-sidebar-collapsible > .ui-sidebar-gap {
+        padding: 8px 12px;
+    }
+
+    .ui-sidebar-panel .ui-sidebar-collapsible:hover {
+        background: transparent;
+        color: var(--ui-text-primary);
+    }
+
+    .ui-sidebar-panel .ui-sidebar-collapsible > a:hover {
+        color: var(--admin-sidebar-ink);
+    }
+
+    .ui-sidebar-panel .ui-sidebar-submenu {
+        border-bottom: 0;
+    }
+
+    .ui-sidebar-panel .ui-sidebar-submenu .ui-sidebar-link {
+        padding-left: 24px;
+    }
+
+    .dark .ui-sidebar-link[aria-current='page'] {
+        color: var(--admin-sidebar-on-action);
+    }
+
+    /*
+     | Entre lg et 1 400 pixels, la barre passe par-dessus le contenu : le contenu garde la largeur du rail
+     | quoi que fasse la barre, la barre reste repliee tant que ☰ ne l'ouvre pas (`admin/sidebar-over.js`),
+     | et ouverte, un voile prend le clic a cote d'elle.
+     |
+     | Un seul cas se replie ici : la barre que le kit dessinerait ouverte, d'apres le choix qu'il retient.
+     | Les regles du kit replient les autres, et le script ouvre la barre par l'etat ouvert du kit sans
+     | ecrire son cookie.
+     */
+    @media (64rem <= width < 87.5rem) {
+        .ui-sidebar-frame .ui-sidebar-inset {
+            padding-left: var(--ui-sidebar-width-rail);
+        }
+
+        .ui-sidebar-frame[data-ui-sidebar='expanded']:not([data-admin-sidebar-over]) {
+            --ui-rail: 1;
+            --ui-sidebar-w: var(--ui-sidebar-width-rail);
+            --ui-sidebar-label-opacity: 0;
+            --ui-sidebar-label-w: 0px;
+            --ui-sidebar-chevron-visibility: hidden;
+            --ui-sidebar-title-h: 0px;
+            --ui-sidebar-title-mb: 0px;
+            --ui-sidebar-row-w: 38px;
+            --ui-sidebar-gap: 0px;
+            --ui-sidebar-submenu: none;
+            --ui-sidebar-badge-bg: var(--ui-text-primary);
+            --ui-sidebar-badge-fg: var(--ui-bg-surface);
+            --ui-sidebar-count-display: none;
+            --ui-sidebar-compact-count-display: flex;
+        }
+
+        .ui-sidebar-frame[data-ui-sidebar='expanded']:not([data-admin-sidebar-over]) .ui-sidebar .ui-sidebar-chevron {
+            padding: 0;
+        }
+
+        .ui-sidebar-frame[data-ui-sidebar='expanded']:not([data-admin-sidebar-over]) .ui-sidebar .ui-sidebar-collapsible {
+            border-bottom-color: var(--ui-border-subtle);
+        }
+
+        .ui-sidebar-frame[data-ui-sidebar='expanded']:not([data-admin-sidebar-over]) .ui-sidebar .ui-sidebar-badge {
+            background: var(--admin-sidebar-action);
+            color: var(--admin-sidebar-on-action);
+        }
+
+        .ui-sidebar-frame[data-ui-sidebar='expanded']:not([data-admin-sidebar-over]) .ui-sidebar .ui-sidebar-badge .ui-icon {
+            opacity: 1;
+        }
+
+        /* Un voile invisible a cote de la barre ouverte : il prend le clic, qui ne fait que la replier. */
+        .ui-sidebar-frame[data-admin-sidebar-over] .ui-sidebar-inset::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            z-index: 25;
+        }
+
+        /* Le ☰ qui la replie glisse en haut de la barre ouverte, au bout de la ligne de la marque : son icone
+           a 20 pixels du bord de la barre, comme le logo l'est de l'autre. 4.375rem font les 1.5rem de marge
+           de l'en-tete, les 2rem du bouton et les 0.875rem laisses a cote de l'icone. */
+        .ui-sidebar-frame .ui-sidebar-trigger {
+            transition: transform .3s ease-in-out;
+        }
+
+        .ui-sidebar-frame[data-admin-sidebar-over] .ui-sidebar-trigger {
+            position: relative;
+            z-index: 31;
+            transform: translateX(calc(var(--ui-sidebar-width-open) - var(--ui-sidebar-width-rail) - 4.375rem));
+        }
+    }
+}

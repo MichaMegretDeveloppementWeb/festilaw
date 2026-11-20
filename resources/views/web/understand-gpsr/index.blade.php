@@ -10,7 +10,7 @@
     ];
     $faqItems = [
         ['q' => __('What is the GPSR?'), 'a' => __('The General Product Safety Regulation (Regulation (EU) 2023/988) is the EU law on consumer product safety. It has applied since 13 December 2024 and replaces the former General Product Safety Directive. It requires, among other things, that an economic operator established in the EU be responsible for products sold to EU consumers.')],
-        ['q' => __('Do I need a GPSR Responsible Person?'), 'a' => __('If your business is established outside the EU and you sell products to consumers in the EU, including through marketplaces, then yes: EU law requires an economic operator established in the EU to be responsible for your products. Festilaw acts as that Responsible Person.'), 'link' => ['url' => '#quiz', 'text' => __('Not sure? Take our 30-second eligibility quiz.')]],
+        ['q' => __('Do I need a GPSR Responsible Person?'), 'a' => __('If your business is established outside the EU and you sell products to consumers in the EU, including through marketplaces, then yes: EU law requires an economic operator established in the EU to be responsible for your products. Festilaw acts as that Responsible Person.'), 'link' => ['url' => '#quiz', 'text' => __('Not sure? Take our 30-second eligibility quiz.'), 'trackLabel' => 'Vers le quiz, depuis la FAQ']],
         ['q' => __('What does a Responsible Person actually do?'), 'a' => __('The Responsible Person keeps your declaration of conformity and technical documentation available for the authorities, cooperates with them, informs them of any risk, and helps take corrective action if needed. It is a legal role with real obligations, not just a mailbox.')],
         ['q' => __('Isn\'t an EU email address enough?'), 'a' => __('No. You need an economic operator physically established in the EU with a verifiable EU address, not just a contact email.')],
         ['q' => __('What happens if I don\'t comply?'), 'a' => __('Your products can be stopped or destroyed at EU customs, you may face national penalties, and marketplaces such as Amazon, Etsy and Shopify can remove your listings or suspend your EU sales.')],
@@ -91,7 +91,7 @@
                     <h2 class="gtabs__panel-title">{{ __('Does this apply to your business?') }}</h2>
                     <p>{{ __('If you sell non-food consumer products to customers inside the European Union, whether you are an e-commerce brand, an international manufacturer, or a marketplace seller, then yes, the GPSR applies directly to you.') }}</p>
                     <p class="gtabs__good"><strong>{{ __('The good news:') }}</strong> {{ __('you don\'t have to navigate the European legal maze alone. Festilaw is here to assess your products, define your exact documentation blueprint, and handle the authority liaison so you can focus entirely on what you do best: growing your business.') }}</p>
-                    <p><a href="{{ localized_route('services') }}" class="gtabs__link">{{ __('See how Festilaw handles your GPSR compliance') }} →</a></p>
+                    <p><a data-track-label="Vers les services, depuis Comprendre le GPSR" href="{{ localized_route('services') }}" class="gtabs__link">{{ __('See how Festilaw handles your GPSR compliance') }} →</a></p>
                 </div>
 
                 <div class="gtabs__panel" role="tabpanel" id="gpsr-panel-3" aria-labelledby="gpsr-tab-3" tabindex="0" hidden>
@@ -103,8 +103,8 @@
                         <li>{{ __('Aviation, Aerospace & Military Equipment (subject to strict defense and aerospace safety standards).') }}</li>
                         <li>{{ __('Pharmaceuticals & Human Medicines (requires European Medicines Agency (EMA) approval).') }}</li>
                     </ul>
-                    <p><a href="{{ localized_route('excluded-products') }}" class="gtabs__link">{{ __('See the full list of products we don\'t cover') }} →</a></p>
-                    <p>{{ __('If you are in doubt,') }} <a href="{{ localized_route('contact') }}" class="gtabs__link">{{ __('send us an email') }}</a>.</p>
+                    <p><a data-track-label="Vers les produits exclus, depuis Comprendre le GPSR" href="{{ localized_route('excluded-products') }}" class="gtabs__link">{{ __('See the full list of products we don\'t cover') }} →</a></p>
+                    <p>{{ __('If you are in doubt,') }} <a data-track-label="Vers le contact, depuis Comprendre le GPSR" href="{{ localized_route('contact') }}" class="gtabs__link">{{ __('send us an email') }}</a>.</p>
                 </div>
             </div>
         </div>

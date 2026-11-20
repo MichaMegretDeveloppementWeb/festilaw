@@ -44,7 +44,7 @@
 
                 @if ($project->cancelled)
                     <p class="my-project__note">{{ __('This project was cancelled. Get in touch if you\'d like to reopen it.') }}</p>
-                    <a href="{{ localized_route('contact') }}" class="btn btn--outline-dark btn--sm">{{ __('Contact us') }}</a>
+                    <a data-track-label="Vers le contact, depuis mon projet" href="{{ localized_route('contact') }}" class="btn btn--outline-dark btn--sm">{{ __('Contact us') }}</a>
                 @else
                     @if ($justUpgraded)
                         {{-- Retour du paiement du passage au Pro (SC12), confirme au retour. --}}
@@ -118,7 +118,7 @@
                                 </p>
                                 <form method="POST" action="{{ $project->renewUrl }}">
                                     @csrf
-                                    <button type="submit" class="btn btn--coral">{{ __('Pay :amount to renew', ['amount' => '€'.number_format($project->annualCents / 100)]) }}</button>
+                                    <button data-track-event="payment.opened" type="submit" class="btn btn--coral">{{ __('Pay :amount to renew', ['amount' => '€'.number_format($project->annualCents / 100)]) }}</button>
                                 </form>
                             </div>
                         @endif
@@ -127,7 +127,7 @@
                         <livewire:web.funnel.pack-change-panel :submission="$dossier" />
                     @else
                         <p class="my-project__resume-text">{{ __('Your project isn\'t finished yet. Pick up right where you left off.') }}</p>
-                        <a href="{{ $project->resumeUrl }}" class="btn btn--coral">{{ __('Resume my project') }}</a>
+                        <a data-track-label="Reprise du dossier" href="{{ $project->resumeUrl }}" class="btn btn--coral">{{ __('Resume my project') }}</a>
                     @endif
 
                     @if ($project->hasDownloads())
@@ -137,21 +137,21 @@
                                 <li class="dossier__file">
                                     <svg class="dossier__file-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                                     <span class="dossier__file-name">{{ __('Signed Responsible Person agreement') }}</span>
-                                    <a class="dossier__download" href="{{ $project->mandateDownloadUrl }}">{{ __('Download') }}</a>
+                                    <a data-track-label="Téléchargement d'un document" class="dossier__download" href="{{ $project->mandateDownloadUrl }}">{{ __('Download') }}</a>
                                 </li>
                             @endif
                             @if ($project->countersignedDownloadUrl)
                                 <li class="dossier__file">
                                     <svg class="dossier__file-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                                     <span class="dossier__file-name">{{ __('Countersigned agreement') }}</span>
-                                    <a class="dossier__download" href="{{ $project->countersignedDownloadUrl }}">{{ __('Download') }}</a>
+                                    <a data-track-label="Téléchargement d'un document" class="dossier__download" href="{{ $project->countersignedDownloadUrl }}">{{ __('Download') }}</a>
                                 </li>
                             @endif
                             @foreach ($project->documents as $doc)
                                 <li class="dossier__file">
                                     <svg class="dossier__file-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                                     <span class="dossier__file-name">{{ $doc->label }} <span class="dossier__file-sub">&middot; {{ $doc->filename }}</span></span>
-                                    <a class="dossier__download" href="{{ $doc->downloadUrl }}">{{ __('Download') }}</a>
+                                    <a data-track-label="Téléchargement d'un document" class="dossier__download" href="{{ $doc->downloadUrl }}">{{ __('Download') }}</a>
                                 </li>
                             @endforeach
                         </ul>
@@ -159,7 +159,7 @@
                 @endif
             </div>
 
-            <p class="my-project__support">{{ __('Need anything?') }} <a href="{{ localized_route('contact') }}">{{ __('Contact us') }}</a> · {{ __('real humans, happy to help.') }}</p>
+            <p class="my-project__support">{{ __('Need anything?') }} <a data-track-label="Vers le contact, depuis mon projet" href="{{ localized_route('contact') }}">{{ __('Contact us') }}</a> · {{ __('real humans, happy to help.') }}</p>
         </div>
     </section>
 @endsection

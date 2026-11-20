@@ -47,7 +47,7 @@
 
                 @if ($space->cancelled)
                     <p class="my-project__note">{{ __('This project was cancelled. Get in touch if you\'d like to reopen it.') }}</p>
-                    <a href="{{ localized_route('contact') }}" class="btn btn--outline-dark btn--sm">{{ __('Contact us') }}</a>
+                    <a data-track-label="Vers le contact, depuis l'espace Scale" href="{{ localized_route('contact') }}" class="btn btn--outline-dark btn--sm">{{ __('Contact us') }}</a>
                 @else
                     @if ($returningFromCheckout && $toBook)
                         <div class="scale-flash scale-flash--ok">
@@ -105,7 +105,7 @@
                             </div>
                             <form method="POST" action="{{ $space->payUrl }}">
                                 @csrf
-                                <button type="submit" class="btn btn--coral">{{ __('Pay :amount audit', ['amount' => $auditPrice]) }}</button>
+                                <button data-track-event="payment.opened" type="submit" class="btn btn--coral">{{ __('Pay :amount audit', ['amount' => $auditPrice]) }}</button>
                             </form>
                             @unless ($space->booked)
                                 <p class="scale-action__credit">
@@ -128,7 +128,7 @@
                                             <p class="scale-book__hint">{{ __('Choose a slot in the calendar below.') }}</p>
                                         @else
                                             <p class="scale-book__hint">{{ __('Opens our booking calendar · times shown in Paris time.') }}</p>
-                                            <a href="{{ $space->calendarUrl }}" target="_blank" rel="noopener" class="btn btn--coral btn--sm">
+                                            <a data-track-label="Ouverture du calendrier Scale" href="{{ $space->calendarUrl }}" target="_blank" rel="noopener" class="btn btn--coral btn--sm">
                                                 {{ __('Open the booking calendar') }}
                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-left:6px"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                                             </a>
@@ -138,7 +138,7 @@
                                         <div class="scale-calendar">
                                             <iframe class="scale-calendar__frame" src="{{ $space->calendarEmbedUrl }}" title="{{ __('Booking calendar') }}" referrerpolicy="no-referrer"></iframe>
                                         </div>
-                                        <p class="scale-calendar__fallback">{{ __('Calendar not showing?') }} <a href="{{ $space->calendarUrl }}" target="_blank" rel="noopener">{{ __('Open it in a new tab') }}</a></p>
+                                        <p class="scale-calendar__fallback">{{ __('Calendar not showing?') }} <a data-track-label="Ouverture du calendrier Scale" href="{{ $space->calendarUrl }}" target="_blank" rel="noopener">{{ __('Open it in a new tab') }}</a></p>
                                     @endif
                                 </li>
                                 <li class="scale-book__step">
@@ -148,7 +148,7 @@
                                         <p class="scale-book__hint">{{ __('Once you\'ve picked a slot, let us know so we can lock it in.') }}</p>
                                         <form method="POST" action="{{ $space->bookUrl }}">
                                             @csrf
-                                            <button type="submit" class="btn btn--outline-dark btn--sm">{{ __('I\'ve booked my consultation') }}</button>
+                                            <button data-track-label="Envoi du formulaire de rendez-vous" type="submit" class="btn btn--outline-dark btn--sm">{{ __('I\'ve booked my consultation') }}</button>
                                         </form>
                                     </div>
                                 </li>
@@ -167,13 +167,13 @@
                                 </div>
                             </dl>
                             <p class="my-project__note">{{ __('Thanks · your consultation request is recorded. Our team will confirm the exact slot by email. Your :price audit fee will be credited toward your final quote.', ['price' => $auditPrice]) }}</p>
-                            <p class="scale-book__reopen">{{ __('Haven\'t picked a slot yet?') }} <a href="{{ $space->calendarUrl }}" target="_blank" rel="noopener">{{ __('Open the booking calendar') }}</a></p>
+                            <p class="scale-book__reopen">{{ __('Haven\'t picked a slot yet?') }} <a data-track-label="Ouverture du calendrier Scale" href="{{ $space->calendarUrl }}" target="_blank" rel="noopener">{{ __('Open the booking calendar') }}</a></p>
                         </div>
                     @endif
                 @endif
             </div>
 
-            <p class="my-project__support">{{ __('Need anything?') }} <a href="{{ localized_route('contact') }}">{{ __('Contact us') }}</a> · {{ __('real humans, happy to help.') }}</p>
+            <p class="my-project__support">{{ __('Need anything?') }} <a data-track-label="Vers le contact, depuis l'espace Scale" href="{{ localized_route('contact') }}">{{ __('Contact us') }}</a> · {{ __('real humans, happy to help.') }}</p>
         </div>
     </section>
 @endsection

@@ -37,7 +37,7 @@
 
             <h2 class="start-heading">{{ __('Pick your starting point') }}</h2>
             <div class="start-paths">
-                <a href="{{ route('get-started.starter') }}" class="start-path">
+                <a data-track-event="offer.creator.chosen" href="{{ route('get-started.starter') }}" class="start-path">
                     <span class="start-path__body">
                         <span class="start-path__name">{{ __('Creator Pack') }}</span>
                         <span class="start-path__who">{{ __('Small creators · up to 9 products') }}</span>
@@ -48,7 +48,7 @@
                     </span>
                 </a>
 
-                <a href="{{ route('get-started.pro') }}" class="start-path start-path--featured">
+                <a data-track-event="offer.pro.chosen" href="{{ route('get-started.pro') }}" class="start-path start-path--featured">
                     <span class="start-path__badge">{{ __('Most popular') }}</span>
                     <span class="start-path__body">
                         <span class="start-path__name">{{ __('Pro Pack') }}</span>
@@ -60,7 +60,7 @@
                     </span>
                 </a>
 
-                <a href="{{ route('get-started.scale') }}" class="start-path">
+                <a data-track-event="offer.scale.chosen" href="{{ route('get-started.scale') }}" class="start-path">
                     <span class="start-path__body">
                         <span class="start-path__name">{{ __('Scale Pack') }}</span>
                         <span class="start-path__who">{{ __('100+ products · starts with a full audit') }}</span>

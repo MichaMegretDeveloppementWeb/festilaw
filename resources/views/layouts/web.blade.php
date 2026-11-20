@@ -85,6 +85,12 @@
 
     @vite('resources/js/web.js')
 
+    {{-- Mesure d'audience (Falcon Analytics, SC8) : le kit pose seul le fichier du collecteur. Rien n'est
+         rendu quand la mesure est coupee ou qu'un compte du back-office est connecte (exclude_guards). Les
+         boutons qui comptent portent data-track-event (App\Enums\Analytics\AudienceEvent), les liens de
+         navigation un libelle fixe data-track-label, pour une seule ligne quelle que soit la langue. --}}
+    @analyticsCollector
+
     {{-- JS propre a la page. Les formulaires conservent l'injection automatique de Livewire. --}}
     @stack('scripts')
 </body>

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Livewire\Web\Funnel;
 
 use App\Actions\Web\Starter\CreateStarterSubmissionAction;
+use App\Contracts\Analytics\AudienceTracker;
+use App\Enums\Analytics\AudienceEvent;
 use App\Enums\Submission\SubmissionType;
 use App\Exceptions\BaseAppException;
 use App\Livewire\Concerns\HandlesUnexpectedErrors;
@@ -91,7 +93,7 @@ class StarterForm extends Component
         ];
     }
 
-    public function submit(CreateStarterSubmissionAction $action): void
+    public function submit(CreateStarterSubmissionAction $action, AudienceTracker $audience): void
     {
         if ($this->looksLikeSpam()) {
             $this->sent = true;
@@ -128,6 +130,7 @@ class StarterForm extends Component
         // Un dossier existait deja pour cet email : on a renvoye son lien par email. On ne redirige pas
         // dans le dossier (le token vaut acces : un simple email ne doit pas y donner acces).
         if (! $outcome->isNew) {
+            $audience->record(AudienceEvent::DossierLinkRequested);
             $this->resent = true;
             $this->resentActive = $outcome->isActive;
             $this->resentType = $outcome->submission->type->value;
@@ -136,6 +139,7 @@ class StarterForm extends Component
         }
 
         // Nouveau dossier : on enchaine directement sur le parcours (televerser -> signer -> payer).
+        $audience->record(AudienceEvent::openedFor($this->packType()));
         $this->redirectRoute('get-started.starter.journey', [
             'dossier' => $outcome->submission->resume_token,
         ], navigate: true);

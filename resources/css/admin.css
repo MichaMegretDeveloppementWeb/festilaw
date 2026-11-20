@@ -18,6 +18,8 @@
 @import './admin/kit.css';
 /* Couleurs de l'IA (degrade des tokens et de l'icone etincelle). */
 @import './admin/ai.css';
+/* Barre laterale reprise de Chouchoute-toi (lignes pleine largeur, sections repliables). */
+@import './admin/sidebar.css';
 @source '../views/layouts/admin.blade.php';
 @source '../views/livewire/admin';
 @source '../views/components/admin';

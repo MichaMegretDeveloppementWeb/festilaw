@@ -4,12 +4,16 @@
      dans la configuration du kit ; `php artisan ui-kit:check` verifie l'ensemble.
      `lang="fr"` : le back-office est redige en francais, quelle que soit la langue du site public.
      Le titre vient du composant de l'ecran (->title('Dossiers')) : barre du haut et onglet du navigateur.
-     $adminNav et $schedulerStatus : fournis par le View::composer de AppServiceProvider.
+     $adminNav et $schedulerStatus : fournis par le View::composer de AppServiceProvider. La barre laterale
+     reprend celle de Chouchoute-toi (demande de Micha du 20/11) : un ecran seul a sa ligne, un espace de
+     plusieurs pages est une section repliable, et le compte est en bas (resources/css/admin/sidebar.css).
      $surface : 'plain' pose le fond blanc sur le contenu (ecrans du blog et de la generation IA, decision du
      16/11/2026, « page blanche a la Stripe ») ; les autres ecrans gardent le fond gris du kit. Un ecran le choisit
-     par ->layoutData(['surface' => 'plain']). --}}
+     par ->layoutData(['surface' => 'plain']). 'full' laisse toute la place au contenu, sans colonne ni marges :
+     les ecrans de Falcon Analytics portent leur propre boite (components/admin/analytics-layout). --}}
 @php($pageTitle = $title ?? __('Back-office'))
 @php($plainSurface = ($surface ?? 'page') === 'plain')
+@php($fullSurface = ($surface ?? 'page') === 'full')
 <!DOCTYPE html>
 {{-- Une seule classe `class`, le theme du kit dedans, a cote de bg-page (meme element : sinon bande claire). --}}
 <html lang="fr" @class(['h-full', 'bg-page' => ! $plainSurface, 'bg-surface' => $plainSurface, falcon_theme_class()])>
@@ -29,7 +33,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap">
-    @vite(['resources/css/admin.css'])
+    @vite(['resources/css/admin.css', 'resources/js/admin.js'])
     @livewireStyles
 </head>
 @auth
@@ -50,23 +54,25 @@
                 <x-ui::sidebar brand="Festilaw">
                     <x-slot:logo>
                         <a href="{{ route('admin.submissions.index') }}" aria-label="{{ __('Festilaw, back-office') }}"
-                            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-900 text-sm font-bold text-white dark:bg-white dark:text-gray-900">F</a>
+                            class="admin-brand-logo flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-900 text-sm font-bold text-white dark:bg-white dark:text-gray-900">F</a>
                     </x-slot:logo>
 
-                    @foreach ($adminNav as $group)
-                        <x-ui::sidebar.group :label="$group->title">
-                            @foreach ($group->items as $item)
-                                <x-ui::sidebar.link :href="$item->url" :icon="$item->icon" :active="$item->active" data-nav-icon="{{ $item->icon }}">{{ $item->label }}</x-ui::sidebar.link>
-                            @endforeach
-                        </x-ui::sidebar.group>
-                    @endforeach
-
                     <x-ui::sidebar.group>
-                        <x-ui::sidebar.link :href="route('home')" icon="arrow-top-right-on-square" target="_blank" rel="noopener">{{ __('Voir le site public') }}</x-ui::sidebar.link>
+                        @foreach ($adminNav as $entry)
+                            @if ($entry instanceof \App\Data\Admin\AdminNavSection)
+                                <x-ui::sidebar.collapsible :name="$entry->name" :label="$entry->label" :icon="$entry->icon" :href="$entry->url" :active="$entry->active">
+                                    @foreach ($entry->items as $item)
+                                        <x-ui::sidebar.link :href="$item->url" :active="$item->active">{{ $item->label }}</x-ui::sidebar.link>
+                                    @endforeach
+                                </x-ui::sidebar.collapsible>
+                            @else
+                                <x-ui::sidebar.link :href="$entry->url" :icon="$entry->icon" :active="$entry->active">{{ $entry->label }}</x-ui::sidebar.link>
+                            @endif
+                        @endforeach
                     </x-ui::sidebar.group>
 
                     <x-slot:user>
-                        <x-ui::sidebar.user :name="__('Mon compte')" :email="auth()->user()->email" :href="route('admin.profile')" />
+                        <x-admin.account-menu :name="(string) auth()->user()->name" :email="(string) auth()->user()->email" />
                     </x-slot:user>
                 </x-ui::sidebar>
             </x-slot:bar>
@@ -96,24 +102,21 @@
                         </x-ui::badge>
                     @endif
 
-                    <form method="POST" action="{{ route('admin.logout') }}">
-                        @csrf
-                        <x-ui::button type="submit" variant="ghost" size="compact" aria-label="{{ __('Se déconnecter') }}">
-                            <x-ui::icon name="arrow-right-start-on-rectangle" />
-                            <span class="hidden sm:inline">{{ __('Se déconnecter') }}</span>
-                        </x-ui::button>
-                    </form>
-
                     <x-ui::theme-toggle />
                 </div>
             </header>
 
-            <main @class(['group/surface flex-1', 'bg-surface' => $plainSurface]) data-surface="{{ $plainSurface ? 'plain' : 'page' }}">
+            <main @class(['group/surface flex-1', 'bg-surface' => $plainSurface]) data-surface="{{ $plainSurface ? 'plain' : ($fullSurface ? 'full' : 'page') }}">
                 {{-- Page blanche : plus de marge sur les cotes, pour que les filets qui debordent de la colonne
-                     (sections, bandes de chiffres, listes) gardent de l'air jusqu'au bord. --}}
-                <div @class(['mx-auto max-w-[90em] px-4 py-6 sm:py-8', 'sm:px-6' => ! $plainSurface, 'sm:px-10 lg:px-12' => $plainSurface])>
+                     (sections, bandes de chiffres, listes) gardent de l'air jusqu'au bord. Surface pleine : aucune
+                     colonne, l'ecran se cadre lui-meme. --}}
+                <div @class([
+                    'mx-auto max-w-[90em] px-4 py-6 sm:py-8' => ! $fullSurface,
+                    'sm:px-6' => ! $plainSurface && ! $fullSurface,
+                    'sm:px-10 lg:px-12' => $plainSurface,
+                ])>
                     @if ($schedulerStatus['stalled'] ?? false)
-                        <x-ui::alert type="error" class="mb-6" :title="__('Les tâches automatiques ne tournent plus depuis le :date (UTC)', ['date' => $schedulerStatus['lastRunAt']->format('d/m/Y à H:i')])">
+                        <x-ui::alert type="error" :class="$fullSurface ? 'mx-4 mt-6 mb-6 sm:mx-6' : 'mb-6'" :title="__('Les tâches automatiques ne tournent plus depuis le :date (UTC)', ['date' => $schedulerStatus['lastRunAt']->format('d/m/Y à H:i')])">
                             {{ __('Rappels de renouvellement, vérification des paiements et des signatures, récupération des contrats signés et purges RGPD ne s\'exécutent plus. À vérifier côté hébergement (tâche cron).') }}
                         </x-ui::alert>
                     @endif

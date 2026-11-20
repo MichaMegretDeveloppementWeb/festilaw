@@ -1,5 +1,6 @@
 <?php
 
+use App\Data\Admin\AdminNavSection;
 use App\Models\User;
 use App\Services\Admin\AdminNavigation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -48,33 +49,91 @@ it('answers not found for an article or a category that does not exist', functio
     get('/admin/blog/posts/abc/edit')->assertNotFound();
 });
 
-it('shows the blog group in both menus and marks the current screen', function () {
+it('shows the blog section in both menus and marks the current screen', function () {
     actingAs(User::factory()->create());
 
     $content = get('/admin/blog/categories')->assertOk()->getContent();
 
-    // Les memes liens dans le menu mobile et dans la barre laterale.
-    expect(substr_count($content, 'href="'.route('admin.blog.posts.index').'"'))->toBe(2)
-        ->and(substr_count($content, 'href="'.route('admin.blog.categories.index').'"'))->toBe(2)
+    // Les memes liens dans le menu mobile et dans la barre laterale. Le kit dessine chaque page d'une
+    // section dans le sous-menu deplie et dans le panneau du rail : autant de fois l'une que l'autre, et
+    // seule la page courante est marquee.
+    $categories = substr_count($content, 'href="'.route('admin.blog.categories.index').'"');
+
+    expect($categories)->toBeGreaterThanOrEqual(2)
+        ->and(substr_count($content, 'href="'.route('admin.blog.posts.index').'"'))->toBe($categories)
         ->and(substr_count($content, 'href="'.route('admin.submissions.index').'"'))->toBeGreaterThanOrEqual(2)
-        ->and(substr_count($content, 'aria-current="page"'))->toBe(2);
+        ->and(substr_count($content, 'aria-current="page"'))->toBe($categories);
 });
 
-it('describes the menu once, with a single active item per screen', function (string $route, bool $viewingContact, string $active) {
-    $items = collect(app(AdminNavigation::class)->groups($route, $viewingContact))->flatMap->items;
+/**
+ * Ce que le menu allume : « Section > page » pour une page de section, le libelle seul pour une ligne.
+ *
+ * @return array{entries: list<string>, active: list<string>, sections: list<string>}
+ */
+function describedMenu(AdminNavigation $navigation, string $route, bool $viewingContact = false): array
+{
+    $entries = [];
+    $active = [];
+    $sections = [];
 
-    expect($items->pluck('label')->all())->toBe(['Dossiers', 'Prises de contact', 'Quiz', 'Tarifs', 'Articles', 'Catégories', 'Génération IA'])
-        ->and($items->where('active', true)->pluck('label')->all())->toBe([$active]);
+    foreach ($navigation->entries($route, $viewingContact) as $entry) {
+        $items = $entry instanceof AdminNavSection ? $entry->items : [$entry];
+        $prefix = $entry instanceof AdminNavSection ? $entry->label.' > ' : '';
+
+        if ($entry instanceof AdminNavSection && $entry->active) {
+            $sections[] = $entry->label;
+        }
+
+        foreach ($items as $item) {
+            $entries[] = $prefix.$item->label;
+
+            if ($item->active) {
+                $active[] = $prefix.$item->label;
+            }
+        }
+    }
+
+    return ['entries' => $entries, 'active' => $active, 'sections' => $sections];
+}
+
+it('describes the menu once, with a single active item per screen', function (string $route, bool $viewingContact, string $active) {
+    $menu = describedMenu(app(AdminNavigation::class), $route, $viewingContact);
+
+    expect($menu['entries'])->toBe([
+        'Dossiers', 'Prises de contact', 'Quiz', 'Tarifs',
+        'Blog > Articles', 'Blog > Catégories', 'Blog > Génération IA',
+        'Audience > Vue d\'ensemble', 'Audience > Temps réel', 'Audience > Visiteurs', 'Audience > Sessions', 'Audience > Événements', 'Audience > Tunnels',
+        'Marketing > Vue d\'ensemble', 'Marketing > Campagnes', 'Marketing > Publicités',
+    ])
+        ->and($menu['active'])->toBe([$active])
+        // Une page de section allume aussi sa section, et elle seule.
+        ->and($menu['sections'])->toBe(str_contains($active, ' > ') ? [explode(' > ', $active)[0]] : []);
 })->with([
     'dossiers' => ['admin.submissions.index', false, 'Dossiers'],
     'a contact opened through the dossier route' => ['admin.submissions.show', true, 'Prises de contact'],
     'quiz' => ['admin.quiz.index', false, 'Quiz'],
     'pricing' => ['admin.settings', false, 'Tarifs'],
-    'post form' => ['admin.blog.posts.edit', false, 'Articles'],
-    'category form' => ['admin.blog.categories.create', false, 'Catégories'],
-    'generation settings' => ['admin.blog.generation.settings', false, 'Génération IA'],
-    'generation detail' => ['admin.blog.generation.show', false, 'Génération IA'],
+    'post form' => ['admin.blog.posts.edit', false, 'Blog > Articles'],
+    'category form' => ['admin.blog.categories.create', false, 'Blog > Catégories'],
+    'generation settings' => ['admin.blog.generation.settings', false, 'Blog > Génération IA'],
+    'generation detail' => ['admin.blog.generation.show', false, 'Blog > Génération IA'],
+    'audience overview' => ['analytics.admin.overview', false, 'Audience > Vue d\'ensemble'],
+    'one session of the audience' => ['analytics.admin.sessions.show', false, 'Audience > Sessions'],
+    'one visitor of the audience' => ['analytics.admin.visitors.show', false, 'Audience > Visiteurs'],
+    'marketing overview' => ['analytics.admin.marketing.dashboard', false, 'Marketing > Vue d\'ensemble'],
+    'one campaign' => ['analytics.admin.marketing.campaigns.show', false, 'Marketing > Campagnes'],
+    'one ad' => ['analytics.admin.marketing.ads.show', false, 'Marketing > Publicités'],
 ]);
+
+it('offers the integrations screen of the audience only once a Search Console client is set', function () {
+    $without = describedMenu(new AdminNavigation(app('url')), 'analytics.admin.integrations');
+    $with = describedMenu(new AdminNavigation(app('url'), searchConsoleConfigured: true), 'analytics.admin.integrations');
+
+    expect($without['entries'])->not->toContain('Audience > Intégrations')
+        ->and($without['sections'])->toBe(['Audience'])
+        ->and($with['entries'])->toContain('Audience > Intégrations')
+        ->and($with['active'])->toBe(['Audience > Intégrations']);
+});
 
 it('never shows a doubly escaped apostrophe on a blog screen', function () {
     $post = BlogContent::published('guide', BlogContent::category('rules'));

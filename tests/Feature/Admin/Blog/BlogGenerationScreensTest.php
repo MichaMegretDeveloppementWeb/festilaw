@@ -68,7 +68,7 @@ it('serves every generation page to a signed-in admin, under one menu entry and 
         ->assertSee('href="'.route('admin.blog.generation.settings').'"', false)
         ->assertSee('data-open-settings', false)
         ->assertSee('Réglages de la génération IA')
-        ->assertDontSee('Vue d\'ensemble')
+        ->assertDontSee('role="tablist"', false)
         ->assertDontSee('data-back-to-generation', false);
 
     // L'historique et les reglages sont deux pages a part, avec un lien de retour. Aucun onglet nulle part.

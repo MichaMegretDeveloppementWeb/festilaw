@@ -51,11 +51,11 @@
                 <span class="quiz__q-count">{{ __('QUESTION') }} <span data-question-number>1</span> {{ __('OF') }} <span>3</span></span>
                 <h3 class="quiz__q-text" tabindex="-1">{{ __('Is your company based outside the European Union?') }}</h3>
                 <div class="quiz__answers">
-                    <button type="button" class="quiz__answer quiz__answer--yes" data-answer="true" disabled>
+                    <button data-track-event="quiz.answered" type="button" class="quiz__answer quiz__answer--yes" data-answer="true" disabled>
                         <span class="quiz__answer-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
                         {{ __('Yes') }}
                     </button>
-                    <button type="button" class="quiz__answer quiz__answer--no" data-answer="false" disabled>
+                    <button data-track-event="quiz.answered" type="button" class="quiz__answer quiz__answer--no" data-answer="false" disabled>
                         <span class="quiz__answer-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></span>
                         {{ __('No') }}
                     </button>
@@ -70,10 +70,10 @@
                 <h3 class="quiz__result-title" tabindex="-1">{{ __('Your eligibility result') }}</h3>
                 <p class="quiz__result-text"></p>
                 <div class="quiz__result-actions">
-                    <a data-result-link="concerned" href="{{ localized_route('pricing') }}" class="btn btn--coral btn--sm">{{ __('See the plans') }}</a>
-                    <a data-result-link="excluded" hidden href="{{ localized_route('excluded-products') }}" class="btn btn--coral btn--sm">{{ __('See excluded products') }}</a>
-                    <a data-result-link="notConcerned" hidden href="{{ localized_route('contact') }}" class="btn btn--coral btn--sm">{{ __('Contact us') }}</a>
-                    <button type="button" class="btn btn--outline-dark btn--sm" data-restart>{{ __('Start over') }}</button>
+                    <a data-track-label="Résultat du quiz, vers les tarifs" data-result-link="concerned" href="{{ localized_route('pricing') }}" class="btn btn--coral btn--sm">{{ __('See the plans') }}</a>
+                    <a data-track-label="Résultat du quiz, vers les produits exclus" data-result-link="excluded" hidden href="{{ localized_route('excluded-products') }}" class="btn btn--coral btn--sm">{{ __('See excluded products') }}</a>
+                    <a data-track-label="Résultat du quiz, vers le contact" data-result-link="notConcerned" hidden href="{{ localized_route('contact') }}" class="btn btn--coral btn--sm">{{ __('Contact us') }}</a>
+                    <button data-track-label="Quiz recommencé" type="button" class="btn btn--outline-dark btn--sm" data-restart>{{ __('Start over') }}</button>
                 </div>
             </div>
         </div>

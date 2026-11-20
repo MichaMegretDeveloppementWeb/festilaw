@@ -10,7 +10,7 @@
                 <p class="pricing__desc">{{ __('Small creators, up to 9 products.') }}</p>
                 <div class="pricing__amount">&euro;{{ number_format($creatorAnnualCents / 100) }}</div>
                 <div class="pricing__period">{{ __('per year') }}</div>
-                <a href="{{ route('get-started.starter') }}" class="btn btn--outline-dark pricing__cta">{{ __('Choose Creator') }}</a>
+                <a data-track-event="offer.creator.chosen" href="{{ route('get-started.starter') }}" class="btn btn--outline-dark pricing__cta">{{ __('Choose Creator') }}</a>
             </div>
             <div class="pricing__card pricing__card--featured">
                 <span class="pricing__badge">{{ __('Most popular') }}</span>
@@ -18,14 +18,14 @@
                 <p class="pricing__desc">{{ __('Growing brands, 10 to 100 products.') }}</p>
                 <div class="pricing__amount">&euro;{{ number_format($proAnnualCents / 100) }}</div>
                 <div class="pricing__period">{{ __('per year') }}</div>
-                <a href="{{ route('get-started.pro') }}" class="btn btn--coral pricing__cta">{{ __('Choose Pro') }}</a>
+                <a data-track-event="offer.pro.chosen" href="{{ route('get-started.pro') }}" class="btn btn--coral pricing__cta">{{ __('Choose Pro') }}</a>
             </div>
             <div class="pricing__card">
                 <h3 class="pricing__name">{{ __('Scale Pack') }}</h3>
                 <p class="pricing__desc">{{ __('100+ products, with full audit.') }}</p>
                 <div class="pricing__amount">{{ __('Custom') }}</div>
                 <div class="pricing__period">{{ __('tailored quote') }}</div>
-                <a href="{{ route('get-started.scale') }}" class="btn btn--outline-dark pricing__cta">{{ __('Choose Scale') }}</a>
+                <a data-track-event="offer.scale.chosen" href="{{ route('get-started.scale') }}" class="btn btn--outline-dark pricing__cta">{{ __('Choose Scale') }}</a>
             </div>
         </div>
     </div>

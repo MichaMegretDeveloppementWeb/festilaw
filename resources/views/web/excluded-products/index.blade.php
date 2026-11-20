@@ -66,7 +66,7 @@
                 </div>
             </div>
 
-            <p class="excluded__note">{{ __('Not sure whether your products are covered?') }} <a href="{{ localized_route('contact') }}" class="excluded__link">{{ __('Send us an email') }}</a> {{ __('and we\'ll point you in the right direction.') }}</p>
+            <p class="excluded__note">{{ __('Not sure whether your products are covered?') }} <a data-track-label="Vers le contact, depuis les produits exclus" href="{{ localized_route('contact') }}" class="excluded__link">{{ __('Send us an email') }}</a> {{ __('and we\'ll point you in the right direction.') }}</p>
         </div>
     </section>
 

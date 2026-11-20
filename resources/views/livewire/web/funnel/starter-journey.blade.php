@@ -36,15 +36,15 @@
                 @endif
                 <p>{{ __('Your current link will stop working: we\'ll email you the new one.') }}</p>
                 <div class="journey-switch__actions">
-                    <button type="button" class="btn btn--coral btn--sm" wire:click="changePack" wire:loading.attr="disabled" wire:target="changePack">
+                    <button data-track-label="Changement de formule, confirmation" type="button" class="btn btn--coral btn--sm" wire:click="changePack" wire:loading.attr="disabled" wire:target="changePack">
                         <span wire:loading.remove wire:target="changePack">{{ __('Switch to the :pack', ['pack' => $otherPack]) }}</span>
                         <span wire:loading wire:target="changePack">{{ __('Switching') }}&hellip;</span>
                     </button>
-                    <button type="button" class="btn btn--outline-dark btn--sm" wire:click="$set('confirmingPackChange', false)">{{ __('Keep the :pack', ['pack' => __($packLabel)]) }}</button>
+                    <button data-track-label="Formule gardée" type="button" class="btn btn--outline-dark btn--sm" wire:click="$set('confirmingPackChange', false)">{{ __('Keep the :pack', ['pack' => __($packLabel)]) }}</button>
                 </div>
             </div>
         @else
-            <p class="journey-switch-link">{{ __('Not the right plan?') }} <button type="button" wire:click="$set('confirmingPackChange', true)">{{ __('Switch to the :pack', ['pack' => $otherPack]) }}</button></p>
+            <p class="journey-switch-link">{{ __('Not the right plan?') }} <button data-track-label="Changement de formule, ouverture" type="button" wire:click="$set('confirmingPackChange', true)">{{ __('Switch to the :pack', ['pack' => $otherPack]) }}</button></p>
         @endif
     @endif
 
@@ -89,7 +89,7 @@
                             <svg class="journey-doc__icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                             <span class="journey-doc__meta"><span class="journey-doc__name">{{ __('Signed agreement') }}</span></span>
                             <span class="journey-doc__actions">
-                                <a href="{{ $mandateUrl }}" class="journey-doc__btn">{{ __('Download') }}</a>
+                                <a data-track-label="Téléchargement d'un document" href="{{ $mandateUrl }}" class="journey-doc__btn">{{ __('Download') }}</a>
                             </span>
                         </li>
                     </ul>
@@ -112,13 +112,13 @@
                             </span>
                             <span class="journey-doc__actions">
                                 @if ($staged)
-                                    <button type="button" class="journey-doc__btn journey-doc__btn--primary" wire:click="replaceDocument('{{ $doc['type'] }}')" wire:loading.attr="disabled" wire:target="replaceDocument('{{ $doc['type'] }}')">
+                                    <button data-track-label="Remplacement d'un document" type="button" class="journey-doc__btn journey-doc__btn--primary" wire:click="replaceDocument('{{ $doc['type'] }}')" wire:loading.attr="disabled" wire:target="replaceDocument('{{ $doc['type'] }}')">
                                         <span wire:loading.remove wire:target="replaceDocument('{{ $doc['type'] }}')">{{ __('Confirm') }}</span>
                                         <span wire:loading wire:target="replaceDocument('{{ $doc['type'] }}')">{{ __('Saving') }}&hellip;</span>
                                     </button>
-                                    <button type="button" class="journey-doc__btn" wire:click="cancelReplacement('{{ $doc['type'] }}')">{{ __('Cancel') }}</button>
+                                    <button data-track-label="Remplacement d'un document, annulation" type="button" class="journey-doc__btn" wire:click="cancelReplacement('{{ $doc['type'] }}')">{{ __('Cancel') }}</button>
                                 @else
-                                    <a href="{{ $doc['downloadUrl'] }}" class="journey-doc__btn">{{ __('Download') }}</a>
+                                    <a data-track-label="Téléchargement d'un document" href="{{ $doc['downloadUrl'] }}" class="journey-doc__btn">{{ __('Download') }}</a>
                                     <label class="journey-doc__btn journey-doc__replace" wire:loading.class="is-busy" wire:target="replacements.{{ $doc['type'] }}">
                                         <span wire:loading.remove wire:target="replacements.{{ $doc['type'] }}">{{ __('Replace') }}</span>
                                         <span wire:loading wire:target="replacements.{{ $doc['type'] }}">{{ __('Uploading') }}&hellip;</span>
@@ -133,7 +133,7 @@
             @endif
             <div class="journey-review">
                 <span>{{ __('This step is done · go back to the current step to continue.') }}</span>
-                <button type="button" class="btn btn--outline-dark btn--sm" wire:click="goToStep('{{ $currentStep }}')">{{ __('Back to the current step') }}</button>
+                <button data-track-label="Retour à l'étape en cours" type="button" class="btn btn--outline-dark btn--sm" wire:click="goToStep('{{ $currentStep }}')">{{ __('Back to the current step') }}</button>
             </div>
         </div>
 
@@ -183,7 +183,7 @@
                 @if ($confirmingSignature)
                     <p class="journey-note">{{ __('Your signature is taking a little longer to be confirmed. Check again below in a moment.') }}</p>
                 @endif
-                <button type="button" class="btn btn--coral" wire:click="sign" wire:loading.attr="disabled" wire:target="sign">
+                <button data-track-event="signature.opened" type="button" class="btn btn--coral" wire:click="sign" wire:loading.attr="disabled" wire:target="sign">
                     <span wire:loading.remove wire:target="sign">{{ __('Sign the agreement') }}</span>
                     <span wire:loading wire:target="sign">{{ __('Opening') }}&hellip;</span>
                 </button>
@@ -194,7 +194,7 @@
                 <div wire:init="autoConfirmSignature"></div>
             @endif
             @if ($signatureStarted && ! $finalising)
-                <button type="button" class="btn btn--outline-dark btn--sm" wire:click="confirmSignature" wire:loading.attr="disabled" wire:target="confirmSignature">
+                <button data-track-label="Vérification de la signature" type="button" class="btn btn--outline-dark btn--sm" wire:click="confirmSignature" wire:loading.attr="disabled" wire:target="confirmSignature">
                     <span wire:loading.remove wire:target="confirmSignature">{{ __('I have signed · check now') }}</span>
                     <span wire:loading wire:target="confirmSignature">{{ __('Checking') }}&hellip;</span>
                 </button>
@@ -222,7 +222,7 @@
                                         <span class="dropzone-file__size">{{ number_format($file['size'] / 1024, 0) }} KB</span>
                                     @endif
                                 </div>
-                                <button type="button" class="dropzone-file__remove" wire:click="removeDocument('{{ $doc->value }}')" aria-label="{{ __('Remove :document', ['document' => $doc->label()]) }}">&times;</button>
+                                <button data-track-label="Retrait d'un document" type="button" class="dropzone-file__remove" wire:click="removeDocument('{{ $doc->value }}')" aria-label="{{ __('Remove :document', ['document' => $doc->label()]) }}">&times;</button>
                             </div>
                         @else
                             <div class="dropzone"
@@ -250,7 +250,7 @@
 
             @error('documents_submit') <div class="funnel-form__error journey-error">{{ $message }}</div> @enderror
 
-            <button type="button" class="btn btn--coral" wire:click="submitDocuments" wire:loading.attr="disabled" wire:target="submitDocuments">
+            <button data-track-label="Envoi des documents" type="button" class="btn btn--coral" wire:click="submitDocuments" wire:loading.attr="disabled" wire:target="submitDocuments">
                 {{-- Un dossier deja signe (ancien ordre) passe directement au paiement. --}}
                 <span wire:loading.remove wire:target="submitDocuments">{{ in_array('sign', $completedSteps, true) ? __('Continue to payment') : __('Continue to signature') }}</span>
                 <span wire:loading wire:target="submitDocuments">{{ __('Saving') }}&hellip;</span>
@@ -270,7 +270,7 @@
                      prestataire (source de verite). S'il a en fait ete paye, on corrige sans double-debit. --}}
                 <div class="journey-note">
                     <p>{{ __('Your last payment attempt (reference :ref) was recorded as failed. If you think it actually went through, check with :provider before paying again.', ['ref' => $failedPayment->provider_reference, 'provider' => $failedPayment->providerLabel()]) }}</p>
-                    <button type="button" class="btn btn--outline-dark btn--sm" wire:click="recheckPayment" wire:loading.attr="disabled" wire:target="recheckPayment">
+                    <button data-track-label="Vérification du paiement" type="button" class="btn btn--outline-dark btn--sm" wire:click="recheckPayment" wire:loading.attr="disabled" wire:target="recheckPayment">
                         <span wire:loading.remove wire:target="recheckPayment">{{ __('Check my payment on :provider', ['provider' => $failedPayment->providerLabel()]) }}</span>
                         <span wire:loading wire:target="recheckPayment">{{ __('Checking') }}&hellip;</span>
                     </button>
@@ -295,7 +295,7 @@
                         @endforeach
                     </div>
                 @endif
-                <button type="button" class="btn btn--coral" wire:click="pay" wire:loading.attr="disabled" wire:target="pay">
+                <button data-track-event="payment.opened" type="button" class="btn btn--coral" wire:click="pay" wire:loading.attr="disabled" wire:target="pay">
                     <span wire:loading.remove wire:target="pay">{{ __('Pay :amount securely', ['amount' => $amount]) }}</span>
                     <span wire:loading wire:target="pay">{{ __('Redirecting') }}&hellip;</span>
                 </button>
@@ -310,7 +310,7 @@
                 @else
                     <p class="journey-note">{{ __('Your payment is still being confirmed. We\'ll email you the moment it clears · you can safely close this page.') }}</p>
                 @endif
-                <button type="button" class="btn btn--outline-dark btn--sm" wire:click="pay" wire:loading.attr="disabled" wire:target="pay">
+                <button data-track-event="payment.opened" type="button" class="btn btn--outline-dark btn--sm" wire:click="pay" wire:loading.attr="disabled" wire:target="pay">
                     <span wire:loading.remove wire:target="pay">{{ __('Haven\'t finished paying? Resume') }}</span>
                     <span wire:loading wire:target="pay">{{ __('Redirecting') }}&hellip;</span>
                 </button>
@@ -325,14 +325,14 @@
             </div>
             <h3 class="funnel-success__title">{{ __('Your :pack is active.', ['pack' => __($packLabel)]) }}</h3>
             <p class="funnel-success__text">{{ __('Your file is ready in your personal space, with your signed agreement and documents.') }}</p>
-            <a href="{{ $myProjectUrl }}" class="btn btn--coral">{{ __('Go to my project') }}</a>
+            <a data-track-label="Vers mon projet" href="{{ $myProjectUrl }}" class="btn btn--coral">{{ __('Go to my project') }}</a>
         </div>
 
     @elseif ($step === 'cancelled')
         <div class="journey-panel">
             <h2 class="journey-panel__title">{{ __('This file was cancelled') }}</h2>
             <p class="journey-panel__text">{{ __('Please get in touch if you\'d like to reopen it.') }}</p>
-            <a href="{{ localized_route('contact') }}" class="btn btn--outline-dark">{{ __('Contact us') }}</a>
+            <a data-track-label="Vers le contact, depuis le parcours" href="{{ localized_route('contact') }}" class="btn btn--outline-dark">{{ __('Contact us') }}</a>
         </div>
     @endif
 </div>

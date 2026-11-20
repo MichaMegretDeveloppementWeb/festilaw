@@ -34,33 +34,33 @@
                 <p>{{ __('You pay :amount today: the difference with your :current for the rest of :year. From 1 January, your plan renews at :price per year.', ['amount' => $quote, 'current' => $current, 'year' => $panel->year, 'price' => $otherPrice]) }}</p>
                 <p>{{ __('You\'ll first sign a new agreement for the :pack, right on this page.', ['pack' => $other]) }}</p>
                 <div class="journey-switch__actions">
-                    <button type="button" class="btn btn--coral btn--sm" wire:click="startUpgrade" wire:loading.attr="disabled" wire:target="startUpgrade">
+                    <button data-track-label="Passage au Pro Pack, confirmation" type="button" class="btn btn--coral btn--sm" wire:click="startUpgrade" wire:loading.attr="disabled" wire:target="startUpgrade">
                         <span wire:loading.remove wire:target="startUpgrade">{{ __('Switch to the :pack', ['pack' => $other]) }}</span>
                         <span wire:loading wire:target="startUpgrade">{{ __('Switching') }}&hellip;</span>
                     </button>
-                    <button type="button" class="btn btn--outline-dark btn--sm" wire:click="$set('confirmingUpgrade', false)">{{ __('Keep the :pack', ['pack' => $current]) }}</button>
+                    <button data-track-label="Formule gardée" type="button" class="btn btn--outline-dark btn--sm" wire:click="$set('confirmingUpgrade', false)">{{ __('Keep the :pack', ['pack' => $current]) }}</button>
                 </div>
             </div>
         @else
-            <p class="journey-switch-link">{{ __('More than 9 products?') }} <button type="button" wire:click="$set('confirmingUpgrade', true)">{{ __('Switch to the :pack', ['pack' => $other]) }}</button></p>
+            <p class="journey-switch-link">{{ __('More than 9 products?') }} <button data-track-label="Passage au Pro Pack, ouverture" type="button" wire:click="$set('confirmingUpgrade', true)">{{ __('Switch to the :pack', ['pack' => $other]) }}</button></p>
         @endif
     @elseif ($panel->mode === Panel::UPGRADE_SIGN)
         <div class="journey-switch">
             <p class="journey-switch__title">{{ __('Switching to the :pack', ['pack' => $other]) }}</p>
             <p>{{ __('Step 1 of 2: sign your :pack agreement, in a window right on this page.', ['pack' => $other]) }}</p>
             @include('livewire.web.funnel.partials.pack-change-signature')
-            <p class="journey-switch-link"><button type="button" wire:click="cancelUpgrade" wire:loading.attr="disabled" wire:target="cancelUpgrade">{{ __('Keep the :pack', ['pack' => $current]) }}</button></p>
+            <p class="journey-switch-link"><button data-track-label="Passage au Pro Pack, annulation" type="button" wire:click="cancelUpgrade" wire:loading.attr="disabled" wire:target="cancelUpgrade">{{ __('Keep the :pack', ['pack' => $current]) }}</button></p>
         </div>
     @elseif ($panel->mode === Panel::UPGRADE_PAY)
         <div class="journey-switch">
             <p class="journey-switch__title">{{ __('Switching to the :pack', ['pack' => $other]) }}</p>
             <p>{{ __('Step 2 of 2: pay :amount, the difference for the rest of :year. Your :pack starts as soon as the payment is confirmed.', ['amount' => $quote, 'year' => $panel->year, 'pack' => $other]) }}</p>
             <div class="journey-switch__actions">
-                <button type="button" class="btn btn--coral btn--sm" wire:click="pay" wire:loading.attr="disabled" wire:target="pay">
+                <button data-track-event="payment.opened" type="button" class="btn btn--coral btn--sm" wire:click="pay" wire:loading.attr="disabled" wire:target="pay">
                     <span wire:loading.remove wire:target="pay">{{ __('Pay :amount', ['amount' => $quote]) }}</span>
                     <span wire:loading wire:target="pay">{{ __('Redirecting') }}&hellip;</span>
                 </button>
-                <button type="button" class="btn btn--outline-dark btn--sm" wire:click="cancelUpgrade" wire:loading.attr="disabled" wire:target="cancelUpgrade">{{ __('Keep the :pack', ['pack' => $current]) }}</button>
+                <button data-track-label="Passage au Pro Pack, annulation" type="button" class="btn btn--outline-dark btn--sm" wire:click="cancelUpgrade" wire:loading.attr="disabled" wire:target="cancelUpgrade">{{ __('Keep the :pack', ['pack' => $current]) }}</button>
             </div>
         </div>
     @elseif ($panel->mode === Panel::UPGRADE_PROCESSING)
@@ -74,12 +74,12 @@
     @elseif ($panel->mode === Panel::DOWNGRADE_REQUESTED)
         <p class="journey-note">
             {{ __('Your request to switch to the :pack is with Festilaw: we\'ll confirm it by email.', ['pack' => $other]) }}
-            <span class="journey-switch-link"><button type="button" wire:click="withdrawDowngrade">{{ __('Withdraw my request') }}</button></span>
+            <span class="journey-switch-link"><button data-track-label="Retour au Creator Pack, retrait de la demande" type="button" wire:click="withdrawDowngrade">{{ __('Withdraw my request') }}</button></span>
         </p>
     @elseif ($panel->mode === Panel::DOWNGRADE_APPROVED)
         <p class="journey-note">
             {{ __('Confirmed: your file switches to the :pack from 1 January :year, at :price per year. You\'ll sign your new agreement when you renew.', ['pack' => $other, 'year' => $panel->effectiveYear, 'price' => $otherPrice]) }}
-            <span class="journey-switch-link"><button type="button" wire:click="withdrawDowngrade" wire:confirm="{{ __('Keep the :pack and withdraw your request?', ['pack' => $current]) }}">{{ __('Withdraw my request') }}</button></span>
+            <span class="journey-switch-link"><button data-track-label="Retour au Creator Pack, retrait de la demande" type="button" wire:click="withdrawDowngrade" wire:confirm="{{ __('Keep the :pack and withdraw your request?', ['pack' => $current]) }}">{{ __('Withdraw my request') }}</button></span>
         </p>
     @elseif ($panel->mode === Panel::DOWNGRADE_OFFER || $panel->mode === Panel::DOWNGRADE_REJECTED)
         @if ($panel->mode === Panel::DOWNGRADE_REJECTED)
@@ -107,15 +107,15 @@
                     </div>
                 </div>
                 <div class="journey-switch__actions">
-                    <button type="button" class="btn btn--coral btn--sm" wire:click="requestDowngrade" wire:loading.attr="disabled" wire:target="requestDowngrade,turnoverProof">
+                    <button data-track-label="Retour au Creator Pack, confirmation" type="button" class="btn btn--coral btn--sm" wire:click="requestDowngrade" wire:loading.attr="disabled" wire:target="requestDowngrade,turnoverProof">
                         <span wire:loading.remove wire:target="requestDowngrade">{{ __('Send my request') }}</span>
                         <span wire:loading wire:target="requestDowngrade">{{ __('Sending') }}&hellip;</span>
                     </button>
-                    <button type="button" class="btn btn--outline-dark btn--sm" wire:click="$set('requestingDowngrade', false)">{{ __('Keep the :pack', ['pack' => $current]) }}</button>
+                    <button data-track-label="Formule gardée" type="button" class="btn btn--outline-dark btn--sm" wire:click="$set('requestingDowngrade', false)">{{ __('Keep the :pack', ['pack' => $current]) }}</button>
                 </div>
             </div>
         @else
-            <p class="journey-switch-link">{{ __('9 products or fewer?') }} <button type="button" wire:click="$set('requestingDowngrade', true)">{{ __('Request the :pack from your next renewal', ['pack' => $other]) }}</button></p>
+            <p class="journey-switch-link">{{ __('9 products or fewer?') }} <button data-track-label="Retour au Creator Pack, ouverture" type="button" wire:click="$set('requestingDowngrade', true)">{{ __('Request the :pack from your next renewal', ['pack' => $other]) }}</button></p>
         @endif
     @endif
 </div>

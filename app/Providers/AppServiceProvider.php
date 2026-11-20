@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Actions\Blog\Category\SaveBlogCategoryAction;
 use App\Actions\Blog\Post\SaveBlogPostAction;
+use App\Contracts\Analytics\AudienceTracker;
 use App\Enums\Submission\SubmissionType;
 use App\Exceptions\Web\DossierLinkInvalidException;
 use App\Models\Submission;
@@ -13,6 +14,7 @@ use App\Services\Admin\AdminNavigation;
 use App\Services\Admin\Blog\BlogCategoryAdminService;
 use App\Services\Admin\Blog\BlogPostFormService;
 use App\Services\Admin\Blog\BlogPostPreviewService;
+use App\Services\Analytics\FalconAudienceTracker;
 use App\Services\Billing\AnnualFeeProrator;
 use App\Services\Billing\PackPricingService;
 use App\Services\Blog\Content\BlogContentNormalizer;
@@ -53,6 +55,13 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(AnnualFeeProrator::class, static fn (): AnnualFeeProrator => new AnnualFeeProrator(
             (int) config('festilaw.payment.min_charge_cents', 50),
         ));
+
+        // Le suivi d'audience (Falcon Analytics), derriere son contrat comme les autres prestataires.
+        $this->app->bind(AudienceTracker::class, FalconAudienceTracker::class);
+
+        // Le menu ne propose l'ecran des integrations de Falcon Analytics qu'avec un client Search Console.
+        $this->app->when(AdminNavigation::class)->needs('$searchConsoleConfigured')
+            ->give(static fn (): bool => trim((string) config('analytics.search_console.client_id')) !== '');
 
         $this->registerBlogSettings();
     }
@@ -150,7 +159,7 @@ class AppServiceProvider extends ServiceProvider
             // Menu principal, decrit une fois et rendu deux fois (mobile, barre laterale). Une prise de
             // contact s'ouvre par la route des dossiers : c'est son type qui dit quel lien est actif.
             $submission = request()->route('submission');
-            $view->with('adminNav', app(AdminNavigation::class)->groups(
+            $view->with('adminNav', app(AdminNavigation::class)->entries(
                 request()->route()?->getName(),
                 $submission instanceof Submission && $submission->type === SubmissionType::Contact,
             ));

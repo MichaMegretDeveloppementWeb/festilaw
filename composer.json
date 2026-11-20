@@ -12,11 +12,16 @@
         {
             "type": "vcs",
             "url": "https://github.com/MichaMegretDeveloppementWeb/falcon-ui-kit.git"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/MichaMegretDeveloppementWeb/falcon-analytics.git"
         }
     ],
     "require": {
         "php": "^8.5",
         "barryvdh/laravel-dompdf": "^3.1",
+        "falcon/analytics": "^1.0@dev",
         "falcon/ui-kit": "^1.0@dev",
         "intervention/image": "~4.4",
         "laravel/ai": "^1.4",

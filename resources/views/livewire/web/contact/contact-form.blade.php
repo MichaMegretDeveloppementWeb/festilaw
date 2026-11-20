@@ -41,7 +41,7 @@
                 @error('message') <span class="contact-form__error">{{ $message }}</span> @enderror
             </div>
 
-            <button type="submit" class="btn btn--coral" wire:loading.attr="disabled" wire:target="save">
+            <button data-track-label="Envoi du formulaire de contact" type="submit" class="btn btn--coral" wire:loading.attr="disabled" wire:target="save">
                 <span wire:loading.remove wire:target="save">{{ __('Send message') }}</span>
                 <span wire:loading wire:target="save">{{ __('Sending') }}&hellip;</span>
             </button>

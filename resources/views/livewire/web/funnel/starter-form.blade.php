@@ -70,7 +70,7 @@
                 @error('website_url') <span class="funnel-form__error">{{ $message }}</span> @enderror
             </div>
 
-            <button type="submit" class="btn btn--coral" wire:loading.attr="disabled" wire:target="submit">
+            <button data-track-label="Envoi du formulaire de dossier" type="submit" class="btn btn--coral" wire:loading.attr="disabled" wire:target="submit">
                 <span wire:loading.remove wire:target="submit">{{ __('Open my file') }}</span>
                 <span wire:loading wire:target="submit">{{ __('Opening') }}&hellip;</span>
             </button>

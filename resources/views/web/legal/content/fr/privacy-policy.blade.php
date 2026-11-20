@@ -1,5 +1,5 @@
 {{-- Politique de confidentialite (FR) · traduction de la version anglaise de reference (qui prevaut en cas de divergence). --}}
-<p class="legal__updated">Dernière mise à jour : 5 octobre 2026</p>
+<p class="legal__updated">Dernière mise à jour : 20 novembre 2026</p>
 
 <h2>1. Responsable du traitement</h2>
 <p>Le responsable du traitement de vos données personnelles est Festilaw B.V., société à responsabilité limitée de droit néerlandais, dont le siège est situé à Nimègue, Spoorstraat 30A, 6511 AN Nijmegen, Pays-Bas, immatriculée auprès de la Chambre de commerce néerlandaise (KvK) sous le numéro 77058720.</p>
@@ -12,6 +12,7 @@
 <p><strong>Espace client et signature électronique.</strong> Nos clients peuvent accéder, via un espace client sécurisé, aux documents qu'ils nous ont transmis. À cette fin, les clients accèdent à leur dossier par un lien personnel sécurisé envoyé par e-mail, sans compte ni mot de passe ; nous traitons le nom et l'adresse e-mail de la personne de contact, les données de connexion et les documents mis à disposition dans l'espace client. Les contrats et certains documents sont signés électroniquement ; le service de signature électronique enregistre les noms, adresses e-mail et adresses IP des signataires ainsi que la piste d'audit horodatée de la signature. Ce traitement est nécessaire à l'exécution du contrat conclu avec votre société (article 6, paragraphe 1, point b)) et à notre intérêt légitime à offrir aux représentants de nos clients un accès sécurisé à leurs documents (article 6, paragraphe 1, point f)).</p>
 <p><strong>Obligations réglementaires.</strong> En tant qu'opérateur économique responsable au sens de l'article 16 du règlement (UE) 2023/988 et de l'article 4 du règlement (UE) 2019/1020, Festilaw B.V. est tenue de conserver certains documents et de coopérer avec les autorités de surveillance du marché. Les données personnelles contenues dans ces documents sont traitées sur le fondement de ces obligations légales (article 6, paragraphe 1, point c)). Il en va de même des obligations comptables et fiscales néerlandaises.</p>
 <p><strong>Fonctionnement et sécurité du site.</strong> Notre hébergeur enregistre les données techniques de connexion (adresse IP, date et heure, pages consultées, type de navigateur) nécessaires au fonctionnement et à la sécurité du site. Ce traitement repose sur notre intérêt légitime à assurer la disponibilité et la sécurité du site (article 6, paragraphe 1, point f)).</p>
+<p><strong>Mesure d'audience.</strong> Pour comprendre comment notre site est utilisé et l'améliorer, nous mesurons les pages consultées, les boutons utilisés et les étapes de nos pages d'offres (quiz d'éligibilité, ouverture d'un dossier, signature, paiement). Cette mesure est réalisée par un outil installé sur nos propres serveurs, et aucune donnée n'est transmise à un tiers. L'adresse IP est tronquée avant d'être enregistrée, et ces données ne servent pas à vous identifier. Ce traitement repose sur notre intérêt légitime à mesurer et améliorer l'audience de notre site (article 6, paragraphe 1, point f)).</p>
 <p>Nous ne procédons à aucune prise de décision automatisée ni à aucun profilage.</p>
 
 <h2>3. Destinataires</h2>
@@ -39,6 +40,7 @@
     <li>Documents conservés en notre qualité d'opérateur économique responsable : pendant toute la durée du mandat. À son terme, les documents sont restitués au client ou transmis au nouvel opérateur économique responsable qu'il désigne, et nos copies sont détruites, à l'exception de celles que nous sommes tenus de conserver en vertu de la législation applicable aux produits concernés, en principe jusqu'à dix ans après la mise sur le marché du dernier produit couvert par le mandat.</li>
     <li>Contrats signés et leur piste d'audit de signature : pendant toute la durée de la relation contractuelle, puis pendant le délai de prescription applicable.</li>
     <li>Données de connexion : pendant une durée limitée fixée par notre hébergeur, et pas au-delà de ce qui est nécessaire pour assurer la sécurité du site.</li>
+    <li>Données de mesure d'audience : 180 jours, puis elles sont supprimées.</li>
 </ul>
 
 <h2>6. Vos droits</h2>
@@ -50,7 +52,7 @@
 <p>Festilaw B.V. met en œuvre des mesures techniques et organisationnelles appropriées pour protéger vos données contre la perte, l'accès non autorisé ou la divulgation, notamment le chiffrement des connexions au site (HTTPS), un accès à l'espace client par des liens personnels uniques et sécurisés et la limitation des accès aux seules personnes qui en ont besoin.</p>
 
 <h2>8. Cookies</h2>
-<p>Ce site utilise uniquement des cookies strictement nécessaires à son fonctionnement, qui ne requièrent pas de consentement, notamment un cookie de session nécessaire au fonctionnement du site et de l'espace client.</p>
+<p>Ce site n'utilise aucun cookie publicitaire ni aucun cookie de tiers. Il utilise un cookie de session, nécessaire au fonctionnement du site et de l'espace client, qui relie aussi les pages consultées au cours d'une même visite pour la mesure d'audience décrite à la section 2. Ces usages ne requièrent pas votre consentement.</p>
 
 <h2>9. Modifications</h2>
 <p>Nous pouvons modifier la présente politique pour tenir compte de l'évolution de nos traitements ou de la réglementation applicable. La date de la dernière mise à jour figure en tête du présent document.</p>

@@ -4,7 +4,7 @@
     "name": "slug-field"
   },
   "resources/css/admin.css": {
-    "file": "assets/admin-CszsqXfW.css",
+    "file": "assets/admin-D0T0kvWm.css",
     "name": "admin",
     "names": [
       "admin.css"
@@ -136,6 +136,12 @@
       "index.css"
     ],
     "src": "resources/css/web/understand-gpsr/index.css",
+    "isEntry": true
+  },
+  "resources/js/admin.js": {
+    "file": "assets/admin-DTqy4Jo2.js",
+    "name": "admin",
+    "src": "resources/js/admin.js",
     "isEntry": true
   },
   "resources/js/admin/blog-category-form.js": {

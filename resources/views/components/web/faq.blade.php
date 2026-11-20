@@ -16,7 +16,7 @@
                     <div class="faq__a">
                         <p>{{ $item['a'] }}</p>
                         @isset($item['link'])
-                            <p class="faq__a-cta"><a href="{{ $item['link']['url'] }}">{{ $item['link']['text'] }}</a></p>
+                            <p class="faq__a-cta"><a href="{{ $item['link']['url'] }}" @isset($item['link']['trackLabel']) data-track-label="{{ $item['link']['trackLabel'] }}" @endisset>{{ $item['link']['text'] }}</a></p>
                         @endisset
                     </div>
                 </details>

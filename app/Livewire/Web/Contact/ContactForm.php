@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Livewire\Web\Contact;
 
 use App\Actions\Web\Contact\CreateContactSubmissionAction;
+use App\Contracts\Analytics\AudienceTracker;
+use App\Enums\Analytics\AudienceEvent;
 use App\Exceptions\BaseAppException;
 use App\Livewire\Concerns\HandlesUnexpectedErrors;
 use App\Livewire\Concerns\HasSpamProtection;
@@ -54,7 +56,7 @@ class ContactForm extends Component
         ];
     }
 
-    public function save(CreateContactSubmissionAction $action): void
+    public function save(CreateContactSubmissionAction $action, AudienceTracker $audience): void
     {
         if ($this->looksLikeSpam()) {
             $this->sent = true;
@@ -81,6 +83,7 @@ class ContactForm extends Component
             return;
         }
 
+        $audience->record(AudienceEvent::ContactSent);
         $this->reset(['name', 'email', 'website_url', 'message']);
         $this->sent = true;
     }
