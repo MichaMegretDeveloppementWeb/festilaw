@@ -54,10 +54,11 @@ class ScaleForm extends Component
         $this->resetContactFields();
 
         // On enchaine directement sur l'espace SCALE (payer l'audit puis reserver) ; le token vaut acces.
-        // Le lien est aussi envoye par email pour revenir plus tard.
+        // Le lien est aussi envoye par email pour revenir plus tard. Une page complete, et non une navigation
+        // Livewire : le collecteur de Falcon Analytics ne compte pas une page ouverte par navigation (20/11).
         $this->redirectRoute('get-started.scale.space', [
             'dossier' => $submission->resume_token,
-        ], navigate: true);
+        ]);
     }
 
     public function render()

@@ -248,6 +248,21 @@ it('counts a new Creator or Pro dossier, and a link asked again for an existing 
     'pro' => ['pro', 'pro.opened'],
 ]);
 
+it('opens the new dossier page and the Scale space with a full page load, so the collector counts them', function () {
+    // Le collecteur du package ne compte pas une page ouverte par navigation Livewire (essai du 20/11).
+    $starter = Livewire::test(StarterForm::class, ['type' => 'starter'])
+        ->set('company_name', 'Wildthread')->set('first_name', 'Maya')->set('last_name', 'Thornton')
+        ->set('email', 'maya@example.com')->call('submit')
+        ->assertRedirectContains('/get-started/starter/');
+    $scale = Livewire::test(ScaleForm::class)
+        ->set('company_name', 'Bigco')->set('first_name', 'Dana')->set('last_name', 'Rivera')
+        ->set('email', 'bigco@example.com')->call('submit')
+        ->assertRedirectContains('/get-started/scale/');
+
+    expect($starter->effects)->not->toHaveKey('redirectUsingNavigate')
+        ->and($scale->effects)->not->toHaveKey('redirectUsingNavigate');
+});
+
 it('counts nothing for a form rejected as spam or that does not validate', function () {
     Livewire::test(StarterForm::class)->set('hp', 'bot')->set('company_name', 'Spam')->set('email', 'spam@example.com')->call('submit');
     Livewire::test(StarterForm::class)->set('email', 'not-an-email')->call('submit')->assertHasErrors();
