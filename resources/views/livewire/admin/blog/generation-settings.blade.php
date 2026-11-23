@@ -1,9 +1,10 @@
-{{-- Reglages de la generation par IA, sur page blanche. Six sections a la suite, sans titres de groupe, dans
+{{-- Reglages de la generation par IA, sur page blanche. Sept sections a la suite, sans titres de groupe, dans
      l'ordre d'un recit (decision de Micha du 19/11) : comment un article est fait (modeles, longueur et images,
-     cout estime), ce qu'il coute dans le mois, qui est prevenu, puis la generation automatique, qui reprend tout
-     ce qui precede. Elle vient en dernier car ses champs n'apparaissent que case cochee : rien n'est en dessous,
-     donc rien ne bouge (regle « une action ne transforme jamais la page sous les yeux »). Chaque section garde son
-     titre et sa phrase en haut, un filet, puis ses champs (<x-admin.section>). Aucune cle d'API ici. --}}
+     cout estime), ce qu'il coute dans le mois, qui est prevenu, la cle OpenRouter (decision du 23/11, composant a
+     part avec son propre bouton), puis la generation automatique, qui reprend tout ce qui precede. Elle vient en
+     dernier car ses champs n'apparaissent que case cochee : rien n'est en dessous, donc rien ne bouge (regle « une
+     action ne transforme jamais la page sous les yeux »). Chaque section garde son titre et sa phrase en haut, un
+     filet, puis ses champs (<x-admin.section>). --}}
 @php
     $rhythmFields = ['periodCount', 'periodUnit', 'articlesPerRun', 'pendingDraftsCap'];
     $rhythmHasError = $errors->hasAny($rhythmFields);
@@ -79,6 +80,8 @@
                 </x-ui::form-group>
             </div>
         </x-admin.section>
+
+        <livewire:admin.blog.open-router-key-form />
 
         <x-admin.section id="generation-automatique" data-settings-section="automatic" :title="__('Génération automatique')"
             :description="__('L\'IA choisit un sujet et prépare des articles à intervalles réguliers, sans que vous ayez à les lancer. Elle reprend les modèles, la longueur et les images réglés plus haut.')">

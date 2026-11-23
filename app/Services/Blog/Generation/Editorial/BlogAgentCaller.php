@@ -16,6 +16,7 @@ use App\Repositories\Blog\BlogGenerationCancelRepository;
 use App\Services\Blog\Generation\BlogAiCostEstimator;
 use App\Services\Blog\Generation\BlogAiModelCatalog;
 use App\Services\Blog\Generation\BlogEffortLevels;
+use App\Services\Blog\Generation\OpenRouterKeyActivator;
 use App\Services\Blog\Generation\OpenRouterUsageReader;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
@@ -58,6 +59,7 @@ final readonly class BlogAgentCaller
         private BlogAiModelCatalog $models,
         private BlogEffortLevels $effort,
         private BlogGenerationCancelRepository $cancellations,
+        private OpenRouterKeyActivator $key,
         private int $defaultMarginPercent = 150,
     ) {}
 
@@ -74,6 +76,8 @@ final readonly class BlogAgentCaller
         if ($generationId !== null && $this->cancellations->isRequested($generationId)) {
             throw BlogAiProviderException::cancelled($step);
         }
+
+        $this->key->activate();
 
         try {
             return $this->send($step, $agent, $prompt, $model, $timeoutSeconds, $generationId, $budgetLeftMicrousd, $effort, $attachments);

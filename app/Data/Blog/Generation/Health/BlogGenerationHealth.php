@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Data\Blog\Generation\Health;
 
+use App\Enums\Blog\Generation\OpenRouterKeyCheck;
 use Carbon\CarbonImmutable;
 use Throwable;
 
@@ -11,7 +12,9 @@ use Throwable;
  * Le resultat de la derniere verification quotidienne des services de la generation : quand elle a eu lieu,
  * les problemes trouves, en messages techniques (anglais, pour le journal et le prestataire), et les prix du
  * jour de chaque modele de texte du catalogue chez son fournisseur le moins cher (cents de dollar par million
- * de jetons), que l'estimation emploie (decision du 23/11). La cliente ne voit que l'existence d'un probleme.
+ * de jetons), que l'estimation emploie (decision du 23/11). Elle garde aussi ce qu'elle a vu de la cle OpenRouter
+ * (acceptee, refusee ou absente, et sa date d'expiration), que les reglages et le tableau de bord disent a la
+ * cliente. Pour le reste, la cliente ne voit que l'existence d'un probleme.
  */
 final readonly class BlogGenerationHealth
 {
@@ -23,6 +26,8 @@ final readonly class BlogGenerationHealth
         public CarbonImmutable $checkedAt,
         public array $problems,
         public array $prices = [],
+        public ?OpenRouterKeyCheck $key = null,
+        public ?CarbonImmutable $keyExpiresAt = null,
     ) {}
 
     public function isHealthy(): bool
@@ -52,7 +57,22 @@ final readonly class BlogGenerationHealth
             }
         }
 
-        return new self($checkedAt, array_values(array_filter((array) ($data['problems'] ?? []), 'is_string')), $prices);
+        return new self(
+            $checkedAt,
+            array_values(array_filter((array) ($data['problems'] ?? []), 'is_string')),
+            $prices,
+            OpenRouterKeyCheck::tryFrom((string) ($data['key'] ?? '')),
+            self::date($data['key_expires_at'] ?? null),
+        );
+    }
+
+    private static function date(mixed $value): ?CarbonImmutable
+    {
+        try {
+            return is_string($value) ? CarbonImmutable::parse($value) : null;
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     public function toStored(): string
@@ -61,6 +81,8 @@ final readonly class BlogGenerationHealth
             'checked_at' => $this->checkedAt->toIso8601String(),
             'problems' => $this->problems,
             'prices' => $this->prices,
+            'key' => $this->key?->value,
+            'key_expires_at' => $this->keyExpiresAt?->toIso8601String(),
         ]);
     }
 }

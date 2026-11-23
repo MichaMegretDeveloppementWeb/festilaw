@@ -32,8 +32,8 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
-        <!-- Generation par IA : les tests ne dependent ni de la cle ni du pipeline du fichier .env local. -->
-        <env name="OPENROUTER_API_KEY" value=""/>
+        <!-- Generation par IA : les tests ne dependent pas du pipeline du fichier .env local. La cle OpenRouter vit
+             en base, un test qui en a besoin l'enregistre. -->
         <env name="BLOG_AI_PIPELINE" value="simulated"/>
         <!-- Audit du 23/11 : les tests n'heritent d'aucune cle du .env local. Un test qui a besoin d'une cle la pose
              lui-meme. Le journal se coupe dans tests/TestCase.php : ici, la valeur « null » serait lue comme une

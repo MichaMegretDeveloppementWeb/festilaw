@@ -13,8 +13,12 @@
              du plafond du mois, qui n'empeche rien. --}}
         @if ($overview->unavailableReason)
             <x-ui::alert type="error" class="mb-6" :title="__('La génération n\'est pas disponible')">{{ $overview->unavailableReason }} {{ __('Contactez l\'assistance technique.') }}</x-ui::alert>
-        @elseif (! $overview->simulated && ! $overview->apiKeyPresent)
-            <x-ui::alert type="warning" class="mb-6" :title="__('La génération n\'est pas disponible pour le moment')">{{ __('Contactez l\'assistance technique.') }}</x-ui::alert>
+        @elseif (! $overview->simulated && ! $overview->key->usable)
+            {{-- La cliente peut y remedier elle-meme depuis le 23/11 : la cle se colle dans les reglages. --}}
+            <x-ui::alert type="warning" class="mb-6" :title="__('La génération n\'est pas disponible pour le moment')" data-key-alert>
+                {{ $overview->key->sentence }}
+                <a href="{{ route('admin.blog.generation.settings') }}#cle-openrouter" class="font-medium underline underline-offset-2">{{ __('Ouvrir les réglages') }}</a>
+            </x-ui::alert>
         @endif
 
         @unless ($overview->workerListening)
@@ -91,10 +95,11 @@
             @endif
         </x-admin.section>
 
-        {{-- Pour qui veille sur le site : les generations peuvent-elles demarrer, la cle du fournisseur est-elle en
-             place, la verification quotidienne des services a-t-elle trouve un probleme (le detail technique ne va
-             qu'au prestataire, par le rapport d'erreurs du matin). La cle elle-meme n'est jamais affichee. Le mode d'essai (etapes factices, en local seulement) se
-             dit ici, en texte neutre, et nulle part ailleurs. --}}
+        {{-- Pour qui veille sur le site : les generations peuvent-elles demarrer, la cle OpenRouter des reglages est-elle
+             en place, refusee ou sur le point d'expirer, la verification quotidienne des services a-t-elle trouve un
+             probleme (le detail technique ne va qu'au prestataire, par le rapport d'erreurs du matin). La cle elle-meme
+             n'est jamais affichee. Le mode d'essai (etapes factices, en local seulement) se dit ici, en texte neutre,
+             et nulle part ailleurs. --}}
         <p class="mt-10 flex flex-wrap items-center gap-x-5 gap-y-1 text-[12px] text-muted" data-service-state>
             <span class="font-medium text-secondary">{{ __('État du service') }}</span>
             <span class="inline-flex items-center gap-1.5" data-service="worker">
@@ -102,8 +107,8 @@
                 {{ $overview->workerListening ? __('Service de génération en marche') : __('Service de génération à l\'arrêt') }}
             </span>
             <span class="inline-flex items-center gap-1.5" data-service="key">
-                <span @class(['h-1.5 w-1.5 rounded-full', 'bg-emerald-500' => $overview->apiKeyPresent, 'bg-amber-500' => ! $overview->apiKeyPresent])></span>
-                {{ $overview->apiKeyPresent ? __('Clé du fournisseur d\'IA en place') : __('Clé du fournisseur d\'IA absente') }}
+                <span @class(['h-1.5 w-1.5 rounded-full', 'bg-emerald-500' => ! $overview->key->needsAttention, 'bg-amber-500' => $overview->key->needsAttention])></span>
+                {{ $overview->key->label }}
             </span>
             @if ($overview->health)
                 <span class="inline-flex items-center gap-1.5" data-service="checks">

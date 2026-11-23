@@ -472,12 +472,14 @@ return [
          | du 23/11) ; ces derniers ne servent plus que de secours.
          | - `prices_valid_days` : au-dela, les prix releves sont trop vieux, l'estimation revient au tableau ;
          | - `key_remaining_percent` : sous ce reste de la limite de la cle OpenRouter, la limite approche ;
+         | - `key_expiry_warning_days` : une cle OpenRouter qui expire dans moins de ces jours est signalee ;
          | - `expiry_warning_days` : un modele qu'OpenRouter retire dans moins de ces jours est signale ;
          | - `stalled_after_minutes` : une generation en attente ou en cours qui n'a pas bouge depuis ce temps.
          */
         'health' => [
             'prices_valid_days' => 7,
             'key_remaining_percent' => 20,
+            'key_expiry_warning_days' => 14,
             'expiry_warning_days' => 30,
             'stalled_after_minutes' => 120,
         ],

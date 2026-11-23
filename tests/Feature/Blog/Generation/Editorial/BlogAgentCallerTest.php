@@ -23,6 +23,7 @@ use Laravel\Ai\Responses\Data\ToolCall;
 use Laravel\Ai\Responses\Data\UrlCitation;
 use Laravel\Ai\Responses\StructuredTextResponse;
 use Laravel\Ai\Responses\TextResponse;
+use Tests\Support\BlogAi;
 use Tests\Support\BlogImageFiles;
 use Tests\Support\EditorialFixtures;
 use Tests\Support\EditorialFixtures as Fixtures;
@@ -307,4 +308,14 @@ it('reports any other provider error as a failed call of the step, which the eng
                 ->and($e->getMessage())->toContain('[research]')->toContain('Upstream timeout')
                 ->and($e->usage)->not->toBeNull();
         });
+});
+
+it('calls OpenRouter with the key saved in the settings, the only place it lives', function () {
+    // Decision de Micha du 23/11 : la cle quitte le .env, la cliente la colle dans les reglages.
+    BlogAi::saveOpenRouterKey('sk-or-v1-saved-in-the-settings-0000');
+    Http::fake(['openrouter.ai/*' => Http::response(openRouterCompletion((string) json_encode(Fixtures::topic())))]);
+
+    app(BlogAgentCaller::class)->call('topic', new TopicAgent('Choose.'), 'Topic.', 'anthropic/claude-haiku-5.5', 90);
+
+    Http::assertSent(fn ($request): bool => $request->hasHeader('Authorization', 'Bearer sk-or-v1-saved-in-the-settings-0000'));
 });

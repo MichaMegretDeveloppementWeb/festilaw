@@ -6,6 +6,7 @@ namespace App\Services\Blog\Generation\Editorial\Images;
 
 use App\Data\Blog\Generation\GenerationUsage;
 use App\Exceptions\Blog\BlogAiProviderException;
+use App\Services\Blog\Generation\OpenRouterKeyActivator;
 use App\Services\Blog\Generation\OpenRouterUsageReader;
 use Laravel\Ai\Exceptions\InsufficientCreditsException;
 use Laravel\Ai\Image;
@@ -25,6 +26,7 @@ final readonly class BlogAiImageGenerator
 
     public function __construct(
         private OpenRouterUsageReader $usageReader,
+        private OpenRouterKeyActivator $key,
         private string $provider,
     ) {}
 
@@ -35,6 +37,8 @@ final readonly class BlogAiImageGenerator
      */
     public function generate(string $prompt, string $model, int $timeoutSeconds = 120): array
     {
+        $this->key->activate();
+
         try {
             $response = Image::of(trim($prompt).' '.self::RULES)
                 ->landscape()

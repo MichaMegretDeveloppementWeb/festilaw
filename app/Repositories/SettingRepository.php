@@ -25,6 +25,27 @@ final class SettingRepository
         }
     }
 
+    /**
+     * Plusieurs reglages en une requete. Meme defense que get() : une table illisible rend des valeurs nulles.
+     *
+     * @param  list<string>  $keys
+     * @return array<string, ?string> chaque cle demandee, nulle quand elle n'est pas en base
+     */
+    public function many(array $keys): array
+    {
+        $values = array_fill_keys($keys, null);
+
+        try {
+            foreach (Setting::query()->whereIn('key', $keys)->pluck('value', 'key') as $key => $value) {
+                $values[(string) $key] = $value === null ? null : (string) $value;
+            }
+        } catch (Throwable) {
+            // valeurs nulles : l'appelant retombe sur ses valeurs par defaut
+        }
+
+        return $values;
+    }
+
     public function put(string $key, string $value): void
     {
         Setting::query()->updateOrCreate(['key' => $key], ['value' => $value]);

@@ -7,13 +7,15 @@ namespace App\Services\Blog\Generation\Health;
 use App\Data\Blog\Generation\Health\OpenRouterKeyStatus;
 use App\Data\Blog\Generation\Health\OpenRouterModelOffer;
 use App\Exceptions\Blog\BlogHealthCheckException;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
+use Throwable;
 
 /**
  * Ce qu'OpenRouter dit de la cle du site et de ses modeles, par ses adresses gratuites, sans jamais appeler un
- * modele (documentation relue le 20/11) : `/key` (cle acceptee, limite restante), `/models` (modeles listes,
+ * modele (documentation relue le 20/11) : `/key` (cle acceptee, limite restante, date d'expiration), `/models` (modeles listes,
  * date de retrait ; les modeles d'images seulement avec `output_modalities=image`) et
  * `/models/{id}/endpoints` (fournisseurs d'un modele, leurs prix et ce qu'ils acceptent).
  */
@@ -28,6 +30,12 @@ final readonly class OpenRouterCatalogReader
         private ?string $apiKey,
         private string $baseUrl,
     ) {}
+
+    /** Le meme lecteur pour une autre cle : celle que la cliente vient de coller, verifiee avant d'etre enregistree. */
+    public function withKey(#[\SensitiveParameter] string $apiKey): self
+    {
+        return new self($apiKey, $this->baseUrl);
+    }
 
     /** @throws BlogHealthCheckException */
     public function keyStatus(): OpenRouterKeyStatus
@@ -44,7 +52,21 @@ final readonly class OpenRouterCatalogReader
         return new OpenRouterKeyStatus(
             is_numeric($data['limit'] ?? null) ? (float) $data['limit'] : null,
             is_numeric($data['limit_remaining'] ?? null) ? (float) $data['limit_remaining'] : null,
+            $this->date($data['expires_at'] ?? null),
         );
+    }
+
+    private function date(mixed $value): ?CarbonImmutable
+    {
+        if (! is_string($value) || $value === '') {
+            return null;
+        }
+
+        try {
+            return CarbonImmutable::parse($value);
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     /**

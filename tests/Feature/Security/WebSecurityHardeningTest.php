@@ -8,6 +8,7 @@ use Illuminate\Mail\Transport\ResendTransport;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Tests\Support\BlogAi;
 
 use function Pest\Laravel\get;
 
@@ -22,7 +23,6 @@ function cleanProductionConfig(): void
     config()->set('signature.drivers.signwell.test_mode', false);
     config()->set('mail.default', 'smtp');
     config()->set('app.debug', false);
-    config()->set('ai.providers.openrouter.key', 'or_x');
     config()->set('services.pixabay.key', 'px_x');
     config()->set('blog.ai.pipeline', 'editorial');
     config()->set('analytics.enabled', true);
@@ -96,18 +96,16 @@ it('passes a clean production configuration', function () {
     expect(app(ProductionSafetyService::class)->violations())->toBe([]);
 });
 
-it('flags a production configuration without the keys of the generation, or with the measure switched off', function () {
+it('flags a production configuration without the key of the photos, or with the measure switched off', function () {
     // SC9 : la commande de mise en ligne verifie aussi la generation d'articles et la mesure d'audience.
     cleanProductionConfig();
-    config()->set('ai.providers.openrouter.key', '');
     config()->set('services.pixabay.key', null);
     config()->set('blog.ai.pipeline', 'simulated');
     config()->set('analytics.enabled', '1');
 
     $violations = implode("\n", app(ProductionSafetyService::class)->violations());
 
-    expect($violations)->toContain('OPENROUTER_API_KEY')
-        ->and($violations)->toContain('PIXABAY_API_KEY')
+    expect($violations)->toContain('PIXABAY_API_KEY')
         ->and($violations)->toContain('BLOG_AI_PIPELINE')
         ->and($violations)->toContain('ANALYTICS_ENABLED');
 });
@@ -179,4 +177,20 @@ it('the production check does nothing outside production, even with an unfit con
     $response = app(EnsureProductionIsConfigured::class)->handle(Request::create('/'), fn () => response('ok'));
 
     expect($response->getContent())->toBe('ok');
+});
+
+it('only reminds that the OpenRouter key is to be pasted in the settings, without failing the production check', function () {
+    // Audit du 23/11 : la cle quitte le .env, elle se colle dans le back-office apres le deploiement.
+    cleanProductionConfig();
+
+    $this->artisan('festilaw:check-production')
+        ->expectsOutputToContain("Aucune cle OpenRouter n'est enregistree.")
+        ->expectsOutputToContain('Configuration prete pour la production.')
+        ->assertSuccessful();
+
+    BlogAi::saveOpenRouterKey();
+
+    $this->artisan('festilaw:check-production')
+        ->doesntExpectOutputToContain('OpenRouter')
+        ->assertSuccessful();
 });

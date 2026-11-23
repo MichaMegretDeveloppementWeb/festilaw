@@ -466,8 +466,9 @@ publication) et la mesure d'audience Falcon Analytics. Elle se déploie par `dep
 - [ ] L'accès GitHub du serveur ouvre les **deux dépôts privés** de la suite Falcon (`falcon-ui-kit` et
       `falcon-analytics`). Sans cela, `composer install` échoue sur « Could not find package ».
 - [ ] La base est sauvegardée.
-- [ ] Le `.env` de production reçoit `OPENROUTER_API_KEY` (avec une limite mensuelle posée sur la clé chez
-      OpenRouter), `PIXABAY_API_KEY` et `ANALYTICS_ENABLED=true`. `BLOG_AI_PIPELINE` reste absent.
+- [ ] Le `.env` de production reçoit `PIXABAY_API_KEY` et `ANALYTICS_ENABLED=true`. `BLOG_AI_PIPELINE` reste
+      absent. La clé OpenRouter ne va plus dans le `.env` : elle se colle dans le back-office après le
+      déploiement (voir plus bas).
 - [ ] Le `.env` de production passe le journal à un fichier par jour (`LOG_STACK=daily`, `LOG_DAILY_DAYS=30`)
       et donne l'adresse du prestataire technique à `FESTILAW_TECH_ALERT_EMAIL`. Cette adresse reçoit chaque
       matin le rapport des erreurs du serveur, seulement s'il y en a eu.
@@ -484,11 +485,16 @@ publication) et la mesure d'audience Falcon Analytics. Elle se déploie par `dep
 
 **Après le déploiement**
 
-- [ ] `php artisan festilaw:check-production` (configuration du site, clés OpenRouter et Pixabay, pipeline de la génération, interrupteur de la mesure).
+- [ ] `deploy.sh` lance lui-même `festilaw:check-production` après la mise en cache de la configuration. S'il
+      manque quelque chose, il va à son terme, remet le site en ligne, puis finit en échec avec la liste. Le
+      rappel « Aucune clé OpenRouter n'est enregistrée » ne le fait pas échouer.
+- [ ] La clé OpenRouter est collée dans le back-office (Blog, Génération IA, Réglages, section « Clé d'accès
+      OpenRouter »), avec une limite mensuelle posée sur la clé chez OpenRouter. Le site la vérifie avant de
+      l'enregistrer, puis affiche son état et sa date d'expiration.
 - [ ] `php artisan analytics:check` ne montre aucun point bloquant. Relancé une fois quelques pages ouvertes, sa
       ligne « Proxy » dit s'il faut déclarer un proxy.
 - [ ] Le back-office affiche les sections Blog, Audience et Marketing, et « Tâches automatiques · il y a 1 min ».
-- [ ] La génération IA dit « Clé du fournisseur d'IA en place » dans son état du service.
+- [ ] La génération IA dit « Clé OpenRouter en place » dans son état du service.
 
 **À chaque déploiement suivant**, relancer `php artisan analytics:check`. La mesure échoue en silence, et un
 tableau de bord vide se lit « personne n'est venu » plutôt que « rien n'a été mesuré ».

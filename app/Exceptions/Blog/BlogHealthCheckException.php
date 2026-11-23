@@ -14,12 +14,23 @@ use Throwable;
  */
 final class BlogHealthCheckException extends BaseAppException
 {
+    private bool $keyRejected = false;
+
     public static function keyRejected(int $status): self
     {
-        return new self(
+        $exception = new self(
             technicalMessage: "OpenRouter rejected the API key (HTTP {$status}).",
             userMessage: __('Le fournisseur d\'IA refuse la clé du site.'),
         );
+        $exception->keyRejected = true;
+
+        return $exception;
+    }
+
+    /** OpenRouter a repondu, et refuse la cle (inconnue, desactivee ou expiree), a la difference d'une panne. */
+    public function rejectsTheKey(): bool
+    {
+        return $this->keyRejected;
     }
 
     public static function unreachable(string $service, string $detail, ?Throwable $previous = null): self

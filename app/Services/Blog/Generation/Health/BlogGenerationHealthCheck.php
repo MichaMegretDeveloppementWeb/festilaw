@@ -6,6 +6,7 @@ namespace App\Services\Blog\Generation\Health;
 
 use App\Data\Blog\Generation\BlogAiSettings;
 use App\Data\Blog\Generation\Health\BlogGenerationHealth;
+use App\Enums\Blog\Generation\OpenRouterKeyCheck;
 use App\Exceptions\Blog\BlogEditorialException;
 use App\Exceptions\Blog\BlogHealthCheckException;
 use App\Repositories\Blog\BlogGenerationProgressRepository;
@@ -21,7 +22,8 @@ use Throwable;
  *
  * - La reference des regles europeennes a-t-elle passe sa date de relecture ?
  * - La file des generations a-t-elle cesse d'avancer ?
- * - Chez OpenRouter : la cle est-elle acceptee, sa limite approche-t-elle, chaque modele choisi est-il encore
+ * - Chez OpenRouter : la cle des reglages est-elle acceptee, expire-t-elle bientot (14 jours), sa limite
+ *   approche-t-elle, chaque modele choisi est-il encore
  *   propose, par un fournisseur qui accepte la sortie structuree et la reflexion, et le modele du sujet lit-il
  *   les images (controle des photos) ? Les modeles du catalogue sont-ils encore listes, et l'un d'eux va-t-il
  *   etre retire ?
@@ -41,7 +43,8 @@ final readonly class BlogGenerationHealthCheck
     /**
      * @param  array<string, array{input: int|float, output: int|float}>  $textCatalog  blog.ai.models
      * @param  array<string, mixed>  $imageCatalog  blog.ai.image_models
-     * @param  array{key_remaining_percent: int, expiry_warning_days: int, stalled_after_minutes: int}  $thresholds  blog.ai.health
+     * @param  ?string  $openRouterKey  la cle enregistree dans les reglages, nulle s'il n'y en a pas
+     * @param  array{key_remaining_percent: int, key_expiry_warning_days: int, expiry_warning_days: int, stalled_after_minutes: int}  $thresholds  blog.ai.health
      * @param  array{checked_on: string, review_by: string}  $rulesReference  blog.ai.rules_reference
      */
     public function __construct(
@@ -62,12 +65,14 @@ final readonly class BlogGenerationHealthCheck
         $now = CarbonImmutable::now();
         $problems = [...$this->rulesReference($now), ...$this->queue($now)];
         $prices = [];
+        $key = null;
+        $keyExpiresAt = null;
 
         if ($this->pipeline === 'editorial') {
-            $problems = [...$problems, ...$this->openRouter($now, $prices), ...$this->pixabay()];
+            $problems = [...$problems, ...$this->openRouter($now, $prices, $key, $keyExpiresAt), ...$this->pixabay()];
         }
 
-        return new BlogGenerationHealth($now, $problems, $prices);
+        return new BlogGenerationHealth($now, $problems, $prices, $key, $keyExpiresAt);
     }
 
     /** @return list<string> */
@@ -96,18 +101,24 @@ final readonly class BlogGenerationHealthCheck
      *                                                                     lecture s'arrete en route
      * @return list<string>
      */
-    private function openRouter(CarbonImmutable $now, array &$prices): array
+    private function openRouter(CarbonImmutable $now, array &$prices, ?OpenRouterKeyCheck &$key, ?CarbonImmutable &$keyExpiresAt): array
     {
         if (blank($this->openRouterKey)) {
-            return ['OPENROUTER_API_KEY is empty: no model can be called.'];
+            $key = OpenRouterKeyCheck::Missing;
+
+            return ['No OpenRouter key is saved in the generation settings: no model can be called.'];
         }
 
         try {
-            $problems = $this->key();
+            $problems = $this->key($now, $key, $keyExpiresAt);
             $settings = $this->settings->current();
 
             return [...$problems, ...$this->textModels($settings, $prices), ...$this->listedModels($settings, $now)];
         } catch (BlogHealthCheckException $e) {
+            if ($e->rejectsTheKey()) {
+                $key = OpenRouterKeyCheck::Rejected;
+            }
+
             return [...($problems ?? []), $e->getMessage()];
         }
     }
@@ -117,15 +128,23 @@ final readonly class BlogGenerationHealthCheck
      *
      * @throws BlogHealthCheckException
      */
-    private function key(): array
+    private function key(CarbonImmutable $now, ?OpenRouterKeyCheck &$check, ?CarbonImmutable &$expiresAt): array
     {
         $key = $this->openRouter->keyStatus();
+        $check = OpenRouterKeyCheck::Accepted;
+        $expiresAt = $key->expiresAt;
+        $problems = [];
 
-        if ($key->limit === null || $key->remaining === null || $key->remaining >= $key->limit * $this->thresholds['key_remaining_percent'] / 100) {
-            return [];
+        // Une cle expiree est refusee par OpenRouter (401) : elle est signalee avant, chaque matin des 14 derniers jours.
+        if ($expiresAt !== null && $expiresAt->lessThanOrEqualTo($now->addDays($this->thresholds['key_expiry_warning_days']))) {
+            $problems[] = "The OpenRouter key saved in the generation settings expires on {$expiresAt->utc()->format('Y-m-d H:i')} UTC.";
         }
 
-        return [sprintf('The OpenRouter key has %.2f $ left of its %.2f $ limit.', $key->remaining, $key->limit)];
+        if ($key->limit !== null && $key->remaining !== null && $key->remaining < $key->limit * $this->thresholds['key_remaining_percent'] / 100) {
+            $problems[] = sprintf('The OpenRouter key has %.2f $ left of its %.2f $ limit.', $key->remaining, $key->limit);
+        }
+
+        return $problems;
     }
 
     /**

@@ -10,8 +10,9 @@ use Illuminate\Console\Command;
 /**
  * Checklist go-live : verifie que la configuration courante est apte a la production (aucun faux
  * prestataire, pas de mail simule, pas de debug, cles presentes...). Code de sortie non nul s'il reste
- * des manquements, pour bloquer un deploiement en CI. A lancer a la demande : le service ne bloque plus
- * le site en prod (le middleware se contente d'un avertissement dans les logs).
+ * des manquements. deploy.sh la lance apres la mise en cache de la configuration et finit en echec
+ * si elle echoue, le site restant en ligne (audit du 23/11). Les rappels (cle OpenRouter pas encore
+ * collee dans les reglages) s'affichent sans la faire echouer.
  */
 final class CheckProductionCommand extends Command
 {
@@ -22,6 +23,10 @@ final class CheckProductionCommand extends Command
     public function handle(ProductionSafetyService $safety): int
     {
         $violations = $safety->violations();
+
+        foreach ($safety->reminders() as $reminder) {
+            $this->warn($reminder);
+        }
 
         if ($violations === []) {
             $this->info('Configuration prete pour la production.');

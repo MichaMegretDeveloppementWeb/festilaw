@@ -3,9 +3,12 @@
 declare(strict_types=1);
 
 use App\Data\Blog\Generation\Health\BlogGenerationHealth;
+use App\Enums\Blog\Generation\OpenRouterKeyCheck;
 use App\Livewire\Admin\Blog\GenerationDashboard;
 use App\Models\BlogGeneration;
+use App\Models\Setting;
 use App\Repositories\Blog\BlogGenerationHealthRepository;
+use App\Repositories\Blog\OpenRouterKeyRepository;
 use App\Services\Blog\Generation\BlogAiCostEstimator;
 use App\Services\Blog\Generation\BlogAiModelCatalog;
 use Carbon\CarbonImmutable;
@@ -28,7 +31,7 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     Http::preventStrayRequests();
     config()->set('blog.ai.pipeline', 'editorial');
-    config()->set('ai.providers.openrouter.key', 'or-test-key');
+    BlogAi::saveOpenRouterKey('or-test-key');
     config()->set('services.pixabay.key', 'px-test-key');
     $this->travelTo('2026-11-21 05:45:00');
 });
@@ -130,7 +133,26 @@ it('reports a rejected key, and stops there for OpenRouter', function () {
     $services['key'] = [401, ['error' => ['message' => 'No auth credentials found']]];
     fakeServices($services);
 
-    expect(healthProblems())->toBe(['OpenRouter rejected the API key (HTTP 401).']);
+    expect(healthProblems())->toBe(['OpenRouter rejected the API key (HTTP 401).'])
+        // Les reglages et le tableau de bord le disent a la cliente, qui peut coller une nouvelle cle (23/11).
+        ->and(app(BlogGenerationHealthRepository::class)->latest()?->key)->toBe(OpenRouterKeyCheck::Rejected);
+});
+
+it('reports a missing key, which now lives in the generation settings', function () {
+    Setting::query()->where('key', OpenRouterKeyRepository::KEY)->delete();
+    fakeServices(healthyServices());
+
+    expect(healthProblems())->toContain('No OpenRouter key is saved in the generation settings: no model can be called.')
+        ->and(app(BlogGenerationHealthRepository::class)->latest()?->key)->toBe(OpenRouterKeyCheck::Missing);
+});
+
+it('reports a key that expires within 14 days', function () {
+    $services = healthyServices();
+    $services['key'] = [200, ['limit' => null, 'limit_remaining' => null, 'expires_at' => '2026-12-04T23:59:00Z']];
+    fakeServices($services);
+
+    expect(healthProblems())->toBe(['The OpenRouter key saved in the generation settings expires on 2026-12-04 23:59 UTC.'])
+        ->and(app(BlogGenerationHealthRepository::class)->latest()?->keyExpiresAt?->toDateString())->toBe('2026-12-04');
 });
 
 it('reports a key nearing its limit', function () {

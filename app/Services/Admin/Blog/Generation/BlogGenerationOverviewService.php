@@ -20,15 +20,16 @@ use Carbon\CarbonImmutable;
 /**
  * La vue d'ensemble de la generation par IA.
  *
- * Plan de requetes (verifie par un test de budget) : 7.
+ * Plan de requetes (verifie par un test de budget) : 8.
  *   1. reglages
  *   2. depense du mois
  *   3. inscription du dernier worker
  *   4. resultat de la derniere verification quotidienne des services
- *   5. brouillons generes qui attendent une relecture
- *   6. dernieres generations
- *   7. etape en echec de ces generations
- * Sans aucune generation : 6 (la septieme n'a rien a lire). Generation automatique activee et pas en pause :
+ *   5. cle OpenRouter des reglages (decision du 23/11 : elle quitte le .env)
+ *   6. brouillons generes qui attendent une relecture
+ *   7. dernieres generations
+ *   8. etape en echec de ces generations
+ * Sans aucune generation : 7 (la huitieme n'a rien a lire). Generation automatique activee et pas en pause :
  * une de plus pour la date du prochain lot (dernier lot lance), deux pour un rythme mensuel (premier lot).
  */
 final readonly class BlogGenerationOverviewService
@@ -52,7 +53,7 @@ final readonly class BlogGenerationOverviewService
         private BlogGenerationPresenter $presenter,
         private BlogGenerationHealthRepository $health,
         private BlogGenerationCalendar $calendar,
-        private ?string $apiKey,
+        private OpenRouterKeyStateService $keys,
         private string $rulesReviewBy,
     ) {}
 
@@ -63,6 +64,7 @@ final readonly class BlogGenerationOverviewService
         $cap = $settings->monthlySpendCapMicrousd();
         $workerStartedAt = $this->workers->lastStartedAt();
         $health = $this->health->latest();
+        $key = $this->keys->withHealth($health);
         $pendingDrafts = $this->budget->pendingDrafts();
         $now = CarbonImmutable::now();
         $nextLaunch = $settings->enabled && $pendingDrafts < $settings->pendingDraftsCap
@@ -79,7 +81,7 @@ final readonly class BlogGenerationOverviewService
             pendingDrafts: $pendingDrafts,
             nextLaunch: $nextLaunch,
             latest: $this->journal->latest(self::LATEST),
-            apiKeyPresent: filled($this->apiKey),
+            key: $key,
             workerListening: $workerStartedAt !== null
                 && $now->getTimestamp() - $workerStartedAt->getTimestamp() <= self::WORKER_SILENCE_SECONDS,
             workerStartedAt: $workerStartedAt,

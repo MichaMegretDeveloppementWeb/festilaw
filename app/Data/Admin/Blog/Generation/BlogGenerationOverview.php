@@ -11,8 +11,8 @@ use Carbon\CarbonImmutable;
 
 /**
  * La vue d'ensemble de la generation par IA : ou en est la depense du mois et son avertissement, combien de brouillons generes
- * attendent une relecture, les dernieres generations, et si la generation peut tourner (cle presente, worker
- * a l'ecoute, pipeline utilisable). La cle elle-meme n'est jamais exposee.
+ * attendent une relecture, les dernieres generations, et si la generation peut tourner (cle OpenRouter utilisable,
+ * worker a l'ecoute, pipeline utilisable). La cle elle-meme n'est jamais exposee, seulement son debut et sa fin.
  */
 final readonly class BlogGenerationOverview
 {
@@ -32,7 +32,7 @@ final readonly class BlogGenerationOverview
         public int $pendingDrafts,
         public ?string $nextLaunch,
         public array $latest,
-        public bool $apiKeyPresent,
+        public OpenRouterKeyState $key,
         public bool $workerListening,
         public ?CarbonImmutable $workerStartedAt,
         public bool $simulated,

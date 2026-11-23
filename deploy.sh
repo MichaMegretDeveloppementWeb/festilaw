@@ -144,6 +144,14 @@ echo "→ Optimisation des caches..."
 "$PHP_BIN" artisan view:cache
 "$PHP_BIN" artisan event:cache
 
+# 9a. Configuration de production (audit du 23/11) : verifiee sur la configuration qui vient d'etre mise en
+# cache, migrations deja passees. Si quelque chose manque, le deploiement va a son terme puis finit en echec,
+# la liste en fin de sortie : garder le site en maintenance couperait les dossiers et les paiements pour une
+# cle de blog manquante. Corriger le .env, puis `artisan config:cache` et `artisan festilaw:check-production`.
+echo "→ Vérification de la configuration de production..."
+CONFIG_READY=1
+"$PHP_BIN" artisan festilaw:check-production || CONFIG_READY=0
+
 # 9b. Webhook SignWell : retrouve (ou cree) le webhook du site et memorise son id, cle de verification
 # des evenements SignWell. Non bloquant : si SignWell ne repond pas, le deploiement continue.
 echo "→ Synchronisation du webhook SignWell..."
@@ -163,6 +171,18 @@ find bootstrap/cache -type d -exec chmod 755 {} \;
 find bootstrap/cache -type f -exec chmod 644 {} \;
 
 echo ""
+if [ "$CONFIG_READY" -eq 0 ]; then
+    echo "============================================"
+    echo "  Déploiement terminé, configuration INCOMPLÈTE"
+    echo "============================================"
+    echo ""
+    "$PHP_BIN" artisan festilaw:check-production || true
+    echo ""
+    echo "Le site est en ligne. Corrigez le .env, puis lancez :"
+    echo "  $PHP_BIN artisan config:cache && $PHP_BIN artisan festilaw:check-production"
+    exit 1
+fi
+
 echo "============================================"
 echo "  Déploiement terminé avec succès !"
 echo "============================================"

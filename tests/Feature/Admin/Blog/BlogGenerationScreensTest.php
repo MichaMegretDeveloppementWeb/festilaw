@@ -150,30 +150,28 @@ it('says when a worker is listening, and warns when none is', function () {
     Livewire::test(GenerationDashboard::class)->assertSee('Service de génération à l\'arrêt');
 });
 
-it('tells whether the provider key is there in the service state, without ever showing it', function () {
-    config(['ai.providers.openrouter.key' => 'sk-or-secret-value-123']);
+it('tells whether the OpenRouter key is there in the service state, without ever showing it whole', function () {
+    Livewire::test(GenerationDashboard::class)->assertSee('Clé OpenRouter absente');
+
+    BlogAi::saveOpenRouterKey('sk-or-v1-secret-value-1234567890abcdef');
     actingAs(User::factory()->create());
 
     Livewire::test(GenerationDashboard::class)
         ->assertSee('État du service')
-        ->assertSee('Clé du fournisseur d\'IA en place')
-        ->assertDontSee('sk-or-secret-value-123');
+        ->assertSee('Clé OpenRouter en place');
 
     foreach (['/admin/blog/generation', '/admin/blog/generation/history', '/admin/blog/generation/settings'] as $path) {
-        expect(get($path)->getContent())->not->toContain('sk-or-secret-value-123');
+        expect(get($path)->getContent())->not->toContain('secret-value-1234567890');
     }
-
-    config(['ai.providers.openrouter.key' => null]);
-
-    Livewire::test(GenerationDashboard::class)->assertSee('Clé du fournisseur d\'IA absente');
 });
 
-it('says in plain words that the generation is unavailable when the key is missing outside of the trial mode', function () {
-    config(['ai.providers.openrouter.key' => null, 'blog.ai.pipeline' => 'editorial']);
+it('says in plain words that the generation is unavailable without a usable key, and where to paste one', function () {
+    config(['blog.ai.pipeline' => 'editorial']);
 
     Livewire::test(GenerationDashboard::class)
         ->assertSee('La génération n\'est pas disponible')
-        ->assertSee('Contactez l\'assistance technique.');
+        ->assertSee('Aucune clé enregistrée. La génération ne peut appeler aucun modèle.')
+        ->assertSeeHtml('/admin/blog/generation/settings#cle-openrouter');
 });
 
 it('lists the five latest generations, newest first, with their outcome and no technical message', function () {
@@ -231,7 +229,7 @@ it('shows a load failure instead of the overview when the data cannot be read', 
     Schema::rename('blog_generations_unavailable', 'blog_generations');
 });
 
-it('loads the overview in 7 queries, plus 1 for the activity tile, whatever the number of generations', function () {
+it('loads the overview in 8 queries, plus 1 for the activity tile, whatever the number of generations', function () {
     BlogGeneration::factory()->count(40)->completed()->create()->each(function (BlogGeneration $generation): void {
         BlogGenerationStep::factory()->for($generation, 'generation')->named('topic', 1)->completed()->create();
         BlogGenerationStep::factory()->for($generation, 'generation')->named('writing', 2)->completed()->create();
@@ -240,10 +238,10 @@ it('loads the overview in 7 queries, plus 1 for the activity tile, whatever the 
     DB::enableQueryLog();
     Livewire::test(GenerationDashboard::class);
 
-    // Reglages, depense du mois, worker, verification quotidienne des services (controle du 20/11), brouillons a
-    // relire, dernieres generations, etape en echec de celles-ci ; plus la tuile « En cours » (une requete :
-    // aucune generation active). Le bouton de lancement n'en fait aucune.
-    expect(count(DB::getQueryLog()))->toBe(8);
+    // Reglages, depense du mois, worker, verification quotidienne des services (controle du 20/11), cle OpenRouter
+    // (en base depuis le 23/11), brouillons a relire, dernieres generations, etape en echec de celles-ci ; plus la
+    // tuile « En cours » (une requete : aucune generation active). Le bouton de lancement n'en fait aucune.
+    expect(count(DB::getQueryLog()))->toBe(9);
 });
 
 // --- Tuile « En cours » ---------------------------------------------------------------------------
@@ -790,7 +788,7 @@ it('says a generation cannot be found', function () {
 
 // --- Reglages --------------------------------------------------------------------------------------
 
-it('opens the settings on their current values, in 3 queries with the spend of the month and the prices of the day', function () {
+it('opens the settings on their current values, in 4 queries with the spend of the month, the prices of the day and the key', function () {
     BlogAi::saveSettings([
         'enabled' => true, 'period_count' => 2, 'period_unit' => 'month', 'monthly_spend_cap_cents' => 2_550,
         'notification_email' => 'owner@example.com',
@@ -799,7 +797,8 @@ it('opens the settings on their current values, in 3 queries with the spend of t
     DB::enableQueryLog();
     $settings = Livewire::test(GenerationSettings::class);
 
-    expect(count(DB::getQueryLog()))->toBe(3);
+    // La section de la cle OpenRouter lit la cle et la derniere verification en une requete (decision du 23/11).
+    expect(count(DB::getQueryLog()))->toBe(4);
     $settings->assertSet('enabled', true)
         ->assertSet('periodCount', '2')
         ->assertSet('periodUnit', 'month')

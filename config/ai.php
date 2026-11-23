@@ -142,9 +142,11 @@ return [
             'key' => env('OPENAI_COMPATIBLE_API_KEY'),
         ],
 
+        // Festilaw : la cle OpenRouter vit dans les reglages de la generation, chiffree en base (decision de Micha
+        // du 23/11), et OpenRouterKeyActivator la pose ici avant le premier appel. Plus de variable dans le .env.
         'openrouter' => [
             'driver' => 'openrouter',
-            'key' => env('OPENROUTER_API_KEY'),
+            'key' => null,
         ],
 
         'typesafe' => [
