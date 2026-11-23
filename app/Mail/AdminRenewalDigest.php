@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Mail;
 
-use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 
@@ -15,7 +14,7 @@ use Illuminate\Mail\Mailables\Envelope;
  *
  * @phpstan-type RenewalRow array{company: string, pack: string, year: int, email: string, url: string}
  */
-final class AdminRenewalDigest extends Mailable
+final class AdminRenewalDigest extends InternalMail
 {
     /** @param  list<RenewalRow>  $rows */
     public function __construct(

@@ -7,7 +7,7 @@
     Dirección profesional: Spoorstraat 30A, 6511 AN Nijmegen, Países Bajos<br>
     Inscrita en la Cámara de Comercio de los Países Bajos (KvK) con el número 77058720<br>
     Número de identificación a efectos del IVA: NL 860886761B01<br>
-    Correo electrónico: <a href="mailto:team@festilaw.com">team@festilaw.com</a>
+    Correo electrónico: <a href="mailto:{{ config('festilaw.contact_email') }}">{{ config('festilaw.contact_email') }}</a>
 </p>
 
 <h2>2. Proveedor de alojamiento</h2>
@@ -27,7 +27,7 @@
 
 <h2>6. Datos personales</h2>
 <p>Festilaw B.V. trata los datos personales recogidos a través de este sitio web (formulario de contacto, área de cliente, correspondencia por correo electrónico) en calidad de responsable del tratamiento, de conformidad con el Reglamento (UE) 2016/679 (RGPD). Los detalles del tratamiento y de sus derechos figuran en nuestra <a href="{{ localized_route('privacy-policy') }}">política de privacidad</a>.</p>
-<p>Para ejercer sus derechos: <a href="mailto:team@festilaw.com">team@festilaw.com</a></p>
+<p>Para ejercer sus derechos: <a href="mailto:{{ config('festilaw.contact_email') }}">{{ config('festilaw.contact_email') }}</a></p>
 <p>Puede presentar una reclamación ante la Autoriteit Persoonsgegevens (la autoridad neerlandesa de protección de datos) o ante la autoridad de control de su Estado miembro de residencia.</p>
 
 <h2>7. Cookies</h2>

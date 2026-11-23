@@ -7,7 +7,6 @@ namespace App\Mail;
 use App\Data\System\ErrorLogGroup;
 use App\Data\System\ErrorLogSummary;
 use Carbon\CarbonImmutable;
-use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 
@@ -18,7 +17,7 @@ use Illuminate\Mail\Mailables\Envelope;
  *
  * @phpstan-type ErrorRow array{title: string, meta: string, exception: ?string, location: ?string, routes: ?string, file: string}
  */
-final class DailyErrorReport extends Mailable
+final class DailyErrorReport extends InternalMail
 {
     public const MAX_GROUPS = 30;
 

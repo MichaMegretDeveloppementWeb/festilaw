@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Mail;
 
-use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 
@@ -13,7 +12,7 @@ use Illuminate\Mail\Mailables\Envelope;
  * depasse. Ce plafond ne bloque rien (decision de Micha du 17/11) : le message le dit, pour qu'on ne croie pas
  * la generation arretee. Envoye au plus une fois par mois pour chacun des deux seuils.
  */
-final class BlogMonthlySpendWarning extends Mailable
+final class BlogMonthlySpendWarning extends InternalMail
 {
     public function __construct(
         public bool $over,

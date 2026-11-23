@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Mail;
 
-use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 
@@ -14,7 +13,7 @@ use Illuminate\Mail\Mailables\Envelope;
  * mois. Le plafond du mois regle au back-office a son propre message (BlogMonthlySpendWarning), car il ne
  * bloque rien.
  */
-final class BlogSpendLimitReached extends Mailable
+final class BlogSpendLimitReached extends InternalMail
 {
     public function __construct(
         public string $spent,

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Mail;
 
-use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 
@@ -19,7 +18,7 @@ use Illuminate\Mail\Mailables\Envelope;
  *
  * @phpstan-type GenerationRow array{subject: string, outcome: string, succeeded: bool, failed: bool, cost: string, url: string, draftUrl: string|null, excerpt?: string|null, sources?: int|null, newCategory?: string|null}
  */
-final class BlogGenerationBatchFinished extends Mailable
+final class BlogGenerationBatchFinished extends InternalMail
 {
     /**
      * @param  list<GenerationRow>  $rows

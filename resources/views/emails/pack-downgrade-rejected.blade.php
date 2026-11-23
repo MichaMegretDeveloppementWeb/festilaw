@@ -9,7 +9,7 @@
         <x-mail.text>{{ $note }}</x-mail.text>
     @endif
 
-    <x-mail.text>{{ __('If you have any questions, contact us at :email.', ['email' => 'team@festilaw.com']) }}</x-mail.text>
+    <x-mail.text>{{ __('If you have any questions, contact us at :email.', ['email' => config('festilaw.contact_email')]) }}</x-mail.text>
 
     <x-mail.button :url="$fileUrl">{{ __('Open my file') }}</x-mail.button>
 

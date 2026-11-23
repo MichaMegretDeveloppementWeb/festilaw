@@ -15,7 +15,7 @@
                 'url' => url('/'),
                 'logo' => asset('images/logo-festilaw-272.png'),
                 'description' => __('Your GPSR Responsible Person in the EU for non-EU sellers.'),
-                'email' => 'team@festilaw.com',
+                'email' => config('festilaw.contact_email'),
                 'address' => [
                     '@type' => 'PostalAddress',
                     'streetAddress' => 'Spoorstraat 30A',
@@ -31,7 +31,7 @@
                 'vatID' => 'NL860886761B01',
                 'contactPoint' => [
                     '@type' => 'ContactPoint',
-                    'email' => 'team@festilaw.com',
+                    'email' => config('festilaw.contact_email'),
                     'contactType' => 'customer support',
                     'availableLanguage' => ['en', 'fr', 'es'],
                 ],

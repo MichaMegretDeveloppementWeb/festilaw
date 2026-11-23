@@ -26,8 +26,12 @@ final readonly class SchedulerHealthService
 {
     public const HEARTBEAT_KEY = 'scheduler.last_run_at';
 
-    /** Une alerte e-mail au plus toutes les 6 heures tant que l'arret dure. */
-    private const ALERT_THROTTLE_HOURS = 6;
+    /**
+     * Une seule alerte par arret (decision de Micha du 23/11) : la marque porte la date du dernier passage, si bien
+     * qu'un nouvel arret, apres une reprise du cron, donne une nouvelle alerte. Elle vit dans le cache en base, que
+     * deploy.sh vide, mais deploy.sh enregistre aussi un passage, ce qui termine l'arret.
+     */
+    private const ALERT_MARK_DAYS = 30;
 
     public function __construct(private SettingRepository $settings) {}
 
@@ -49,8 +53,11 @@ final readonly class SchedulerHealthService
 
     public function isStalled(): bool
     {
-        $lastRunAt = $this->lastRunAt();
+        return $this->stalledSince($this->lastRunAt());
+    }
 
+    private function stalledSince(?CarbonImmutable $lastRunAt): bool
+    {
         return $lastRunAt !== null
             && $lastRunAt->lt(now()->subMinutes((int) config('festilaw.scheduler.stale_after_minutes', 15)));
     }
@@ -62,18 +69,21 @@ final readonly class SchedulerHealthService
      */
     public function alertIfStalled(): void
     {
-        if (! $this->isStalled()) {
+        $lastRunAt = $this->lastRunAt();
+
+        if (! $this->stalledSince($lastRunAt)) {
             return;
         }
 
-        if (! Cache::add('scheduler-stalled-alerted', true, now()->addHours(self::ALERT_THROTTLE_HOURS))) {
+        // Cache::add est atomique : deux visites simultanees n'envoient pas deux alertes.
+        if (! Cache::add('scheduler-stalled-alerted:'.$lastRunAt->getTimestamp(), true, now()->addDays(self::ALERT_MARK_DAYS))) {
             return;
         }
 
         $recipient = config('festilaw.tech_alert_email') ?: config('festilaw.notification_email');
 
         try {
-            Mail::to($recipient)->send(new SchedulerStalledAlert($this->lastRunAt()));
+            Mail::to($recipient)->send(new SchedulerStalledAlert($lastRunAt));
         } catch (Throwable $e) {
             Log::error('Scheduler stalled alert failed to send.', ['exception' => $e]);
         }

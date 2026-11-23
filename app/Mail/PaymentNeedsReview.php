@@ -6,7 +6,6 @@ namespace App\Mail;
 
 use App\Data\Payment\PaymentReviewData;
 use App\Models\Payment;
-use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 
@@ -14,7 +13,7 @@ use Illuminate\Mail\Mailables\Envelope;
  * Alerte interne (francophone) : un paiement confirme est a verifier (double paiement et/ou montant encaisse
  * different du montant attendu). Envoyee a l'adresse de notification de Festilaw, qui rembourse au besoin.
  */
-final class PaymentNeedsReview extends Mailable
+final class PaymentNeedsReview extends InternalMail
 {
     public function __construct(
         public Payment $payment,

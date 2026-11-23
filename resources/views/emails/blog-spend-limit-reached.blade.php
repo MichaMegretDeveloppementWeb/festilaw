@@ -6,6 +6,4 @@
     <x-mail.text>Le site a enregistré <strong>{{ $spent }}</strong> de dépense ce mois-ci, pour un plafond de {{ $cap }} réglé au back-office.</x-mail.text>
 
     <x-mail.text>Le site et le back-office fonctionnent normalement. Les articles déjà rédigés restent modifiables et publiables.</x-mail.text>
-
-    <x-mail.text :muted="true" size="13.5px">Ce message n'est envoyé qu'une fois par mois.</x-mail.text>
 </x-mail.layout>

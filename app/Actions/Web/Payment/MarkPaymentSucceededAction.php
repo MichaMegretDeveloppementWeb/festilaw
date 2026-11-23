@@ -167,6 +167,7 @@ final readonly class MarkPaymentSucceededAction
         }
 
         $mailable = match (true) {
+            $payment->type === PaymentType::AnnualRenewal => new StarterPaymentConfirmed($submission, (int) $payment->service_year),
             $payment->type->isSubscription() => new StarterPaymentConfirmed($submission),
             // Audit SCALE : invite a reserver la consultation (sauf dossier deja reserve avant de payer).
             $payment->type === PaymentType::ScaleAudit => new ScaleAuditConfirmed($submission, $submission->appointment()->exists()),

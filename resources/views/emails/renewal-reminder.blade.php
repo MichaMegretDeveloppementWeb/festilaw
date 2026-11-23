@@ -1,5 +1,7 @@
 <x-mail.layout>
-    <x-mail.heading>{{ __('Time to renew your Festilaw :pack', ['pack' => $packLabel]) }}</x-mail.heading>
+    <x-mail.heading>{{ $overdue
+        ? __('Your Festilaw :pack renewal is overdue', ['pack' => $packLabel])
+        : __('Time to renew your Festilaw :pack', ['pack' => $packLabel]) }}</x-mail.heading>
 
     <x-mail.text>{{ __('Hello') }}{{ $submission->first_name ? ' '.$submission->first_name : '' }},</x-mail.text>
 

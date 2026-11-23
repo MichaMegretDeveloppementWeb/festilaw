@@ -44,6 +44,14 @@ return [
     'notification_email' => env('FESTILAW_NOTIFICATION_EMAIL') ?: 'team@festilaw.com',
 
     /*
+     | Adresse de contact publique de Festilaw : pied de page, page de contact, mentions legales, politique de
+     | confidentialite, donnees structurees et e-mails aux clients. Un seul reglage plutot que l'adresse ecrite a
+     | chaque endroit (decision de Micha du 23/11). Distincte de l'adresse qui recoit les notifications, pour qu'un
+     | changement de boite de reception ne publie jamais une autre adresse sur le site.
+     */
+    'contact_email' => env('FESTILAW_CONTACT_EMAIL') ?: 'team@festilaw.com',
+
+    /*
      | Alertes techniques (taches automatiques a l'arret) : adresse du prestataire technique. A defaut,
      | l'adresse de notification ci-dessus.
      */

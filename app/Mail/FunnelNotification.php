@@ -6,7 +6,6 @@ namespace App\Mail;
 
 use App\Enums\Notification\FunnelNotificationReason;
 use App\Models\Submission;
-use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
@@ -15,7 +14,7 @@ use Illuminate\Queue\SerializesModels;
  * Generic funnel notification to Festilaw (submission created, payment received...).
  * Sent synchronously from the Action after commit (no queue/worker). The reason is a typed enum.
  */
-final class FunnelNotification extends Mailable
+final class FunnelNotification extends InternalMail
 {
     use SerializesModels;
 

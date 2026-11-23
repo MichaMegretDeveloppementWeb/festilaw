@@ -469,6 +469,14 @@ publication) et la mesure d'audience Falcon Analytics. Elle se déploie par `dep
 - [ ] Le `.env` de production reçoit `PIXABAY_API_KEY` et `ANALYTICS_ENABLED=true`. `BLOG_AI_PIPELINE` reste
       absent. La clé OpenRouter ne va plus dans le `.env` : elle se colle dans le back-office après le
       déploiement (voir plus bas).
+- [ ] Géolocalisation de la mesure : une clé de licence MaxMind GeoLite gratuite dans
+      `ANALYTICS_GEOIP_LICENSE_KEY`. `ANALYTICS_GEOIP_DATABASE` et `ANALYTICS_GEOIP_DEV_IP` restent vides.
+- [ ] Google Search Console : un client OAuth « Application Web » dans Google Cloud, interface Search Console
+      activée, écran de consentement « Interne » (compte Google Workspace de Festilaw) ou « Externe » passé
+      « En production » (en mode « Test », l'autorisation tombe au bout de sept jours). Son adresse de
+      retour autorisée est `https://festilaw.com/admin/analytics/integrations/search-console/callback`. Son
+      identifiant et son secret vont dans `ANALYTICS_GSC_CLIENT_ID` et `ANALYTICS_GSC_CLIENT_SECRET`.
+      `ANALYTICS_GSC_REDIRECT` reste vide.
 - [ ] Le `.env` de production passe le journal à un fichier par jour (`LOG_STACK=daily`, `LOG_DAILY_DAYS=30`)
       et donne l'adresse du prestataire technique à `FESTILAW_TECH_ALERT_EMAIL`. Cette adresse reçoit chaque
       matin le rapport des erreurs du serveur, seulement s'il y en a eu.
@@ -491,6 +499,9 @@ publication) et la mesure d'audience Falcon Analytics. Elle se déploie par `dep
 - [ ] La clé OpenRouter est collée dans le back-office (Blog, Génération IA, Réglages, section « Clé d'accès
       OpenRouter »), avec une limite mensuelle posée sur la clé chez OpenRouter. Le site la vérifie avant de
       l'enregistrer, puis affiche son état et sa date d'expiration.
+- [ ] `php artisan analytics:geoip:download`, puis `php artisan analytics:geoip:check`.
+- [ ] Back-office, Audience, Intégrations : « Connecter Google Search Console », puis la propriété
+      `festilaw.com`.
 - [ ] `php artisan analytics:check` ne montre aucun point bloquant. Relancé une fois quelques pages ouvertes, sa
       ligne « Proxy » dit s'il faut déclarer un proxy.
 - [ ] Le back-office affiche les sections Blog, Audience et Marketing, et « Tâches automatiques · il y a 1 min ».

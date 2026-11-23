@@ -5,14 +5,13 @@ declare(strict_types=1);
 namespace App\Mail;
 
 use App\Models\Submission;
-use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 // Envoi synchrone (pas de ShouldQueue) : pas de worker/cron requis. Voir CreateContactSubmissionAction.
-class ContactSubmissionReceived extends Mailable
+class ContactSubmissionReceived extends InternalMail
 {
     use SerializesModels;
 

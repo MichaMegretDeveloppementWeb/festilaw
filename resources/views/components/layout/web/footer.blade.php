@@ -4,7 +4,7 @@
             <div class="site-footer__brandcol">
                 <a data-track-label="Pied de page, Festilaw" href="{{ localized_route('home') }}" class="brand">Festilaw</a>
                 <p class="site-footer__tagline">{{ __('Your GPSR Responsible Person in the EU. Compliance built by entrepreneurs, for entrepreneurs.') }}</p>
-                <a data-track-label="Pied de page, e-mail" href="mailto:team@festilaw.com" class="site-footer__email">team@festilaw.com</a>
+                <a data-track-label="Pied de page, e-mail" href="mailto:{{ config('festilaw.contact_email') }}" class="site-footer__email">{{ config('festilaw.contact_email') }}</a>
             </div>
 
             <div class="site-footer__col">

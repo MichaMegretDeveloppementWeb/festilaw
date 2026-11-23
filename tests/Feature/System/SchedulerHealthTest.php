@@ -18,7 +18,7 @@ use function Pest\Laravel\actingAs;
 
 /*
  | Surveillance des taches automatiques : le cron note son passage chaque minute ; apres 15 minutes sans
- | passage, bandeau dans le back-office et e-mail au prestataire technique (au plus toutes les 6 heures).
+ | passage, bandeau dans le back-office et e-mail au prestataire technique (une seule fois par arret).
  */
 
 uses(RefreshDatabase::class);
@@ -58,7 +58,8 @@ it('considers the automatic tasks stalled only after 15 minutes without a passag
     expect($health->isStalled())->toBeTrue();
 });
 
-it('alerts the technical contact once every 6 hours while the cron is stalled', function () {
+it('alerts the technical contact once per stall, at the time of Paris, and again only after the cron came back', function () {
+    // Decision de Micha du 23/11 : une seule alerte par arret, a l'heure de Paris comme le rapport du matin.
     heartbeatMinutesAgo(20);
     $health = app(SchedulerHealthService::class);
 
@@ -66,10 +67,14 @@ it('alerts the technical contact once every 6 hours while the cron is stalled', 
     $health->alertIfStalled();
     Mail::assertSent(SchedulerStalledAlert::class, 1);
     Mail::assertSent(SchedulerStalledAlert::class, fn (SchedulerStalledAlert $mail) => $mail->hasTo('tech@example.com')
-        && str_contains($mail->render(), '05/10/2026 à 11:40'));
+        && str_contains($mail->render(), '05/10/2026 à 13:40</strong>, heure de Paris'));
 
-    $this->travel(6)->hours();
-    $this->travel(1)->minutes();
+    $this->travel(2)->days();
+    $health->alertIfStalled();
+    Mail::assertSent(SchedulerStalledAlert::class, 1);
+
+    // Le cron reprend, puis s'arrete de nouveau : c'est un autre arret.
+    heartbeatMinutesAgo(20);
     $health->alertIfStalled();
     Mail::assertSent(SchedulerStalledAlert::class, 2);
 });

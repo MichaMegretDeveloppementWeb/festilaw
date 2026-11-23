@@ -16,6 +16,4 @@
     <x-mail.button :url="$generationsUrl">Ouvrir les générations</x-mail.button>
 
     <x-mail.text>La cause technique de chaque échec est écrite dans le journal du serveur (storage/logs, fichier laravel du jour), à l'heure de la génération. Le rapport d'erreurs du matin la reprend.</x-mail.text>
-
-    <x-mail.text :muted="true" size="13.5px">Cette alerte n'est envoyée qu'une fois par série. Une nouvelle série commence après la prochaine génération réussie.</x-mail.text>
 </x-mail.layout>

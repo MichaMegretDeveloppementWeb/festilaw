@@ -7,5 +7,5 @@
 
     <x-mail.button :url="$draftsUrl">Voir les brouillons à relire</x-mail.button>
 
-    <x-mail.text :muted="true" size="13.5px">Ce message n'est envoyé qu'une fois par pause. Le plafond de brouillons se règle dans les réglages de la génération.</x-mail.text>
+    <x-mail.text :muted="true" size="13.5px">Le plafond de brouillons se règle dans les réglages de la génération.</x-mail.text>
 </x-mail.layout>

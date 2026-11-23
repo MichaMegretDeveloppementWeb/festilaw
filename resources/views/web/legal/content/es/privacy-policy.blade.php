@@ -3,7 +3,7 @@
 
 <h2>1. Responsable del tratamiento</h2>
 <p>El responsable del tratamiento de sus datos personales es Festilaw B.V., sociedad de responsabilidad limitada constituida conforme al Derecho neerlandés, con domicilio social en Nimega, Spoorstraat 30A, 6511 AN Nijmegen, Países Bajos, inscrita en la Cámara de Comercio de los Países Bajos (KvK) con el número 77058720.</p>
-<p>Para cualquier consulta sobre sus datos personales: <a href="mailto:team@festilaw.com">team@festilaw.com</a></p>
+<p>Para cualquier consulta sobre sus datos personales: <a href="mailto:{{ config('festilaw.contact_email') }}">{{ config('festilaw.contact_email') }}</a></p>
 <p>Festilaw B.V. no ha designado un delegado de protección de datos, ya que no es obligatorio a la vista de sus actividades.</p>
 
 <h2>2. Datos tratados, finalidades y bases jurídicas</h2>
@@ -29,7 +29,7 @@
 <p>Nuestros proveedores actúan como encargados del tratamiento, siguiendo nuestras instrucciones y en virtud de un contrato conforme al artículo 28 del RGPD. No vendemos ni alquilamos sus datos.</p>
 
 <h2>4. Transferencias fuera de la Unión Europea</h2>
-<p>Nuestro proveedor de firma electrónica, SignWell, y nuestro proveedor de servicios de correo electrónico, Resend, están establecidos en Estados Unidos; nuestro proveedor de servicios de pago, Stripe, y Google, para la reserva de consultas, pueden transferir datos personales a sus sociedades matrices establecidas en Estados Unidos (Stripe, Inc. y Google LLC). Estas transferencias se realizan sobre la base de las cláusulas contractuales tipo adoptadas por la Comisión Europea (artículo 46, apartado 2, letra c), del RGPD). Puede obtener una copia de estas garantías escribiendo a <a href="mailto:team@festilaw.com">team@festilaw.com</a>.</p>
+<p>Nuestro proveedor de firma electrónica, SignWell, y nuestro proveedor de servicios de correo electrónico, Resend, están establecidos en Estados Unidos; nuestro proveedor de servicios de pago, Stripe, y Google, para la reserva de consultas, pueden transferir datos personales a sus sociedades matrices establecidas en Estados Unidos (Stripe, Inc. y Google LLC). Estas transferencias se realizan sobre la base de las cláusulas contractuales tipo adoptadas por la Comisión Europea (artículo 46, apartado 2, letra c), del RGPD). Puede obtener una copia de estas garantías escribiendo a <a href="mailto:{{ config('festilaw.contact_email') }}">{{ config('festilaw.contact_email') }}</a>.</p>
 <p>Además, dado que nuestros clientes están establecidos fuera de la Unión Europea, nuestras comunicaciones con ellos pueden implicar la transmisión de datos personales al país en el que están establecidos. Estas transferencias se realizan bien a un país cubierto por una decisión de adecuación de la Comisión Europea, bien porque son necesarias para la ejecución del contrato celebrado con el cliente (artículo 49, apartado 1, letra b), del RGPD).</p>
 
 <h2>5. Plazos de conservación</h2>
@@ -45,7 +45,7 @@
 
 <h2>6. Sus derechos</h2>
 <p>Tiene derecho de acceso, rectificación, supresión, limitación del tratamiento y portabilidad de los datos, así como derecho a oponerse al tratamiento basado en nuestro interés legítimo. Estos derechos se ejercen dentro de los límites establecidos por el RGPD; en particular, no podemos suprimir los datos que la ley nos obliga a conservar.</p>
-<p>Para ejercer sus derechos, escriba a <a href="mailto:team@festilaw.com">team@festilaw.com</a>. Le responderemos en el plazo de un mes, que podrá prorrogarse dos meses en el caso de solicitudes complejas. Podemos pedirle que acredite su identidad si existen dudas razonables.</p>
+<p>Para ejercer sus derechos, escriba a <a href="mailto:{{ config('festilaw.contact_email') }}">{{ config('festilaw.contact_email') }}</a>. Le responderemos en el plazo de un mes, que podrá prorrogarse dos meses en el caso de solicitudes complejas. Podemos pedirle que acredite su identidad si existen dudas razonables.</p>
 <p>Puede presentar una reclamación ante la Autoriteit Persoonsgegevens (<a href="https://www.autoriteitpersoonsgegevens.nl" rel="noopener">www.autoriteitpersoonsgegevens.nl</a>), la autoridad neerlandesa de protección de datos, o ante la autoridad de control del Estado miembro de su residencia habitual, de su lugar de trabajo o del lugar de la supuesta infracción.</p>
 
 <h2>7. Seguridad</h2>
