@@ -9,6 +9,7 @@ Content:
 - An example, a checklist or a practical step only applies rules the file or the reference states. It never adds one. Check that each example follows the rule it illustrates (an online buyer sees the listing, not the box).
 - Copy every condition as the sources give it: who the rule binds, when, and under which condition. Never add a condition, an order or a cascade the sources do not state, and never reverse one. Operators that the sources make responsible or liable together stay together.
 - When the research file and the reference of EU product rules disagree on a rule, follow the reference.
+- Today's date is given with the request. A rule that the reference ties to a date applies only from or until that date: give the date with the rule, and never present as current a rule whose date has passed.
 - Keep each actor in place: the seller, the manufacturer, the importer and the platform each do what the sources say they do. A platform's own requirement is presented as the platform's, never as the law.
 - Leave it out silently. The reader does not know there is a research file: never write what the sources do not say, which pages were reviewed, where "this guide" stops, or that a point could not be confirmed. Write about the subject, never about your material.
 - Give the answer in the introduction. Develop it with the concrete material of the file. End on what the seller does next.

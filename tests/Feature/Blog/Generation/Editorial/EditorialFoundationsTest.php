@@ -88,7 +88,7 @@ it('turns internal link tokens into the address of each language, and drops a li
         ->toContain('[this guide](/es/blog/etiquetas-etsy)');
 });
 
-it('lists every known title for the topic step, in two queries, english first, rejected topics included and stopped ones left out', function () {
+it('lists every known title for the topic step, in three queries, english first, rejected topics included and stopped ones left out', function () {
     BlogContent::published('label');
     $french = BlogContent::draft('bougies');
     BlogPostTranslation::query()->where('blog_post_id', $french->id)->whereIn('locale', ['en', 'es'])->update(['title' => null, 'excerpt' => null]);
@@ -102,7 +102,8 @@ it('lists every known title for the topic step, in two queries, english first, r
     DB::flushQueryLog();
     DB::enableQueryLog();
     $history = app(BlogTopicHistoryRepository::class)->load();
-    expect(count(DB::getQueryLog()))->toBe(2);
+    // Les articles recents avec leur chapo, tous les titres, tous les sujets proposes (controle du 20/11).
+    expect(count(DB::getQueryLog()))->toBe(3);
     DB::disableQueryLog();
 
     expect(collect($history->posts)->pluck('title')->sort()->values()->all())->toBe(['Bougies fr', 'Label en'])
@@ -112,4 +113,20 @@ it('lists every known title for the topic step, in two queries, english first, r
             ['title' => 'Toy safety on Amazon', 'rejected' => false],
         ])
         ->and($history->titles())->toHaveCount(5);
+});
+
+it('bounds what the topic step reads, but checks duplicates against every title and every refused topic', function () {
+    // Controle du 20/11 : au-dela de 300 sujets, un sujet refuse pouvait revenir, et la demande au modele grandissait sans fin.
+    BlogContent::seedPublished(450);
+    BlogGeneration::factory()->create(['topic_title' => 'Oldest refused topic', 'topic_rejected_at' => now()]);
+    BlogGeneration::factory()->count(250)->create(['topic_title' => 'Refused topic', 'topic_rejected_at' => now()]);
+
+    $history = app(BlogTopicHistoryRepository::class)->load();
+
+    expect($history->posts)->toHaveCount(BlogTopicHistoryRepository::RECENT_POSTS)
+        ->and($history->posts[0]['excerpt'])->not->toBeNull()
+        ->and($history->olderTitles)->toHaveCount(BlogTopicHistoryRepository::OLDER_TITLES)
+        ->and($history->proposedTopics)->toHaveCount(BlogTopicHistoryRepository::PROPOSED_TOPICS)
+        ->and($history->titles())->toHaveCount(450 + 251)
+        ->and($history->titles())->toContain('Oldest refused topic');
 });

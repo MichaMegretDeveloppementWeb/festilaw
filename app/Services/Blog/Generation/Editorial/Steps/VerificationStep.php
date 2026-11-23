@@ -14,6 +14,9 @@ use App\Services\Blog\Generation\Editorial\BlogAgentCaller;
 use App\Services\Blog\Generation\Editorial\BlogFactGuard;
 use App\Services\Blog\Generation\Editorial\BlogPromptLibrary;
 use App\Services\Blog\Generation\Editorial\EditorialMarkdown;
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
  * La verification. L'agent relit l'article contre le dossier, la fiche des regles de l'UE et les preuves
@@ -68,6 +71,8 @@ final class VerificationStep extends EditorialStep
         $claims = (array) ($context->output('writing')['claims'] ?? []);
         $evidence = trim((string) ($context->output('fact_search')['notes'] ?? ''));
         $prompt = implode("\n\n", array_filter([
+            // La date du jour situe les regles datees de la reference (controle du 20/11).
+            $this->block('Today', CarbonImmutable::now()->toDateString()),
             $this->block('Research file', ['sources' => $research['sources'] ?? [], 'facts' => $research['facts'] ?? []]),
             $evidence === '' ? null : $this->block('Web evidence on the statements of the article, searched after writing', $evidence),
             $linked === [] ? null : $this->block('Blog articles the text links to (festilaw:post/ID)', $linked),
@@ -96,13 +101,38 @@ final class VerificationStep extends EditorialStep
             $this->items($reply->structured(), 'removed_claims'),
         ), static fn (array $claim): bool => ($claim['claim'] ?? '') !== ''));
 
+        $conflicts = $this->referenceConflicts($reply->structured(), $context->generationId);
+
         return GenerationStepResult::continue(
-            ['article' => $checked->toArray(), 'removed_claims' => $removed, 'attention_points' => $this->attentionPoints($reply->structured())],
+            ['article' => $checked->toArray(), 'removed_claims' => $removed, 'attention_points' => $this->attentionPoints($reply->structured()), 'reference_conflicts' => $conflicts],
             $usage,
             $this->report($reply, $removed === []
                 ? __('Chaque affirmation de l\'article est appuyée par le dossier de recherche.')
                 : trans_choice('{1} Une affirmation non appuyée par le dossier a été retirée.|[2,*] :count affirmations non appuyées par le dossier ont été retirées.', count($removed), ['count' => count($removed)])),
         );
+    }
+
+    /**
+     * Les affirmations qui suivent la reference des regles europeennes alors qu'une source officielle des
+     * preuves la contredit (controle du 20/11) : la reference est peut-etre depassee. La verification ne
+     * tranche pas, elle en fait un point d'attention pour la relectrice ; chaque conflit est journalise en
+     * erreur, donc porte par le rapport d'erreurs du matin, pour faire relire la reference.
+     *
+     * @param  array<string, mixed>  $answer
+     * @return list<array{statement: string, source: string}>
+     */
+    private function referenceConflicts(array $answer, int $generationId): array
+    {
+        $conflicts = array_values(array_filter(array_map(fn ($conflict): array => is_array($conflict) ? [
+            'statement' => $this->text($conflict, 'statement'),
+            'source' => $this->text($conflict, 'source'),
+        ] : [], $this->items($answer, 'reference_conflicts')), static fn (array $conflict): bool => ($conflict['statement'] ?? '') !== ''));
+
+        foreach ($conflicts as $conflict) {
+            Log::error('EU rules reference contradicted by an official source: '.Str::limit($conflict['statement'], 160), ['generation_id' => $generationId, 'source' => $conflict['source']]);
+        }
+
+        return $conflicts;
     }
 
     /**

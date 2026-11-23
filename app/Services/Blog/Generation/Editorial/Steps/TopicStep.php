@@ -57,7 +57,7 @@ final class TopicStep extends EditorialStep
         $citations = is_array($scan['citations'] ?? null) ? $scan['citations'] : [];
 
         $agent = new TopicAgent($this->prompts->compose('festilaw-context', 'editorial-guidelines', 'step-topic'));
-        $reply = $this->ask($context, $agent, implode("\n\n", [
+        $reply = $this->ask($context, $agent, implode("\n\n", array_filter([
             $this->block('Today', CarbonImmutable::now()->toDateString()),
             $this->block('Request', [
                 'imposed_topic' => $context->topicHint,
@@ -65,6 +65,7 @@ final class TopicStep extends EditorialStep
             ]),
             $this->block('Length of the article', 'About '.($context->length->words ?? $context->settings->articleWords).' words in the body.'),
             $this->block('Existing articles', array_map(static fn (array $post): array => ['title' => $post['title'], 'excerpt' => $post['excerpt'], 'status' => $post['status']], $history->posts)),
+            $history->olderTitles === [] ? null : $this->block('Older articles (titles only)', $history->olderTitles),
             $this->block('Topics already proposed', $history->proposedTopics),
             $this->block('Notes from the web scan', match (true) {
                 filled($context->topicHint) => 'No web scan: the topic is imposed, and the research step will search the web.',
@@ -72,7 +73,7 @@ final class TopicStep extends EditorialStep
                 default => $notes,
             }),
             $this->block('Pages cited by the search', $citations),
-        ]));
+        ])));
         $usage = $reply->usage;
 
         $answer = $reply->structured();

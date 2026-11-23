@@ -8,6 +8,7 @@ use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogGenerationStepStatus;
 use App\Models\BlogGeneration;
 use App\Models\BlogGenerationStep;
+use App\Models\BlogImage;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
@@ -24,6 +25,33 @@ final readonly class BlogGenerationRequeueRepository
             ->where('blog_generation_id', $generationId)
             ->where('status', '!=', BlogGenerationStepStatus::Completed->value)
             ->update(['status' => BlogGenerationStepStatus::Pending->value, 'attempt' => 0, 'error' => null]);
+    }
+
+    /**
+     * Les images d'une etape terminee attendent l'assemblage sans article, et la purge les efface au bout de
+     * 24 heures. Relancee plus tard, la generation pointerait vers une image effacee et echouerait en boucle :
+     * l'etape des images est alors refaite (controle du 20/11), son cout passe reste compte. Vrai : refaite.
+     */
+    public function redoImagesIfGone(int $generationId): bool
+    {
+        $step = BlogGenerationStep::query()
+            ->where('blog_generation_id', $generationId)
+            ->where('step', 'images')
+            ->where('status', BlogGenerationStepStatus::Completed->value)
+            ->first(['id', 'output']);
+
+        $imageIds = array_values(array_filter(array_map(
+            static fn (mixed $image): int => is_array($image) ? (int) ($image['image_id'] ?? 0) : 0,
+            (array) ($step?->output['images'] ?? []),
+        )));
+
+        if ($step === null || $imageIds === [] || BlogImage::query()->whereKey($imageIds)->count() === count($imageIds)) {
+            return false;
+        }
+
+        BlogGenerationStep::query()->whereKey($step->id)->update(['status' => BlogGenerationStepStatus::Pending->value, 'attempt' => 0, 'error' => null]);
+
+        return true;
     }
 
     /**

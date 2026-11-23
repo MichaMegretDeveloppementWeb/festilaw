@@ -31,6 +31,7 @@ use GuzzleHttp\Psr7\Response as Psr7Response;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Sleep;
 use Laravel\Ai\Responses\Data\Meta;
@@ -483,6 +484,34 @@ it('asks the fact-checker to read each rule for whom it binds, when and under wh
     FactCheckAgent::assertPrompted(fn ($prompt): bool => str_contains($prompt->agent->instructions(), 'who it binds, when it applies, and under which condition')
         && str_contains($prompt->agent->instructions(), 'An example must follow the rule it illustrates')
         && str_contains($prompt->agent->instructions(), 'every heading, every list item and every example'));
+});
+
+it('gives the writer and the fact-checker the date of the day and a dated reference, and lets an official source call the reference into question', function () {
+    // Controle du 20/11 : la reference primait sur tout, sans date, et un fait plus recent et juste pouvait etre
+    // « corrige » vers une regle depassee. Une source officielle qui la contredit devient un point d'attention.
+    $this->travelTo('2031-02-03 09:00:00');
+    Http::fake(['*' => Http::response('ok')]);
+    WriterAgent::fake([Fixtures::writerAnswer()]);
+    FactCheckAgent::fake([[...Fixtures::article(), 'removed_claims' => [], 'report_fr' => 'x', 'reference_conflicts' => [
+        ['statement' => 'Toys bear the CE marking under Directive 2009/48/EC.', 'source' => 'https://eur-lex.europa.eu/eli/reg/2025/2509/oj'],
+    ]]])->preventStrayPrompts();
+    Log::spy();
+
+    app(WritingStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic(), 'research' => Fixtures::research()]));
+    $verification = app(VerificationStep::class)->execute(Fixtures::context(['research' => Fixtures::research(), 'writing' => Fixtures::articleOutput()]));
+
+    $dated = fn ($prompt): bool => $prompt->contains("## Today\n\n2031-02-03")
+        && str_contains($prompt->agent->instructions(), 'as checked on 19 November 2026')
+        && str_contains($prompt->agent->instructions(), 'Until 31 July 2030, under Directive 2009/48/EC');
+    WriterAgent::assertPrompted($dated);
+    FactCheckAgent::assertPrompted(fn ($prompt): bool => $dated($prompt)
+        && str_contains($prompt->agent->instructions(), 'When the research file disagrees with the reference on a rule, the reference prevails.')
+        && str_contains($prompt->agent->instructions(), 'do not settle it either way'));
+    expect($verification->output['reference_conflicts'])->toBe([
+        ['statement' => 'Toys bear the CE marking under Directive 2009/48/EC.', 'source' => 'https://eur-lex.europa.eu/eli/reg/2025/2509/oj'],
+    ]);
+    Log::shouldHaveReceived('error')->once()->withArgs(fn (string $message, array $context): bool => $message === 'EU rules reference contradicted by an official source: Toys bear the CE marking under Directive 2009/48/EC.'
+        && $context['source'] === 'https://eur-lex.europa.eu/eli/reg/2025/2509/oj');
 });
 
 it('gives the fact-checker each statement of the writer with its basis, and asks for its reasons in French', function () {

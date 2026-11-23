@@ -15,6 +15,7 @@ use App\Ai\Agents\Blog\WebSearchAgent;
 use App\Ai\Agents\Blog\WriterAgent;
 use App\Contracts\Blog\Generation\StockImageProvider;
 use App\Data\Blog\Generation\GenerationStepContext;
+use App\Data\Blog\Generation\GenerationStepResult;
 use App\Enums\Blog\BlogImageCreditSource;
 use App\Enums\Blog\BlogPostOrigin;
 use App\Enums\Blog\BlogPostStatus;
@@ -29,6 +30,7 @@ use App\Models\BlogGeneration;
 use App\Models\BlogImage;
 use App\Models\BlogPost;
 use App\Services\Blog\Generation\BlogAiModelCatalog;
+use App\Services\Blog\Generation\Editorial\Steps\StyleStep;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -342,36 +344,54 @@ it('hands back the draft it already created when the step runs again, without a 
         ->and(BlogPost::query()->count())->toBe(1);
 });
 
-it('creates no draft when the final title repeats a known article', function () {
+/**
+ * L'etape du style sur l'article verifie des fixtures (« Adding an economic operator on Etsy »), pour une
+ * generation donnee : depuis le controle du 20/11, c'est elle qui controle le titre final, avant les traductions
+ * et les images.
+ */
+function styleStepFor(BlogGeneration $generation, string $kind = 'evergreen', ?string $topicHint = null): GenerationStepResult
+{
+    StyleAgent::fake(fn (): array => [...Fixtures::article(), 'report_fr' => 'Style revu.'])->preventStrayPrompts();
+    $outputs = ['verification' => Fixtures::articleOutput(), 'topic' => [...Fixtures::topic(), 'kind' => $kind]];
+
+    return app(StyleStep::class)->execute(new GenerationStepContext($generation->id, BlogGenerationType::Article, $topicHint, null, Fixtures::context()->settings, $outputs, [], 1));
+}
+
+it('stops before the translations and the images when the final title repeats a known article', function () {
     $existing = BlogContent::published('label');
     $existing->translations()->where('locale', 'en')->update(['title' => 'Adding an economic operator on Etsy']);
     $generation = BlogGeneration::factory()->running()->create(['topic_title' => 'Adding an economic operator on Etsy']);
-    $context = new GenerationStepContext($generation->id, BlogGenerationType::Article, null, null, Fixtures::context()->settings, textOutputs(), [], 1);
 
-    $result = app(AssembleGeneratedBlogDraftAction::class)->execute($context);
+    $result = styleStepFor($generation);
 
     expect($result->stopReason)->toBe(BlogGenerationOutcomeReason::DuplicateTopic)
-        ->and(BlogPost::query()->count())->toBe(1);
+        ->and($result->output['duplicate_of'])->toBe('Adding an economic operator on Etsy')
+        ->and($result->summary)->toBe('Le titre final reprenait « Adding an economic operator on Etsy », déjà traité ou refusé, donc l\'article s\'arrête avant ses traductions et ses images.');
 });
 
-it('creates the draft of a news article whose title takes up a covered subject to say what changed', function () {
+it('lets a news article whose title takes up a covered subject go on, to say what changed', function () {
     // Decision de Micha du 19/11 : l'ancien article reste tel quel, le nouveau annonce le changement.
     $existing = BlogContent::published('label');
     $existing->translations()->where('locale', 'en')->update(['title' => 'Economic operator on Etsy']);
     $generation = BlogGeneration::factory()->running()->create();
-    $outputs = textOutputs();
-    $context = fn (string $kind): GenerationStepContext => new GenerationStepContext($generation->id, BlogGenerationType::Article, null, null, Fixtures::context()->settings, [...$outputs, 'topic' => [...$outputs['topic'], 'kind' => $kind]], [], 1);
 
-    expect(app(AssembleGeneratedBlogDraftAction::class)->execute($context('evergreen'))->stopReason)->toBe(BlogGenerationOutcomeReason::DuplicateTopic)
-        ->and(app(AssembleGeneratedBlogDraftAction::class)->execute($context('news'))->stopsGeneration())->toBeFalse()
-        ->and(BlogPost::query()->count())->toBe(2);
+    expect(styleStepFor($generation, 'evergreen')->stopReason)->toBe(BlogGenerationOutcomeReason::DuplicateTopic)
+        ->and(styleStepFor($generation, 'news')->stopsGeneration())->toBeFalse();
 });
 
-it('creates the draft of an imposed topic even when its final title repeats a known article', function () {
+it('lets an imposed topic go on even when its final title repeats a known article', function () {
     $existing = BlogContent::published('label');
     $existing->translations()->where('locale', 'en')->update(['title' => 'Adding an economic operator on Etsy']);
     $generation = BlogGeneration::factory()->running()->create(['topic_hint' => 'Etsy economic operator']);
-    $context = new GenerationStepContext($generation->id, BlogGenerationType::Article, 'Etsy economic operator', null, Fixtures::context()->settings, textOutputs(), [], 1);
+
+    expect(styleStepFor($generation, topicHint: 'Etsy economic operator')->stopsGeneration())->toBeFalse();
+});
+
+it('no longer stops at the assembly on a repeated title, which the style step already checked', function () {
+    $existing = BlogContent::published('label');
+    $existing->translations()->where('locale', 'en')->update(['title' => 'Adding an economic operator on Etsy']);
+    $generation = BlogGeneration::factory()->running()->create(['topic_title' => 'Adding an economic operator on Etsy']);
+    $context = new GenerationStepContext($generation->id, BlogGenerationType::Article, null, null, Fixtures::context()->settings, textOutputs(), [], 1);
 
     $result = app(AssembleGeneratedBlogDraftAction::class)->execute($context);
 

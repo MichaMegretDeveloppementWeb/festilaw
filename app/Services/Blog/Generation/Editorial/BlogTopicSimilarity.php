@@ -23,6 +23,20 @@ final class BlogTopicSimilarity
     /** Part de mots communs a partir de laquelle deux titres parlent de la meme chose. */
     private const THRESHOLD = 0.8;
 
+    /** Mots qu'un titre de fond doit ajouter a un titre connu pour en etre un angle precis, dont un precis. */
+    private const ANGLE_WORDS = 2;
+
+    /**
+     * Mots qui, ajoutes a un titre connu, n'en font pas un angle precis : ils annoncent une mise a jour ou un
+     * format, pas un autre sujet (racines, comme `words()` les rend). Les nombres non plus.
+     */
+    private const GENERIC_WORDS = [
+        'chang', 'change', 'new', 'updat', 'update', 'rul', 'rule', 'requirement', 'explain', 'complete', 'full', 'basic',
+        'step', 'tip', 'tips', 'check', 'checklist', 'list', 'overview', 'simple', 'easy', 'quick', 'essential',
+        'practical', 'everything', 'detail', 'nouveau', 'nouvell', 'nouvelle', 'regl', 'regle', 'exigenc', 'exigence',
+        'nueva', 'nuevo', 'regla', 'requisito',
+    ];
+
     /** Mots qui ne disent rien du sujet, dans les trois langues du blog. */
     private const STOP_WORDS = [
         'a', 'an', 'the', 'to', 'for', 'of', 'in', 'on', 'and', 'or', 'your', 'you', 'what', 'how', 'why', 'with',
@@ -48,12 +62,35 @@ final class BlogTopicSimilarity
         foreach ($knownTitles as $title) {
             $other = $this->words($title);
 
-            if ($other !== [] && $this->overlap($words, $other, $kind) >= self::THRESHOLD) {
+            if ($other !== [] && $this->overlap($words, $other, $kind) >= self::THRESHOLD && ! $this->addsAnAngle($words, $other, $kind)) {
                 return $title;
             }
         }
 
         return null;
+    }
+
+    /**
+     * Un titre de fond qui reprend un titre connu en y ajoutant au moins deux mots, dont un precis (une
+     * plateforme, un type de produit, un pays), traite un angle precis, et la consigne du sujet en demande
+     * (controle du 20/11) : « GPSR label requirements for Etsy jewellery sellers » n'est pas « GPSR labels for
+     * Etsy sellers ». Une reformulation qui n'ajoute qu'un mot (« Adding ... »), ou que des mots generiques et une
+     * date (« what changes in 2027 », l'annonce d'un changement est un article d'actualite, decision de Micha du
+     * 19/11), reste un doublon.
+     *
+     * @param  list<string>  $candidate
+     * @param  list<string>  $known
+     */
+    private function addsAnAngle(array $candidate, array $known, BlogTopicKind $kind): bool
+    {
+        if ($kind === BlogTopicKind::News) {
+            return false;
+        }
+
+        $added = array_diff($candidate, $known);
+        $specific = array_filter($added, static fn (string $word): bool => ! ctype_digit($word) && ! in_array($word, self::GENERIC_WORDS, true));
+
+        return count($added) >= self::ANGLE_WORDS && $specific !== [];
     }
 
     /** @return list<string> */

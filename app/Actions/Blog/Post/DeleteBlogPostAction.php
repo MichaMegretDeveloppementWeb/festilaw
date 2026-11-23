@@ -19,7 +19,8 @@ use Throwable;
  * slugs sont gardes sans article. Ses textes et ses liens d'articles associes partent avec lui (cles
  * etrangeres). Ses images sont supprimees ensuite, apres la transaction, au mieux : celle qui
  * resisterait reste orpheline et la purge planifiee la reprendra. Un article genere par IA emporte son
- * sujet : il est marque refuse et ne sera plus propose.
+ * sujet : il est marque refuse et ne sera plus propose. Les liens des autres articles vers lui sont
+ * retires, leur texte reste (decision de Micha du 20/11).
  */
 final readonly class DeleteBlogPostAction
 {
@@ -27,6 +28,7 @@ final readonly class DeleteBlogPostAction
         private BlogPostSlugAssigner $slugs,
         private DeleteBlogImageAction $deleteImage,
         private BlogGenerationTopicRepository $topics,
+        private DetachLinksToBlogPostAction $detachLinks,
     ) {}
 
     /**
@@ -47,6 +49,8 @@ final readonly class DeleteBlogPostAction
                 $this->topics->rejectTopicOf($post->id, $post->generation_id);
             }
 
+            // Avant que ses adresses ne perdent leur article : les autres articles ne le montrent plus.
+            $this->detachLinks->execute($post->id);
             $this->slugs->entomb($post);
             $post->delete();
 

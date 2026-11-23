@@ -162,3 +162,13 @@ it('lets a news article take up a covered subject to say what changed, and still
         // Deux titres d'actualite presque identiques restent un doublon.
         ->and($similarity->duplicateOf('The Etsy economic operator rules change from 2027', $known, BlogTopicKind::News))->toBe('Etsy economic operator rules change in 2027');
 });
+
+it('lets an evergreen title that adds a precise angle to a known one go, and keeps a mere rewording a duplicate', function (string $candidate, string $known, ?string $expected) {
+    // Controle du 20/11 : la consigne du sujet demande des angles precis (une plateforme, un produit, un pays).
+    expect((new BlogTopicSimilarity)->duplicateOf($candidate, [$known]))->toBe($expected);
+})->with([
+    'a product type on a platform' => ['GPSR label requirements for Etsy jewellery sellers', 'GPSR labels for Etsy sellers', null],
+    'a product and a platform' => ['EU toy safety warnings for wooden toys sold on Amazon', 'Toy safety warnings in the EU', null],
+    'one word only' => ['GPSR responsible person explained', 'What is the GPSR responsible person', 'What is the GPSR responsible person'],
+    'generic words and a date' => ['GPSR label requirements, new rules for 2027', 'GPSR labels', 'GPSR labels'],
+]);

@@ -12,10 +12,13 @@ use Illuminate\Support\Facades\DB;
 /**
  * Repasse un article en brouillon : depublication d'un article publie, ou annulation d'une
  * programmation. La date de premiere publication est conservee (les anciens slugs d'un article deja
- * vu restent traces). Rejouable : un brouillon reste un brouillon.
+ * vu restent traces). Les liens des autres articles vers lui sont retires, leur texte reste (decision de
+ * Micha du 20/11). Rejouable : un brouillon reste un brouillon.
  */
 final readonly class UnpublishBlogPostAction
 {
+    public function __construct(private DetachLinksToBlogPostAction $detachLinks) {}
+
     /**
      * @throws BlogPostException
      */
@@ -30,6 +33,7 @@ final readonly class UnpublishBlogPostAction
                     'status' => BlogPostStatus::Draft,
                     'scheduled_for' => null,
                 ]);
+                $this->detachLinks->execute($post->id);
             }
 
             return $post;

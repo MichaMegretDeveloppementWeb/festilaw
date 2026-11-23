@@ -16,6 +16,8 @@ use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogGenerationStepStatus;
 use App\Exceptions\Blog\BlogAiProviderException;
 use App\Models\BlogGeneration;
+use App\Models\BlogGenerationStep;
+use App\Models\BlogImage;
 use App\Repositories\Blog\PendingBlogGenerationRepository;
 use App\Services\Blog\Generation\BlogGenerationLabels;
 use App\Services\Blog\Generation\Editorial\BlogAgentCaller;
@@ -222,4 +224,23 @@ it('relaunches with the models of the moment, keeping the higher of the two anno
 })->with([
     'the new forecast is higher' => [1, false],
     'the old one is higher' => [50_000_000, true],
+]);
+
+it('redoes the images of a generation relaunched after the purge deleted them, and keeps them otherwise', function (bool $purged, BlogGenerationStepStatus $expected) {
+    // Controle du 20/11 : les images attendent l'assemblage sans article, et la purge les efface au bout de 24 heures.
+    $generation = BlogGeneration::factory()->failed()->create();
+    $image = BlogImage::factory()->create(['blog_post_id' => null]);
+    $images = BlogGenerationStep::factory()->for($generation, 'generation')->named('images', 13)->completed()
+        ->create(['output' => ['mode' => 'stock', 'images' => [['number' => 0, 'image_id' => $image->id]], 'warnings' => []]]);
+
+    if ($purged) {
+        BlogImage::query()->whereKey($image->id)->delete();
+    }
+
+    app(RetryBlogGenerationAction::class)->execute($generation->id);
+
+    expect($images->refresh()->status)->toBe($expected);
+})->with([
+    'images purged' => [true, BlogGenerationStepStatus::Pending],
+    'images still there' => [false, BlogGenerationStepStatus::Completed],
 ]);

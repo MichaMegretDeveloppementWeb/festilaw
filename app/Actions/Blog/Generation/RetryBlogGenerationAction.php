@@ -51,6 +51,7 @@ final readonly class RetryBlogGenerationAction
 
         DB::transaction(function () use ($generation, $payload, $forecast): void {
             $this->requeue->resetUnfinishedSteps($generation->id);
+            $this->requeue->redoImagesIfGone($generation->id);
 
             // Conditionnee au statut : deux clics rapproches ne relancent qu'une fois.
             BlogGeneration::query()

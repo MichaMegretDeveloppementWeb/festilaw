@@ -19,6 +19,7 @@ use App\Services\Blog\Generation\Editorial\BlogInternalLinkResolver;
 use App\Services\Blog\Generation\Editorial\BlogPromptLibrary;
 use App\Services\Blog\Generation\Editorial\BlogWritingSignalsInspector;
 use App\Services\Blog\Generation\Editorial\EditorialMarkdown;
+use Carbon\CarbonImmutable;
 
 /**
  * Etape 5 · la redaction de l'article anglais, a partir du seul dossier de recherche. Le code controle ce
@@ -74,6 +75,8 @@ final class WritingStep extends EditorialStep
         $categories = $this->blog->categories();
         $posts = $this->blog->publishedPosts();
         $prompt = implode("\n\n", [
+            // La date du jour situe les regles datees de la reference (controle du 20/11).
+            $this->block('Today', CarbonImmutable::now()->toDateString()),
             $this->block('Topic', $topic),
             $this->block('Research file', ['sources' => $research['sources'] ?? [], 'facts' => $research['facts'], 'notes' => $research['notes'] ?? '']),
             $this->block('Instructions from the editor', $context->instructions ?? 'None.'),

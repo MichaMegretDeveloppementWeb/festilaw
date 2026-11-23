@@ -14,13 +14,9 @@ use App\Data\Blog\Generation\GenerationStepContext;
 use App\Data\Blog\Generation\GenerationStepResult;
 use App\Data\Blog\SaveBlogPostData;
 use App\Enums\Blog\BlogPostOrigin;
-use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
-use App\Enums\Blog\Generation\BlogTopicKind;
 use App\Exceptions\Blog\BlogEditorialException;
 use App\Repositories\Blog\BlogGeneratedDraftRepository;
-use App\Repositories\Blog\BlogTopicHistoryRepository;
 use App\Services\Blog\Generation\Editorial\BlogInternalLinkResolver;
-use App\Services\Blog\Generation\Editorial\BlogTopicSimilarity;
 use App\Services\Blog\Generation\Editorial\EditorialDocumentBuilder;
 use App\Services\Blog\Generation\Editorial\EditorialMarkdown;
 use Throwable;
@@ -33,8 +29,8 @@ use Throwable;
  * generation.
  *
  * Rejouable : si la generation a deja son brouillon (etape rejouee apres un verrou perdu ou une erreur
- * survenue apres l'enregistrement), il est rendu tel quel, sans second brouillon. Un second controle des
- * doublons porte sur le titre final, sauf pour un sujet impose, toujours traite (decision du 18/11).
+ * survenue apres l'enregistrement), il est rendu tel quel, sans second brouillon. Le second controle des
+ * doublons, sur le titre final, se fait desormais a la fin de l'etape du style (StyleStep, controle du 20/11).
  */
 final readonly class AssembleGeneratedBlogDraftAction implements GenerationStep
 {
@@ -44,8 +40,6 @@ final readonly class AssembleGeneratedBlogDraftAction implements GenerationStep
     public function __construct(
         private SaveBlogPostAction $savePost,
         private BlogGeneratedDraftRepository $drafts,
-        private BlogTopicHistoryRepository $history,
-        private BlogTopicSimilarity $similarity,
         private BlogInternalLinkResolver $links,
         private EditorialDocumentBuilder $documents,
     ) {}
@@ -76,17 +70,6 @@ final readonly class AssembleGeneratedBlogDraftAction implements GenerationStep
             if ($articles[$locale]->isEmpty()) {
                 throw BlogEditorialException::missingInput($this->key(), "the {$locale} article");
             }
-        }
-
-        $kind = BlogTopicKind::tryFrom((string) ($context->output('topic')['kind'] ?? '')) ?? BlogTopicKind::Evergreen;
-        $duplicateOf = filled($context->topicHint) ? null : $this->similarity->duplicateOf($articles['en']->title, $this->history->load(exceptGenerationId: $context->generationId)->titles(), $kind);
-
-        if ($duplicateOf !== null) {
-            return GenerationStepResult::stop(
-                BlogGenerationOutcomeReason::DuplicateTopic,
-                ['duplicate_of' => $duplicateOf],
-                summary: __('L\'article terminé reprenait « :title », déjà traité ou refusé, donc aucun brouillon n\'a été créé.', ['title' => $duplicateOf]),
-            );
         }
 
         $writing = $context->output('writing');

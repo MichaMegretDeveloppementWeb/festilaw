@@ -8,10 +8,14 @@ use App\Ai\Agents\Blog\StyleAgent;
 use App\Data\Blog\Generation\EditorialArticle;
 use App\Data\Blog\Generation\GenerationStepContext;
 use App\Data\Blog\Generation\GenerationStepResult;
+use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
+use App\Enums\Blog\Generation\BlogTopicKind;
 use App\Exceptions\Blog\BlogEditorialException;
+use App\Repositories\Blog\BlogTopicHistoryRepository;
 use App\Services\Blog\Generation\Editorial\BlogAgentCaller;
 use App\Services\Blog\Generation\Editorial\BlogFactGuard;
 use App\Services\Blog\Generation\Editorial\BlogPromptLibrary;
+use App\Services\Blog\Generation\Editorial\BlogTopicSimilarity;
 use App\Services\Blog\Generation\Editorial\BlogWritingSignalsInspector;
 
 /**
@@ -30,6 +34,8 @@ final class StyleStep extends EditorialStep
         BlogPromptLibrary $prompts,
         private readonly BlogFactGuard $guard,
         private readonly BlogWritingSignalsInspector $signals,
+        private readonly BlogTopicHistoryRepository $history,
+        private readonly BlogTopicSimilarity $similarity,
         private readonly int $maxFlaggedSentences,
     ) {
         parent::__construct($caller, $prompts);
@@ -83,19 +89,46 @@ final class StyleStep extends EditorialStep
             }
         }
 
+        $output = [
+            'article' => $final->toArray(),
+            'style_applied' => $applied,
+            'differences' => $differences,
+            'second_pass' => $secondPass,
+            'signals' => $signals,
+        ];
+
+        // Le titre final se controle ici, avant les traductions et les images (controle du 20/11) : a
+        // l'assemblage, un doublon avait deja tout paye.
+        $duplicateOf = $this->duplicateOf($final->title, $context);
+
+        if ($duplicateOf !== null) {
+            return GenerationStepResult::stop(
+                BlogGenerationOutcomeReason::DuplicateTopic,
+                [...$output, 'duplicate_of' => $duplicateOf],
+                $usage,
+                __('Le titre final reprenait « :title », déjà traité ou refusé, donc l\'article s\'arrête avant ses traductions et ses images.', ['title' => $duplicateOf]),
+            );
+        }
+
         return GenerationStepResult::continue(
-            [
-                'article' => $final->toArray(),
-                'style_applied' => $applied,
-                'differences' => $differences,
-                'second_pass' => $secondPass,
-                'signals' => $signals,
-            ],
+            $output,
             $usage,
             $applied
                 ? $this->report($reply, __('Le style a été relu pour retirer les tournures d\'un texte généré.'))
                 : __('La relecture du style a été écartée, car elle modifiait un chiffre ou un lien. Le texte vérifié est gardé.'),
         );
+    }
+
+    /** Le titre connu que l'article termine reprend, ou nul. Un sujet impose n'est jamais un doublon. */
+    private function duplicateOf(string $title, GenerationStepContext $context): ?string
+    {
+        if (filled($context->topicHint)) {
+            return null;
+        }
+
+        $kind = BlogTopicKind::tryFrom((string) ($context->output('topic')['kind'] ?? '')) ?? BlogTopicKind::Evergreen;
+
+        return $this->similarity->duplicateOf($title, $this->history->load(exceptGenerationId: $context->generationId)->titles(), $kind);
     }
 
     /** Le texte que le controle des signes lit : le titre, comme un intertitre, puis le corps. */

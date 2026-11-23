@@ -1,6 +1,7 @@
+<!-- La date de verification ci-dessous change avec blog.ai.rules_reference (config/blog.php) : la verification quotidienne rappelle de relire ce fichier passee la date de relecture. -->
 # Reference of EU product rules
 
-The rules below come from the official texts published on EUR-Lex. They are stable: an article may state them without a source from the research file. State them as they are written here. Do not widen their scope, and do not add a figure, a date, a deadline or a case they do not contain. News, enforcement actions, sweeps, what a platform asks or does, and national practice come only from the research file.
+The rules below come from the official texts published on EUR-Lex, as checked on 19 November 2026. They change rarely: an article may state them without a source from the research file. A rule tied to a date applies only from or until that date. State them as they are written here. Do not widen their scope, and do not add a figure, a date, a deadline or a case they do not contain. News, enforcement actions, sweeps, what a platform asks or does, and national practice come only from the research file.
 
 ## General Product Safety Regulation (EU) 2023/988 (GPSR)
 
@@ -34,9 +35,9 @@ The rules below come from the official texts published on EUR-Lex. They are stab
 
 ## Toys
 
-- Under Directive 2009/48/EC on the safety of toys, toys made available on the market bear the CE marking (Article 16(1)). It is affixed visibly, legibly and indelibly to the toy, to an affixed label or to the packaging (Article 17(1)).
-- The toy bears a type, batch, serial or model number or another element that identifies it, or, where the size or nature of the toy does not allow it, the information is on the packaging or in an accompanying document (Article 4(5)). The manufacturer indicates its name, registered trade name or registered trade mark and the address at which it can be contacted (Article 4(6)). Instructions and safety information are in a language easily understood by consumers, as determined by the Member State concerned (Article 4(7)).
-- Warnings are preceded by the word "Warning" or "Warnings". Warnings that determine the decision to purchase, such as the minimum and maximum ages of users, appear on the consumer packaging or are otherwise clearly visible to the consumer before the purchase (Article 11(2)).
+- Until 31 July 2030, under Directive 2009/48/EC on the safety of toys, toys made available on the market bear the CE marking (Article 16(1)). It is affixed visibly, legibly and indelibly to the toy, to an affixed label or to the packaging (Article 17(1)).
+- Until 31 July 2030, under the same directive, the toy bears a type, batch, serial or model number or another element that identifies it, or, where the size or nature of the toy does not allow it, the information is on the packaging or in an accompanying document (Article 4(5)). The manufacturer indicates its name, registered trade name or registered trade mark and the address at which it can be contacted (Article 4(6)). Instructions and safety information are in a language easily understood by consumers, as determined by the Member State concerned (Article 4(7)).
+- Until 31 July 2030, under the same directive, warnings are preceded by the word "Warning" or "Warnings". Warnings that determine the decision to purchase, such as the minimum and maximum ages of users, appear on the consumer packaging or are otherwise clearly visible to the consumer before the purchase (Article 11(2)).
 - Regulation (EU) 2025/2509 on the safety of toys, adopted on 26 November 2025 and published in the Official Journal on 12 December 2025, applies from 1 August 2030. It repeals Directive 2009/48/EC from that date (Articles 56 and 59).
 
 ## Product Liability Directive (EU) 2024/2853

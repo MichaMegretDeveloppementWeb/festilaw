@@ -38,6 +38,10 @@ final class FactCheckAgent extends BlogAgent implements HasStructuredOutput
                 'statement_fr' => $schema->string()->description('What the article says, in one plain French sentence.')->required(),
                 'check_fr' => $schema->string()->description('What the editor should check, in one plain French sentence.')->required(),
             ]))->required(),
+            'reference_conflicts' => $schema->array()->items($schema->object([
+                'statement' => $schema->string()->description('The statement of the article that follows the reference, in English.')->required(),
+                'source' => $schema->string()->description('The address of the official source of the web evidence that contradicts it.')->required(),
+            ]))->required(),
             'report_fr' => $schema->string()->required(),
         ];
     }
