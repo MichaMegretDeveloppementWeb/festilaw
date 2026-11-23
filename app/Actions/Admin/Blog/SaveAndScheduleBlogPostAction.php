@@ -12,11 +12,13 @@ use App\Exceptions\BaseAppException;
 use App\Exceptions\Blog\BlogPostException;
 use App\Services\Blog\Post\BlogPostReadinessCalculator;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Bouton "Programmer" du formulaire : enregistre ce qui est a l'ecran, puis programme la publication
- * si l'article est pret. Meme principe que SaveAndPublishBlogPostAction : un article pas encore pret
- * reste enregistre en brouillon, et le resultat dit ce qui bloque.
+ * si l'article est pret, dans une seule transaction. Meme principe que SaveAndPublishBlogPostAction : un
+ * article pas encore pret reste enregistre en brouillon, et le resultat dit ce qui bloque ; une
+ * programmation qui echoue annule aussi l'enregistrement.
  */
 final readonly class SaveAndScheduleBlogPostAction
 {
@@ -39,15 +41,17 @@ final readonly class SaveAndScheduleBlogPostAction
             throw BlogPostException::scheduleNotInFuture($data->postId ?? 0, $at);
         }
 
-        $post = $this->save->execute($data);
-        $readiness = $this->readiness->calculate($post);
+        return DB::transaction(function () use ($data, $at): BlogPostStatusChangeResult {
+            $post = $this->save->execute($data);
+            $readiness = $this->readiness->calculate($post);
 
-        if (! $readiness->isReady()) {
-            return BlogPostStatusChangeResult::notReady($post->id, $readiness);
-        }
+            if (! $readiness->isReady()) {
+                return BlogPostStatusChangeResult::notReady($post->id, $readiness);
+            }
 
-        $this->schedule->execute($post->id, $at);
+            $this->schedule->execute($post->id, $at);
 
-        return BlogPostStatusChangeResult::done($post->id);
+            return BlogPostStatusChangeResult::done($post->id);
+        });
     }
 }

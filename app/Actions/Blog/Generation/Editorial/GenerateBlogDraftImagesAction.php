@@ -15,6 +15,7 @@ use App\Data\Blog\StoreBlogImageData;
 use App\Enums\Blog\BlogImageCreditSource;
 use App\Enums\Blog\BlogImageUsage;
 use App\Enums\Blog\Generation\BlogAiImageMode;
+use App\Exceptions\BaseAppException;
 use App\Exceptions\Blog\BlogAiProviderException;
 use App\Exceptions\Blog\BlogEditorialException;
 use App\Models\BlogImage;
@@ -54,6 +55,13 @@ final readonly class GenerateBlogDraftImagesAction implements GenerationStep
     private const CAUSE_BANK = 'bank_unavailable';
 
     private const CAUSE_FAILED = 'failed';
+
+    /**
+     * Une image trouvee ou generee que le serveur n'a pas pu enregistrer (disque plein, droits, traitement de
+     * l'image) : une panne du serveur, pas un choix de l'IA, nommee comme telle et portee au rapport du matin
+     * (audit du 23/11).
+     */
+    private const CAUSE_STORAGE = 'storage_failed';
 
     public function __construct(
         private StockImageProvider $stock,
@@ -135,8 +143,11 @@ final readonly class GenerateBlogDraftImagesAction implements GenerationStep
                 $stored = null;
                 Log::warning('Blog generation image could not be generated.', ['generation' => $context->generationId, 'image' => $number, 'exception' => $e]);
             } catch (Throwable $e) {
-                $stored = null;
-                Log::warning('Blog generation image could not be found or stored.', ['generation' => $context->generationId, 'image' => $number, 'exception' => $e]);
+                // Un fichier refuse par les regles des images (trop petit, format) n'est qu'une photo qui ne
+                // convenait pas ; tout le reste est une panne du serveur.
+                $refused = $e instanceof BaseAppException && $e->isRefusal();
+                $stored = $refused ? null : ['image' => null, 'usage' => null, 'cause' => self::CAUSE_STORAGE];
+                Log::log($refused ? 'warning' : 'error', $refused ? 'Blog generation image was refused by the image rules.' : 'Blog generation image could not be stored.', ['generation' => $context->generationId, 'image' => $number, 'exception' => $e]);
             }
 
             if ($stored !== null && $stored['usage'] !== null) {
@@ -289,6 +300,7 @@ final readonly class GenerateBlogDraftImagesAction implements GenerationStep
     private function summary(BlogAiImageMode $mode, int $count, bool $missingMain, ?string $mainCause): string
     {
         $done = match (true) {
+            $count === 0 && $mainCause === self::CAUSE_STORAGE => __("Les images n'ont pas pu être enregistrées sur le serveur."),
             $mode !== BlogAiImageMode::Stock => trans_choice('{0} Aucune image n\'a pu être générée.|{1} Une image a été générée par l\'IA.|[2,*] :count images ont été générées par l\'IA.', $count, ['count' => $count]),
             $count === 0 && $mainCause === self::CAUSE_BANK => __('La banque de photos n\'a pas répondu, aucune photo n\'a pu être choisie.'),
             $count === 0 && $mainCause === self::CAUSE_CHECK => __('Les photos trouvées n\'ont pas pu être contrôlées, aucune n\'a été prise.'),

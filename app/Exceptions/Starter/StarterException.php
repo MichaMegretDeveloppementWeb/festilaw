@@ -11,34 +11,34 @@ final class StarterException extends BaseAppException
 {
     public static function dossierIncomplete(int $submissionId): self
     {
-        return new self(
+        return (new self(
             technicalMessage: "STARTER submission [{$submissionId}] cannot proceed to payment: dossier is incomplete.",
             userMessage: 'Please upload all required documents and sign your agreement before paying.',
-        );
+        ))->asRefusal();
     }
 
     public static function renewalNotDue(int $submissionId): self
     {
-        return new self(
+        return (new self(
             technicalMessage: "Submission [{$submissionId}] has no renewal due: cannot start a renewal payment.",
             userMessage: 'Your subscription is up to date · there is nothing to renew right now.',
-        );
+        ))->asRefusal();
     }
 
     public static function dossierCancelled(int $submissionId): self
     {
-        return new self(
+        return (new self(
             technicalMessage: "Submission [{$submissionId}] is cancelled: refusing to start a renewal payment.",
             userMessage: 'This file has been cancelled and can no longer be renewed. Please contact us.',
-        );
+        ))->asRefusal();
     }
 
     public static function renewalInProgress(int $submissionId): self
     {
-        return new self(
+        return (new self(
             technicalMessage: "Submission [{$submissionId}] already has a renewal payment awaiting confirmation: refusing to start a second one.",
             userMessage: 'Your renewal is being confirmed · please wait a moment before trying again.',
-        );
+        ))->asRefusal();
     }
 
     public static function contractMissing(int $submissionId): self
@@ -68,34 +68,34 @@ final class StarterException extends BaseAppException
 
     public static function packChangeNotAllowed(int $submissionId, string $reason): self
     {
-        return new self(
+        return (new self(
             technicalMessage: "STARTER submission [{$submissionId}] cannot change pack: {$reason}.",
             userMessage: 'Your plan can no longer be changed from here (a payment has been made or is in progress). Please contact us.',
-        );
+        ))->asRefusal();
     }
 
     public static function packUpgradeUnavailable(int $submissionId, string $reason): self
     {
-        return new self(
+        return (new self(
             technicalMessage: "STARTER submission [{$submissionId}] cannot switch to Pro: {$reason}.",
             userMessage: 'Switching to the Pro Pack is not available for your file right now. Please contact us.',
-        );
+        ))->asRefusal();
     }
 
     public static function packDowngradeUnavailable(int $submissionId, string $reason): self
     {
-        return new self(
+        return (new self(
             technicalMessage: "STARTER submission [{$submissionId}] cannot request the Creator pack: {$reason}.",
             userMessage: 'Switching to the Creator Pack cannot be requested for your file right now. Please contact us.',
-        );
+        ))->asRefusal();
     }
 
     public static function packUpgradeNotSigned(int $submissionId): self
     {
-        return new self(
+        return (new self(
             technicalMessage: "STARTER submission [{$submissionId}] cannot pay the Pro upgrade: the Pro mandate is not signed.",
             userMessage: 'Please sign your Pro Pack agreement before paying.',
-        );
+        ))->asRefusal();
     }
 
     /** @param  list<string>  $missingTypes */
@@ -103,9 +103,9 @@ final class StarterException extends BaseAppException
     {
         $list = implode(', ', $missingTypes);
 
-        return new self(
+        return (new self(
             technicalMessage: "STARTER submission [{$submissionId}] is missing required documents: [{$list}].",
             userMessage: 'Please add every required document before continuing.',
-        );
+        ))->asRefusal();
     }
 }

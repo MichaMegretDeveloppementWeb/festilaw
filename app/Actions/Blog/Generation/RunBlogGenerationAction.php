@@ -90,14 +90,14 @@ final readonly class RunBlogGenerationAction
         try {
             // Les modeles sont ceux figes au lancement (controle du 20/11), comme l'arret de securite.
             $settings = GenerationModels::applyTo($this->settings->current(), $generation->payload);
-            $ceiling = $this->safetyStop->ceiling($this->announcedHigh($generation, $settings));
+            $ceiling = $this->safetyStop->ceiling((int) $generation->forecast_high_microusd);
             $this->runSteps($generation, $owner, $settings, $ceiling, $handOverAt);
         } catch (Throwable $e) {
             // Dernier filet du traitement : une erreur hors d'une etape (configuration du pipeline, base) ne
             // doit pas laisser la generation « en cours » etre reprise en boucle.
             Log::error('Blog generation crashed outside of a step.', ['generation_id' => $generation->id, 'exception' => $e]);
 
-            $this->finish($generation, $owner, $settings, BlogGenerationStatus::Failed, BlogGenerationOutcomeReason::StepFailed, $e->getMessage());
+            $this->finish($generation, $owner, $settings, BlogGenerationStatus::Failed, BlogGenerationOutcomeReason::StepFailed);
         }
     }
 
@@ -117,7 +117,7 @@ final readonly class RunBlogGenerationAction
             }
 
             if ($this->cancellations->isRequested($generation->id)) {
-                $this->finish($generation, $owner, $settings, BlogGenerationStatus::Cancelled, BlogGenerationOutcomeReason::CancelledByUser, null);
+                $this->finish($generation, $owner, $settings, BlogGenerationStatus::Cancelled, BlogGenerationOutcomeReason::CancelledByUser);
 
                 return;
             }
@@ -152,7 +152,7 @@ final readonly class RunBlogGenerationAction
             }
 
             if ($outcome->cancelled) {
-                $this->finish($generation, $owner, $settings, BlogGenerationStatus::Cancelled, BlogGenerationOutcomeReason::CancelledByUser, null);
+                $this->finish($generation, $owner, $settings, BlogGenerationStatus::Cancelled, BlogGenerationOutcomeReason::CancelledByUser);
 
                 return;
             }
@@ -173,7 +173,7 @@ final readonly class RunBlogGenerationAction
                 ]);
 
                 $reason = $outcome->stoppedBeforeCall ? BlogGenerationOutcomeReason::SafetyStopBeforeCall : BlogGenerationOutcomeReason::SafetyStop;
-                $this->finish($generation, $owner, $settings, BlogGenerationStatus::Abandoned, $reason, null);
+                $this->finish($generation, $owner, $settings, BlogGenerationStatus::Abandoned, $reason);
 
                 return;
             }
@@ -185,13 +185,13 @@ final readonly class RunBlogGenerationAction
 
                 Log::error('Blog generation failed.', ['generation_id' => $generation->id, 'step' => $step->key(), 'exception' => $outcome->error]);
 
-                $this->finish($generation, $owner, $settings, BlogGenerationStatus::Failed, $this->failureReason($outcome), $outcome->error?->getMessage());
+                $this->finish($generation, $owner, $settings, BlogGenerationStatus::Failed, $this->failureReason($outcome));
 
                 return;
             }
 
             if ($outcome->result->stopsGeneration()) {
-                $this->finish($generation, $owner, $settings, BlogGenerationStatus::Abandoned, $outcome->result->stopReason, null);
+                $this->finish($generation, $owner, $settings, BlogGenerationStatus::Abandoned, $outcome->result->stopReason);
 
                 return;
             }
@@ -200,7 +200,7 @@ final readonly class RunBlogGenerationAction
             $stepsRun++;
         }
 
-        $this->finish($generation, $owner, $settings, BlogGenerationStatus::Completed, null, null);
+        $this->finish($generation, $owner, $settings, BlogGenerationStatus::Completed, null);
     }
 
     /** La raison affichee d'un echec, d'apres la sorte de la panne du fournisseur (controle du 20/11). */
@@ -265,22 +265,6 @@ final readonly class RunBlogGenerationAction
         return $ceiling - $this->spend->costOf($generationId);
     }
 
-    /** Le haut du cout annonce, calcule et garde pour une generation lancee avant que l'annonce existe. */
-    private function announcedHigh(BlogGeneration $generation, BlogAiSettings $settings): int
-    {
-        if ($generation->forecast_high_microusd !== null) {
-            return $generation->forecast_high_microusd;
-        }
-
-        $forecast = $this->forecaster->forGeneration($settings, $generation->type, $generation->payload, topicImposed: filled($generation->topic_hint));
-        BlogGeneration::query()->whereKey($generation->id)->update([
-            'forecast_low_microusd' => $forecast->lowMicrousd,
-            'forecast_high_microusd' => $forecast->highMicrousd,
-        ]);
-
-        return $forecast->highMicrousd;
-    }
-
     private function holdLock(int $generationId, string $owner, GenerationStep $step): bool
     {
         return $this->locks->extend(
@@ -297,7 +281,6 @@ final readonly class RunBlogGenerationAction
         ?BlogAiSettings $settings,
         BlogGenerationStatus $status,
         ?BlogGenerationOutcomeReason $reason,
-        ?string $error,
     ): void {
         $finished = BlogGeneration::query()
             ->whereKey($generation->id)
@@ -306,7 +289,6 @@ final readonly class RunBlogGenerationAction
                 'status' => $status->value,
                 'outcome_reason' => $reason?->value,
                 'current_step' => null,
-                'last_error' => $error,
                 'finished_at' => CarbonImmutable::now(),
                 'locked_until' => null,
                 'lock_owner' => null,

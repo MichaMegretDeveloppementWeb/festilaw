@@ -22,25 +22,25 @@ final class BlogContentException extends BaseAppException
 
     public static function tooLarge(int $bytes, int $maxBytes): self
     {
-        return new self(
+        return (new self(
             technicalMessage: "Blog content is too large: {$bytes} bytes (maximum {$maxBytes}).",
             userMessage: 'Le contenu de l\'article est trop long pour être enregistré. Raccourcissez-le ou découpez-le en plusieurs articles.',
-        );
+        ))->asRefusal();
     }
 
     public static function tooManyNodes(int $maxNodes): self
     {
-        return new self(
+        return (new self(
             technicalMessage: "Blog content has more than {$maxNodes} nodes.",
             userMessage: 'Le contenu de l\'article comporte trop d\'éléments pour être enregistré. Simplifiez sa mise en forme.',
-        );
+        ))->asRefusal();
     }
 
     public static function tooDeep(int $maxDepth): self
     {
-        return new self(
+        return (new self(
             technicalMessage: "Blog content is nested deeper than {$maxDepth} levels.",
             userMessage: 'Le contenu de l\'article comporte des listes imbriquées trop profondément. Simplifiez-les.',
-        );
+        ))->asRefusal();
     }
 }

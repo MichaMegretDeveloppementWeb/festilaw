@@ -159,7 +159,6 @@ it('restarts a failed generation from the step that failed, keeping what was don
 
     expect($generation->status)->toBe(BlogGenerationStatus::Queued)
         ->and($generation->outcome_reason)->toBeNull()
-        ->and($generation->last_error)->toBeNull()
         ->and($generation->finished_at)->toBeNull()
         ->and($generation->batch_uuid)->not->toBe($oldBatch)
         ->and($generation->batch_notified_at)->toBeNull()

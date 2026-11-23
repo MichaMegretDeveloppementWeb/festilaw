@@ -122,11 +122,14 @@ it('shows the stalled tasks in the back-office, in production', function () {
     actingAs(User::factory()->create())
         ->get(route('admin.submissions.index'))
         ->assertOk()
-        ->assertSee('Les tâches automatiques ne tournent plus depuis le 05/10/2026 à 11:30 (UTC)')
-        ->assertSee('Tâches automatiques à l&#039;arrêt', false);
+        ->assertSee('Les relances et la génération automatique sont à l&#039;arrêt depuis le 05/10/2026 à 11:30 (UTC)', false)
+        ->assertSee('L&#039;assistance technique est prévenue par e-mail.', false)
+        // Audit du 23/11 : ni pastille d'etat technique ni vocabulaire du serveur a l'ecran de Laetitia.
+        ->assertDontSee('Tâches automatiques')
+        ->assertDontSee('cron');
 });
 
-it('shows the last passage in the back-office while the cron runs, and nothing outside production', function () {
+it('says nothing about the cron in the back-office while it runs, in production or not', function () {
     heartbeatMinutesAgo(1);
     $admin = User::factory()->create();
 
@@ -137,11 +140,6 @@ it('shows the last passage in the back-office while the cron runs, and nothing o
     $this->app['env'] = 'production';
     actingAs($admin)->get(route('admin.submissions.index'))
         ->assertOk()
-        ->assertSee('Tâches automatiques · il y a 1 min')
-        ->assertSee('data-scheduler-state="ok"', false)
-        ->assertDontSee('ne tournent plus');
-
-    $this->artisan('festilaw:scheduler-heartbeat');
-    actingAs($admin)->get(route('admin.submissions.index'))
-        ->assertSee('Tâches automatiques · à l&#039;instant', false);
+        ->assertDontSee('Tâches automatiques')
+        ->assertDontSee('à l&#039;arrêt depuis', false);
 });

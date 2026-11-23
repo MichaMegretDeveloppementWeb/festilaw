@@ -32,7 +32,7 @@ final class QueueBlogGeneration extends Command
                 instructions: $this->option('instructions'),
             ));
         } catch (BaseAppException $e) {
-            Log::error($e->getMessage(), ['exception' => $e]);
+            Log::log($e->logLevel(), $e->getMessage(), ['exception' => $e]);
             $this->error($e->getUserMessage());
 
             return self::FAILURE;

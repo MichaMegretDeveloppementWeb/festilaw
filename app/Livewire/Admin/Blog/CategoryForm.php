@@ -120,7 +120,7 @@ class CategoryForm extends Component
         try {
             $saveCategory->execute(new SaveBlogCategoryData($this->categoryId, $translations));
         } catch (BaseAppException $e) {
-            Log::error($e->getMessage(), ['exception' => $e]);
+            Log::log($e->logLevel(), $e->getMessage(), ['exception' => $e]);
             $this->addError('form', $e->getUserMessage());
 
             return;

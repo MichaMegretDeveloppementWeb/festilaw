@@ -142,7 +142,7 @@ class GenerationLauncher extends Component
                 effort: BlogEffortLevel::from((string) $validated['effort']),
             ));
         } catch (BaseAppException $e) {
-            Log::error($e->getMessage(), ['exception' => $e]);
+            Log::log($e->logLevel(), $e->getMessage(), ['exception' => $e]);
             $this->dispatch('ui-toast', title: $e->getUserMessage(), type: 'error');
 
             return;

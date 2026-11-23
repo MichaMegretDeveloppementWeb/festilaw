@@ -14,16 +14,16 @@ use Throwable;
 
 /**
  * En PRODUCTION, si la configuration est apte a simuler ou degrader un paiement / une signature / les
- * emails (faux prestataires, mode test, mail simule, debug...), on trace un AVERTISSEMENT dans les logs
- * SANS bloquer la requete : une mise en ligne peut etre volontairement partielle (ex. SIGNWELL_TEST_MODE
- * le temps d'une recette, SMTP pas encore branche). L'avertissement est throttle (au plus une fois par
- * heure et par jeu de manquements) pour ne pas saturer les logs. La verification bloquante reste
- * disponible a la demande via `festilaw:check-production` (checklist go-live / CI). Hors prod : no-op.
+ * emails / la generation d'articles (faux prestataires, mode test, mail simule, debug, cle manquante...), on
+ * le journalise en ERREUR SANS bloquer la requete : une mise en ligne peut etre volontairement partielle (ex.
+ * SIGNWELL_TEST_MODE le temps d'une recette). En erreur, le manquement part au rapport du matin, une fois par
+ * jour et par jeu de manquements (audit du 23/11 : en warning, personne ne le voyait). deploy.sh lance aussi
+ * `festilaw:check-production` en fin de deploiement. Hors prod : no-op.
  */
 final class EnsureProductionIsConfigured
 {
-    /** Fenetre anti-spam du log d'avertissement (une entree par heure suffit a signaler l'etat). */
-    private const WARN_THROTTLE_MINUTES = 60;
+    /** Une entree par jour suffit : le rapport d'erreurs du matin la porte tant que le manquement dure. */
+    private const WARN_THROTTLE_MINUTES = 1_440;
 
     public function __construct(private readonly ProductionSafetyService $safety) {}
 
@@ -54,7 +54,7 @@ final class EnsureProductionIsConfigured
 
             // Cache::add est atomique : ne loggue qu'a la premiere requete de la fenetre pour ce jeu.
             if (Cache::add('production-safety-warned:'.$fingerprint, true, now()->addMinutes(self::WARN_THROTTLE_MINUTES))) {
-                Log::warning('Production configuration warnings (non-blocking).', ['violations' => $violations]);
+                Log::error('Production configuration is incomplete (non-blocking).', ['violations' => $violations]);
             }
         } catch (Throwable $e) {
             // Avertissement best-effort : on avale tout pour garantir que la requete passe malgre tout.

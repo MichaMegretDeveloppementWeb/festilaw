@@ -129,7 +129,7 @@ it('fails the go-live check command when the configuration is unfit', function (
     $this->artisan('festilaw:check-production')->assertFailed();
 });
 
-it('serves normally in production despite an unfit config, logging a non-blocking warning', function () {
+it('serves normally in production despite an unfit config, logging a non-blocking error for the morning report', function () {
     $this->app['env'] = 'production';
     Cache::flush(); // repartir d'un throttle vierge
     Log::spy();
@@ -139,8 +139,8 @@ it('serves normally in production despite an unfit config, logging a non-blockin
 
     // Le site est servi (plus de blocage 503) ...
     expect($response->getContent())->toBe('ok');
-    // ... et un avertissement non bloquant est trace.
-    Log::shouldHaveReceived('warning')
+    // ... et une erreur non bloquante est tracee : le rapport du matin la porte (audit du 23/11).
+    Log::shouldHaveReceived('error')
         ->once()
         ->withArgs(fn (string $message, array $context): bool => str_contains($message, 'non-blocking')
             && ($context['violations'] ?? []) !== []);
@@ -157,7 +157,7 @@ it('throttles the production warning to avoid flooding the logs on every request
     app(EnsureProductionIsConfigured::class)->handle(Request::create('/'), $handler);
 
     // Deux requetes, un seul log (throttle par empreinte du jeu de manquements).
-    Log::shouldHaveReceived('warning')->once();
+    Log::shouldHaveReceived('error')->once();
 });
 
 it('serves normally in production when the configuration is clean, without warning', function () {
@@ -169,7 +169,7 @@ it('serves normally in production when the configuration is clean, without warni
     $response = app(EnsureProductionIsConfigured::class)->handle(Request::create('/'), fn () => response('ok'));
 
     expect($response->getContent())->toBe('ok');
-    Log::shouldNotHaveReceived('warning');
+    Log::shouldNotHaveReceived('error');
 });
 
 it('the production check does nothing outside production, even with an unfit config', function () {

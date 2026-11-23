@@ -589,3 +589,21 @@ it('warns in the form about an image of the article that is not described in eve
         ->assertSee('Conseillé, sans être obligatoire')
         ->assertSee('description d\'une image');
 });
+
+it('saves nothing when the publication fails after the saving, so that the screen tells the truth', function () {
+    // Audit du 23/11 : enregistrement et publication se font dans une seule transaction.
+    $post = BlogContent::draft('pending');
+    BlogPost::updating(static function (BlogPost $updated): void {
+        if ($updated->status === BlogPostStatus::Published) {
+            throw new RuntimeException('Publication failed.');
+        }
+    });
+
+    Livewire::test(PostForm::class, ['post' => $post->id])
+        ->set('texts.en.title', 'A title that must not stay')
+        ->call('publish', BlogContent::contentsOf($post));
+
+    expect($post->fresh()->status)->toBe(BlogPostStatus::Draft)
+        ->and($post->translationFor('en')->fresh()->title)->not->toBe('A title that must not stay')
+        ->and(BlogPost::query()->count())->toBe(1);
+});

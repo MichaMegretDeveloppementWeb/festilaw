@@ -2,12 +2,16 @@
 
 declare(strict_types=1);
 
+use App\Actions\Blog\Image\StoreBlogImageAction;
 use App\Actions\Blog\Image\UpdateBlogImageAltAction;
+use App\Data\Blog\StoreBlogImageData;
+use App\Enums\Blog\BlogImageUsage;
 use App\Exceptions\Blog\BlogImageException;
 use App\Livewire\Admin\Blog\PostForm;
 use App\Models\BlogImage;
 use App\Models\BlogPost;
 use App\Models\User;
+use App\Services\Blog\Image\BlogImagePaths;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -30,6 +34,8 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     Storage::fake('public');
+    // Les sources non decoupees vont sur le disque prive (audit du 23/11).
+    Storage::fake('local');
     actingAs(User::factory()->create());
 });
 
@@ -113,6 +119,15 @@ describe('sending an image', function () {
                 && $params['life'] > 4000);
 
         expect(BlogImage::query()->count())->toBe(0);
+        // Un refus d'utilisation reste hors du rapport d'erreurs du matin (decision de Micha du 23/11).
+        Log::shouldHaveReceived('log')->withArgs(fn (string $level): bool => $level === 'warning')->once();
+        Log::shouldNotHaveReceived('error');
+    });
+
+    it('keeps in the morning error report a failure of the server, but not a refusal the screen explains', function () {
+        expect(BlogImageException::tooSmall(800, 400, 1200, 630)->logLevel())->toBe('warning')
+            ->and(BlogImageException::storageFailed('uuid', new RuntimeException('disk full'))->logLevel())->toBe('error')
+            ->and(BlogImageException::processingFailed(new RuntimeException('GD'))->logLevel())->toBe('error');
     });
 
     it('refuses a file that is not an image', function () {
@@ -178,7 +193,7 @@ describe('framing an image of the text', function () {
             ->call('storeImage', 'content', ['x' => 500, 'y' => 100, 'width' => 1000, 'height' => 800], ['fr' => 'Une étiquette CE', 'de' => 'ignoriert'])
             ->assertSet('imageUpload', null)
             ->assertReturned(fn (array $summary): bool => $summary['url'] !== null
-                && str_ends_with((string) $summary['source'], '-source.webp')
+                && preg_match('~/admin/blog/images/\d+/source$~', (string) $summary['source']) === 1
                 && $summary['crop'] === ['x' => 500, 'y' => 100, 'width' => 1000, 'height' => 800]
                 && $summary['alt']['fr'] === 'Une étiquette CE');
 
@@ -267,7 +282,7 @@ describe('framing an image of the text', function () {
         $older = BlogImage::factory()->create(['blog_post_id' => $post->id]);
 
         Livewire::test(PostForm::class, ['post' => $post->id])
-            ->assertViewHas('initialImages', fn (array $images): bool => str_ends_with((string) $images[$image->id]['source'], '-source.webp')
+            ->assertViewHas('initialImages', fn (array $images): bool => $images[$image->id]['source'] === route('admin.blog.images.source', ['image' => $image->id])
                 && $images[$image->id]['crop'] === ['x' => 10, 'y' => 20, 'width' => 800, 'height' => 600]
                 && str_ends_with((string) $images[$older->id]['source'], '-1600.webp')
                 && $images[$older->id]['crop'] === null);
@@ -477,4 +492,26 @@ describe('choosing the related articles', function () {
         expect(count(DB::getQueryLog()))->toBe(5);
         DB::disableQueryLog();
     });
+});
+
+it('serves the uncut source of an image only to a signed-in admin, from the private disk', function () {
+    // Audit du 23/11 : publique, la source montrait ce que le recadrage avait retire.
+    Storage::fake('public');
+    Storage::fake('local');
+    $image = app(StoreBlogImageAction::class)->execute(new StoreBlogImageData(
+        BlogImageFiles::jpeg(2000, 1000), BlogImageUsage::Content, keepSource: true,
+    ));
+    $source = app(BlogImagePaths::class)->sourceOf($image);
+
+    expect(Storage::disk('local')->exists($source))->toBeTrue()
+        ->and(Storage::disk('public')->exists($source))->toBeFalse();
+
+    auth()->logout();
+    $this->get(route('admin.blog.images.source', ['image' => $image->id]))->assertRedirect(route('admin.login'));
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('admin.blog.images.source', ['image' => $image->id]))
+        ->assertOk()
+        ->assertHeader('Content-Type', 'image/webp');
+    $this->get(route('admin.blog.images.source', ['image' => 999_999]))->assertNotFound();
 });

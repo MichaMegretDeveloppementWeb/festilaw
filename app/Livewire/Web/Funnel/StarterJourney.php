@@ -178,7 +178,7 @@ class StarterJourney extends Component
         } catch (BaseAppException $e) {
             // Echec de l'appel au prestataire de signature : message clair nommant le prestataire plutot
             // que le message technique generique. Le detail technique part dans les logs.
-            Log::error($e->getMessage(), ['exception' => $e]);
+            Log::log($e->logLevel(), $e->getMessage(), ['exception' => $e]);
             $provider = $this->submission->contract?->signatureProviderLabel();
             $this->addError('journey', $provider
                 ? __('We could not reach :provider to check your signature right now. Please try again in a moment.', ['provider' => $provider])
@@ -278,7 +278,7 @@ class StarterJourney extends Component
         try {
             $session = $startContractSigning->execute($this->submission);
         } catch (BaseAppException $e) {
-            Log::error($e->getMessage(), ['exception' => $e]);
+            Log::log($e->logLevel(), $e->getMessage(), ['exception' => $e]);
             $this->addError('journey', __($e->getUserMessage()));
 
             return;
@@ -471,7 +471,7 @@ class StarterJourney extends Component
         try {
             $submitStarterDocuments->execute($this->submission, $deposited);
         } catch (BaseAppException $e) {
-            Log::error($e->getMessage(), ['exception' => $e]);
+            Log::log($e->logLevel(), $e->getMessage(), ['exception' => $e]);
             $this->addError('documents_submit', __($e->getUserMessage()));
 
             return;
@@ -523,7 +523,7 @@ class StarterJourney extends Component
         try {
             $replaceDocument->execute($this->submission, $docType, $this->replacements[$type]);
         } catch (BaseAppException $e) {
-            Log::error($e->getMessage(), ['exception' => $e]);
+            Log::log($e->logLevel(), $e->getMessage(), ['exception' => $e]);
             $this->addError("replacements.{$type}", __($e->getUserMessage()));
 
             return;
@@ -554,7 +554,7 @@ class StarterJourney extends Component
         try {
             $checkout = $startStarterPayment->execute($this->submission, $this->paymentProvider, $audience->currentSession());
         } catch (BaseAppException $e) {
-            Log::error($e->getMessage(), ['exception' => $e]);
+            Log::log($e->logLevel(), $e->getMessage(), ['exception' => $e]);
             $this->addError('journey', __($e->getUserMessage()));
 
             return null;
@@ -581,7 +581,7 @@ class StarterJourney extends Component
         try {
             $replacement = $changePack->execute($this->submission, $this->otherPack());
         } catch (BaseAppException $e) {
-            Log::error($e->getMessage(), ['exception' => $e]);
+            Log::log($e->logLevel(), $e->getMessage(), ['exception' => $e]);
             $this->confirmingPackChange = false;
             $this->addError('journey', __($e->getUserMessage()));
 

@@ -107,6 +107,8 @@ describe('festilaw:blog-publish-scheduled', function () {
 describe('festilaw:blog-purge-orphan-images', function () {
     beforeEach(function () {
         Storage::fake('public');
+        // Les sources non decoupees vont sur le disque prive (audit du 23/11).
+        Storage::fake('local');
     });
 
     /** Image reellement stockee (ligne + fichiers), vieillie de `$hours` heures. */

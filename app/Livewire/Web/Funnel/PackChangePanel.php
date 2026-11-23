@@ -127,7 +127,7 @@ final class PackChangePanel extends Component
         try {
             $requestDowngrade->execute($this->submission, $this->turnoverProof);
         } catch (BaseAppException $e) {
-            Log::error($e->getMessage(), ['exception' => $e]);
+            Log::log($e->logLevel(), $e->getMessage(), ['exception' => $e]);
             $this->addError('pack', __($e->getUserMessage()));
 
             return;
@@ -164,7 +164,7 @@ final class PackChangePanel extends Component
         try {
             $session = $startSigning->execute($this->submission, $contract);
         } catch (BaseAppException $e) {
-            Log::error($e->getMessage(), ['exception' => $e]);
+            Log::log($e->logLevel(), $e->getMessage(), ['exception' => $e]);
             $this->addError('pack', __($e->getUserMessage()));
 
             return;
@@ -256,7 +256,7 @@ final class PackChangePanel extends Component
         try {
             $session = $startPayment->execute($this->submission, (string) array_key_first($gateways->options()), $audience->currentSession());
         } catch (BaseAppException $e) {
-            Log::error($e->getMessage(), ['exception' => $e]);
+            Log::log($e->logLevel(), $e->getMessage(), ['exception' => $e]);
             $this->addError('pack', __($e->getUserMessage()));
 
             return;

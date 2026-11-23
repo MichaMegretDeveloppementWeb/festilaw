@@ -15,42 +15,42 @@ final class AdminActionException extends BaseAppException
 {
     public static function responsiblePersonNotPaid(int $submissionId): self
     {
-        return new self(
+        return (new self(
             technicalMessage: "Cannot issue the Responsible Person for submission [{$submissionId}]: no active payment.",
             userMessage: 'Impossible de délivrer la Personne Responsable : le dossier n\'a pas de paiement actif.',
-        );
+        ))->asRefusal();
     }
 
     public static function responsiblePersonMandateNotSigned(int $submissionId): self
     {
-        return new self(
+        return (new self(
             technicalMessage: "Cannot issue the Responsible Person for submission [{$submissionId}]: mandate not signed.",
             userMessage: 'Impossible de délivrer la Personne Responsable : le contrat n\'est pas signé.',
-        );
+        ))->asRefusal();
     }
 
     public static function responsiblePersonDocumentsMissing(int $submissionId): self
     {
-        return new self(
+        return (new self(
             technicalMessage: "Cannot issue the Responsible Person for submission [{$submissionId}]: required documents missing.",
             userMessage: 'Impossible de délivrer la Personne Responsable : toutes les pièces requises ne sont pas déposées.',
-        );
+        ))->asRefusal();
     }
 
     public static function packUpgradeNotRevertible(int $packChangeId): self
     {
-        return new self(
+        return (new self(
             technicalMessage: "Pack change [{$packChangeId}] cannot be reverted: not a completed, paid upgrade.",
             userMessage: 'Ce passage au Pro ne peut pas être annulé : il n\'est pas terminé ou son paiement n\'est plus « réussi ».',
-        );
+        ))->asRefusal();
     }
 
     public static function packDowngradeNotPending(int $packChangeId): self
     {
-        return new self(
+        return (new self(
             technicalMessage: "Pack change [{$packChangeId}] is not a pending switch back to Creator.",
             userMessage: 'Cette demande de passage au Creator n\'est plus en attente (déjà traitée ou retirée par le client).',
-        );
+        ))->asRefusal();
     }
 
     public static function packUpgradeRefundFailed(int $packChangeId, ?Throwable $previous = null): self

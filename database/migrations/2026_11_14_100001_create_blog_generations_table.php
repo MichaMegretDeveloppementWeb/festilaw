@@ -39,14 +39,12 @@ return new class extends Migration
             $table->timestamp('topic_rejected_at')->nullable(); // brouillon genere supprime : sujet a ne plus proposer
             $table->foreignId('blog_post_id')->nullable()->constrained()->nullOnDelete();
             $table->json('payload')->nullable();
-            $table->json('result')->nullable();
             $table->unsignedBigInteger('cost_microusd')->default(0);
             $table->timestamp('started_at')->nullable();
             $table->timestamp('finished_at')->nullable();
             $table->timestamp('locked_until')->nullable();
             $table->string('lock_owner', 40)->nullable();
             $table->timestamp('cancel_requested_at')->nullable();
-            $table->text('last_error')->nullable();
             $table->timestamps();
 
             $table->index(['status', 'locked_until']);

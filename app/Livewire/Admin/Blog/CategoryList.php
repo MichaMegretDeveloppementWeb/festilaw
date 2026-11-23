@@ -30,7 +30,7 @@ class CategoryList extends Component
         try {
             $reorder->execute((int) $categoryId, (int) $position);
         } catch (BaseAppException $e) {
-            Log::error($e->getMessage(), ['exception' => $e]);
+            Log::log($e->logLevel(), $e->getMessage(), ['exception' => $e]);
             $this->dispatch('ui-toast', title: $e->getUserMessage(), type: 'error');
 
             return;
@@ -48,7 +48,7 @@ class CategoryList extends Component
         try {
             $deleteCategory->execute($categoryId);
         } catch (BaseAppException $e) {
-            Log::error($e->getMessage(), ['exception' => $e]);
+            Log::log($e->logLevel(), $e->getMessage(), ['exception' => $e]);
             $this->dispatch('ui-toast', title: $e->getUserMessage(), type: 'error');
 
             return;
@@ -70,7 +70,7 @@ class CategoryList extends Component
             $this->resetErrorBag('categories-load-failed');
         } catch (Throwable $e) {
             Log::error('Unexpected error while loading the admin blog category list.', ['exception' => $e]);
-            $this->addError('categories-load-failed', __('Le chargement des catégories a échoué. Réessayez ; si le problème persiste, contactez-nous.'));
+            $this->addError('categories-load-failed', __('Le chargement des catégories a échoué. Réessayez. Si le problème persiste, contactez l\'assistance technique.'));
         }
 
         return view('livewire.admin.blog.category-list', [

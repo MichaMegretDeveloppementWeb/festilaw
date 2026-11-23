@@ -153,3 +153,17 @@ it('answers gone, in the language of the address, for a published post that was 
 
     get('/blog/label-en')->assertStatus(410)->assertSee('This page no longer exists');
 });
+
+it('never lets a title close the structured data block and run a script', function () {
+    // Audit du 23/11 : un titre, une description ou une categorie viennent aussi de la generation par IA.
+    $post = BlogContent::published('label', BlogContent::category('rules'));
+    $post->translations()->where('locale', 'en')->update(['title' => 'Tips </script><script>alert(1)</script> & more']);
+
+    $html = get('/blog/label-en')->assertOk()->getContent();
+    preg_match('/<script type="application\/ld\+json">(.*?)<\/script>/s', $html, $matches);
+
+    expect($matches[1])->not->toContain('<script>')
+        ->toContain('\u003C/script\u003E')
+        ->and(collect(json_decode($matches[1], true)['@graph'])->firstWhere('@type', 'BlogPosting')['headline'])
+        ->toBe('Tips </script><script>alert(1)</script> & more');
+});

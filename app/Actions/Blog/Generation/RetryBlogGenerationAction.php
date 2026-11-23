@@ -61,7 +61,6 @@ final readonly class RetryBlogGenerationAction
                     'status' => BlogGenerationStatus::Queued->value,
                     'outcome_reason' => null,
                     'current_step' => null,
-                    'last_error' => null,
                     'finished_at' => null,
                     'locked_until' => null,
                     'not_before' => null,

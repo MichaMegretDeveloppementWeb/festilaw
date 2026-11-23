@@ -13,6 +13,14 @@ use Throwable;
  */
 abstract class BaseAppException extends RuntimeException
 {
+    /**
+     * Un refus du a l'utilisation (fichier au mauvais format, adresse prise, article pas pret), que l'ecran
+     * explique et que la personne corrige elle-meme. Journalise en warning, il reste hors du rapport d'erreurs
+     * du matin, reserve aux erreurs du code et des services (decision de Micha du 23/11). Par defaut, non : une
+     * exception typee qui enveloppe une panne reste en error.
+     */
+    private bool $refusal = false;
+
     public function __construct(
         string $technicalMessage,
         protected readonly string $userMessage,
@@ -25,5 +33,24 @@ abstract class BaseAppException extends RuntimeException
     public function getUserMessage(): string
     {
         return $this->userMessage;
+    }
+
+    /** Marque l'exception comme un refus du a l'utilisation (voir $refusal). */
+    public function asRefusal(): static
+    {
+        $this->refusal = true;
+
+        return $this;
+    }
+
+    public function isRefusal(): bool
+    {
+        return $this->refusal;
+    }
+
+    /** Le niveau de journal : warning pour un refus d'utilisation, error pour tout le reste. */
+    public function logLevel(): string
+    {
+        return $this->refusal ? 'warning' : 'error';
     }
 }

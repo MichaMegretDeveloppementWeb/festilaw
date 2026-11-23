@@ -15,26 +15,26 @@ final class BlogGenerationException extends BaseAppException
 {
     public static function notFound(int $generationId): self
     {
-        return new self(
+        return (new self(
             technicalMessage: "Blog generation {$generationId} not found.",
             userMessage: __('Cette génération est introuvable.'),
-        );
+        ))->asRefusal();
     }
 
     public static function notRetryable(int $generationId, BlogGenerationStatus $status): self
     {
-        return new self(
+        return (new self(
             technicalMessage: "Blog generation {$generationId} cannot be retried from status {$status->value}.",
             userMessage: __('Seule une génération en échec peut être relancée.'),
-        );
+        ))->asRefusal();
     }
 
     public static function notCancellable(int $generationId, BlogGenerationStatus $status): self
     {
-        return new self(
+        return (new self(
             technicalMessage: "Blog generation {$generationId} cannot be cancelled from status {$status->value}.",
             userMessage: __('Cette génération est déjà terminée.'),
-        );
+        ))->asRefusal();
     }
 
     public static function simulatedPipelineInProduction(): self

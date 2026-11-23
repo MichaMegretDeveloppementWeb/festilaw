@@ -411,7 +411,7 @@ class PostForm extends Component
                 keepSource: $imageUsage === BlogImageUsage::Content,
             ));
         } catch (BaseAppException $e) {
-            Log::error($e->getMessage(), ['exception' => $e]);
+            Log::log($e->logLevel(), $e->getMessage(), ['exception' => $e]);
             $this->dispatch('ui-toast', type: 'error', title: $e->getUserMessage(), life: self::IMAGE_REFUSAL_LIFE);
 
             return null;
@@ -454,7 +454,7 @@ class PostForm extends Component
         try {
             $image = $recrop->execute($imageId, $rectangle, $this->postId);
         } catch (BaseAppException $e) {
-            Log::error($e->getMessage(), ['exception' => $e]);
+            Log::log($e->logLevel(), $e->getMessage(), ['exception' => $e]);
             $this->dispatch('ui-toast', type: 'error', title: $e->getUserMessage(), life: self::IMAGE_REFUSAL_LIFE);
 
             return null;
@@ -490,7 +490,7 @@ class PostForm extends Component
         try {
             $saved = $updateAlt->execute($imageId, $alt, $this->postId);
         } catch (BaseAppException $e) {
-            Log::error($e->getMessage(), ['exception' => $e]);
+            Log::log($e->logLevel(), $e->getMessage(), ['exception' => $e]);
             $this->dispatch('ui-toast', type: 'error', title: $e->getUserMessage());
 
             return null;
@@ -643,7 +643,7 @@ class PostForm extends Component
         try {
             $category = $saveCategory->execute(new SaveBlogCategoryData(null, $translations));
         } catch (BaseAppException $e) {
-            Log::error($e->getMessage(), ['exception' => $e]);
+            Log::log($e->logLevel(), $e->getMessage(), ['exception' => $e]);
 
             return ['form' => $e->getUserMessage()];
         } catch (Throwable $e) {
@@ -800,7 +800,7 @@ class PostForm extends Component
     /** Message precis d'un refus metier, affiche en haut du formulaire tant qu'il n'est pas corrige. */
     private function reportRefusal(BaseAppException $e): void
     {
-        Log::error($e->getMessage(), ['exception' => $e]);
+        Log::log($e->logLevel(), $e->getMessage(), ['exception' => $e]);
 
         $this->addError('form', $e->getUserMessage());
     }

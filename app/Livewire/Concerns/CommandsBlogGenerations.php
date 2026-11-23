@@ -25,7 +25,7 @@ trait CommandsBlogGenerations
         try {
             $retry->execute($generationId);
         } catch (BaseAppException $e) {
-            Log::error($e->getMessage(), ['exception' => $e]);
+            Log::log($e->logLevel(), $e->getMessage(), ['exception' => $e]);
             $this->dispatch('ui-toast', title: $e->getUserMessage(), type: 'error');
 
             return false;
@@ -46,7 +46,7 @@ trait CommandsBlogGenerations
         try {
             $cancel->execute($generationId, auth()->id());
         } catch (BaseAppException $e) {
-            Log::error($e->getMessage(), ['exception' => $e]);
+            Log::log($e->logLevel(), $e->getMessage(), ['exception' => $e]);
             $this->dispatch('ui-toast', title: $e->getUserMessage(), type: 'error');
 
             return false;

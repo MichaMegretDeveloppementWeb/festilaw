@@ -29,6 +29,9 @@ class BlogGenerationFactory extends Factory
             'trigger' => BlogGenerationTrigger::Manual,
             'status' => BlogGenerationStatus::Queued,
             'batch_uuid' => (string) Str::uuid(),
+            // Toute generation recoit son cout annonce a sa creation (file, lot planifie, relance).
+            'forecast_low_microusd' => 200_000,
+            'forecast_high_microusd' => 320_000,
         ];
     }
 
@@ -83,7 +86,6 @@ class BlogGenerationFactory extends Factory
             'outcome_reason' => BlogGenerationOutcomeReason::StepFailed,
             'started_at' => now()->subMinutes(3),
             'finished_at' => now(),
-            'last_error' => 'Simulated provider failure.',
         ]);
     }
 

@@ -56,6 +56,8 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     Storage::fake('public');
+    // Les sources non decoupees vont sur le disque prive (audit du 23/11).
+    Storage::fake('local');
     Mail::fake();
     Sleep::fake();
     Http::preventStrayRequests();
@@ -191,6 +193,20 @@ it('looks at four photos at most per search, and delivers the draft without a ma
         ->and(BlogImage::query()->count())->toBe(0)
         ->and($result->output['warnings'])->toBe(['no main image', 'no image 1'])
         ->and($result->summary)->toBe('Aucune photo de banque ne convenait. Il manque l\'image principale, à ajouter avant de publier.');
+});
+
+it('says the server could not store the images, and reports it, instead of blaming the photo bank', function () {
+    // Audit du 23/11 : un disque plein se faisait passer pour « aucune photo ne convenait », en warning.
+    fakePixabay();
+    BlogImageFiles::failingDisk(failWrites: true);
+    Log::spy();
+
+    $result = app(GenerateBlogDraftImagesAction::class)->execute(Fixtures::context(textOutputs()));
+
+    expect(BlogImage::query()->count())->toBe(0)
+        ->and($result->output['causes'][0])->toBe('storage_failed')
+        ->and($result->summary)->toBe("Les images n'ont pas pu être enregistrées sur le serveur. Il manque l'image principale, à ajouter avant de publier.");
+    Log::shouldHaveReceived('log')->withArgs(fn (string $level, string $message): bool => $level === 'error' && $message === 'Blog generation image could not be stored.');
 });
 
 it('does not take a photo it could not check, goes on with the draft, and stops everything when the credit runs out', function () {

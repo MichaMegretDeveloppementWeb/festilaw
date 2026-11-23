@@ -19,6 +19,8 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     Storage::fake('public');
+    // Les sources non decoupees vont sur le disque prive (audit du 23/11).
+    Storage::fake('local');
 });
 
 afterEach(function () {

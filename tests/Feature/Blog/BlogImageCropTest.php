@@ -23,6 +23,8 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     Storage::fake('public');
+    // Les sources non decoupees vont sur le disque prive (audit du 23/11).
+    Storage::fake('local');
 });
 
 afterEach(function () {
@@ -39,7 +41,8 @@ function storeCroppedBlogImage(string $path, ?BlogImageCrop $crop, array $extra 
 /** @return array{0: int, 1: int, 2: string} largeur, hauteur, type mime du fichier stocke */
 function croppedBlogFile(string $path): array
 {
-    $info = getimagesizefromstring(Storage::disk('public')->get($path));
+    // La source non decoupee est sur le disque prive, les tailles servies sur le disque public (audit du 23/11).
+    $info = getimagesizefromstring(Storage::disk(str_ends_with($path, '-source.webp') ? 'local' : 'public')->get($path));
 
     return [$info[0], $info[1], $info['mime']];
 }
@@ -57,7 +60,8 @@ it('cuts the image to the kept rectangle before making its variants, and keeps t
         // La source est l'image entiere, non decoupee.
         ->and(croppedBlogFile($paths->sourceOf($image)))->toBe([2000, 1000, 'image/webp'])
         ->and($paths->sourceOf($image))->toBe("blog/{$image->uuid}/{$image->basename}-source.webp")
-        ->and(Storage::disk('public')->allFiles('blog'))->toHaveCount(4);
+        ->and(Storage::disk('public')->allFiles('blog'))->toHaveCount(3)
+        ->and(Storage::disk('local')->allFiles('blog'))->toBe([$paths->sourceOf($image)]);
 });
 
 it('keeps a source no wider than 2400 px, with the framing expressed in its pixels', function () {
@@ -82,7 +86,7 @@ it('keeps no source for an image that is not meant to be framed again', function
 
     expect($image->hasSource())->toBeFalse()
         ->and($image->crop)->toBeNull()
-        ->and(Storage::disk('public')->exists(app(BlogImagePaths::class)->sourceOf($image)))->toBeFalse();
+        ->and(Storage::disk('local')->exists(app(BlogImagePaths::class)->sourceOf($image)))->toBeFalse();
 });
 
 it('brings a rectangle that overflows by a pixel back inside the image', function () {
@@ -148,7 +152,7 @@ it('makes a new pending image from the kept source, with the same texts, and lea
         ->and($second->crop)->toBe(['x' => 1000, 'y' => 200, 'width' => 800, 'height' => 600])
         ->and($second->hasSource())->toBeTrue()
         // La source est reprise telle quelle, jamais reencodee d'un cadrage a l'autre.
-        ->and(Storage::disk('public')->get($paths->sourceOf($second)))->toBe(Storage::disk('public')->get($paths->sourceOf($first)))
+        ->and(Storage::disk('local')->get($paths->sourceOf($second)))->toBe(Storage::disk('local')->get($paths->sourceOf($first)))
         // La premiere image n'a pas bouge : un article en ligne qui la montre ne perd rien.
         ->and(Storage::disk('public')->allFiles("blog/{$first->uuid}"))->toBe($filesOfFirst)
         ->and($first->fresh()->crop)->toBe(['x' => 0, 'y' => 0, 'width' => 1000, 'height' => 1000])
@@ -171,7 +175,7 @@ it('frames again an image placed before sources were kept, from its largest file
         ->and($framed->crop)->toBe(['x' => 400, 'y' => 100, 'width' => 800, 'height' => 600])
         // La nouvelle image garde ce fichier comme source : elle se recadrera encore, sans perte de plus.
         ->and($framed->hasSource())->toBeTrue()
-        ->and(Storage::disk('public')->get($paths->sourceOf($framed)))->toBe(Storage::disk('public')->get($paths->variantOf($older, 1600)))
+        ->and(Storage::disk('local')->get($paths->sourceOf($framed)))->toBe(Storage::disk('public')->get($paths->variantOf($older, 1600)))
         ->and(croppedBlogFile($paths->sourceOf($framed)))->toBe([1600, 800, 'image/webp'])
         // L'ancienne image n'a pas bouge.
         ->and($older->fresh()->widths())->toBe([480, 768, 1200, 1600]);

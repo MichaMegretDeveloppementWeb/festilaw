@@ -14,16 +14,10 @@ enum BlogGenerationOutcomeReason: string
     case NoRelevantTopic = 'no_relevant_topic';
     case DuplicateTopic = 'duplicate_topic';
     case InsufficientSources = 'insufficient_sources';
-    /** Plus ecrite depuis le 17/11, le plafond du mois ne bloquant plus rien ; gardee pour les lignes deja en base. */
-    case SpendCapReached = 'spend_cap_reached';
-    /** Plus ecrite depuis le 18/11, le plafond par article ayant disparu ; gardee pour les lignes deja en base. */
-    case ArticleSpendCapReached = 'article_spend_cap_reached';
     case PendingDraftsCapReached = 'pending_drafts_cap_reached';
     case CreditExhausted = 'credit_exhausted';
     case StepFailed = 'step_failed';
     case CancelledByUser = 'cancelled_by_user';
-    /** Plus ecrite depuis le 18/11, aucun lot n'etant plus retenu par son cout estime ; gardee pour les lignes deja en base. */
-    case ForecastAboveArticleCap = 'forecast_above_article_cap';
     /** Le cout allait depasser le double du haut annonce au lancement (decision de Micha du 18/11). */
     case SafetyStop = 'safety_stop';
     /** L'appel suivant n'est pas parti : son cout maximal ne tenait plus avant l'arret de securite (controle du 20/11). */
@@ -39,13 +33,10 @@ enum BlogGenerationOutcomeReason: string
             self::NoRelevantTopic => __('Aucun sujet assez pertinent'),
             self::DuplicateTopic => __('Sujet déjà traité ou refusé'),
             self::InsufficientSources => __('Pas assez de sources fiables sur ce sujet'),
-            self::SpendCapReached => __('Plafond de dépense du mois atteint'),
-            self::ArticleSpendCapReached => __('Plafond de dépense par article atteint'),
             self::PendingDraftsCapReached => __('Trop de brouillons générés en attente de relecture'),
             self::CreditExhausted => __('Crédit épuisé chez le fournisseur d\'IA'),
             self::StepFailed => __('Une étape a échoué après plusieurs essais'),
             self::CancelledByUser => __('Arrêtée avant la fin'),
-            self::ForecastAboveArticleCap => __('Coût estimé au-dessus du plafond par article'),
             self::SafetyStop => __('Arrêtée par sécurité, coût bien au-delà de l\'estimation'),
             self::SafetyStopBeforeCall => __('Arrêtée par sécurité avant un appel trop coûteux'),
             self::AiKeyRejected => __('Clé du fournisseur d\'IA refusée'),

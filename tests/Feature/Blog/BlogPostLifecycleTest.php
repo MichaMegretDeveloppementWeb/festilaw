@@ -170,6 +170,8 @@ describe('deleting', function () {
 
     it('deletes the images of the post, rows and files', function () {
         Storage::fake('public');
+        // Les sources non decoupees vont sur le disque prive (audit du 23/11).
+        Storage::fake('local');
         $image = app(StoreBlogImageAction::class)->execute(new StoreBlogImageData(BlogImageFiles::jpeg(1300, 700), BlogImageUsage::Featured));
         $post = BlogPost::factory()->withTranslations()->create(['featured_image_id' => $image->id]);
         $image->update(['blog_post_id' => $post->id]);
@@ -184,6 +186,8 @@ describe('deleting', function () {
 
     it('still deletes the post when the files of an image resist, and logs it', function () {
         Storage::fake('public');
+        // Les sources non decoupees vont sur le disque prive (audit du 23/11).
+        Storage::fake('local');
         $image = app(StoreBlogImageAction::class)->execute(new StoreBlogImageData(BlogImageFiles::jpeg(900, 600), BlogImageUsage::Content));
         $post = BlogPost::factory()->create();
         $image->update(['blog_post_id' => $post->id]);

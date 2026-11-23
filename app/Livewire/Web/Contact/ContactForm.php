@@ -73,7 +73,7 @@ class ContactForm extends Component
         try {
             $action->execute($validated);
         } catch (BaseAppException $e) {
-            Log::error($e->getMessage(), ['exception' => $e]);
+            Log::log($e->logLevel(), $e->getMessage(), ['exception' => $e]);
             $this->addError('form', __($e->getUserMessage()));
 
             return;

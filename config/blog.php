@@ -86,6 +86,9 @@ return [
      */
     'images' => [
         'disk' => 'public',
+        // La source non decoupee d'une image recadrable, privee : elle montrerait ce que le recadrage a retire
+        // (audit du 23/11). Le back-office la lit par une adresse reservee aux comptes connectes.
+        'source_disk' => 'local',
         'directory' => 'blog',
         'widths' => [480, 768, 1200, 1600],
         'webp_quality' => 82,

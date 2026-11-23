@@ -85,24 +85,6 @@
                 </div>
 
                 <div class="flex shrink-0 items-center gap-x-3">
-                    {{-- Etat des taches automatiques (cron), en production seulement. --}}
-                    @if ($schedulerStatus)
-                        @php($schedulerState = $schedulerStatus['stalled'] ? 'stalled' : ($schedulerStatus['lastRunAt'] ? 'ok' : 'unknown'))
-                        <x-ui::badge :dot="true" class="hidden sm:inline-flex" data-scheduler-state="{{ $schedulerState }}"
-                            :color="['stalled' => 'red', 'ok' => 'emerald', 'unknown' => 'gray'][$schedulerState]"
-                            title="{{ $schedulerStatus['lastRunAt'] ? __('Dernier passage : :date (UTC)', ['date' => $schedulerStatus['lastRunAt']->format('d/m/Y H:i')]) : '' }}">
-                            @if ($schedulerStatus['stalled'])
-                                {{ __('Tâches automatiques à l\'arrêt') }}
-                            @elseif ($schedulerStatus['minutesAgo'] === 0)
-                                {{ __('Tâches automatiques · à l\'instant') }}
-                            @elseif ($schedulerStatus['lastRunAt'])
-                                {{ __('Tâches automatiques · il y a :minutes min', ['minutes' => $schedulerStatus['minutesAgo']]) }}
-                            @else
-                                {{ __('Tâches automatiques · aucun passage') }}
-                            @endif
-                        </x-ui::badge>
-                    @endif
-
                     <x-ui::theme-toggle />
                 </div>
             </header>
@@ -116,9 +98,12 @@
                     'sm:px-6' => ! $plainSurface && ! $fullSurface,
                     'sm:px-10 lg:px-12' => $plainSurface,
                 ])>
+                    {{-- Le cron du serveur ne passe plus, en production. Aucune pastille d'etat dans la barre du haut, et le
+                         message dit ce que Laetitia constate, dans ses mots (audit du 23/11, front.md) ; le prestataire
+                         technique recoit l'alerte par e-mail. --}}
                     @if ($schedulerStatus['stalled'] ?? false)
-                        <x-ui::alert type="error" :class="$fullSurface ? 'mx-4 mt-6 mb-6 sm:mx-6' : 'mb-6'" :title="__('Les tâches automatiques ne tournent plus depuis le :date (UTC)', ['date' => $schedulerStatus['lastRunAt']->format('d/m/Y à H:i')])">
-                            {{ __('Rappels de renouvellement, vérification des paiements et des signatures, récupération des contrats signés et purges RGPD ne s\'exécutent plus. À vérifier côté hébergement (tâche cron).') }}
+                        <x-ui::alert type="error" :class="$fullSurface ? 'mx-4 mt-6 mb-6 sm:mx-6' : 'mb-6'" :title="__('Les relances et la génération automatique sont à l\'arrêt depuis le :date (UTC)', ['date' => $schedulerStatus['lastRunAt']->format('d/m/Y à H:i')])">
+                            {{ __('Les rappels de renouvellement, la vérification des paiements et des signatures, et la génération automatique d\'articles ne se font plus. L\'assistance technique est prévenue par e-mail.') }}
                         </x-ui::alert>
                     @endif
 

@@ -13,9 +13,11 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Seul endroit qui ecrit, lit et supprime les fichiers des images du blog. Le disque est configure
- * pour lever une exception en cas d'echec ; ces exceptions sont converties ici en exception typee, ou
- * journalisees quand le nettoyage est fait "au mieux".
+ * Seul endroit qui ecrit, lit et supprime les fichiers des images du blog. Les tailles servies au public vont
+ * sur le disque public ; la source non decoupee d'une image recadrable va sur le disque prive, sous le meme
+ * chemin (audit du 23/11 : publique, elle montrait ce que le recadrage avait retire). Les disques sont
+ * configures pour lever une exception en cas d'echec ; ces exceptions sont converties ici en exception typee,
+ * ou journalisees quand le nettoyage est fait "au mieux".
  */
 final readonly class BlogImageStorage
 {
@@ -23,6 +25,7 @@ final readonly class BlogImageStorage
         private FilesystemFactory $filesystems,
         private BlogImagePaths $paths,
         private string $disk,
+        private string $sourceDisk,
     ) {}
 
     /**
@@ -42,7 +45,7 @@ final readonly class BlogImageStorage
             }
 
             if ($image->source !== null) {
-                $this->disk()->put($this->paths->source($uuid, $basename), $image->source);
+                $this->sourceDisk()->put($this->paths->source($uuid, $basename), $image->source);
             }
         } catch (Throwable $e) {
             $this->deleteQuietly($uuid);
@@ -65,7 +68,7 @@ final readonly class BlogImageStorage
         }
 
         try {
-            $contents = $this->disk()->get($path);
+            $contents = ($image->hasSource() ? $this->sourceDisk() : $this->disk())->get($path);
         } catch (Throwable $e) {
             throw BlogImageException::storageFailed($image->uuid, $e);
         }
@@ -86,6 +89,7 @@ final readonly class BlogImageStorage
     {
         try {
             $this->disk()->deleteDirectory($this->paths->directory($uuid));
+            $this->sourceDisk()->deleteDirectory($this->paths->directory($uuid));
 
             return true;
         } catch (Throwable $e) {
@@ -99,28 +103,52 @@ final readonly class BlogImageStorage
     }
 
     /**
-     * Identifiants (uuid) des dossiers d'image presents sur le disque.
+     * Identifiants (uuid) des dossiers d'image presents sur l'un ou l'autre disque.
      *
      * @return list<string>
      */
     public function directories(): array
     {
-        return array_map(basename(...), $this->disk()->directories($this->paths->root()));
+        $uuids = [];
+
+        foreach ([$this->disk(), $this->sourceDisk()] as $disk) {
+            if ($disk->exists($this->paths->root())) {
+                array_push($uuids, ...array_map(basename(...), $disk->directories($this->paths->root())));
+            }
+        }
+
+        return array_values(array_unique($uuids));
     }
 
-    /** Date du fichier le plus recent d'un dossier (horodatage Unix), ou null s'il est vide. */
+    /** Date du fichier le plus recent d'un dossier, sur les deux disques (horodatage Unix), ou null s'il est vide. */
     public function lastModified(string $uuid): ?int
     {
-        $times = array_map(
-            fn (string $file): int => $this->disk()->lastModified($file),
-            $this->disk()->files($this->paths->directory($uuid)),
-        );
+        $times = [];
+
+        foreach ([$this->disk(), $this->sourceDisk()] as $disk) {
+            foreach ($disk->files($this->paths->directory($uuid)) as $file) {
+                $times[] = $disk->lastModified($file);
+            }
+        }
 
         return $times === [] ? null : max($times);
+    }
+
+    /** Les fichiers d'une image sont-ils sur le disque ? Sa plus grande taille suffit a le dire. */
+    public function variantsExist(BlogImage $image): bool
+    {
+        $widths = $image->widths();
+
+        return $widths === [] || $this->disk()->exists($this->paths->variantOf($image, max($widths)));
     }
 
     private function disk(): Filesystem
     {
         return $this->filesystems->disk($this->disk);
+    }
+
+    private function sourceDisk(): Filesystem
+    {
+        return $this->filesystems->disk($this->sourceDisk);
     }
 }

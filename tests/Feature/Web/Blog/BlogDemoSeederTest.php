@@ -38,6 +38,8 @@ afterEach(function () {
 it('publishes the demonstration posts through the real actions, and can be run again without duplicates', function () {
     $mine = BlogContent::published('mine');
     Storage::fake('public');
+    // Les sources non decoupees vont sur le disque prive (audit du 23/11).
+    Storage::fake('local');
 
     $this->seed(BlogDemoSeeder::class);
 

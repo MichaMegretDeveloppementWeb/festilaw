@@ -42,7 +42,6 @@ class BlogGeneration extends Model
         'topic_rejected_at',
         'blog_post_id',
         'payload',
-        'result',
         'cost_microusd',
         'forecast_low_microusd',
         'forecast_high_microusd',
@@ -53,7 +52,6 @@ class BlogGeneration extends Model
         'lock_owner',
         'cancel_requested_at',
         'cancel_requested_by',
-        'last_error',
     ];
 
     /** @var array<string, mixed> */
@@ -74,7 +72,6 @@ class BlogGeneration extends Model
             'batch_notified_at' => 'immutable_datetime',
             'topic_rejected_at' => 'immutable_datetime',
             'payload' => 'array',
-            'result' => 'array',
             'cost_microusd' => 'integer',
             'forecast_low_microusd' => 'integer',
             'forecast_high_microusd' => 'integer',

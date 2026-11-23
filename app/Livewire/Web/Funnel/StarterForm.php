@@ -117,7 +117,7 @@ class StarterForm extends Component
                 'website_url' => $this->website_url ?: null,
             ], $this->packType());
         } catch (BaseAppException $e) {
-            Log::error($e->getMessage(), ['exception' => $e]);
+            Log::log($e->logLevel(), $e->getMessage(), ['exception' => $e]);
             $this->addError('form', __($e->getUserMessage()));
 
             return;

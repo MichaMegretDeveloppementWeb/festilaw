@@ -159,7 +159,6 @@ it('stops without an error when a step finds nothing worth writing', function ()
 
     expect($generation->status)->toBe(BlogGenerationStatus::Abandoned)
         ->and($generation->outcome_reason)->toBe(BlogGenerationOutcomeReason::NoRelevantTopic)
-        ->and($generation->last_error)->toBeNull()
         ->and($generation->lock_owner)->toBeNull()
         ->and($pipeline->calls('topic'))->toBe(1)
         ->and($pipeline->calls('writing'))->toBe(0);
@@ -205,7 +204,6 @@ it('fails the generation after three attempts of a step, without running the nex
 
     expect($generation->status)->toBe(BlogGenerationStatus::Failed)
         ->and($generation->outcome_reason)->toBe(BlogGenerationOutcomeReason::StepFailed)
-        ->and($generation->last_error)->toBe('Provider is down.')
         ->and($generation->finished_at)->not->toBeNull()
         ->and($generation->lock_owner)->toBeNull()
         ->and($generation->cost_microusd)->toBe(FakeGenerationPipeline::STEP_COST)
@@ -406,18 +404,6 @@ it('stops retrying a failing step once twice the announced high is spent', funct
         ->and($generation->cost_microusd)->toBe(120_000);
 });
 
-it('works out and keeps the announced cost of a generation launched before the announcement existed', function () {
-    $generation = BlogGeneration::factory()->create(['forecast_low_microusd' => null, 'forecast_high_microusd' => null]);
-    FakeGenerationPipeline::bind();
-
-    generationWorkerPass();
-
-    $generation->refresh();
-    expect($generation->status)->toBe(BlogGenerationStatus::Completed)
-        ->and($generation->forecast_low_microusd)->toBeGreaterThan(0)
-        ->and($generation->forecast_high_microusd)->toBeGreaterThan($generation->forecast_low_microusd);
-});
-
 it('gives the generation back, unfinished, while the site is in maintenance', function () {
     $pipeline = FakeGenerationPipeline::bind();
     $generation = BlogGeneration::factory()->create();
@@ -444,7 +430,6 @@ it('fails cleanly, instead of looping, when the pipeline cannot be used', functi
     generationWorkerPass();
 
     expect($generation->refresh()->status)->toBe(BlogGenerationStatus::Failed)
-        ->and($generation->last_error)->toContain('Unknown blog generation pipeline [nope]')
         ->and($generation->lock_owner)->toBeNull()
         ->and(generationWorkerPass())->toBeFalse();
 });

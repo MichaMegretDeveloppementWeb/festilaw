@@ -179,12 +179,12 @@ it('says in plain words that the generation is unavailable when the key is missi
 it('lists the five latest generations, newest first, with their outcome and no technical message', function () {
     BlogGeneration::factory()->count(3)->completed()->create();
     $old = BlogGeneration::factory()->completed(costMicrousd: 262_500)->create(['topic_title' => 'CE marking for toys']);
-    BlogGeneration::factory()->scheduled()->abandoned(BlogGenerationOutcomeReason::SpendCapReached)->create();
+    BlogGeneration::factory()->scheduled()->abandoned(BlogGenerationOutcomeReason::PendingDraftsCapReached)->create();
     $failed = BlogGeneration::factory()->failed()->create(['topic_hint' => 'Labels on Etsy']);
     BlogGenerationStep::factory()->for($failed, 'generation')->named('writing', 3)->failed()->create();
 
     $dashboard = Livewire::test(GenerationDashboard::class)
-        ->assertSeeInOrder(['Labels on Etsy', 'Échec à l\'étape « Rédaction »', 'Plafond de dépense du mois atteint', 'CE marking for toys'])
+        ->assertSeeInOrder(['Labels on Etsy', 'Échec à l\'étape « Rédaction »', 'Trop de brouillons générés en attente de relecture', 'CE marking for toys'])
         ->assertDontSee('Simulated provider failure.')
         ->assertSee('Automatique')
         ->assertSee('En échec')
@@ -660,7 +660,6 @@ it('shows a generation step by step, with its model, tokens and cost under each 
         'requested_by' => $user->id,
         'payload' => ['images' => ['mode' => 'stock', 'max' => 2], 'length' => ['words' => 1_200], 'effort' => 'high'],
         'cost_microusd' => 42_500,
-        'last_error' => 'Provider is down.',
     ]);
     BlogGenerationStep::factory()->for($generation, 'generation')->named('topic', 1)->completed(30_000)->create([
         'model' => 'anthropic/claude-sonnet-5.5', 'web_searches' => 2, 'summary' => 'Sellers keep asking about labels.',
@@ -753,7 +752,7 @@ it('says a generation was stopped before its first step, and stays sober when no
 });
 
 it('says a generation failed outside of any step, without a technical message', function () {
-    $generation = BlogGeneration::factory()->failed()->create(['last_error' => 'Unknown pipeline [editorial].']);
+    $generation = BlogGeneration::factory()->failed()->create();
 
     Livewire::test(GenerationDetail::class, ['generation' => $generation->id])
         ->assertSee('La génération a échoué')

@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AdminContractMandateDownloadController;
 use App\Http\Controllers\Admin\AdminCountersignedDownloadController;
 use App\Http\Controllers\Admin\AdminDocumentDownloadController;
 use App\Http\Controllers\Admin\AdminMandateDownloadController;
+use App\Http\Controllers\Admin\Blog\BlogImageSourceController;
 use App\Http\Controllers\Admin\Blog\BlogPostPreviewController;
 use App\Http\Controllers\Admin\LogoutController;
 use App\Http\Controllers\SitemapController;
@@ -153,6 +154,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 ->whereNumber('post')
                 ->whereIn('locale', config('festilaw.supported_locales'))
                 ->name('posts.preview');
+            // La source non decoupee d'une image, rangee en prive, pour l'outil de recadrage (audit du 23/11).
+            Route::get('/images/{image}/source', BlogImageSourceController::class)->whereNumber('image')->name('images.source');
             Route::get('/categories', BlogCategoryList::class)->name('categories.index');
             Route::get('/categories/create', BlogCategoryForm::class)->name('categories.create');
             Route::get('/categories/{category}/edit', BlogCategoryForm::class)->whereNumber('category')->name('categories.edit');
