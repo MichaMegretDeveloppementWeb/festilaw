@@ -238,3 +238,19 @@ it('gives every generation of a batch the default images and effort of the setti
         ->and($images->every(fn (?GenerationImageOptions $options): bool => $options?->mode === BlogAiImageMode::None && $options->maxImages === 2))->toBeTrue()
         ->and($generations->every(fn (BlogGeneration $generation): bool => GenerationEffort::fromPayload($generation->payload) === BlogEffortLevel::High))->toBeTrue();
 });
+
+it('keeps the day of the first batch for a monthly rhythm, after a shorter month', function () {
+    // Controle du 20/11 : un lot du 31 janvier passait au 28 fevrier, puis au 28 de chaque mois.
+    BlogAi::saveSettings(['enabled' => true, 'period_count' => 1, 'period_unit' => 'month']);
+    $this->travelTo('2027-01-31 06:00:00');
+    planScheduledGenerations();
+
+    $this->travelTo('2027-02-28 06:00:00');
+    expect(planScheduledGenerations()->launched)->toBe(1);
+
+    $this->travelTo('2027-03-28 06:00:00');
+    $notDue = planScheduledGenerations();
+
+    expect($notDue->launched)->toBe(0)
+        ->and($notDue->dueAt->toDateString())->toBe('2027-03-31');
+});

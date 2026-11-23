@@ -55,7 +55,7 @@ it('opens empty for a new article, with only the categories to load', function (
         ->assertSee('Pas encore enregistré');
 });
 
-it('opens an article with its texts, hands its content to the browser once, in 5 queries', function () {
+it('opens an article with its texts, hands its content to the browser once, in 6 queries', function () {
     $rules = BlogContent::category('rules');
     $post = BlogContent::published('label', $rules, CarbonImmutable::parse('2026-11-02 09:00:00'));
     $post->update(['sources' => [['label' => 'Regulation', 'url' => 'https://eur-lex.europa.eu/x']]]);
@@ -66,8 +66,9 @@ it('opens an article with its texts, hands its content to the browser once, in 5
 
     $form = Livewire::test(PostForm::class, ['post' => $post->id]);
 
-    // Article, textes avec contenu, images, articles lies, categories.
-    expect(count(DB::getQueryLog()))->toBe(5);
+    // Article, textes avec contenu, images, articles lies, categories ; plus la traduction assistee encore en
+    // cours pour cet article, que le formulaire retrouve apres un rechargement (controle du 20/11).
+    expect(count(DB::getQueryLog()))->toBe(6);
     DB::disableQueryLog();
 
     $form->assertSet('postId', $post->id)

@@ -22,6 +22,20 @@ final readonly class BlogTranslationResultService
         private EditorialDocumentBuilder $documents,
     ) {}
 
+    /**
+     * La traduction encore en cours pour un article, avec sa langue visee, ou nulle.
+     *
+     * @return array{generation_id: int, locale: string}|null
+     */
+    public function pendingForPost(int $postId): ?array
+    {
+        $row = $this->requests->activeForPost($postId);
+        $payload = is_string($row?->payload) ? json_decode($row->payload, true) : null;
+        $locale = is_array($payload) ? (string) ($payload['translation']['to'] ?? '') : '';
+
+        return $row === null || $locale === '' ? null : ['generation_id' => (int) $row->id, 'locale' => $locale];
+    }
+
     public function find(int $generationId): BlogTranslationResult
     {
         $row = $this->requests->find($generationId);

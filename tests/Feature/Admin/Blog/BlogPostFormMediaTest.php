@@ -354,8 +354,8 @@ describe('choosing the related articles', function () {
 
         $form->call('openRelatedPicker');
 
-        // Les 5 lectures d'un aller-retour, plus celle de la liste a proposer.
-        expect(count(DB::getQueryLog()))->toBe(6);
+        // Les 6 lectures d'un aller-retour (traduction en cours comprise, controle du 20/11), plus celle de la liste a proposer.
+        expect(count(DB::getQueryLog()))->toBe(7);
         DB::disableQueryLog();
 
         // Ni l'article lui-meme, ni celui deja choisi ; le statut de ce qui n'est pas publie est dit.
@@ -473,8 +473,8 @@ describe('choosing the related articles', function () {
 
         $form->call('saveSource', null, 'Source', 'https://example.org');
 
-        // Article, textes, images, categories.
-        expect(count(DB::getQueryLog()))->toBe(4);
+        // Article, textes, images, categories, traduction en cours (controle du 20/11).
+        expect(count(DB::getQueryLog()))->toBe(5);
         DB::disableQueryLog();
     });
 });

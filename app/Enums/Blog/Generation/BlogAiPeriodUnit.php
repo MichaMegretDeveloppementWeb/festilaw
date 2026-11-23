@@ -25,13 +25,25 @@ enum BlogAiPeriodUnit: string
         };
     }
 
-    /** La date a partir de laquelle un nouveau lot est du, `$count` periodes apres `$from`. */
-    public function addTo(CarbonImmutable $from, int $count): CarbonImmutable
+    /**
+     * La date a partir de laquelle un nouveau lot est du, `$count` periodes apres `$from`. Au mois, un lot ramene
+     * au dernier jour d'un mois court (31 janvier, puis 28 fevrier) retrouve son jour d'origine ensuite (31 mars),
+     * au lieu de glisser au 28 de chaque mois (controle du 20/11).
+     *
+     * @param  int|null  $anchorDay  le jour du mois du premier lot, pour un rythme au mois
+     */
+    public function addTo(CarbonImmutable $from, int $count, ?int $anchorDay = null): CarbonImmutable
     {
-        return match ($this) {
-            self::Day => $from->addDays($count),
-            self::Week => $from->addWeeks($count),
-            self::Month => $from->addMonthsNoOverflow($count),
-        };
+        if ($this !== self::Month) {
+            return $this === self::Day ? $from->addDays($count) : $from->addWeeks($count);
+        }
+
+        $due = $from->addMonthsNoOverflow($count);
+
+        if ($anchorDay === null || $anchorDay <= $from->day || $from->day !== $from->daysInMonth) {
+            return $due;
+        }
+
+        return $due->setDay(min($anchorDay, $due->daysInMonth));
     }
 }

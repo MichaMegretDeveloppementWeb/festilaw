@@ -25,7 +25,9 @@ use App\Services\Web\Localization\LocalizedUrlGenerator;
  *   - rendu suivant : 4 (article, textes sans contenu, images, articles lies), 3 sans article lie ;
  *   - categories du selecteur : 1, a chaque rendu ;
  *   - creation : seulement les categories (plus 1 des qu'un article lie est choisi) ;
- *   - articles a proposer comme articles lies : 1, seulement pendant que la liste est ouverte.
+ *   - articles a proposer comme articles lies : 1, seulement pendant que la liste est ouverte ;
+ *   - traduction assistee encore en cours pour l'article : 1, lue par le composant PostTranslation a chaque
+ *     montage (controle du 20/11).
  */
 final readonly class BlogPostFormService
 {

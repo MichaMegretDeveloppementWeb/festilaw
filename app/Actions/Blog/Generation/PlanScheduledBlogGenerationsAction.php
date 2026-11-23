@@ -11,6 +11,7 @@ use App\Data\Blog\Generation\GenerationImageOptions;
 use App\Data\Blog\Generation\GenerationLength;
 use App\Data\Blog\Generation\GenerationModels;
 use App\Data\Blog\Generation\ScheduledGenerationPlan;
+use App\Enums\Blog\Generation\BlogAiPeriodUnit;
 use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogGenerationTrigger;
@@ -89,9 +90,13 @@ final readonly class PlanScheduledBlogGenerationsAction
     {
         $lastLaunchedAt = $this->scheduled->lastLaunchedAt();
 
-        return $lastLaunchedAt === null
-            ? null
-            : $settings->periodUnit->addTo($lastLaunchedAt, $settings->periodCount)->startOfDay();
+        if ($lastLaunchedAt === null) {
+            return null;
+        }
+
+        $anchorDay = $settings->periodUnit === BlogAiPeriodUnit::Month ? $this->scheduled->firstLaunchedAt()?->day : null;
+
+        return $settings->periodUnit->addTo($lastLaunchedAt, $settings->periodCount, $anchorDay)->startOfDay();
     }
 
     /** Chaque generation du lot porte les images, la longueur, l'effort, les modeles et le cout annonce des reglages, figes au lancement. */

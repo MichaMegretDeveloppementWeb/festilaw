@@ -445,10 +445,10 @@ return [
         ],
 
         /*
-         | Generation automatique : heure (UTC) du controle quotidien « un lot est-il du ? », et nombre
-         | d'echecs consecutifs qui declenche l'alerte au prestataire technique.
+         | Generation automatique : nombre de generations d'articles terminees sans brouillon, d'affilee, qui
+         | declenche l'alerte au prestataire technique. Le controle « un lot est-il du ? » passe chaque heure de
+         | 6 h a 20 h (UTC, routes/console.php).
          */
-        'schedule_time' => '06:00',
         'consecutive_failures_alert' => 3,
 
         /*

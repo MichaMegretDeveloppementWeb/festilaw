@@ -54,10 +54,13 @@ final class RunBlogGenerationWorker extends Command
             try {
                 $worked = $processNext->execute($workerId, $handOverAt);
             } catch (Throwable $e) {
-                // Dernier filet du worker : la generation en cause garde son verrou, qui expirera seul.
+                // Dernier filet du worker : la generation en cause garde son verrou, qui expirera seul. Le worker
+                // s'arrete la, et celui de la minute suivante reprendra : une panne qui dure (base, configuration)
+                // ecrit une trace par minute au journal, et non une toutes les deux secondes (controle du 20/11).
                 $failed++;
-                $worked = false;
                 Log::error('Blog generation worker pass failed; the generation will be retried.', ['worker' => $workerId, 'exception' => $e]);
+
+                break;
             }
 
             if ($worked) {

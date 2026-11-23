@@ -34,6 +34,38 @@ class PostTranslation extends Component
     #[Locked]
     public ?string $target = null;
 
+    /** Depuis quand le formulaire attend (horodatage), pour cesser d'attendre une traduction trop longue. */
+    #[Locked]
+    public ?int $waitingSince = null;
+
+    /** Au-dela, le formulaire cesse d'attendre : la traduction continue, la page rechargee la retrouvera. */
+    private const MAX_WAIT_SECONDS = 1200;
+
+    /**
+     * Une traduction demandee avant un rechargement de la page est retrouvee et attendue de nouveau (controle du
+     * 20/11) : sinon son resultat etait perdu.
+     */
+    public function mount(BlogTranslationResultService $results): void
+    {
+        if ($this->postId === null) {
+            return;
+        }
+
+        try {
+            $pending = $results->pendingForPost($this->postId);
+        } catch (Throwable $e) {
+            $this->reportAdminError($e, 'blog post translation resume');
+
+            return;
+        }
+
+        if ($pending !== null) {
+            $this->generationId = $pending['generation_id'];
+            $this->target = $pending['locale'];
+            $this->waitingSince = now()->getTimestamp();
+        }
+    }
+
     /**
      * @param  array<string, mixed>  $source  textes et document de la langue de depart, tels que dans le formulaire
      */
@@ -57,6 +89,7 @@ class PostTranslation extends Component
                 requestedBy: auth()->id(),
             ));
             $this->target = $to;
+            $this->waitingSince = now()->getTimestamp();
         } catch (BaseAppException $e) {
             $this->dispatch('ui-toast', title: $e->getUserMessage(), type: 'error');
             $this->dispatch('post-translation-failed', locale: $to);
@@ -66,7 +99,7 @@ class PostTranslation extends Component
         }
     }
 
-    /** Releve regulier tant qu'une traduction est attendue. */
+    /** Releve regulier tant qu'une traduction est attendue, 20 minutes au plus. */
     public function check(BlogTranslationResultService $results): void
     {
         if ($this->generationId === null) {
@@ -81,12 +114,19 @@ class PostTranslation extends Component
             return;
         }
 
+        $target = (string) $this->target;
+
         if ($result->isPending()) {
+            if (now()->getTimestamp() - (int) $this->waitingSince > self::MAX_WAIT_SECONDS) {
+                $this->reset('generationId', 'target', 'waitingSince');
+                $this->dispatch('ui-toast', title: __('La traduction prend plus de temps que prévu. Elle continue, et vous la retrouverez en rechargeant la page un peu plus tard.'), type: 'warning');
+                $this->dispatch('post-translation-failed', locale: $target);
+            }
+
             return;
         }
 
-        $target = (string) $this->target;
-        $this->reset('generationId', 'target');
+        $this->reset('generationId', 'target', 'waitingSince');
 
         if (! $result->isReady()) {
             $this->dispatch('ui-toast', title: __('La traduction n\'a pas abouti. Réessayez, et contactez l\'assistance technique si cela se reproduit.'), type: 'error');

@@ -24,6 +24,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Sleep;
 use Livewire\Livewire;
 use Tests\Support\BlogAi;
+use Tests\Support\BlogContent;
 
 use function Pest\Laravel\actingAs;
 
@@ -205,4 +206,33 @@ it('reports a translation still running as pending, and an unknown generation as
     expect($results->find($running->id)->isPending())->toBeTrue()
         ->and($results->find(999_999)->isReady())->toBeFalse()
         ->and($results->find(999_999)->isPending())->toBeFalse();
+});
+
+it('finds again, after the page was reloaded, a translation still running for the article', function () {
+    // Controle du 20/11 : un rechargement de la page perdait la traduction attendue.
+    actingAs(User::factory()->create());
+    $post = BlogContent::published('label');
+    Livewire::test(PostTranslation::class, ['postId' => $post->id])
+        ->dispatch('request-post-translation', from: 'en', to: 'es', source: ['title' => 'Etsy labels', 'content' => richDocument()]);
+
+    $reloaded = Livewire::test(PostTranslation::class, ['postId' => $post->id]);
+
+    expect($reloaded->get('generationId'))->not->toBeNull()
+        ->and($reloaded->get('target'))->toBe('es');
+    expect(Livewire::test(PostTranslation::class, ['postId' => BlogContent::published('other')->id])->get('generationId'))->toBeNull();
+});
+
+it('stops waiting after twenty minutes, saying the translation goes on', function () {
+    actingAs(User::factory()->create());
+    $component = Livewire::test(PostTranslation::class)
+        ->dispatch('request-post-translation', from: 'en', to: 'fr', source: ['title' => 'Etsy labels', 'content' => richDocument()]);
+
+    $this->travel(19)->minutes();
+    $component->call('check')->assertNotDispatched('post-translation-failed');
+
+    $this->travel(2)->minutes();
+    $component->call('check')
+        ->assertSet('generationId', null)
+        ->assertDispatched('post-translation-failed', locale: 'fr')
+        ->assertDispatched('ui-toast', fn (string $event, array $params): bool => $params['type'] === 'warning' && str_contains($params['title'], 'Elle continue'));
 });

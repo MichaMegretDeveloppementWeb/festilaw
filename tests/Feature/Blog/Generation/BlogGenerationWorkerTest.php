@@ -165,12 +165,38 @@ it('goes on by itself, one step at a time, when no newer worker shows up', funct
         ->and($pipeline->calls('assembly'))->toBe(1);
 });
 
-it('is run by the scheduler every minute, and the batch check every day at the set hour', function () {
-    // Recette du CDC (point P1) : sans ces deux inscriptions, rien ne genere sur l'hebergement.
+it('is run by the scheduler every minute, last, and the batch check every hour of the day', function () {
+    // Recette du CDC (point P1) : sans ces deux inscriptions, rien ne genere sur l'hebergement. Le worker ne rend
+    // pas la main, il doit rester la derniere tache. Le lot se controle chaque heure de 6 h a 20 h (controle du
+    // 20/11) : une heure manquee ne coute plus un jour.
     $events = collect(app(Schedule::class)->events());
     $worker = $events->first(fn ($event): bool => str_contains((string) $event->command, 'festilaw:blog-generation-worker'));
     $batch = $events->first(fn ($event): bool => str_contains((string) $event->command, 'festilaw:blog-generation-schedule'));
 
     expect($worker?->expression)->toBe('* * * * *')
-        ->and($batch?->expression)->toBe('0 6 * * *');
+        ->and($events->last())->toBe($worker)
+        ->and($batch?->expression)->toBe('0 * * * *');
+});
+
+it('lets the scheduled tasks lock themselves for a bounded time, so a killed run never blocks them for a day', function () {
+    // jobs-queues.md : le verrou de withoutOverlapping() expire par defaut au bout de 24 heures.
+    $locked = collect(app(Schedule::class)->events())
+        ->filter(fn ($event): bool => $event->withoutOverlapping && str_contains((string) $event->command, 'festilaw:'));
+
+    expect($locked)->not->toBeEmpty()
+        ->and($locked->every(fn ($event): bool => $event->expiresAt <= 60))->toBeTrue();
+});
+
+it('stops a worker after a failed pass, leaving the next minute to the next worker', function () {
+    // Controle du 20/11 : une panne qui dure ecrivait une trace complete toutes les deux secondes. Sans --once, le
+    // worker continuerait jusqu'a son inactivite ; il s'arrete au premier passage en echec.
+    Log::spy();
+    Schema::rename('blog_generations', 'blog_generations_unavailable');
+
+    $this->artisan('festilaw:blog-generation-worker')
+        ->expectsOutputToContain('0 working pass(es), 1 failed pass(es)')
+        ->assertFailed();
+
+    Log::shouldHaveReceived('error')->once()->with('Blog generation worker pass failed; the generation will be retried.', Mockery::any());
+    Schema::rename('blog_generations_unavailable', 'blog_generations');
 });

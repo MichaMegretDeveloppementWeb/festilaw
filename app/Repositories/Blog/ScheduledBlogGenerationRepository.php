@@ -21,14 +21,27 @@ final readonly class ScheduledBlogGenerationRepository
     /** Date du dernier lot lance par la tache planifiee, ou nul si elle n'en a jamais lance. */
     public function lastLaunchedAt(): ?CarbonImmutable
     {
-        $createdAt = BlogGeneration::query()
+        $createdAt = $this->launched()->max('created_at');
+
+        return $createdAt === null ? null : CarbonImmutable::parse($createdAt);
+    }
+
+    /** Date du premier lot lance : son jour du mois tient le rythme mensuel (controle du 20/11). */
+    public function firstLaunchedAt(): ?CarbonImmutable
+    {
+        $createdAt = $this->launched()->min('created_at');
+
+        return $createdAt === null ? null : CarbonImmutable::parse($createdAt);
+    }
+
+    /** @return Builder<BlogGeneration> les generations planifiees qui ont vraiment ete lancees */
+    private function launched(): Builder
+    {
+        return BlogGeneration::query()
             ->where('trigger', BlogGenerationTrigger::Scheduled->value)
             ->where(static function (Builder $query): void {
                 $query->where('status', '!=', BlogGenerationStatus::Abandoned->value)->orWhereNotNull('started_at');
-            })
-            ->max('created_at');
-
-        return $createdAt === null ? null : CarbonImmutable::parse($createdAt);
+            });
     }
 
     /**

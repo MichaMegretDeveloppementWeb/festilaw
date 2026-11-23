@@ -13,39 +13,39 @@ Artisan::command('inspire', function () {
  | de l'hebergement mutualise (`* * * * * php artisan schedule:run`). Pas de worker de queue : les
  | mails partent en synchrone (hebergement mutualise Hostinger, ADR-008).
  */
-Schedule::command('festilaw:purge-abandoned-dossiers')->dailyAt('03:00')->withoutOverlapping();
+Schedule::command('festilaw:purge-abandoned-dossiers')->dailyAt('03:00')->withoutOverlapping(60);
 
 /*
  | Politique de confidentialite : acces ferme des dossiers annules (rattrapage / filet) et suppression des
  | demandes de contact sans echange depuis 12 mois. Idempotent.
  */
-Schedule::command('festilaw:apply-privacy-retention')->dailyAt('03:15')->withoutOverlapping();
+Schedule::command('festilaw:apply-privacy-retention')->dailyAt('03:15')->withoutOverlapping(60);
 
 /*
  | Renouvellements annuels : rappels client + digests admin (a renouveler / en retard). Idempotent sur
  | l'annee (anti-doublon via meta du dossier), donc sans risque a passer tous les jours.
  */
-Schedule::command('festilaw:process-renewals')->dailyAt('07:00')->withoutOverlapping();
+Schedule::command('festilaw:process-renewals')->dailyAt('07:00')->withoutOverlapping(60);
 
 /*
  | Reconciliation des paiements : filet ultime si le retour navigateur ET le webhook sont loupes.
  | Re-interroge le provider pour les paiements en attente > 15 min et confirme les payes. Idempotent.
  | Toutes les 5 min : rattrapage rapide sans marteler l'API du provider (garde le seuil interne > 15 min).
  */
-Schedule::command('festilaw:reconcile-payments')->everyFiveMinutes()->withoutOverlapping();
+Schedule::command('festilaw:reconcile-payments')->everyFiveMinutes()->withoutOverlapping(15);
 
 /*
  | Reconciliation des signatures : meme filet, cote signature. Re-interroge le prestataire pour les
  | contrats en attente > 15 min et enregistre signe/refuse/expire. Toutes les 5 min. Idempotent.
  */
-Schedule::command('festilaw:reconcile-signatures')->everyFiveMinutes()->withoutOverlapping();
+Schedule::command('festilaw:reconcile-signatures')->everyFiveMinutes()->withoutOverlapping(15);
 
 /*
  | PDF du mandat signe : avec la signature integree, le navigateur confirme la signature avant que le
  | prestataire ait genere le PDF final. Le webhook le recupere quand il arrive ; a defaut, ce rattrapage
  | le telecharge dans la minute (requete legere : contrats signes sans fichier). Idempotent.
  */
-Schedule::command('festilaw:backfill-signed-pdfs')->everyMinute()->withoutOverlapping();
+Schedule::command('festilaw:backfill-signed-pdfs')->everyMinute()->withoutOverlapping(10);
 
 /*
  | Blog : publication des articles programmes dont l'heure est passee. Chaque minute, requete legere
@@ -81,11 +81,13 @@ Schedule::command('festilaw:blog-health-check')->dailyAt('05:45')->withoutOverla
 Schedule::command('festilaw:error-report')->dailyAt('06:00')->withoutOverlapping(30);
 
 /*
- | Blog, generation par IA : chaque jour, met en file le lot d'articles quand la periode reglee au
- | back-office est echue. Elle ne genere rien elle-meme (c'est le worker ci-dessous). Rejouable.
+ | Blog, generation par IA : met en file le lot d'articles quand la periode reglee au back-office est echue.
+ | Elle ne genere rien elle-meme (c'est le worker ci-dessous). Chaque heure de 6 h a 20 h (UTC) : rejouable, elle
+ | ne lance qu'un lot par periode, et une heure manquee ne coute plus un jour (controle du 20/11).
  */
 Schedule::command('festilaw:blog-generation-schedule')
-    ->dailyAt((string) config('blog.ai.schedule_time'))
+    ->hourly()
+    ->between('06:00', '20:00')
     ->withoutOverlapping(10);
 
 /*

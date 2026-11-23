@@ -979,7 +979,7 @@ it('refuses settings that make no sense, each with its own message', function ()
         ->assertSee('Choisissez une longueur dans la liste.')
         ->assertSee('La période est d\'au moins 1.')
         ->assertSee('Le nombre d\'articles ne peut pas dépasser 10.')
-        ->assertSee('Le plafond de dépense ne peut pas être négatif.')
+        ->assertSee('Le plafond de dépense est d\'au moins 1 $.')
         ->assertSee('Choisissez un modèle dans la liste.')
         ->assertSee('Cette adresse e-mail n\'est pas valide.')
         ->assertNotDispatched('ui-toast');

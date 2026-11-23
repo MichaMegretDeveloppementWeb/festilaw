@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repositories\Blog;
 
+use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogGenerationStepStatus;
 use App\Enums\Blog\Generation\BlogGenerationType;
 use App\Models\BlogGeneration;
@@ -29,5 +30,21 @@ final class BlogTranslationRequestRepository
                 ->where('status', BlogGenerationStepStatus::Completed->value)
                 ->limit(1)])
             ->first();
+    }
+
+    /**
+     * La traduction encore en attente ou en cours pour un article, la plus recente : le formulaire la retrouve
+     * apres un rechargement (controle du 20/11).
+     *
+     * @return object{id: int, payload: string|null}|null
+     */
+    public function activeForPost(int $postId): ?object
+    {
+        return BlogGeneration::query()->toBase()
+            ->where('type', BlogGenerationType::Translation->value)
+            ->whereIn('status', BlogGenerationStatus::activeValues())
+            ->where('payload->translation->post_id', $postId)
+            ->orderByDesc('id')
+            ->first(['id', 'payload']);
     }
 }
