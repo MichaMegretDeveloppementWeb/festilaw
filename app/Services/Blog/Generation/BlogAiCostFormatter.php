@@ -20,4 +20,13 @@ final readonly class BlogAiCostFormatter
     {
         return number_format($microusd / 1_000_000, 4, ',', "\u{00A0}")."\u{00A0}$";
     }
+
+    /**
+     * Un montant du mois, depense ou plafond, au centime : « 11,82 $ sur 10,00 $ » (decision de Micha du 23/11).
+     * Quatre decimales faisaient de « 10,0000 $ » un chiffre technique ; le budget se lit d'un coup d'oeil.
+     */
+    public function monthDollars(int $microusd): string
+    {
+        return number_format($microusd / 1_000_000, 2, ',', "\u{00A0}")."\u{00A0}$";
+    }
 }

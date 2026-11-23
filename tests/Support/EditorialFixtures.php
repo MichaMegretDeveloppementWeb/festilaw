@@ -123,7 +123,7 @@ final class EditorialFixtures
             'title' => 'Adding an economic operator on Etsy',
             'excerpt' => 'Etsy now asks for an economic operator. Here is what UK sellers fill in.',
             'meta_title' => 'Etsy economic operator for UK sellers',
-            'meta_description' => str_repeat('Etsy asks UK sellers for an EU economic operator since the GPSR. What to fill in and where. ', 2),
+            'meta_description' => 'Etsy asks UK sellers for an EU economic operator since the GPSR came into force. Here is what to fill in, where, and what to prepare.',
             'body_markdown' => self::body(),
             ...$overrides,
         ];

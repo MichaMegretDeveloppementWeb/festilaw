@@ -57,8 +57,8 @@ final readonly class BlogGenerationPresenter
      */
     public function monthlyWarning(MonthlySpendLevel $level, int $spentMicrousd, int $capMicrousd): ?array
     {
-        $spent = $this->costs->dollars($spentMicrousd);
-        $cap = $this->costs->dollars($capMicrousd);
+        $spent = $this->costs->monthDollars($spentMicrousd);
+        $cap = $this->costs->monthDollars($capMicrousd);
 
         return match ($level) {
             MonthlySpendLevel::Under => null,
@@ -113,6 +113,28 @@ final readonly class BlogGenerationPresenter
         };
 
         return trans_choice('{1} :count article :period|[2,*] :count articles :period', $articles, ['count' => $articles, 'period' => $period]);
+    }
+
+    /**
+     * Quand partira le prochain lot automatique, dit sans approximation (decision de Micha du 23/11) : le jour
+     * meme « dans moins d'une heure » ou « dans 3 heures », le lendemain « demain », a deux ou trois jours « dans
+     * 2 jours », au-dela la date, « le 31/12 ». Les jours se comptent en dates UTC, comme toutes les heures du
+     * back-office.
+     */
+    public function nextLaunch(CarbonImmutable $at, CarbonImmutable $now, int $articles): string
+    {
+        $minutes = max(0, (int) floor(($at->getTimestamp() - $now->getTimestamp()) / 60));
+        $days = (int) $now->startOfDay()->diffInDays($at->startOfDay());
+
+        $when = match (true) {
+            $minutes < 60 => __('dans moins d\'une heure'),
+            $days === 0 => trans_choice('{1} dans une heure|[2,*] dans :count heures', (int) round($minutes / 60), ['count' => (int) round($minutes / 60)]),
+            $days === 1 => __('demain'),
+            $days <= 3 => __('dans :count jours', ['count' => $days]),
+            default => __('le :date', ['date' => $at->format($at->year === $now->year ? 'd/m' : 'd/m/Y')]),
+        };
+
+        return trans_choice('{1} Prochain article :when.|[2,*] Prochains articles :when.', $articles, ['when' => $when]);
     }
 
     /** « 45 s », « 2 min 05 s », « 1 h 03 min ». Nul quand la duree n'est pas connue. */

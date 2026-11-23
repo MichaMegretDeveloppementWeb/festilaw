@@ -70,7 +70,9 @@
             <x-ui::alert type="error" class="mb-6" :title="__('L\'article n\'a pas été enregistré')">{{ $message }}</x-ui::alert>
         @enderror
 
-        {{-- Article genere : le modele qui l'a redige et le lien vers sa generation (etapes, sources consultees). --}}
+        {{-- Article genere : le modele qui l'a redige et le lien vers sa generation (etapes, sources consultees).
+             Les doutes de la verification y sont montres en entier, comme sur la page de la generation, car le lien
+             de l'e-mail mene droit ici (decision de Micha du 23/11). Ils ne bloquent pas la publication. --}}
         @if ($view?->origin === \App\Enums\Blog\BlogPostOrigin::Ai)
             <x-ui::alert type="info" class="mb-6" :title="__('Article généré par IA')" data-generated-banner>
                 {{ $view->writingModel
@@ -78,6 +80,23 @@
                     : __('Ce brouillon a été proposé par l\'IA. Relisez-le et corrigez-le avant de le publier.') }}
                 @if ($view->generationId)
                     <a href="{{ route('admin.blog.generation.show', ['generation' => $view->generationId]) }}" class="font-medium underline underline-offset-2" data-generation-link>{{ __('Voir la génération') }}</a>
+                @endif
+
+                @if ($attentionPoints !== [])
+                    <div class="mt-3 border-t border-current/15 pt-3 text-[13px] leading-relaxed" data-attention-points>
+                        <p class="font-medium">{{ trans_choice('{1} La vérification a gardé une affirmation sur laquelle elle a un doute. Vérifiez-la avant de publier.|[2,*] La vérification a gardé :count affirmations sur lesquelles elle a un doute. Vérifiez-les avant de publier.', count($attentionPoints), ['count' => count($attentionPoints)]) }}</p>
+                        <ul class="mt-2 space-y-2">
+                            @foreach ($attentionPoints as $point)
+                                <li data-attention-point>
+                                    @if ($point['where'])
+                                        <span class="block text-[12px] opacity-80">{{ $point['where'] }}</span>
+                                    @endif
+                                    <span class="block">{{ $point['statement'] }}</span>
+                                    <span class="block opacity-80">{{ $point['check'] }}</span>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
                 @endif
             </x-ui::alert>
         @endif

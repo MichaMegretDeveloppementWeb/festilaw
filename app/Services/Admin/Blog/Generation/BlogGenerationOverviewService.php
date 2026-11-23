@@ -12,6 +12,7 @@ use App\Repositories\Blog\BlogGenerationHealthRepository;
 use App\Services\Blog\Generation\BlogAiCostFormatter;
 use App\Services\Blog\Generation\BlogAiSettingsService;
 use App\Services\Blog\Generation\BlogGenerationBudget;
+use App\Services\Blog\Generation\BlogGenerationCalendar;
 use App\Services\Blog\Generation\BlogGenerationWorkerRegistry;
 use App\Services\Blog\Generation\Simulation\SimulatedGenerationPipeline;
 use Carbon\CarbonImmutable;
@@ -27,7 +28,8 @@ use Carbon\CarbonImmutable;
  *   5. brouillons generes qui attendent une relecture
  *   6. dernieres generations
  *   7. etape en echec de ces generations
- * Sans aucune generation : 6 (la septieme n'a rien a lire).
+ * Sans aucune generation : 6 (la septieme n'a rien a lire). Generation automatique activee et pas en pause :
+ * une de plus pour la date du prochain lot (dernier lot lance), deux pour un rythme mensuel (premier lot).
  */
 final readonly class BlogGenerationOverviewService
 {
@@ -49,6 +51,7 @@ final readonly class BlogGenerationOverviewService
         private GenerationPipeline $pipeline,
         private BlogGenerationPresenter $presenter,
         private BlogGenerationHealthRepository $health,
+        private BlogGenerationCalendar $calendar,
         private ?string $apiKey,
         private string $rulesReviewBy,
     ) {}
@@ -60,19 +63,25 @@ final readonly class BlogGenerationOverviewService
         $cap = $settings->monthlySpendCapMicrousd();
         $workerStartedAt = $this->workers->lastStartedAt();
         $health = $this->health->latest();
+        $pendingDrafts = $this->budget->pendingDrafts();
+        $now = CarbonImmutable::now();
+        $nextLaunch = $settings->enabled && $pendingDrafts < $settings->pendingDraftsCap
+            ? $this->presenter->nextLaunch($this->calendar->nextLaunchAt($settings, $now), $now, $settings->articlesPerRun)
+            : null;
 
         return new BlogGenerationOverview(
             settings: $settings,
             automaticRhythm: $this->presenter->rhythm($settings->articlesPerRun, $settings->periodCount, $settings->periodUnit),
-            spent: $this->costs->dollars($spent),
-            cap: $this->costs->dollars($cap),
+            spent: $this->costs->monthDollars($spent),
+            cap: $this->costs->monthDollars($cap),
             spentPercent: $cap > 0 ? min(100, (int) round(100 * $spent / $cap)) : 100,
             monthlyWarning: $this->presenter->monthlyWarning($this->budget->monthlyLevel($spent, $cap), $spent, $cap),
-            pendingDrafts: $this->budget->pendingDrafts(),
+            pendingDrafts: $pendingDrafts,
+            nextLaunch: $nextLaunch,
             latest: $this->journal->latest(self::LATEST),
             apiKeyPresent: filled($this->apiKey),
             workerListening: $workerStartedAt !== null
-                && CarbonImmutable::now()->getTimestamp() - $workerStartedAt->getTimestamp() <= self::WORKER_SILENCE_SECONDS,
+                && $now->getTimestamp() - $workerStartedAt->getTimestamp() <= self::WORKER_SILENCE_SECONDS,
             workerStartedAt: $workerStartedAt,
             simulated: $this->pipeline instanceof SimulatedGenerationPipeline,
             unavailableReason: $this->unavailableReason(),

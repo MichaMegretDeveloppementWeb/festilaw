@@ -219,8 +219,14 @@ final class WritingStep extends EditorialStep
 
         $descriptionLength = mb_strlen($article->metaDescription);
 
-        if ($descriptionLength < 120 || $descriptionLength > 170) {
+        if ($descriptionLength < 120 || $descriptionLength > self::META_DESCRIPTION_MAX_CHARACTERS) {
             $problems[] = "meta_description has {$descriptionLength} characters, it must have 140 to 160.";
+        }
+
+        $excerptLength = mb_strlen($article->excerpt);
+
+        if ($excerptLength > self::EXCERPT_MAX_CHARACTERS) {
+            $problems[] = "excerpt has {$excerptLength} characters. Write it in one or two sentences of about 160 characters.";
         }
 
         $headings = preg_match_all('/^##\s/m', $article->body);

@@ -76,7 +76,7 @@
             </div>
         </x-admin.section>
 
-        <x-admin.section data-settings-section="automatic" :title="__('Génération automatique')"
+        <x-admin.section id="generation-automatique" data-settings-section="automatic" :title="__('Génération automatique')"
             :description="__('L\'IA choisit un sujet et prépare des articles à intervalles réguliers, sans que vous ayez à les lancer. Elle reprend les modèles, la longueur et les images réglés plus haut.')">
             <div class="space-y-6 pt-6">
                 <x-ui::checkbox id="ai-enabled" wire:model="enabled" :label="__('Activer la génération automatique')"

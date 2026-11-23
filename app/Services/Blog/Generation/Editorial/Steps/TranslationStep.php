@@ -96,13 +96,19 @@ final class TranslationStep extends EditorialStep
         $reply = $this->ask($context, $agent, $prompt);
         $usage = $reply->usage;
         $problems = $this->problems($source, $reply);
+        $lengths = $this->lengthProblems($reply);
 
-        if ($problems !== []) {
+        // Une longueur depassee demande une correction, sans jamais faire echouer l'etape : la reponse corrigee
+        // n'est gardee que si elle reste juste, ou si la premiere ne l'etait pas.
+        if ($problems !== [] || $lengths !== []) {
             $correction = $this->ask($context, $agent, spent: $usage, prompt: $prompt."\n\n".$this->block('Your previous answer', $reply->structured())
-                ."\n\n".$this->block('Fix these problems and answer again in full', '- '.implode("\n- ", $problems)));
+                ."\n\n".$this->block('Fix these problems and answer again in full', '- '.implode("\n- ", [...$problems, ...$lengths])));
             $usage = $usage->plus($correction->usage);
-            $reply = $correction;
-            $problems = $this->problems($source, $reply);
+            $correctionProblems = $this->problems($source, $correction);
+
+            if ($correctionProblems === [] || $problems !== []) {
+                [$reply, $problems] = [$correction, $correctionProblems];
+            }
         }
 
         if ($problems !== []) {
@@ -188,5 +194,28 @@ final class TranslationStep extends EditorialStep
                 static fn (string $difference): bool => ! str_starts_with($difference, 'numbers'),
             ),
         ));
+    }
+
+    /**
+     * Les longueurs depassees de la version : l'extrait et la description pour Google (decision du 23/11).
+     *
+     * @return list<string>
+     */
+    private function lengthProblems(BlogAgentReply $reply): array
+    {
+        $translated = EditorialArticle::fromArray($reply->structured());
+        $problems = [];
+        $excerpt = mb_strlen($translated->excerpt);
+        $description = mb_strlen($translated->metaDescription);
+
+        if ($excerpt > self::EXCERPT_MAX_CHARACTERS) {
+            $problems[] = "excerpt has {$excerpt} characters. Write it in one or two sentences of about 160 characters.";
+        }
+
+        if ($description > self::META_DESCRIPTION_MAX_CHARACTERS) {
+            $problems[] = "meta_description has {$description} characters. Keep it just under 160.";
+        }
+
+        return $problems;
     }
 }

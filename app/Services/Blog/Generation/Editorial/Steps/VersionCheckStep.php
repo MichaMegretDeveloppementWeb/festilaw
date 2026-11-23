@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Blog\Generation\Editorial\Steps;
 
 use App\Ai\Agents\Blog\VersionCheckAgent;
+use App\Data\Blog\Generation\BlogAgentReply;
 use App\Data\Blog\Generation\EditorialArticle;
 use App\Data\Blog\Generation\GenerationStepContext;
 use App\Data\Blog\Generation\GenerationStepResult;
@@ -85,10 +86,38 @@ final class VersionCheckStep extends EditorialStep
         return GenerationStepResult::continue(
             ['locale' => $this->locale, 'article' => $checked->toArray(), 'corrections' => $applied, 'set_aside' => $setAside],
             $reply->usage,
-            $this->report($reply, $applied === []
-                ? __('La version dit la même chose que le texte anglais.')
-                : trans_choice('{1} Un passage de la version a été corrigé pour dire ce que dit le texte anglais.|[2,*] :count passages de la version ont été corrigés pour dire ce que dit le texte anglais.', count($applied), ['count' => count($applied)])),
+            $this->summary($reply, count($applied), count($setAside)),
         );
+    }
+
+    /**
+     * Le compte rendu commence par ce que le code a fait, qui ne peut pas se tromper, puis la description de
+     * l'IA (decision du 23/11) : ecrite au present, elle laissait croire l'ecart encore dans le brouillon alors
+     * qu'il etait corrige. Une correction ecartee est dite a verifier.
+     */
+    private function summary(BlogAgentReply $reply, int $applied, int $setAside): string
+    {
+        if ($applied === 0 && $setAside === 0) {
+            return __('La version dit la même chose que le texte anglais.');
+        }
+
+        $sentences = [];
+
+        if ($applied > 0) {
+            $sentences[] = trans_choice('{1} Un passage de la version a été corrigé pour dire ce que dit le texte anglais.|[2,*] :count passages de la version ont été corrigés pour dire ce que dit le texte anglais.', $applied, ['count' => $applied]);
+        }
+
+        $described = $this->text($reply->structured(), 'report_fr');
+
+        if ($described !== '') {
+            $sentences[] = $described;
+        }
+
+        if ($setAside > 0) {
+            $sentences[] = trans_choice('{1} Un écart relevé n\'a pas pu être corrigé automatiquement. Il reste à vérifier dans la version.|[2,*] :count écarts relevés n\'ont pas pu être corrigés automatiquement. Ils restent à vérifier dans la version.', $setAside, ['count' => $setAside]);
+        }
+
+        return implode(' ', $sentences);
     }
 
     /**

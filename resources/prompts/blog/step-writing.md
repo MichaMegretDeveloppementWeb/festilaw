@@ -32,7 +32,7 @@ Images:
 
 Other fields:
 
-- "title" about 60 characters, "meta_title" up to 60 characters, "meta_description" 140 to 160 characters, "excerpt" two or three sentences for the blog cards.
+- "title" about 60 characters, "meta_title" up to 60 characters, "meta_description" 140 to 160 characters (176 at most), "excerpt" one or two sentences of about 160 characters (184 at most), shown on the blog cards.
 - "claims": every legal or factual statement of the article (title, excerpt, headings, body, lists and examples included), each with its basis: the ids of the facts of the research file that support it (F1, F2...), or RULES when it comes from the reference of EU product rules. A statement you cannot give a basis for does not belong in the article: remove it from the text.
 - "source_ids": the sources shown to the reader under the article. Give the three most credible sources the article relies on, official first. Add a fourth or a fifth only when a key fact of the article rests on it and none of the first three supports that fact, and then say why in "extra_sources_reason". Otherwise leave "extra_sources_reason" empty.
 - "category_id": the id of the category below that fits the main theme of the article. A category is a broad, lasting theme that holds many articles, such as "Marketplaces" or "Product safety". Prefer a category that already holds articles.

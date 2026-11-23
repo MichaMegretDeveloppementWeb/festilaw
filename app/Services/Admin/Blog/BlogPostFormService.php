@@ -8,11 +8,13 @@ use App\Data\Admin\Blog\BlogPostFormOpening;
 use App\Data\Admin\Blog\BlogPostFormState;
 use App\Data\Admin\Blog\BlogPostFormView;
 use App\Data\Blog\BlogReadinessIssue;
+use App\Enums\Blog\BlogPostOrigin;
 use App\Enums\Blog\BlogPostStatus;
 use App\Models\BlogImage;
 use App\Models\BlogPost;
 use App\Repositories\Blog\AdminBlogCategoryRepository;
 use App\Repositories\Blog\AdminBlogPostFormRepository;
+use App\Services\Admin\Blog\Generation\BlogGenerationAttentionPointsService;
 use App\Services\Blog\Generation\BlogAiModelCatalog;
 use App\Services\Blog\Post\BlogPostReadinessCalculator;
 use App\Services\Web\Localization\LocalizedUrlGenerator;
@@ -27,7 +29,8 @@ use App\Services\Web\Localization\LocalizedUrlGenerator;
  *   - creation : seulement les categories (plus 1 des qu'un article lie est choisi) ;
  *   - articles a proposer comme articles lies : 1, seulement pendant que la liste est ouverte ;
  *   - traduction assistee encore en cours pour l'article : 1, lue par le composant PostTranslation a chaque
- *     montage (controle du 20/11).
+ *     montage (controle du 20/11) ;
+ *   - points d'attention d'un brouillon genere : 1, a l'ouverture seulement (decision du 23/11).
  */
 final readonly class BlogPostFormService
 {
@@ -53,6 +56,7 @@ final readonly class BlogPostFormService
         private BlogImagePreviewFactory $previews,
         private LocalizedUrlGenerator $urls,
         private BlogAiModelCatalog $models,
+        private BlogGenerationAttentionPointsService $attention,
         private array $locales,
     ) {}
 
@@ -97,6 +101,8 @@ final readonly class BlogPostFormService
             ),
             view: $view,
             contents: $contents,
+            // Le lien de l'e-mail mene droit ici : les doutes de la verification y sont montres aussi.
+            attentionPoints: $post->origin === BlogPostOrigin::Ai && $post->generation_id !== null ? $this->attention->of($post->generation_id) : [],
         );
     }
 

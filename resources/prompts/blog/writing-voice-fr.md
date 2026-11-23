@@ -27,10 +27,10 @@ Le titre informe. Il dit le fait ou le sujet précis de l'article, comme le titr
 
 ## Le chapô
 
-Le chapô est le champ « excerpt ». Il tient en deux ou trois phrases qui complètent le titre sans le répéter. Elles donnent le fait principal, qui est concerné, et ce que le lecteur trouvera dans l'article.
+Le chapô est le champ « excerpt ». Il tient en une ou deux phrases qui complètent le titre sans le répéter, autour de 160 caractères et jamais plus de 184, car les cartes du blog le coupent au-delà. Elles donnent le fait principal et qui est concerné.
 
 - Il ne parle jamais de l'article lui-même (« Cet article explique… », « Nous verrons… », « Découvrez… »).
-- La description pour Google (« meta_description ») reprend l'essentiel du chapô en 140 à 160 caractères, sans formule d'accroche.
+- La description pour Google (« meta_description ») reprend l'essentiel du chapô en 140 à 160 caractères, jamais plus de 176, sans formule d'accroche.
 
 ## Les intertitres
 

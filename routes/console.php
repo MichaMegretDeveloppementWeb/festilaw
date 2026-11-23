@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\Blog\Generation\BlogGenerationCalendar;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -87,7 +88,8 @@ Schedule::command('festilaw:error-report')->dailyAt('06:00')->withoutOverlapping
  */
 Schedule::command('festilaw:blog-generation-schedule')
     ->hourly()
-    ->between('06:00', '20:00')
+    // La fenetre vient du calendrier que lit aussi le tableau de bord, pour annoncer la date du prochain lot.
+    ->between(sprintf('%02d:00', BlogGenerationCalendar::FIRST_HOUR), sprintf('%02d:00', BlogGenerationCalendar::LAST_HOUR))
     ->withoutOverlapping(10);
 
 /*

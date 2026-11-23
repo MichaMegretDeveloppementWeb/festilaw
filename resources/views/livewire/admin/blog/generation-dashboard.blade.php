@@ -39,14 +39,22 @@
                 </x-slot:extra>
             </x-admin.stats.item>
 
+            {{-- La date du prochain lot vient du calendrier du planificateur ; le lien mene droit a la section de la
+                 generation automatique, en bas des reglages (decisions de Micha du 23/11). --}}
             <x-admin.stats.item icon="clock" :label="__('Génération automatique')" data-stat="automatic">
                 @if ($overview->automaticPaused())
                     {{ __('En pause') }}
-                    <x-slot:extra>{{ __('Reprend quand les brouillons sont relus') }}</x-slot:extra>
                 @else
                     {{ $overview->settings->enabled ? __('Activée') : __('Désactivée') }}
-                    <x-slot:extra>{{ $overview->automaticRhythm }}</x-slot:extra>
                 @endif
+                <x-slot:extra>
+                    <span class="block">{{ $overview->automaticPaused() ? __('Reprend quand les brouillons sont relus') : $overview->automaticRhythm }}</span>
+                    @if ($overview->nextLaunch)
+                        <span class="block" data-next-launch>{{ $overview->nextLaunch }}</span>
+                    @endif
+                    <a href="{{ route('admin.blog.generation.settings') }}#generation-automatique" data-edit-automatic
+                        class="mt-1 flex items-center gap-1 font-medium text-secondary transition-colors hover:text-primary">{{ __('Modifier') }} <x-ui::icon name="arrow-right" class="h-3.5 w-3.5" /></a>
+                </x-slot:extra>
             </x-admin.stats.item>
 
             <x-admin.stats.item icon="document-text" :label="__('Brouillons à relire')" data-stat="drafts">

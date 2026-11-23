@@ -19,6 +19,8 @@ final readonly class BlogGenerationOverview
     /**
      * @param  array{level: MonthlySpendLevel, title: string, text: string}|null  $monthlyWarning  l'avertissement du plafond du mois, nul en dessous du seuil
      * @param  list<BlogGenerationJournalRow>  $latest  les dernieres generations, la plus recente d'abord
+     * @param  string|null  $nextLaunch  quand partira le prochain lot automatique, en une phrase ; nul quand la
+     *                                   generation automatique est desactivee ou en pause
      */
     public function __construct(
         public BlogAiSettings $settings,
@@ -28,6 +30,7 @@ final readonly class BlogGenerationOverview
         public int $spentPercent,
         public ?array $monthlyWarning,
         public int $pendingDrafts,
+        public ?string $nextLaunch,
         public array $latest,
         public bool $apiKeyPresent,
         public bool $workerListening,

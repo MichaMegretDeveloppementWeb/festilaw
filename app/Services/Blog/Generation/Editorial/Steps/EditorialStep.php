@@ -25,6 +25,16 @@ abstract class EditorialStep implements GenerationStep
     /** Le temps ajoute au delai d'une requete pour chaque recherche web qu'elle enchaine. */
     private const SECONDS_PER_SEARCH = 10;
 
+    /**
+     * Les longueurs que le code fait respecter dans chaque langue (decision de Micha du 23/11) : l'extrait vise
+     * 160 caracteres et passe jusqu'a 15 % de plus, la description pour Google vise un peu moins de 160 et ne
+     * depasse jamais 10 % de plus. Au-dela, l'etape redemande sa reponse une fois. Les titres ne sont pas bornes
+     * ici : Google sait les couper.
+     */
+    protected const EXCERPT_MAX_CHARACTERS = 184;
+
+    protected const META_DESCRIPTION_MAX_CHARACTERS = 176;
+
     /** Le reglage de modele de chaque etape (la passe de style emploie le modele de la redaction). */
     private const MODEL_SETTINGS = [
         'topic_scan' => 'topic',

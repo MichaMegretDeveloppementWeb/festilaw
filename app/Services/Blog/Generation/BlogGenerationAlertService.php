@@ -103,8 +103,8 @@ final readonly class BlogGenerationAlertService
         }
 
         $this->sendOncePerMonth('credit', $settings->notificationEmail, new BlogSpendLimitReached(
-            $this->costs->dollars($this->budget->spentThisMonthMicrousd()),
-            $this->costs->dollars($settings->monthlySpendCapMicrousd()),
+            $this->costs->monthDollars($this->budget->spentThisMonthMicrousd()),
+            $this->costs->monthDollars($settings->monthlySpendCapMicrousd()),
         ), 'Blog spend limit message failed to send.');
     }
 
@@ -125,8 +125,8 @@ final readonly class BlogGenerationAlertService
 
         $this->sendOncePerMonth($level->value, $settings->notificationEmail, new BlogMonthlySpendWarning(
             $level === MonthlySpendLevel::Over,
-            $this->costs->dollars($spent),
-            $this->costs->dollars($cap),
+            $this->costs->monthDollars($spent),
+            $this->costs->monthDollars($cap),
             intdiv(100 * $spent, max(1, $cap)),
             $this->url->route('admin.blog.generation.settings'),
         ), 'Blog monthly spend warning failed to send.');

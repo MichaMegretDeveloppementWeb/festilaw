@@ -97,6 +97,14 @@ class PostForm extends Component
     public string $scheduledFor = '';
 
     /**
+     * Les doutes de la verification d'un brouillon genere, lus a l'ouverture : ils ne changent plus ensuite.
+     *
+     * @var list<array{where: string|null, statement: string, check: string}>
+     */
+    #[Locked]
+    public array $attentionPoints = [];
+
+    /**
      * Fichier d'image en cours d'envoi (image principale, de partage ou du texte). Il ne reste dans
      * l'etat que le temps d'etre enregistre par storeImage().
      *
@@ -139,6 +147,7 @@ class PostForm extends Component
         $this->relatedIds = $state->relatedIds;
         $this->sources = $state->sources;
         $this->scheduledFor = $state->scheduledFor;
+        $this->attentionPoints = $this->opening->attentionPoints;
 
         // Une adresse deja enregistree ne change plus quand on retouche le titre.
         foreach (array_keys(self::LOCALES) as $locale) {

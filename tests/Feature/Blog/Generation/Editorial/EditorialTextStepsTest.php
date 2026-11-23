@@ -428,7 +428,7 @@ it('shows three sources under the article, official first, and five at most when
 
 it('asks once for a correction when the article breaks the rules, then keeps the corrected one', function () {
     WriterAgent::fake([
-        Fixtures::writerAnswer(['meta_description' => 'Too short.', 'body_markdown' => Fixtures::body().' [More](festilaw:page/unknown) [Elsewhere](https://random.example/page)']),
+        Fixtures::writerAnswer(['meta_description' => 'Too short.', 'excerpt' => str_repeat('An excerpt far too long for the cards. ', 6), 'body_markdown' => Fixtures::body().' [More](festilaw:page/unknown) [Elsewhere](https://random.example/page)']),
         Fixtures::writerAnswer(),
     ])->preventStrayPrompts();
 
@@ -438,6 +438,7 @@ it('asks once for a correction when the article breaks the rules, then keeps the
         ->and($result->output['warnings'])->toBe([]);
     WriterAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Fix these problems')
         && $prompt->contains('meta_description has 10 characters')
+        && $prompt->contains('excerpt has 233 characters')
         && $prompt->contains('festilaw:page/unknown does not match')
         && $prompt->contains('https://random.example/page is not a source'));
 });
@@ -734,6 +735,32 @@ it('names in each language the new category that the writer proposed', function 
     TranslatorAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('New category') && $prompt->contains('Product safety'));
 });
 
+it('asks the version once to shorten an excerpt that the cards would cut', function () {
+    $long = str_repeat('Un chapô bien trop long pour les cartes du blog. ', 5);
+    TranslatorAgent::fake([
+        [...Fixtures::article(['title' => 'Ajouter un opérateur économique sur Etsy', 'excerpt' => $long]), 'report_fr' => 'x'],
+        [...Fixtures::article(['title' => 'Ajouter un opérateur économique sur Etsy', 'excerpt' => 'Un chapô court.']), 'report_fr' => 'x'],
+    ])->preventStrayPrompts();
+
+    $result = app()->make(TranslationStep::class, ['locale' => 'fr'])->execute(Fixtures::context(['writing' => Fixtures::writingOutput(), 'style' => Fixtures::articleOutput()]));
+
+    expect($result->output['article']['excerpt'])->toBe('Un chapô court.');
+    TranslatorAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('excerpt has 244 characters'));
+});
+
+it('keeps a sound version with a long excerpt rather than a shortened one that lost a link, and never fails for a length', function () {
+    $long = str_repeat('Un chapô bien trop long pour les cartes du blog. ', 5);
+    TranslatorAgent::fake([
+        [...Fixtures::article(['title' => 'Ajouter un opérateur économique sur Etsy', 'excerpt' => $long]), 'report_fr' => 'x'],
+        [...Fixtures::article(['title' => 'Ajouter un opérateur économique sur Etsy', 'excerpt' => 'Court.', 'body_markdown' => 'Un texte qui a perdu ses liens.']), 'report_fr' => 'x'],
+    ])->preventStrayPrompts();
+
+    $result = app()->make(TranslationStep::class, ['locale' => 'fr'])->execute(Fixtures::context(['writing' => Fixtures::writingOutput(), 'style' => Fixtures::articleOutput()]));
+
+    expect($result->output['article']['excerpt'])->toStartWith('Un chapô bien trop long')
+        ->and($result->output['article']['body'])->toBe(Fixtures::body());
+});
+
 it('sends the French sentences that still show signs back once, and keeps that second pass when links and images are intact', function () {
     $french = "Depuis le 13 décembre 2024, chaque produit vendu dans l'UE a besoin d'un opérateur économique. [Lire le règlement](https://eur-lex.europa.eu/eli/reg/2023/988/oj).\n\n"
         ."## Les informations demandées par Etsy\n\nEtsy le demande dans les réglages de l'annonce. [Vérifier votre cas](festilaw:page/quiz).\n\n[[image:1]]\n\n"
@@ -866,7 +893,9 @@ it('corrects a version that changes a fact of the English article, with the mode
         ->not->toContain('champ fabricant')
         ->and($result->output['article']['title'])->toBe(Fixtures::article()['title'])
         ->and($result->output['corrections'])->toBe([['original' => $added, 'corrected' => 'Etsy le demande dans les réglages de la fiche.', 'reason' => 'La version ajoute une obligation que le texte anglais ne pose pas.']])
-        ->and(array_column($result->output['set_aside'], 'why'))->toBe(['passage not found once in the version', 'number absent from the English article: 2031']);
+        ->and(array_column($result->output['set_aside'], 'why'))->toBe(['passage not found once in the version', 'number absent from the English article: 2031'])
+        // Ce que le code a fait d'abord, puis la description de l'IA, puis ce qui reste a verifier (decision du 23/11).
+        ->and($result->summary)->toBe("Un passage de la version a été corrigé pour dire ce que dit le texte anglais. Un passage corrigé. 2 écarts relevés n'ont pas pu être corrigés automatiquement. Ils restent à vérifier dans la version.");
     VersionCheckAgent::assertPrompted(fn ($prompt): bool => $prompt->model === Fixtures::context()->settings->modelFor('verification')
         && $prompt->contains('French version to check')
         && str_contains($prompt->agent->instructions(), 'an alternative turned into a cumulation'));

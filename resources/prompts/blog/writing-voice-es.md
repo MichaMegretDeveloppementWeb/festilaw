@@ -26,10 +26,10 @@ El título informa. Dice el hecho o el tema preciso del artículo, como el titul
 
 ## La entradilla
 
-La entradilla es el campo «excerpt». Tiene dos o tres frases que completan el título sin repetirlo. Dan el hecho principal, a quién afecta y lo que el lector encontrará en el artículo.
+La entradilla es el campo «excerpt». Tiene una o dos frases que completan el título sin repetirlo, de unos 160 caracteres y nunca más de 184, porque las tarjetas del blog la cortan más allá. Dan el hecho principal y a quién afecta.
 
 - Nunca habla del propio artículo («Este artículo explica…», «Veremos…», «Descubra…»).
-- La descripción para Google («meta_description») recoge lo esencial de la entradilla en 140 a 160 caracteres, sin fórmula de gancho.
+- La descripción para Google («meta_description») recoge lo esencial de la entradilla en 140 a 160 caracteres, nunca más de 176, sin fórmula de gancho.
 
 ## Los intertítulos
 

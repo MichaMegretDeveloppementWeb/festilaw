@@ -11,7 +11,6 @@ use App\Data\Blog\Generation\GenerationImageOptions;
 use App\Data\Blog\Generation\GenerationLength;
 use App\Data\Blog\Generation\GenerationModels;
 use App\Data\Blog\Generation\ScheduledGenerationPlan;
-use App\Enums\Blog\Generation\BlogAiPeriodUnit;
 use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogGenerationTrigger;
@@ -21,6 +20,7 @@ use App\Models\BlogGeneration;
 use App\Repositories\Blog\ScheduledBlogGenerationRepository;
 use App\Services\Blog\Generation\BlogAiSettingsService;
 use App\Services\Blog\Generation\BlogGenerationBudget;
+use App\Services\Blog\Generation\BlogGenerationCalendar;
 use App\Services\Blog\Generation\BlogGenerationCostForecaster;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Routing\UrlGenerator;
@@ -49,6 +49,7 @@ final readonly class PlanScheduledBlogGenerationsAction
         private BlogGenerationBudget $budget,
         private ScheduledBlogGenerationRepository $scheduled,
         private BlogGenerationCostForecaster $forecaster,
+        private BlogGenerationCalendar $calendar,
         private UrlGenerator $url,
     ) {}
 
@@ -61,7 +62,7 @@ final readonly class PlanScheduledBlogGenerationsAction
             return ScheduledGenerationPlan::disabled();
         }
 
-        $dueAt = $this->dueAt($settings);
+        $dueAt = $this->calendar->dueAt($settings);
 
         if ($dueAt !== null && $dueAt->isFuture()) {
             return ScheduledGenerationPlan::notDue($dueAt);
@@ -80,23 +81,6 @@ final readonly class PlanScheduledBlogGenerationsAction
         }
 
         return ScheduledGenerationPlan::launched($count);
-    }
-
-    /**
-     * Le jour a partir duquel un lot est du, ou nul s'il n'y en a jamais eu (du tout de suite). Compare au
-     * jour pres : la tache passe chaque jour a la meme heure, a quelques secondes pres.
-     */
-    private function dueAt(BlogAiSettings $settings): ?CarbonImmutable
-    {
-        $lastLaunchedAt = $this->scheduled->lastLaunchedAt();
-
-        if ($lastLaunchedAt === null) {
-            return null;
-        }
-
-        $anchorDay = $settings->periodUnit === BlogAiPeriodUnit::Month ? $this->scheduled->firstLaunchedAt()?->day : null;
-
-        return $settings->periodUnit->addTo($lastLaunchedAt, $settings->periodCount, $anchorDay)->startOfDay();
     }
 
     /** Chaque generation du lot porte les images, la longueur, l'effort, les modeles et le cout annonce des reglages, figes au lancement. */

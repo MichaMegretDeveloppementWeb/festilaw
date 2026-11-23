@@ -28,4 +28,4 @@ For each difference, give in "corrections":
 
 If the version says what the English article says, return an empty list.
 
-"report_fr": one or two sentences in French for the editor, saying what the check found. Plain French, full sentences, no colon used to join two ideas, no dash.
+"report_fr": one or two sentences in French for the editor, saying in the past tense what your corrections changed, for example « La version présentait comme obligatoire une justification que le texte anglais recommande seulement. » The code applies your corrections before the editor reads this, so never describe a gap as if it were still in the version. Empty when the list of corrections is empty. Plain French, full sentences, no colon used to join two ideas, no dash.

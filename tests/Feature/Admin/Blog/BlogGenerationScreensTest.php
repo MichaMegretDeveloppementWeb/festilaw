@@ -13,6 +13,7 @@ use App\Livewire\Admin\Blog\GenerationDetail;
 use App\Livewire\Admin\Blog\GenerationHistory;
 use App\Livewire\Admin\Blog\GenerationLauncher;
 use App\Livewire\Admin\Blog\GenerationSettings;
+use App\Livewire\Admin\Blog\PostForm;
 use App\Models\BlogGeneration;
 use App\Models\BlogGenerationStep;
 use App\Models\BlogPost;
@@ -104,8 +105,8 @@ it('shows the spend of the month against its cap, the automatic rhythm and the d
     BlogPost::factory()->create();
 
     Livewire::test(GenerationDashboard::class)
-        ->assertSee(dollarsText('1,0000 $'))
-        ->assertSee(dollarsText('sur 4,0000 $ de plafond'))
+        ->assertSee(dollarsText('1,00 $'))
+        ->assertSee(dollarsText('sur 4,00 $ de plafond'))
         ->assertSee('Activée')
         ->assertSee('2 articles chaque semaine')
         // Le titre « Brouillons à relire » dit deja ce qu'est le nombre : rien d'autre que le lien (Micha, 19/11).
@@ -523,7 +524,7 @@ it('warns as the spend of the month nears its cap, then passes it, and still lau
 
     Livewire::test(GenerationDashboard::class)
         ->assertSee('La dépense du mois approche du plafond')
-        ->assertSee(dollarsText('soit 85 % du plafond de 1,0000 $'))
+        ->assertSee(dollarsText('soit 85 % du plafond de 1,00 $'))
         // Decision de Micha du 19/11 : une phrase simple, a la place de « ce plafond ne fait qu'avertir ».
         ->assertSee('Dépasser le plafond ne bloque pas la génération.')
         ->assertDontSee('ne fait qu\'avertir')
@@ -996,4 +997,54 @@ it('keeps a saved model that left the list visible, so that another one gets cho
         ->assertSee('old/retired-model (retiré de la liste)')
         ->call('save')
         ->assertHasErrors(['models.writing' => 'in']);
+});
+
+it('says when the next automatic article will come, without approximation, and leads straight to its settings', function (string $now, ?string $lastLaunch, string $expected) {
+    // Decisions de Micha du 23/11 : jamais « vers » ni « dans l'heure », et un lien vers la section des reglages.
+    $this->travelTo($now);
+    BlogAi::saveSettings(['enabled' => true, 'period_count' => 1, 'period_unit' => 'week']);
+
+    if ($lastLaunch !== null) {
+        BlogGeneration::factory()->scheduled()->completed()->create(['created_at' => $lastLaunch]);
+    }
+
+    Livewire::test(GenerationDashboard::class)
+        ->assertSee($expected)
+        ->assertSeeHtml(route('admin.blog.generation.settings').'#generation-automatique');
+})->with([
+    'never launched, during the day' => ['2026-11-23 11:49:00', null, 'Prochain article dans moins d\'une heure.'],
+    'never launched, before the first check of the day' => ['2026-11-23 03:10:00', null, 'Prochain article dans 3 heures.'],
+    'never launched, after the last check of the day' => ['2026-11-23 21:30:00', null, 'Prochain article demain.'],
+    'weekly, due in two days' => ['2026-11-23 10:00:00', '2026-11-18 09:00:00', 'Prochain article dans 2 jours.'],
+    'weekly, due later' => ['2026-11-23 10:00:00', '2026-11-22 09:00:00', 'Prochain article le 29/11.'],
+]);
+
+it('announces no next article while the automatic generation is off or paused', function () {
+    BlogAi::saveSettings(['enabled' => false]);
+    Livewire::test(GenerationDashboard::class)->assertDontSeeHtml('data-next-launch')->assertSee('Modifier');
+
+    BlogAi::saveSettings(['enabled' => true, 'pending_drafts_cap' => 1]);
+    BlogPost::factory()->create(['origin' => BlogPostOrigin::Ai]);
+    Livewire::test(GenerationDashboard::class)->assertSee('En pause')->assertDontSeeHtml('data-next-launch');
+});
+
+it('shows the attention points of a generated draft in its editor too, since the e-mail leads straight there', function () {
+    actingAs(User::factory()->create());
+    $generation = BlogGeneration::factory()->completed()->create();
+    BlogGenerationStep::factory()->for($generation, 'generation')->named('verification', 6)->completed(4_000)->create([
+        'output' => [
+            'article' => ['body' => 'Intro.'],
+            'attention_points' => [['heading' => '', 'statement_fr' => 'Le règlement s\'applique depuis décembre 2024.', 'check_fr' => 'Vérifiez la date d\'application.']],
+        ],
+    ]);
+    $draft = BlogPost::factory()->withTranslations()->create(['origin' => BlogPostOrigin::Ai, 'generation_id' => $generation->id]);
+    $byHand = BlogPost::factory()->withTranslations()->create();
+
+    Livewire::test(PostForm::class, ['post' => $draft->id])
+        ->assertSeeHtml('data-attention-points')
+        ->assertSeeInOrder([
+            'La vérification a gardé une affirmation sur laquelle elle a un doute. Vérifiez-la avant de publier.',
+            'Dans l\'introduction', 'Le règlement s\'applique depuis décembre 2024.', 'Vérifiez la date d\'application.',
+        ]);
+    Livewire::test(PostForm::class, ['post' => $byHand->id])->assertDontSeeHtml('data-attention-points');
 });
