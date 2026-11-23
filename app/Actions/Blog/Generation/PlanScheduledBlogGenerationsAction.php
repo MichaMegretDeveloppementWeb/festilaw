@@ -31,8 +31,8 @@ use Illuminate\Support\Str;
 use Throwable;
 
 /**
- * La generation automatique : une fois par periode, met en file un lot d'articles. Appelee chaque jour par
- * la tache planifiee ; elle ne fait rien tant que la periode reglee n'est pas echue depuis le dernier lot
+ * La generation automatique : une fois par periode, met en file un lot d'articles. Appelee chaque heure de 6 h
+ * a 20 h (UTC) par la tache planifiee ; elle ne fait rien tant que la periode reglee n'est pas echue depuis le dernier lot
  * lance. Un lot du mais retenu est inscrit au journal (une ligne « non lancee », sans jamais repeter deux fois
  * de suite la meme raison), et sera lance des que la raison tombe. Une seule raison le retient : trop de
  * brouillons en attente. Le cout ne retient rien : chaque generation du lot garde son cout annonce et s'arrete

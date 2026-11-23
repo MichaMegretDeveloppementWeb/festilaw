@@ -35,5 +35,16 @@
         <!-- Generation par IA : les tests ne dependent ni de la cle ni du pipeline du fichier .env local. -->
         <env name="OPENROUTER_API_KEY" value=""/>
         <env name="BLOG_AI_PIPELINE" value="simulated"/>
+        <!-- Audit du 23/11 : les tests n'heritent d'aucune cle du .env local. Un test qui a besoin d'une cle la pose
+             lui-meme. Le journal se coupe dans tests/TestCase.php : ici, la valeur « null » serait lue comme une
+             absence de canal, et Laravel ecrirait dans son journal de secours. -->
+        <env name="RESEND_API_KEY" value=""/>
+        <env name="PIXABAY_API_KEY" value=""/>
+        <env name="SIGNWELL_API_KEY" value=""/>
+        <env name="SIGNWELL_API_APPLICATION_ID" value=""/>
+        <env name="STRIPE_SECRET_KEY" value=""/>
+        <env name="STRIPE_WEBHOOK_SECRET" value=""/>
+        <env name="ANALYTICS_GEOIP_LICENSE_KEY" value=""/>
+        <env name="ANALYTICS_GSC_CLIENT_SECRET" value=""/>
     </php>
 </phpunit>

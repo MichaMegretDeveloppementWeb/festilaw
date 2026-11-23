@@ -11,11 +11,11 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Generation automatique d'articles : chaque jour, regarde si un lot est du d'apres la periode reglee au
+ * Generation automatique d'articles : chaque heure de 6 h a 20 h (UTC), regarde si un lot est du d'apres la periode reglee au
  * back-office, et le met en file (PlanScheduledBlogGenerationsAction). C'est le worker qui l'execute ; un
  * e-mail part quand tout le lot est termine.
  *
- * Rejouable : relancee le meme jour, elle ne trouve plus rien de du. `--dry` dit ce qui serait fait sans
+ * Rejouable : relancee dans la meme periode, elle ne trouve plus rien de du. `--dry` dit ce qui serait fait sans
  * rien mettre en file ni envoyer.
  */
 final class ScheduleBlogGenerations extends Command

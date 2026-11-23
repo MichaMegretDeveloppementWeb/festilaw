@@ -353,3 +353,17 @@ it('gives the cost of an image bench without any call, and refuses a topic, a mo
 
     Image::assertNothingGenerated();
 });
+
+it('refuses to run any bench in production, where it would call paid models', function (string $command) {
+    // Audit du 23/11 : le banc est un outil local.
+    $this->app['env'] = 'production';
+    Http::preventStrayRequests();
+
+    $this->artisan($command)
+        ->expectsOutputToContain("Le banc d'essai ne tourne qu'en local, jamais en production.")
+        ->assertFailed();
+})->with([
+    'articles' => ['festilaw:blog-bench --dry'],
+    'images' => ['festilaw:blog-bench-images some-run'],
+    'verification' => ['festilaw:blog-bench-verify some-run'],
+]);

@@ -12,6 +12,7 @@ use App\Enums\Blog\Generation\BlogAiImageMode;
 use App\Enums\Blog\Generation\BlogAiPeriodUnit;
 use App\Enums\Blog\Generation\BlogEffortLevel;
 use App\Livewire\Concerns\HandlesAdminErrors;
+use App\Livewire\Concerns\HandlesMountFailure;
 use App\Services\Admin\Blog\Generation\BlogGenerationPresenter;
 use App\Services\Blog\Generation\BlogAiModelCatalog;
 use App\Services\Blog\Generation\BlogAiSettingsService;
@@ -42,6 +43,7 @@ use Throwable;
 class GenerationSettings extends Component
 {
     use HandlesAdminErrors;
+    use HandlesMountFailure;
 
     public bool $enabled = false;
 
@@ -82,8 +84,14 @@ class GenerationSettings extends Component
 
     public function mount(BlogAiSettingsService $settings, ArticleLengthRules $length, BlogGenerationBudget $budget): void
     {
-        $current = $settings->current();
-        $this->spentThisMonthMicrousd = $budget->spentThisMonthMicrousd();
+        try {
+            $current = $settings->current();
+            $this->spentThisMonthMicrousd = $budget->spentThisMonthMicrousd();
+        } catch (Throwable $e) {
+            $this->failedToLoad($e, 'the blog generation settings');
+
+            return;
+        }
 
         $this->wordOptions = $length->options();
         $this->articleWords = (string) $length->clamp($current->articleWords);
@@ -220,6 +228,30 @@ class GenerationSettings extends Component
         BlogGenerationBudget $budget,
         BlogAiSettingsService $settings,
     ): View {
+        $view = view('livewire.admin.blog.generation-settings')->title(__('Réglages de la génération IA'))->layoutData(['surface' => 'plain']);
+
+        if ($this->loadFailed) {
+            return $view;
+        }
+
+        try {
+            return $view->with($this->viewData($presenter, $catalog, $forecaster, $length, $budget, $settings));
+        } catch (Throwable $e) {
+            $this->failedToLoad($e, 'the blog generation settings');
+
+            return $view;
+        }
+    }
+
+    /** @return array<string, mixed> */
+    private function viewData(
+        BlogGenerationPresenter $presenter,
+        BlogAiModelCatalog $catalog,
+        BlogGenerationCostForecaster $forecaster,
+        ArticleLengthRules $length,
+        BlogGenerationBudget $budget,
+        BlogAiSettingsService $settings,
+    ): array {
         $steps = collect($this->models)->keys();
         $recommended = $settings->recommendedModels();
         $images = new GenerationImageOptions(
@@ -228,7 +260,7 @@ class GenerationSettings extends Component
         );
         $monthlyCap = self::microusd($this->monthlySpendCap);
 
-        return view('livewire.admin.blog.generation-settings', [
+        return [
             'forecast' => $presenter->forecast($forecaster->forecast(
                 $this->models, $length->clamp((int) $this->articleWords), $images,
                 effort: BlogEffortLevel::tryFrom($this->effort) ?? BlogEffortLevel::Medium,
@@ -253,7 +285,7 @@ class GenerationSettings extends Component
             'imageModes' => collect(BlogAiImageMode::cases())->mapWithKeys(fn (BlogAiImageMode $mode): array => [$mode->value => $mode->label()])->all(),
             'effortLevels' => collect(BlogEffortLevel::cases())->mapWithKeys(fn (BlogEffortLevel $level): array => [$level->value => $level->label()])->all(),
             'imageCounts' => collect(range(1, BlogAiSettings::MAX_IMAGES))->mapWithKeys(fn (int $count): array => [(string) $count => $presenter->imageCountLabel($count)])->all(),
-        ])->title(__('Réglages de la génération IA'))->layoutData(['surface' => 'plain']);
+        ];
     }
 
     /** Un montant saisi en dollars, ou nul tant que la saisie n'est pas un nombre positif. */

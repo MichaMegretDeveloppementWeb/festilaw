@@ -4,6 +4,7 @@ use App\Contracts\Blog\Generation\HostResolver;
 use App\Services\Blog\Generation\Editorial\Sources\SourceLinkChecker;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 /*
  | Test des liens de source : un lien mort sort de l'article, une adresse qui vise le reseau local ou le
@@ -100,4 +101,15 @@ it('drops a link that keeps redirecting', function () {
 
     expect(app(SourceLinkChecker::class)->check(['https://loop.example/start']))->toBe(['https://loop.example/start' => false]);
     Http::assertSentCount(4);
+});
+
+it('logs a failure of the check itself, which would otherwise pass for unreliable sources', function () {
+    // Audit du 23/11 : l'erreur etait avalee sans un mot.
+    Http::fake(fn () => throw new RuntimeException('client broken'));
+    Log::spy();
+
+    expect(app(SourceLinkChecker::class)->check(['https://commission.europa.eu/gpsr']))
+        ->toBe(['https://commission.europa.eu/gpsr' => false]);
+
+    Log::shouldHaveReceived('error')->once()->withArgs(fn (string $message): bool => $message === 'Blog source link check failed for a link.');
 });

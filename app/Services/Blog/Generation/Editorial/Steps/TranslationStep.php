@@ -17,7 +17,7 @@ use App\Services\Blog\Generation\Editorial\BlogWritingSignalsInspector;
 use App\Services\Blog\Generation\Editorial\EditorialTypography;
 
 /**
- * Etapes 8 et 9 · la version francaise ou espagnole. Depuis le 18/11, l'article anglais verifie sert de
+ * Etapes « version francaise » et « version espagnole », chacune suivie de son controle (VersionCheckStep). Depuis le 18/11, l'article anglais verifie sert de
  * matiere a un secretaire de redaction de la langue, qui ecrit lui-meme titre, chapo et intertitres d'apres
  * la charte de sa presse (writing-voice-xx.md, consigne step-adaptation-xx.md, ecrite dans la langue) : une
  * simple traduction gardait le squelette anglais (brouillon 99, relu par Micha). Les memes jetons de liens et

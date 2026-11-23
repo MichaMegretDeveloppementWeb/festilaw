@@ -53,6 +53,13 @@ final class RunBlogBench extends Command
         BlogAiCostFormatter $dollars,
         BlogAiModelCatalog $catalog,
     ): int {
+        // Outil local : lance sur le serveur, il appellerait des modeles payants sur le credit de Festilaw (audit du 23/11).
+        if (app()->isProduction()) {
+            $this->error("Le banc d'essai ne tourne qu'en local, jamais en production.");
+
+            return self::FAILURE;
+        }
+
         [$plan, $unknown] = $plan->only((array) $this->option('topic'), (array) $this->option('configuration'));
 
         if ($unknown !== []) {

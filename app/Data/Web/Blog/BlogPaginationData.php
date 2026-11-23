@@ -9,6 +9,9 @@ namespace App\Data\Web\Blog;
  */
 final readonly class BlogPaginationData
 {
+    /** Pages montrees de part et d'autre de la page courante, en plus de la premiere et de la derniere. */
+    private const WINDOW = 2;
+
     public function __construct(
         public string $baseUrl,
         public int $currentPage,
@@ -36,10 +39,30 @@ final readonly class BlogPaginationData
     }
 
     /**
-     * @return list<int>
+     * Les numeros a montrer : la premiere page, la derniere, et deux de part et d'autre de la page courante (audit
+     * du 23/11 : avec un article par jour, la liste aurait compte des dizaines de numeros). Null marque un saut ;
+     * un saut d'une seule page montre la page plutot que des points de suspension.
+     *
+     * @return list<int|null>
      */
     public function pages(): array
     {
-        return range(1, $this->lastPage);
+        $shown = array_unique([1, $this->lastPage, ...range(max(1, $this->currentPage - self::WINDOW), min($this->lastPage, $this->currentPage + self::WINDOW))]);
+        sort($shown);
+        $pages = [];
+        $previous = 0;
+
+        foreach ($shown as $page) {
+            if ($page - $previous === 2) {
+                $pages[] = $previous + 1;
+            } elseif ($page - $previous > 2) {
+                $pages[] = null;
+            }
+
+            $pages[] = $page;
+            $previous = $page;
+        }
+
+        return $pages;
     }
 }

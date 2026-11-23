@@ -26,7 +26,7 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Etape 10 · les images d'un article genere (taches 6.8 a 6.10). L'image principale toujours, sauf si la
+ * Avant-derniere etape : les images d'un article genere (taches 6.8 a 6.10). L'image principale toujours, sauf si la
  * generation n'en demande aucune, puis les images du texte prevues par le redacteur, dans la limite reglee.
  * Selon la generation, une photo de banque (avec son credit) ou une image generee par IA. Une photo de banque
  * n'est prise qu'apres un controle qui la regarde et la decrit telle qu'elle est (StockPhotoChecker, remarque de

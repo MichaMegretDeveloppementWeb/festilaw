@@ -87,7 +87,7 @@ it('does not mark the yearly client reminder when it could not be sent (no email
     expect($dossier->fresh()->meta['renewal']['reminded_year'] ?? null)->toBeNull();
 });
 
-it('does not mark the admin digest meta when the digest failed to send', function () {
+it('does not mark the admin digest meta when the digest failed to send, and reports the run as failed', function () {
     Mail::fake();
     $year = (int) now()->year;
     $dossier = renewalDossier($year - 1);
@@ -97,7 +97,10 @@ it('does not mark the admin digest meta when the digest failed to send', functio
     $notifier->shouldReceive('notify')->andReturnFalse();
     app()->instance(TeamNotifier::class, $notifier);
 
-    $this->artisan('festilaw:process-renewals', ['--now' => "{$year}-01-05"])->assertOk();
+    // Audit du 23/11 : un envoi en echec fait repondre « echec » a la commande.
+    $this->artisan('festilaw:process-renewals', ['--now' => "{$year}-01-05"])
+        ->expectsOutputToContain('echecs : 1')
+        ->assertFailed();
 
     $renewal = $dossier->fresh()->meta['renewal'] ?? [];
     expect($renewal['reminded_year'] ?? null)->toBe($year)          // client OK -> marque

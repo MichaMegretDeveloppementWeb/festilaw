@@ -31,8 +31,9 @@ use Throwable;
  * ou le traitement se suit en direct. Le plafond du mois ne desactive rien : la fenetre avertit seulement quand
  * la depense s'en approche ou l'a depasse.
  *
- * Aucune requete au rendu : les reglages (longueur, images, modeles, plafonds), la depense du mois et les prix
- * du jour des modeles ne sont lus qu'a la premiere ouverture de la fenetre (trois requetes).
+ * Aucune requete au rendu du bouton : les reglages (longueur, images, modeles, plafonds), la depense du mois et
+ * les prix du jour des modeles ne sont lus qu'a la premiere ouverture de la fenetre (trois requetes). Ensuite,
+ * chaque changement d'un champ refait l'estimation, qui relit les prix du jour (une requete).
  */
 class GenerationLauncher extends Component
 {
@@ -72,18 +73,29 @@ class GenerationLauncher extends Component
     public bool $prepared = false;
 
     /** Appelee a l'ouverture de la fenetre : pre-remplit la demande d'apres les reglages, une seule fois. */
-    public function prepare(BlogAiSettingsService $settings, ArticleLengthRules $length, BlogGenerationBudget $budget): void
+    /**
+     * Lit les reglages avant d'ouvrir la fenetre. Faux si la lecture echoue : la fenetre ne s'ouvre pas vide, et un
+     * message le dit (audit du 23/11 : rien ne s'ouvrait, sans un mot).
+     */
+    public function prepare(BlogAiSettingsService $settings, ArticleLengthRules $length, BlogGenerationBudget $budget): bool
     {
         $this->resetErrorBag();
 
         if ($this->prepared) {
-            return;
+            return true;
         }
 
-        $current = $settings->current();
-        $this->spentThisMonthMicrousd = $budget->spentThisMonthMicrousd();
-        $this->monthlyCapMicrousd = $current->monthlySpendCapMicrousd();
+        try {
+            $current = $settings->current();
+            $spent = $budget->spentThisMonthMicrousd();
+        } catch (Throwable $e) {
+            $this->reportAdminError($e, 'Admin prepare blog generation launcher');
 
+            return false;
+        }
+
+        $this->spentThisMonthMicrousd = $spent;
+        $this->monthlyCapMicrousd = $current->monthlySpendCapMicrousd();
         $this->imageMode = $current->imageMode->value;
         $this->maxImages = (string) $current->maxImages;
         $this->articleWords = (string) $length->clamp($current->articleWords);
@@ -91,6 +103,8 @@ class GenerationLauncher extends Component
         $this->models = $current->models;
         $this->wordOptions = $length->options();
         $this->prepared = true;
+
+        return true;
     }
 
     /** @return array<string, array<int, mixed>> */

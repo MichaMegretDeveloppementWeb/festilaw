@@ -1,6 +1,10 @@
 @extends('layouts.web')
 
-@section('title', $page->metaTitle ?? __(':category · Blog · Festilaw', ['category' => $page->name]))
+{{-- Les pages 2 et suivantes portent leur numero, comme celles du blog : sinon Google les compte comme des
+     doublons (audit du 23/11). --}}
+@section('title', $page->pagination->currentPage > 1
+    ? __(':category · page :page · Blog · Festilaw', ['category' => $page->metaTitle ?? $page->name, 'page' => $page->pagination->currentPage])
+    : ($page->metaTitle ?? __(':category · Blog · Festilaw', ['category' => $page->name])))
 @section('meta_description', $page->metaDescription ?? $page->description ?? __('Practical guides and news on EU product safety rules for sellers outside the EU.'))
 @section('canonical', $page->url)
 

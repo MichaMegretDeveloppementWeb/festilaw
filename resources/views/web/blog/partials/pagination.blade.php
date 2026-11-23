@@ -8,7 +8,9 @@
         <ol class="blog-pagination__pages">
             @foreach ($pagination->pages() as $number)
                 <li>
-                    @if ($number === $pagination->currentPage)
+                    @if ($number === null)
+                        <span class="blog-pagination__gap" aria-hidden="true">…</span>
+                    @elseif ($number === $pagination->currentPage)
                         <span class="blog-pagination__page is-current" aria-current="page"><span class="visually-hidden">{{ __('Page') }} </span>{{ $number }}</span>
                     @else
                         <a href="{{ $pagination->url($number) }}" class="blog-pagination__page"><span class="visually-hidden">{{ __('Page') }} </span>{{ $number }}</a>

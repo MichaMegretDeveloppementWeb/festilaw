@@ -12,6 +12,7 @@ use App\Data\Blog\Generation\GenerationStepContext;
 use App\Data\Blog\Generation\GenerationUsage;
 use App\Exceptions\Blog\BlogAiProviderException;
 use App\Exceptions\Blog\BlogEditorialException;
+use App\Exceptions\Blog\BlogGenerationLockLostException;
 use App\Services\Blog\Generation\Editorial\BlogAgentCaller;
 use App\Services\Blog\Generation\Editorial\BlogPromptLibrary;
 
@@ -86,6 +87,12 @@ abstract class EditorialStep implements GenerationStep
         // Les recherches d'un agent s'enchainent dans la meme requete : son delai grandit avec leur nombre
         // (controle du 20/11), sinon une recherche d'effort eleve serait coupee avant la fin, et payee.
         $timeout = $this->turnTimeoutSeconds() + ($agent instanceof WebSearchAgent ? self::SECONDS_PER_SEARCH * $agent->searches() : 0);
+
+        // Une etape peut enchainer plusieurs appels lents : le verrou est prolonge avant chacun, pour qu'aucun
+        // autre worker ne reprenne l'etape et ne la paie deux fois (audit du 23/11). Perdu, l'appel ne part pas.
+        if (! $context->keepLock()) {
+            throw new BlogGenerationLockLostException($this->key(), $spent ?? GenerationUsage::none());
+        }
 
         try {
             return $this->caller->call(

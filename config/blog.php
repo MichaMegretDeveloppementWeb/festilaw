@@ -265,6 +265,13 @@ return [
         ],
 
         /*
+         | Controle des photos de la banque d'images (remarque de Micha du 20/11) : le modele du choix du sujet
+         | regarde au plus ce nombre de photos par recherche, et ne garde que la premiere qui convient a
+         | l'article, decrite telle qu'elle est. Environ 0,03 centime par photo regardee.
+         */
+        'stock_photo_checks' => 4,
+
+        /*
          | Recherche web des agents (outil `openrouter:web_search`). Le moteur Exa est impose : la recherche
          | native d'Anthropic, choisie sinon pour Haiku, rend des pages dont la taille ne se regle pas (47 000
          | jetons pour deux recherches le 17/11). Exa rend des extraits, au plus `max_results` par recherche
@@ -273,13 +280,6 @@ return [
          | 19/11 sur six generations : 6 470 a 6 580 millioniemes de dollar, d'ou `price_microusd`. Le contenu
          | des extraits est facture en plus, comme du texte lu.
          */
-        /*
-         | Controle des photos de la banque d'images (remarque de Micha du 20/11) : le modele du choix du sujet
-         | regarde au plus ce nombre de photos par recherche, et ne garde que la premiere qui convient a
-         | l'article, decrite telle qu'elle est. Environ 0,03 centime par photo regardee.
-         */
-        'stock_photo_checks' => 4,
-
         'web_search' => [
             'engine' => 'exa',
             'max_results' => 5,

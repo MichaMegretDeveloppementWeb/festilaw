@@ -21,6 +21,7 @@ use App\Services\Blog\Generation\Editorial\Steps\AssistedTranslationStep;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Sleep;
 use Livewire\Livewire;
 use Tests\Support\BlogAi;
@@ -235,4 +236,20 @@ it('stops waiting after twenty minutes, saying the translation goes on', functio
         ->assertSet('generationId', null)
         ->assertDispatched('post-translation-failed', locale: 'fr')
         ->assertDispatched('ui-toast', fn (string $event, array $params): bool => $params['type'] === 'warning' && str_contains($params['title'], 'Elle continue'));
+});
+
+it('stops following a translation after an error, instead of repeating the error every two seconds', function () {
+    // Audit du 23/11 : la notification d'erreur revenait a chaque releve.
+    actingAs(User::factory()->create());
+    $component = Livewire::test(PostTranslation::class)
+        ->dispatch('request-post-translation', from: 'en', to: 'fr', source: ['title' => 'Etsy labels', 'content' => richDocument()]);
+    Schema::rename('blog_generations', 'blog_generations_unavailable');
+
+    $component->call('check')
+        ->assertSet('generationId', null)
+        ->assertDispatched('post-translation-failed', locale: 'fr')
+        ->assertDispatched('ui-toast', type: 'error');
+
+    Schema::rename('blog_generations_unavailable', 'blog_generations');
+    expect($component->html())->not->toContain('wire:poll');
 });

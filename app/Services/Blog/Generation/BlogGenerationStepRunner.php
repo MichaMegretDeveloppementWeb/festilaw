@@ -9,6 +9,7 @@ use App\Data\Blog\Generation\GenerationStepContext;
 use App\Data\Blog\Generation\GenerationStepOutcome;
 use App\Enums\Blog\Generation\BlogAiFailureKind;
 use App\Exceptions\Blog\BlogAiProviderException;
+use App\Exceptions\Blog\BlogGenerationLockLostException;
 use Closure;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Sleep;
@@ -67,6 +68,12 @@ final readonly class BlogGenerationStepRunner
 
             try {
                 $result = $step->execute($context($row->attempt));
+            } catch (BlogGenerationLockLostException $e) {
+                // Un autre worker a repris la generation pendant l'etape : ce qui a ete depense reste compte,
+                // rien d'autre ne s'ecrit (audit du 23/11).
+                $this->recorder->addAbandonedConsumption($row, $e->usage, $this->elapsedMs($startedAt));
+
+                return GenerationStepOutcome::lockLost();
             } catch (BlogAiProviderException $e) {
                 $this->recorder->fail($row, $e->getMessage(), $e->usage, $this->elapsedMs($startedAt));
 

@@ -138,7 +138,7 @@ describe('festilaw:blog-purge-orphan-images', function () {
         $attached = agedBlogImage(hours: 300, postId: BlogPost::factory()->create()->id);
 
         $this->artisan('festilaw:blog-purge-orphan-images')
-            ->expectsOutputToContain('1 orphan image(s) deleted, 0 folder(s) without row removed, 0 failed')
+            ->expectsOutputToContain('1 orphan image(s) deleted, 0 folder(s) without row removed, 0 image(s) with missing files, 0 failed')
             ->assertSuccessful();
 
         expect(BlogImage::query()->orderBy('id')->pluck('id')->all())->toBe([$recentOrphan->id, $attached->id])
@@ -168,7 +168,7 @@ describe('festilaw:blog-purge-orphan-images', function () {
         $this->artisan('festilaw:blog-purge-orphan-images --dry')
             ->expectsOutputToContain("Would delete orphan image #{$orphan->id}.")
             ->expectsOutputToContain('Would delete folder without image row: aaaaaaaa-0000-0000-0000-000000000001.')
-            ->expectsOutputToContain('Blog (dry run): 1 orphan image(s) deleted, 1 folder(s) without row removed, 0 failed')
+            ->expectsOutputToContain('Blog (dry run): 1 orphan image(s) deleted, 1 folder(s) without row removed, 0 image(s) with missing files, 0 failed')
             ->assertSuccessful();
 
         expect(BlogImage::query()->count())->toBe(1)
@@ -187,6 +187,23 @@ describe('festilaw:blog-purge-orphan-images', function () {
         $this->artisan('festilaw:blog-purge-orphan-images')
             ->expectsOutputToContain('1 failed')
             ->assertFailed();
+    });
+
+    it('reports in the morning error report an image shown by a post whose files are gone, and deletes nothing', function () {
+        // Audit du 23/11 : l'article l'affichait cassee sans que personne le sache.
+        $post = BlogPost::factory()->create();
+        $kept = agedBlogImage(hours: 48, postId: $post->id);
+        $broken = agedBlogImage(hours: 48, postId: $post->id);
+        Storage::disk('public')->deleteDirectory("blog/{$broken->uuid}");
+        Log::spy();
+
+        $this->artisan('festilaw:blog-purge-orphan-images')
+            ->expectsOutputToContain('1 image(s) with missing files')
+            ->assertOk();
+
+        Log::shouldHaveReceived('error')->once()->withArgs(fn (string $message, array $context): bool => $message === 'Blog image files are missing for an image shown by a post.'
+            && $context['image_id'] === $broken->id);
+        expect(BlogImage::query()->whereKey([$kept->id, $broken->id])->count())->toBe(2);
     });
 
     it('is scheduled once a day with a bounded lock', function () {

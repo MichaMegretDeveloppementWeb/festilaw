@@ -607,3 +607,21 @@ it('saves nothing when the publication fails after the saving, so that the scree
         ->and($post->translationFor('en')->fresh()->title)->not->toBe('A title that must not stay')
         ->and(BlogPost::query()->count())->toBe(1);
 });
+
+it('shows a load failure instead of an empty form when the article cannot be read, and reloads the page on retry', function () {
+    // Audit du 23/11 : une erreur a l'ouverture donnait une page 500. Vide, le formulaire enregistrerait un nouvel article.
+    $post = BlogContent::draft('guide');
+    Log::spy();
+    Schema::rename('blog_post_translations', 'blog_post_translations_unavailable');
+
+    $form = Livewire::test(PostForm::class, ['post' => $post->id])
+        ->assertSet('loadFailed', true)
+        ->assertSee('Le chargement de l\'article a échoué.')
+        ->assertDontSeeHtml('data-blog-contents');
+
+    Schema::rename('blog_post_translations_unavailable', 'blog_post_translations');
+    Log::shouldHaveReceived('error')->withArgs(fn (string $message, array $context): bool => $message === 'Unexpected error while loading the admin blog post form.'
+        && $context['post_id'] === $post->id);
+
+    $form->call('reloadPage')->assertRedirect();
+});

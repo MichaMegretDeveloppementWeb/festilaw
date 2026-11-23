@@ -13,6 +13,10 @@
         :description="__('Le nom est obligatoire dans les trois langues : la catégorie a une page publique dans chacune.')"
         class="mb-8 mt-2" />
 
+    @if ($loadFailed)
+        <x-ui::load-failure :title="__('Le chargement de la catégorie a échoué.')"
+            :description="__('Réessayez. Si le problème persiste, contactez l\'assistance technique.')" retry="reloadPage" />
+    @else
     <form wire:submit="save" id="category-form" class="pb-10">
         @error('form')
             <x-ui::alert type="error" class="mb-6" :title="__('La catégorie n\'a pas été enregistrée')">{{ $message }}</x-ui::alert>
@@ -55,6 +59,7 @@
             <x-ui::button type="submit" form="category-form" :loading="true" target="save">{{ __('Enregistrer la catégorie') }}</x-ui::button>
         </div>
     </x-admin.action-bar>
+    @endif
 
     @assets
         @vite('resources/js/admin/blog-category-form.js')

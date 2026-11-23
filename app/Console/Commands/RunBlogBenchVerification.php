@@ -39,6 +39,13 @@ final class RunBlogBenchVerification extends Command
         BlogGenerationCostForecaster $forecaster,
         BlogAiCostFormatter $dollars,
     ): int {
+        // Outil local : lance sur le serveur, il appellerait des modeles payants sur le credit de Festilaw (audit du 23/11).
+        if (app()->isProduction()) {
+            $this->error("Le banc d'essai ne tourne qu'en local, jamais en production.");
+
+            return self::FAILURE;
+        }
+
         $run = (string) $this->argument('run');
         $models = array_values(array_map(strval(...), (array) $this->option('model')));
         $known = $storage->articleKeys($run);

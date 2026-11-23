@@ -9,6 +9,7 @@ use App\Data\Blog\BlogCategoryTranslationData;
 use App\Data\Blog\SaveBlogCategoryData;
 use App\Exceptions\BaseAppException;
 use App\Livewire\Concerns\HandlesAdminErrors;
+use App\Livewire\Concerns\HandlesMountFailure;
 use App\Services\Admin\Blog\BlogCategoryAdminService;
 use App\Services\Admin\Blog\BlogSlugSuggestionService;
 use Illuminate\Support\Facades\Log;
@@ -28,6 +29,7 @@ use Throwable;
 class CategoryForm extends Component
 {
     use HandlesAdminErrors;
+    use HandlesMountFailure;
 
     private const LOCALES = ['en' => 'anglais', 'fr' => 'français', 'es' => 'espagnol'];
 
@@ -55,7 +57,13 @@ class CategoryForm extends Component
             return;
         }
 
-        $state = $categories->formState((int) $category);
+        try {
+            $state = $categories->formState((int) $category);
+        } catch (Throwable $e) {
+            $this->failedToLoad($e, 'the admin blog category form', ['category_id' => (int) $category]);
+
+            return;
+        }
 
         abort_if($state === null, 404);
 

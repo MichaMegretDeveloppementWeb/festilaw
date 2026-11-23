@@ -10,6 +10,7 @@ use App\Exceptions\BaseAppException;
 use App\Livewire\Concerns\HandlesAdminErrors;
 use App\Services\Admin\Blog\BlogTranslationResultService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -91,6 +92,7 @@ class PostTranslation extends Component
             $this->target = $to;
             $this->waitingSince = now()->getTimestamp();
         } catch (BaseAppException $e) {
+            Log::log($e->logLevel(), $e->getMessage(), ['exception' => $e]);
             $this->dispatch('ui-toast', title: $e->getUserMessage(), type: 'error');
             $this->dispatch('post-translation-failed', locale: $to);
         } catch (Throwable $e) {
@@ -106,15 +108,19 @@ class PostTranslation extends Component
             return;
         }
 
+        $target = (string) $this->target;
+
         try {
             $result = $results->find($this->generationId);
         } catch (Throwable $e) {
+            // Le releve s'arrete apres une erreur : sinon la meme notification revenait toutes les deux secondes
+            // (audit du 23/11). La traduction continue, et la page rechargee la retrouve.
             $this->reportAdminError($e, 'blog post translation check');
+            $this->reset('generationId', 'target', 'waitingSince');
+            $this->dispatch('post-translation-failed', locale: $target);
 
             return;
         }
-
-        $target = (string) $this->target;
 
         if ($result->isPending()) {
             if (now()->getTimestamp() - (int) $this->waitingSince > self::MAX_WAIT_SECONDS) {

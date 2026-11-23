@@ -1,7 +1,7 @@
 {{-- Le bouton « Générer un article » et sa fenetre. Le bouton lit d'abord les images par defaut des reglages
      (prepare), puis ouvre la fenetre ; le lancement redirige vers la page de la generation. --}}
 <div class="flex items-center gap-x-2">
-    <x-ui::button data-launch-generation x-on:click="$wire.prepare().then(() => $dispatch('ui-open-modal', 'launch-generation'))">
+    <x-ui::button data-launch-generation x-on:click="$wire.prepare().then((ready) => ready && $dispatch('ui-open-modal', 'launch-generation'))">
         <x-ui::icon name="sparkles" class="ai-icon h-4 w-4" /> {{ __('Générer un article') }}
     </x-ui::button>
 

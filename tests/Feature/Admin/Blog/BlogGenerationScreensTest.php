@@ -1047,3 +1047,32 @@ it('shows the attention points of a generated draft in its editor too, since the
         ]);
     Livewire::test(PostForm::class, ['post' => $byHand->id])->assertDontSeeHtml('data-attention-points');
 });
+
+it('does not open an empty launch window when the settings cannot be read, and says so', function () {
+    // Audit du 23/11 : la fenetre ne s'ouvrait pas, sans un mot.
+    Log::spy();
+    Schema::rename('blog_generations', 'blog_generations_unavailable');
+
+    $launcher = Livewire::test(GenerationLauncher::class)->call('prepare')
+        ->assertReturned(false)
+        ->assertDispatched('ui-toast', type: 'error')
+        ->assertSet('imageMode', '');
+
+    Schema::rename('blog_generations_unavailable', 'blog_generations');
+    Log::shouldHaveReceived('error')->withArgs(fn (string $message): bool => $message === 'Unexpected error in Admin prepare blog generation launcher.');
+
+    $launcher->call('prepare')->assertReturned(true)->assertSet('imageMode', 'stock');
+});
+
+it('shows a load failure instead of the settings when they cannot be read', function () {
+    // Audit du 23/11 : une erreur a l'ouverture donnait une page 500.
+    Log::spy();
+    Schema::rename('blog_generations', 'blog_generations_unavailable');
+
+    Livewire::test(GenerationSettings::class)
+        ->assertSee('Le chargement des réglages a échoué.')
+        ->assertDontSeeHtml('id="generation-settings-form"');
+
+    Schema::rename('blog_generations_unavailable', 'blog_generations');
+    Log::shouldHaveReceived('error')->withArgs(fn (string $message): bool => $message === 'Unexpected error while loading the blog generation settings.');
+});

@@ -37,4 +37,15 @@ final readonly class OrphanBlogImageRepository
     {
         return BlogImage::query()->pluck('uuid')->all();
     }
+
+    /**
+     * Les images rattachees a un article, avec ce qu'il faut pour retrouver leurs fichiers (audit du 23/11 : une
+     * image affichee dont les fichiers ont disparu doit etre signalee). Lues par lots, jamais toutes en memoire.
+     *
+     * @return iterable<BlogImage>
+     */
+    public function attached(): iterable
+    {
+        return BlogImage::query()->whereNotNull('blog_post_id')->select(['id', 'blog_post_id', 'uuid', 'basename', 'variants'])->lazyById(200);
+    }
 }

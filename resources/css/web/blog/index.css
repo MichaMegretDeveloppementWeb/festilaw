@@ -100,4 +100,5 @@
 a.blog-pagination__page:hover { border-color: var(--color-coral); color: var(--color-blue); }
 .blog-pagination__page.is-current { background: var(--color-blue); border-color: var(--color-blue); color: var(--color-cream); }
 .blog-pagination__step { color: var(--color-blue); font-weight: 600; }
+.blog-pagination__gap { display: inline-flex; align-items: center; height: 44px; color: var(--color-ink-soft); }
 .blog-pagination__step:hover { color: var(--color-coral); }

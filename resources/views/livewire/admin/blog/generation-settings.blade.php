@@ -11,6 +11,10 @@
 <div class="flex min-h-[calc(100svh-6.5rem)] flex-col sm:min-h-[calc(100svh-7.5rem)]">
     @include('livewire.admin.blog.generation.header', ['page' => 'settings'])
 
+    @if ($loadFailed)
+        <x-ui::load-failure :title="__('Le chargement des réglages a échoué.')"
+            :description="__('Réessayez. Si le problème persiste, contactez l\'assistance technique.')" retry="reloadPage" />
+    @else
     <form wire:submit="save" id="generation-settings-form" class="pb-10">
         <x-admin.section data-settings-section="models" :spaced="false" :title="__('Modèles')"
             :description="__('Le modèle d\'IA de chaque étape, pour tous les articles, lancés par vous ou automatiquement. Les deux prix sont ceux d\'un million de tokens lus et d\'un million de tokens écrits.')">
@@ -58,7 +62,7 @@
             <div class="grid grid-cols-1 gap-5 pt-6 sm:grid-cols-2">
                 <x-ui::form-group :label="__('Plafond de dépense du mois ($)')" for="ai-spend-cap" :error="$errors->first('monthlySpendCap')"
                     :hint="__('Dépasser le plafond ne bloque pas la génération. Vous êtes averti à l\'écran et par e-mail quand la dépense du mois en atteint :percent %, puis quand elle le dépasse.', ['percent' => $warningPercent])">
-                    <x-ui::input type="number" step="0.01" min="0" id="ai-spend-cap" wire:model.live.debounce.500ms="monthlySpendCap" :error="$errors->has('monthlySpendCap')" />
+                    <x-ui::input type="number" step="0.01" min="1" max="10000" id="ai-spend-cap" wire:model.live.debounce.500ms="monthlySpendCap" :error="$errors->has('monthlySpendCap')" />
                 </x-ui::form-group>
             </div>
 
@@ -91,7 +95,7 @@
                         </x-ui::form-group>
 
                         <x-ui::form-group :label="__('Tous les')" for="ai-period-count" :error="$errors->first('periodCount')">
-                            <x-ui::input type="number" min="1" max="365" id="ai-period-count" wire:model="periodCount" :error="$errors->has('periodCount')" />
+                            <x-ui::input type="number" min="1" max="12" id="ai-period-count" wire:model="periodCount" :error="$errors->has('periodCount')" />
                         </x-ui::form-group>
 
                         <x-ui::form-group :label="__('Unité')" for="ai-period-unit" :error="$errors->first('periodUnit')">
@@ -116,4 +120,5 @@
             <x-ui::button type="submit" form="generation-settings-form" :loading="true" target="save">{{ __('Enregistrer les réglages') }}</x-ui::button>
         </div>
     </x-admin.action-bar>
+    @endif
 </div>

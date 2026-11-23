@@ -13,12 +13,14 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Menage des images du blog. Planifiee chaque jour (routes/console.php). Deux passes :
+ * Menage des images du blog. Planifiee chaque jour (routes/console.php). Trois passes :
  *
  *  1. les images sans article depuis plus du delai de grace (envoyees puis jamais rattachees, retirees
  *     d'un article, ou restees apres une suppression d'article) : ligne et fichiers supprimes ;
- *  2. les dossiers presents sur le disque mais sans ligne en base (ecriture interrompue, suppression de
- *     fichiers qui avait echoue) : supprimes s'ils sont plus vieux que le delai de grace.
+ *  2. les dossiers presents sur un disque mais sans ligne en base (ecriture interrompue, suppression de
+ *     fichiers qui avait echoue) : supprimes s'ils sont plus vieux que le delai de grace ;
+ *  3. les images rattachees a un article dont les fichiers ont disparu : signalees en erreur, donc au rapport
+ *     du matin, car l'article les affiche cassees (audit du 23/11). Rien n'est supprime.
  *
  * Rejouable. Un element en echec est journalise et n'arrete pas les autres.
  *  --dry  liste ce qui serait supprime, sans rien supprimer
@@ -60,12 +62,21 @@ final class PurgeOrphanBlogImages extends Command
 
         try {
             $known = array_flip($orphans->knownUuids());
+            $directories = $storage->directories();
+        } catch (Throwable $e) {
+            $known = null;
+            $directories = [];
+            $failed++;
+            Log::error('Blog image folder sweep failed; it will be retried.', ['exception' => $e]);
+        }
 
-            foreach ($storage->directories() as $uuid) {
-                if (isset($known[$uuid])) {
-                    continue;
-                }
+        // Une erreur sur un dossier n'arrete pas les suivants.
+        foreach ($known === null ? [] : $directories as $uuid) {
+            if (isset($known[$uuid])) {
+                continue;
+            }
 
+            try {
                 $lastModified = $storage->lastModified($uuid);
 
                 if ($lastModified !== null && $lastModified >= $cutoff->getTimestamp()) {
@@ -80,14 +91,28 @@ final class PurgeOrphanBlogImages extends Command
                 }
 
                 $storage->deleteQuietly($uuid) ? $swept++ : $failed++;
+            } catch (Throwable $e) {
+                $failed++;
+                Log::error('Blog image folder could not be swept; it will be retried.', ['uuid' => $uuid, 'exception' => $e]);
+            }
+        }
+
+        $missing = 0;
+
+        try {
+            foreach ($orphans->attached() as $image) {
+                if (! $storage->variantsExist($image)) {
+                    $missing++;
+                    Log::error('Blog image files are missing for an image shown by a post.', ['image_id' => $image->id, 'post_id' => $image->blog_post_id, 'uuid' => $image->uuid]);
+                }
             }
         } catch (Throwable $e) {
             $failed++;
-            Log::error('Blog image folder sweep failed; it will be retried.', ['exception' => $e]);
+            Log::error('Blog image files check failed; it will be retried.', ['exception' => $e]);
         }
 
         $prefix = $dry ? 'Blog (dry run)' : 'Blog';
-        $this->info("{$prefix}: {$deleted} orphan image(s) deleted, {$swept} folder(s) without row removed, {$failed} failed.");
+        $this->info("{$prefix}: {$deleted} orphan image(s) deleted, {$swept} folder(s) without row removed, {$missing} image(s) with missing files, {$failed} failed.");
 
         return $failed > 0 ? self::FAILURE : self::SUCCESS;
     }

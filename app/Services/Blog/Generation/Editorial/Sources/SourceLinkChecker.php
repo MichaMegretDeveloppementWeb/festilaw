@@ -7,9 +7,11 @@ namespace App\Services\Blog\Generation\Editorial\Sources;
 use App\Contracts\Blog\Generation\HostResolver;
 use GuzzleHttp\Psr7\Uri;
 use GuzzleHttp\Psr7\UriResolver;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Pool;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
@@ -69,6 +71,12 @@ final readonly class SourceLinkChecker
                 $response = $responses[$original] ?? null;
 
                 if (! $response instanceof Response) {
+                    // Un lien qui ne repond pas est mort. Toute autre erreur est une panne du controle, a journaliser
+                    // (audit du 23/11) : elle passait pour une source peu fiable.
+                    if ($response instanceof Throwable && ! $response instanceof ConnectionException) {
+                        Log::error('Blog source link check failed for a link.', ['url' => $target['url'], 'exception' => $response]);
+                    }
+
                     $verdicts[$original] = false;
 
                     continue;
@@ -150,7 +158,11 @@ final readonly class SourceLinkChecker
                     ->get($targets[$key]['url']),
                 array_keys($targets),
             ));
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            // Une panne du controle lui-meme, pas un lien mort : sans ce journal, elle passait pour des sources
+            // trop peu fiables (audit du 23/11). Les liens du lot comptent alors comme non verifies.
+            Log::error('Blog source link check failed as a whole.', ['links' => count($targets), 'exception' => $e]);
+
             return [];
         }
     }

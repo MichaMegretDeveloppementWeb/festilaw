@@ -160,8 +160,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/categories/create', BlogCategoryForm::class)->name('categories.create');
             Route::get('/categories/{category}/edit', BlogCategoryForm::class)->whereNumber('category')->name('categories.edit');
 
-            // Generation d'articles par IA : vue d'ensemble, historique, reglages (trois pages reliees par
-            // des onglets), puis la page d'une generation.
+            // Generation d'articles par IA : vue d'ensemble, historique, reglages (l'historique s'ouvre par son lien,
+            // les reglages par la roue crantee de l'en-tete), puis la page d'une generation.
             Route::get('/generation', BlogGenerationDashboard::class)->name('generation.index');
             Route::get('/generation/history', BlogGenerationHistory::class)->name('generation.history');
             Route::get('/generation/settings', BlogGenerationSettings::class)->name('generation.settings');

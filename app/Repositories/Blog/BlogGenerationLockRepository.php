@@ -10,9 +10,10 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Le verrou d'une generation : qui la traite, et jusqu'a quand. Chaque operation est une seule mise a jour
- * conditionnelle, donc atomique : deux workers ne peuvent pas prendre la meme generation. Le verrou a une
- * duree courte et expire seul si son worker meurt.
+ * Le verrou d'une generation : qui la traite, et jusqu'a quand. La prise est une seule mise a jour
+ * conditionnelle, donc atomique : deux workers ne peuvent pas prendre la meme generation. Les autres operations
+ * ne touchent qu'une generation deja tenue par leur worker. Le verrou a une duree courte, prolongee avant chaque
+ * appel a l'IA, et expire seul si son worker meurt.
  */
 final readonly class BlogGenerationLockRepository
 {

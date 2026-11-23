@@ -8,9 +8,9 @@
      $adminNav et $schedulerStatus : fournis par le View::composer de AppServiceProvider. La barre laterale
      reprend celle de Chouchoute-toi (demande de Micha du 20/11) : un ecran seul a sa ligne, un espace de
      plusieurs pages est une section repliable, et le compte est en bas (resources/css/admin/sidebar.css).
-     $surface : 'plain' pose le fond blanc sur le contenu (ecrans du blog et de la generation IA, decision du
-     16/11/2026, « page blanche a la Stripe ») ; les autres ecrans gardent le fond gris du kit. Un ecran le choisit
-     par ->layoutData(['surface' => 'plain']). 'full' laisse toute la place au contenu, sans colonne ni marges :
+     $surface : 'plain' pose le fond blanc sur le contenu, et chaque ecran du back-office le choisit par
+     ->layoutData(['surface' => 'plain']) (decision du 16/11/2026, « page blanche a la Stripe »). Sans lui, le
+     contenu garde le fond gris du kit. 'full' laisse toute la place au contenu, sans colonne ni marges :
      les ecrans de Falcon Analytics portent leur propre boite (components/admin/analytics-layout). --}}
 @php($pageTitle = $title ?? __('Back-office'))
 @php($plainSurface = ($surface ?? 'page') === 'plain')

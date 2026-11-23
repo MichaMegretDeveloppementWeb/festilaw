@@ -129,7 +129,7 @@ final class VerificationStep extends EditorialStep
         ] : [], $this->items($answer, 'reference_conflicts')), static fn (array $conflict): bool => ($conflict['statement'] ?? '') !== ''));
 
         foreach ($conflicts as $conflict) {
-            Log::error('EU rules reference contradicted by an official source: '.Str::limit($conflict['statement'], 160), ['generation_id' => $generationId, 'source' => $conflict['source']]);
+            Log::error('EU rules reference contradicted by an official source.', ['generation_id' => $generationId, 'statement' => Str::limit($conflict['statement'], 160), 'source' => $conflict['source']]);
         }
 
         return $conflicts;

@@ -63,7 +63,11 @@ it('paginates a category twelve by twelve', function () {
     $second = get('/blog/category/rules-en?page=2')->assertOk();
     expect(substr_count($second->getContent(), 'class="post-card"'))->toBe(1);
     $second->assertSee('<link rel="canonical" href="'.url('/blog/category/rules-en').'?page=2">', false)
-        ->assertSee('<link rel="alternate" hreflang="es" href="'.url('/es/blog/categoria/rules-es').'?page=2">', false);
+        ->assertSee('<link rel="alternate" hreflang="es" href="'.url('/es/blog/categoria/rules-es').'?page=2">', false)
+        // Audit du 23/11 : la page 2 porte son numero, Google ne la compte plus comme un doublon de la page 1.
+        ->assertSee('<title>Rules en · page 2 · Blog · Festilaw</title>', false);
+    $first->assertSee('<title>Rules en · Blog · Festilaw</title>', false);
+    get('/es/blog/categoria/rules-es?page=2')->assertSee('<title>Rules es · página 2 · Blog · Festilaw</title>', false);
 
     get('/blog/category/rules-en?page=3')->assertNotFound();
 });

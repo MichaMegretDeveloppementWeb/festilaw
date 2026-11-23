@@ -7,6 +7,7 @@ use App\Enums\Submission\SubmissionStatus;
 use App\Models\Payment;
 use App\Models\Submission;
 use App\Services\Payment\PaymentGatewayRegistry;
+use App\Services\Payment\StripePaymentGateway;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
@@ -16,6 +17,9 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     config()->set('payment.enabled', ['stripe']);
     config()->set('payment.drivers.stripe', ['secret_key' => 'sk_test_x', 'webhook_secret' => 'whsec_x']);
+    // La passerelle peut avoir ete construite avant que la cle de test soit posee (audit du 23/11 : le test prenait
+    // la cle du .env local).
+    app()->forgetInstance(StripePaymentGateway::class);
     app()->forgetInstance(PaymentGatewayRegistry::class);
     Mail::fake();
 });

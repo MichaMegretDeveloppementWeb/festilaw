@@ -22,7 +22,7 @@ use App\Services\Blog\Generation\Editorial\EditorialMarkdown;
 use Carbon\CarbonImmutable;
 
 /**
- * Etape 5 · la redaction de l'article anglais, a partir du seul dossier de recherche. Le code controle ce
+ * Etape « redaction » : l'article anglais, a partir du seul dossier de recherche. Le code controle ce
  * qu'il recoit : structure, longueurs (le nombre de mots du texte compris), liens (jetons internes connus,
  * liens externes du dossier seulement), emplacements d'images dans la limite reglee, sources du dossier. Un
  * ecart donne lieu a une seule demande de correction. Ce qui reste ensuite est garde au journal ; seul un

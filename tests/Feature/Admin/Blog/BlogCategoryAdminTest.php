@@ -9,6 +9,8 @@ use App\Models\BlogCategoryTranslation;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Livewire\Livewire;
 use Tests\Support\BlogContent;
 
@@ -212,4 +214,18 @@ it('opens a category from its whole row, with no edit button', function () {
         ->assertSeeHtml("window.location.href = '".route('admin.blog.categories.edit', ['category' => $rules->id])."'")
         ->assertDontSeeHtml('title="Modifier"')
         ->assertSee('Supprimer cette catégorie ?');
+});
+
+it('shows a load failure instead of the form when the category cannot be read', function () {
+    // Audit du 23/11 : une erreur a l'ouverture donnait une page 500.
+    $rules = BlogContent::category('rules');
+    Log::spy();
+    Schema::rename('blog_category_translations', 'blog_category_translations_unavailable');
+
+    Livewire::test(CategoryForm::class, ['category' => $rules->id])
+        ->assertSee('Le chargement de la catégorie a échoué.')
+        ->assertDontSeeHtml('id="category-form"');
+
+    Schema::rename('blog_category_translations_unavailable', 'blog_category_translations');
+    Log::shouldHaveReceived('error')->withArgs(fn (string $message): bool => $message === 'Unexpected error while loading the admin blog category form.');
 });

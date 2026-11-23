@@ -25,6 +25,7 @@ use App\Data\Blog\StoreBlogImageData;
 use App\Enums\Blog\BlogImageUsage;
 use App\Exceptions\BaseAppException;
 use App\Livewire\Concerns\HandlesAdminErrors;
+use App\Livewire\Concerns\HandlesMountFailure;
 use App\Models\BlogPost;
 use App\Services\Admin\Blog\BlogPostFormService;
 use App\Services\Admin\Blog\BlogSlugSuggestionService;
@@ -55,6 +56,7 @@ use Throwable;
 class PostForm extends Component
 {
     use HandlesAdminErrors;
+    use HandlesMountFailure;
     use WithFileUploads;
 
     private const LOCALES = ['en' => 'anglais', 'fr' => 'français', 'es' => 'espagnol'];
@@ -133,7 +135,13 @@ class PostForm extends Component
             return;
         }
 
-        $this->opening = $form->open((int) $post);
+        try {
+            $this->opening = $form->open((int) $post);
+        } catch (Throwable $e) {
+            $this->failedToLoad($e, 'the admin blog post form', ['post_id' => (int) $post]);
+
+            return;
+        }
 
         abort_if($this->opening === null, 404);
 
@@ -681,6 +689,10 @@ class PostForm extends Component
 
     public function render(BlogPostFormService $form, BlogSlugSuggestionService $slugs): View
     {
+        if ($this->loadFailed) {
+            return view('livewire.admin.blog.post-form.load-failed')->title(__("Modifier l'article"))->layoutData(['surface' => 'plain']);
+        }
+
         $view = null;
         $categoryOptions = [];
         $related = [];

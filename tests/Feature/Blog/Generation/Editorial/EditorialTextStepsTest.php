@@ -9,12 +9,14 @@ use App\Ai\Agents\Blog\TranslatorAgent;
 use App\Ai\Agents\Blog\VersionCheckAgent;
 use App\Ai\Agents\Blog\WebSearchAgent;
 use App\Ai\Agents\Blog\WriterAgent;
+use App\Data\Blog\Generation\GenerationStepContext;
 use App\Enums\Blog\Generation\BlogEffortLevel;
 use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogTopicKind;
 use App\Exceptions\Blog\BlogAiProviderException;
 use App\Exceptions\Blog\BlogEditorialException;
+use App\Exceptions\Blog\BlogGenerationLockLostException;
 use App\Models\BlogGeneration;
 use App\Services\Blog\Generation\BlogEffortLevels;
 use App\Services\Blog\Generation\Editorial\Steps\FactSearchStep;
@@ -545,7 +547,9 @@ it('gives the writer and the fact-checker the date of the day and a dated refere
     expect($verification->output['reference_conflicts'])->toBe([
         ['statement' => 'Toys bear the CE marking under Directive 2009/48/EC.', 'source' => 'https://eur-lex.europa.eu/eli/reg/2025/2509/oj'],
     ]);
-    Log::shouldHaveReceived('error')->once()->withArgs(fn (string $message, array $context): bool => $message === 'EU rules reference contradicted by an official source: Toys bear the CE marking under Directive 2009/48/EC.'
+    // Message fixe, l'affirmation en contexte : le rapport du matin les regroupe (audit du 23/11).
+    Log::shouldHaveReceived('error')->once()->withArgs(fn (string $message, array $context): bool => $message === 'EU rules reference contradicted by an official source.'
+        && $context['statement'] === 'Toys bear the CE marking under Directive 2009/48/EC.'
         && $context['source'] === 'https://eur-lex.europa.eu/eli/reg/2025/2509/oj');
 });
 
@@ -910,4 +914,16 @@ it('gives the version check the lexicon of its own language, so that an official
     VersionCheckAgent::assertPrompted(fn ($prompt): bool => str_contains($prompt->agent->instructions(), 'Domain lexicon, English to Spanish')
         && ! str_contains($prompt->agent->instructions(), 'Domain lexicon, English to French')
         && str_contains($prompt->agent->instructions(), 'Never correct it toward the English'));
+});
+
+it('stops before an AI call once another worker has taken the generation over, instead of paying the call twice', function () {
+    // Audit du 23/11 : le verrou est prolonge avant chaque appel ; perdu, l'appel ne part pas.
+    WriterAgent::fake([Fixtures::writerAnswer()])->preventStrayPrompts();
+    $base = Fixtures::context(['topic' => Fixtures::topic(), 'research' => Fixtures::research()]);
+    $context = new GenerationStepContext(
+        $base->generationId, $base->type, null, null, $base->settings, $base->outputs, $base->payload, 1, keepLock: fn (): bool => false,
+    );
+
+    expect(fn () => app(WritingStep::class)->execute($context))->toThrow(BlogGenerationLockLostException::class);
+    WriterAgent::assertNeverPrompted();
 });

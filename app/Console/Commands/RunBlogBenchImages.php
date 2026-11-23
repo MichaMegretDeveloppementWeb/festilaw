@@ -31,6 +31,13 @@ final class RunBlogBenchImages extends Command
 
     public function handle(RunBlogBenchImagesAction $images, BlogBenchFileStorage $storage, BlogAiModelCatalog $catalog, BlogAiCostFormatter $dollars): int
     {
+        // Outil local : lance sur le serveur, il appellerait des modeles payants sur le credit de Festilaw (audit du 23/11).
+        if (app()->isProduction()) {
+            $this->error("Le banc d'essai ne tourne qu'en local, jamais en production.");
+
+            return self::FAILURE;
+        }
+
         $run = (string) $this->argument('run');
         $models = array_values(array_map(strval(...), (array) $this->option('model')));
         $known = array_values(array_unique(array_map(static fn (string $key): string => explode('--', $key)[0], $storage->articleKeys($run))));

@@ -62,6 +62,12 @@ Schedule::command('festilaw:blog-publish-scheduled')->everyMinute()->withoutOver
 Schedule::command('festilaw:blog-purge-orphan-images')->dailyAt('03:30')->withoutOverlapping(60);
 
 /*
+ | Cache en base : efface les lignes expirees (limites de debit par visiteur, recherches de photos), que Laravel
+ | ne retire que si la meme cle est relue. Sans elle, la table grossit entre deux deploiements (audit du 23/11).
+ */
+Schedule::command('festilaw:purge-expired-cache')->dailyAt('03:45')->withoutOverlapping(10);
+
+/*
  | Battement : note chaque passage du cron. S'il s'arrete, le back-office l'affiche et le prestataire
  | technique est prevenu par e-mail (SchedulerHealthService, AlertOnStalledScheduler).
  */

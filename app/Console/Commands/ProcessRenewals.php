@@ -48,6 +48,12 @@ final class ProcessRenewals extends Command
         parent::__construct();
     }
 
+    /**
+     * Les envois et retours au Creator qui ont echoue pendant ce passage. Un seul suffit pour que la commande
+     * reponde « echec » (audit du 23/11), comme le veut la regle des commandes ; chacun est deja au journal.
+     */
+    private int $failures = 0;
+
     public function handle(): int
     {
         $now = $this->resolveNow();
@@ -124,21 +130,31 @@ final class ProcessRenewals extends Command
 
         if (! $dry) {
             // Le jalon anti-doublon du digest n'est pose que si le digest est reellement parti.
-            if ($dueRows !== [] && $this->teamNotifier->notify(new AdminRenewalDigest($dueRows, overdue: false))) {
-                foreach ($dueToMark as $dossier) {
-                    $this->markRenewalMeta($dossier, 'admin_notified_year', $year);
-                }
+            if ($dueRows !== []) {
+                $this->markIfSent($this->teamNotifier->notify(new AdminRenewalDigest($dueRows, overdue: false)), $dueToMark, 'admin_notified_year', $year);
             }
-            if ($overdueRows !== [] && $this->teamNotifier->notify(new AdminRenewalDigest($overdueRows, overdue: true))) {
-                foreach ($overdueToMark as $dossier) {
-                    $this->markRenewalMeta($dossier, 'overdue_alerted_year', $year);
-                }
+            if ($overdueRows !== []) {
+                $this->markIfSent($this->teamNotifier->notify(new AdminRenewalDigest($overdueRows, overdue: true)), $overdueToMark, 'overdue_alerted_year', $year);
             }
         }
 
-        $this->info('Rappels client : '.$clientReminders.' · relances client en retard : '.$overdueReminders.' · admin a renouveler : '.count($dueRows).' · admin en retard : '.count($overdueRows));
+        $this->info('Rappels client : '.$clientReminders.' · relances client en retard : '.$overdueReminders.' · admin a renouveler : '.count($dueRows).' · admin en retard : '.count($overdueRows).' · echecs : '.$this->failures);
 
-        return self::SUCCESS;
+        return $this->failures > 0 ? self::FAILURE : self::SUCCESS;
+    }
+
+    /** @param  list<Submission>  $dossiers */
+    private function markIfSent(bool $sent, array $dossiers, string $key, int $year): void
+    {
+        if (! $sent) {
+            $this->failures++;
+
+            return;
+        }
+
+        foreach ($dossiers as $dossier) {
+            $this->markRenewalMeta($dossier, $key, $year);
+        }
     }
 
     /**
@@ -162,6 +178,7 @@ final class ProcessRenewals extends Command
             try {
                 $this->applyPackDowngrade->execute($downgrade);
             } catch (Throwable $e) {
+                $this->failures++;
                 Log::error('Failed to apply an approved switch back to Creator.', ['exception' => $e, 'pack_change' => $downgrade->id]);
             }
         }
@@ -200,6 +217,7 @@ final class ProcessRenewals extends Command
 
             return true;
         } catch (Throwable $e) {
+            $this->failures++;
             Log::error('Renewal reminder failed to send.', ['exception' => $e, 'submission' => $dossier->id]);
 
             return false;

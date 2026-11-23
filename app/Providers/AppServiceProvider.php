@@ -11,6 +11,7 @@ use App\Contracts\Analytics\AudienceTracker;
 use App\Enums\Submission\SubmissionType;
 use App\Exceptions\Web\DossierLinkInvalidException;
 use App\Models\Submission;
+use App\Repositories\System\ExpiredCacheRepository;
 use App\Services\Admin\AdminNavigation;
 use App\Services\Admin\Blog\BlogCategoryAdminService;
 use App\Services\Admin\Blog\BlogPostFormService;
@@ -102,6 +103,9 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->when(BlogImageStorage::class)->needs('$disk')->giveConfig('blog.images.disk');
         $this->app->when(BlogImageStorage::class)->needs('$sourceDisk')->giveConfig('blog.images.source_disk');
+        $this->app->when(ExpiredCacheRepository::class)->needs('$connection')->giveConfig('cache.stores.database.connection');
+        $this->app->when(ExpiredCacheRepository::class)->needs('$table')->give(static fn (): string => (string) (config('cache.stores.database.table') ?: 'cache'));
+        $this->app->when(ExpiredCacheRepository::class)->needs('$lockTable')->give(static fn (): string => (string) (config('cache.stores.database.lock_table') ?: 'cache_locks'));
         $this->app->when(BlogImageTextCleaner::class)->needs('$locales')->giveConfig('festilaw.supported_locales');
         $this->app->when(BlogImageInspector::class)->needs('$maxKilobytes')->giveConfig('blog.images.max_upload_kilobytes');
         $this->app->when(BlogImageInspector::class)->needs('$maxPixels')->giveConfig('blog.images.max_pixels');
