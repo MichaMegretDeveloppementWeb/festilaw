@@ -28,12 +28,11 @@ use Throwable;
  * Back-office : le bouton « Générer un article » et sa fenetre, poses dans l'en-tete des pages de la
  * generation par IA. La fenetre demande le sujet, les consignes, la longueur et les images de CETTE
  * generation, et montre la fourchette de cout qui en resulte ; le lancement mene a la page de la generation,
- * ou le traitement se suit en direct. Le bouton de lancement se desactive quand le haut de la fourchette
- * depasse le plafond par article ; l'Action le refuse de toute facon. Le plafond du mois ne desactive rien :
- * la fenetre avertit seulement quand la depense s'en approche ou l'a depasse.
+ * ou le traitement se suit en direct. Le plafond du mois ne desactive rien : la fenetre avertit seulement quand
+ * la depense s'en approche ou l'a depasse.
  *
- * Aucune requete au rendu : les reglages (longueur, images, modeles, plafonds) et la depense du mois ne sont
- * lus qu'a la premiere ouverture de la fenetre (deux requetes).
+ * Aucune requete au rendu : les reglages (longueur, images, modeles, plafonds), la depense du mois et les prix
+ * du jour des modeles ne sont lus qu'a la premiere ouverture de la fenetre (trois requetes).
  */
 class GenerationLauncher extends Component
 {

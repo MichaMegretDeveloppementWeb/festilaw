@@ -2,9 +2,13 @@
 
 declare(strict_types=1);
 
+use App\Data\Blog\Generation\Health\BlogGenerationHealth;
 use App\Livewire\Admin\Blog\GenerationDashboard;
 use App\Models\BlogGeneration;
 use App\Repositories\Blog\BlogGenerationHealthRepository;
+use App\Services\Blog\Generation\BlogAiCostEstimator;
+use App\Services\Blog\Generation\BlogAiModelCatalog;
+use Carbon\CarbonImmutable;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
@@ -90,6 +94,8 @@ function fakeServices(array $services): void
                 'architecture' => ['input_modalities' => $offer['image'] ? ['text', 'image'] : ['text']],
                 'endpoints' => [
                     ['provider_name' => 'Pricey', 'pricing' => ['prompt' => '0.001', 'completion' => '0.001'], 'supported_parameters' => ['reasoning']],
+                    // Palier flex a moitie prix : il ne sert que sur demande, son prix ne compte pas.
+                    ['provider_name' => 'Flex', 'service_tier' => 'flex', 'pricing' => ['prompt' => (string) ($offer['input'] / 200_000_000), 'completion' => (string) ($offer['output'] / 200_000_000)], 'supported_parameters' => ['structured_outputs', 'reasoning']],
                     ['provider_name' => 'Cheapest', 'pricing' => ['prompt' => (string) ($offer['input'] / 100_000_000), 'completion' => (string) ($offer['output'] / 100_000_000)], 'supported_parameters' => $offer['params']],
                 ],
             ]]);
@@ -150,12 +156,49 @@ it('reports a chosen model that OpenRouter retired, offers without the needed pa
     ]);
 });
 
-it('compares the catalog with the cheapest provider that accepts what the site sends, not with a pricier one', function () {
+it('records today\'s price of every catalog model, from the cheapest provider that accepts what the site sends', function () {
     $services = healthyServices();
     $services['offers']['openai/gpt-6-luna']['output'] = 70;
     fakeServices($services);
 
-    expect(healthProblems())->toBe(['The cheapest provider of [openai/gpt-6-luna] now charges 10/70 cents per million tokens, the catalog (config/blog.php) says 10/50.']);
+    expect(healthProblems())->toBe([]);
+
+    $prices = app(BlogGenerationHealthRepository::class)->latest()->prices;
+    expect(array_keys($prices))->toEqualCanonicalizing(array_keys(config('blog.ai.models')))
+        ->and($prices['openai/gpt-6-luna'])->toBe(['input' => 10.0, 'output' => 70.0]);
+});
+
+it('keeps the catalog price, and reports it, when today\'s price is too far from it to be trusted', function () {
+    $services = healthyServices();
+    $services['offers']['openai/gpt-6-luna']['output'] = 500;
+    fakeServices($services);
+
+    expect(healthProblems())->toBe(['The cheapest provider of [openai/gpt-6-luna] charges 10/500 cents per million tokens, too far from the catalog (config/blog.php, 10/50) to be trusted. The estimate keeps the catalog price.'])
+        ->and(app(BlogGenerationHealthRepository::class)->latest()->prices)->not->toHaveKey('openai/gpt-6-luna');
+});
+
+it('prices the estimate and the model list at today\'s prices, and falls back to the catalog when they are a week old or missing', function () {
+    $luna = 'openai/gpt-6-luna';
+    $record = fn (string $checkedAt, array $prices) => app(BlogGenerationHealthRepository::class)->store(new BlogGenerationHealth(CarbonImmutable::parse($checkedAt), [], $prices));
+    // Les prix se lisent une fois par requete : chaque mesure repart d'une table neuve.
+    $cost = function () use ($luna): int {
+        app()->forgetScopedInstances();
+
+        return app(BlogAiCostEstimator::class)->estimateMicrousd($luna, 1_000_000, 1_000_000);
+    };
+
+    // Catalogue : 10 cents par million lus, 50 ecrits. Un million de chaque : 60 cents.
+    expect($cost())->toBe(600_000);
+
+    $record('2026-11-21 05:45:00', [$luna => ['input' => 20.0, 'output' => 70.5]]);
+    expect($cost())->toBe(905_000)
+        ->and(app(BlogAiModelCatalog::class)->optionsFor('writing')[$luna])->toContain('0,20 $ / 0,71 $');
+
+    $record('2026-11-14 05:44:00', [$luna => ['input' => 20.0, 'output' => 70.5]]);
+    expect($cost())->toBe(600_000);
+
+    $record('2026-11-21 05:45:00', [$luna => ['input' => 0.0, 'output' => 70.5]]);
+    expect($cost())->toBe(600_000);
 });
 
 it('reports catalog models that OpenRouter no longer lists or will soon retire, and a chosen image model that left', function () {

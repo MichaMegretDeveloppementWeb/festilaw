@@ -149,8 +149,8 @@ return [
          | que ceux de Haiku sur 3 paires sur 5 (1 pour Haiku). Luna aussi pour la redaction et les versions :
          | trois a quatre fois plus rapide que DeepSeek V4.1 Flash pour un cout voisin, au prix d'une langue un
          | peu moins vivante (choix de Micha). GPT-6.1 Terra pour la verification et le controle des versions :
-         | il attrapait 10 erreurs connues sur 11, contre 1 pour Haiku. Environ 0,07 a 0,09 $ l'article,
-         | recherche comprise, image a part.
+         | il attrapait 10 erreurs connues sur 11, contre 1 pour Haiku. Au niveau Moyen, un article d'environ
+         | 1 000 mots coute de 0,22 a 0,26 $, recherches, preuves et traductions comprises (decision du 20/11).
          */
         'defaults' => [
             'enabled' => false,
@@ -195,10 +195,12 @@ return [
          | nom commercial et l'editeur, tels que le catalogue d'OpenRouter les ecrit.
          |
          | `input` et `output` : prix en CENTS de dollar par million de jetons lus et ecrits, releves au
-         | catalogue d'OpenRouter le 16/11/2026 (DeepSeek arrondi au cent). Ils servent a deux choses : le
-         | prix indicatif affiche a cote du modele, et l'ESTIMATION d'un cout quand le fournisseur ne renvoie
-         | pas le cout reel (l'etape est alors marquee « cout estime »). La qualite de ces modeles n'est pas
-         | presumee : le banc d'essai tranche, et resserrera cette liste.
+         | catalogue d'OpenRouter le 16/11/2026 (DeepSeek arrondi au cent). Depuis le 23/11, ce sont des prix de
+         | SECOURS : la verification du matin releve le prix du jour de chaque modele (BlogAiPriceTable), qui sert
+         | au prix indicatif affiche a cote du modele, a l'estimation d'un article, a l'arret de securite et au
+         | cout d'une etape quand le fournisseur ne renvoie pas le cout reel (marque « cout estime »). Ces prix-ci
+         | ne servent que si le releve manque ou a plus d'une semaine, ou si un prix du jour est trop loin d'eux
+         | pour etre cru (plus de 5 fois). La qualite de ces modeles n'est pas presumee : le banc d'essai tranche.
          |
          | Trois mesures facultatives, pour le cout estime d'un article, relevees sur les 17 articles du banc
          | d'essai du 18/11 (storage/app/private/blog-bench/2026-11-18-sc7 et journal « Blog AI call. ») :
@@ -454,15 +456,16 @@ return [
         /*
          | Verification quotidienne des services de la generation (festilaw:blog-health-check, controle du
          | 20/11), sans aucun appel a un modele. Chaque probleme est journalise en erreur, donc repris par le
-         | rapport d'erreurs du matin tant qu'il dure.
-         | - `price_drift_percent` : un prix du fournisseur le moins cher au-dessus du catalogue de plus de ce
-         |   pourcentage signale un catalogue a revoir (le site demande toujours le meilleur prix) ;
+         | rapport d'erreurs du matin tant qu'il dure. Elle releve aussi le prix du jour de chaque modele de texte
+         | du catalogue, que l'estimation emploie a la place des prix `input` et `output` de `models` (decision
+         | du 23/11) ; ces derniers ne servent plus que de secours.
+         | - `prices_valid_days` : au-dela, les prix releves sont trop vieux, l'estimation revient au tableau ;
          | - `key_remaining_percent` : sous ce reste de la limite de la cle OpenRouter, la limite approche ;
          | - `expiry_warning_days` : un modele qu'OpenRouter retire dans moins de ces jours est signale ;
          | - `stalled_after_minutes` : une generation en attente ou en cours qui n'a pas bouge depuis ce temps.
          */
         'health' => [
-            'price_drift_percent' => 25,
+            'prices_valid_days' => 7,
             'key_remaining_percent' => 20,
             'expiry_warning_days' => 30,
             'stalled_after_minutes' => 120,

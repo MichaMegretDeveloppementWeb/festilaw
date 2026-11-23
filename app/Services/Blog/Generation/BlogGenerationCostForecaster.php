@@ -16,8 +16,9 @@ use App\Services\Blog\Generation\Editorial\BlogWritingSignalsInspector;
 
 /**
  * La fourchette de cout d'un article, avant de le lancer : la somme, etape par etape, de ce que coutent les
- * appels prevus par le profil `blog.ai.forecast.steps`, aux prix des modeles choisis. Calcul pur, aucune
- * requete.
+ * appels prevus par le profil `blog.ai.forecast.steps` (jetons mesures aux essais des 18 au 20/11), aux prix du
+ * jour des modeles choisis. Calcul pur, a la lecture des prix du jour pres (une requete par requete HTTP ou par
+ * commande, BlogAiPriceTable).
  *
  * La borne basse compte un appel par etape et une reflexion faible ; la borne haute, les corrections et
  * seconds passages et la reflexion a son plus haut. Le niveau d'effort fixe, par etape, la reflexion

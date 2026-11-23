@@ -7,6 +7,7 @@ use App\Enums\Blog\Generation\BlogAiImageMode;
 use App\Enums\Blog\Generation\BlogAiPeriodUnit;
 use App\Services\Blog\Generation\BlogAiCostEstimator;
 use App\Services\Blog\Generation\BlogAiCostFormatter;
+use App\Services\Blog\Generation\BlogAiPriceTable;
 use App\Services\Blog\Generation\OpenRouterUsageReader;
 use Carbon\CarbonImmutable;
 
@@ -18,7 +19,7 @@ use Carbon\CarbonImmutable;
 /** Tarifs en cents de dollar par million de jetons : 2 $ en entree, 10 $ en sortie. */
 function blogAiEstimator(): BlogAiCostEstimator
 {
-    return new BlogAiCostEstimator(['test/model' => ['input' => 200, 'output' => 1_000]], 10_000);
+    return new BlogAiCostEstimator(BlogAiPriceTable::fixed(['test/model' => ['input' => 200, 'output' => 1_000]]), 10_000);
 }
 
 it('estimates a cost from the price table, in millionths of a dollar', function () {

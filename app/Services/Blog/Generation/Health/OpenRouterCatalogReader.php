@@ -109,12 +109,20 @@ final readonly class OpenRouterCatalogReader
         );
     }
 
-    /** Le site demande la sortie structuree et la reflexion : OpenRouter ne route que vers ceux qui les acceptent. */
+    /**
+     * Le site demande la sortie structuree et la reflexion : OpenRouter ne route que vers ceux qui les acceptent.
+     * Il ne demande aucun palier de service : un fournisseur « flex » (moitie prix) ou « priority » (double prix)
+     * ne sert ses appels que sur demande, son prix ne compte donc pas (releve du 23/11 : GPT-6 Luna et GPT-6.1
+     * Terra ont un palier flex a moitie prix chez OpenAI, nos appels passent par Amazon Bedrock et Azure au prix
+     * normal).
+     */
     private function acceptsWhatTheSiteSends(array $endpoint): bool
     {
         $parameters = (array) ($endpoint['supported_parameters'] ?? []);
+        $tier = $endpoint['service_tier'] ?? null;
 
-        return in_array('structured_outputs', $parameters, true) && in_array('reasoning', $parameters, true);
+        return in_array('structured_outputs', $parameters, true) && in_array('reasoning', $parameters, true)
+            && in_array($tier, [null, '', 'default', 'standard'], true);
     }
 
     private function cents(mixed $dollarsPerToken): ?float

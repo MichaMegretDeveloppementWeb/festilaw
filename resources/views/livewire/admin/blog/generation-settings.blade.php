@@ -47,7 +47,7 @@
         </x-admin.section>
 
         <x-admin.section data-settings-section="forecast" data-cost-forecast :title="__('Coût estimé d\'un article')"
-            :description="__('Calculé d\'après les modèles, la longueur et les images choisis, et recalculé à chaque changement. Chaque génération affiche ensuite son coût réel à côté de cette estimation.')">
+            :description="__('Calculé d\'après les modèles et leurs prix du jour, la longueur et les images choisis, et recalculé à chaque changement. Chaque génération affiche ensuite son coût réel à côté de cette estimation.')">
             <div class="space-y-5 pt-6">
                 @include('livewire.admin.blog.generation.cost-forecast', ['forecast' => $forecast])
             </div>

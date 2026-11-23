@@ -1,7 +1,8 @@
 {{-- Mise en page du back-office : la notre, pas une coquille du kit Falcon (le kit en propose une, sans
      l'imposer). Elle se declare au kit par ses deux marques : @falconStyles AVANT la feuille de
-     l'application, @falconScripts avant </body> (il pose le conteneur des notifications). Rien a regler
-     dans la configuration du kit ; `php artisan ui-kit:check` verifie l'ensemble.
+     l'application, @falconScripts avant </body>. Elle pose elle-meme le conteneur des notifications juste
+     avant, en haut (le kit garde le sien) ; resources/css/admin/kit.css le centre (demande de Micha du
+     23/11). Rien a regler dans la configuration du kit ; `php artisan ui-kit:check` verifie l'ensemble.
      `lang="fr"` : le back-office est redige en francais, quelle que soit la langue du site public.
      Le titre vient du composant de l'ecran (->title('Dossiers')) : barre du haut et onglet du navigateur.
      $adminNav et $schedulerStatus : fournis par le View::composer de AppServiceProvider. La barre laterale
@@ -126,6 +127,7 @@
             </main>
         </x-ui::sidebar.frame>
 
+        <x-ui::toast position="top-right" />
         @falconScripts
         @livewireScripts
     </body>
@@ -144,6 +146,7 @@
             </x-ui::card>
         </div>
 
+        <x-ui::toast position="top-right" />
         @falconScripts
         @livewireScripts
     </body>

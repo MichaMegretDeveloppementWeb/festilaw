@@ -7,7 +7,8 @@ namespace App\Services\Blog\Generation;
 /**
  * Les modeles que le back-office propose (config/blog.php, section ai) : ceux qui ecrivent du texte, et ceux
  * qui generent des images. La liste est fermee : la personne choisit dans une liste, sous le nom commercial
- * du modele, et ne saisit jamais un identifiant. Calcul pur, aucune requete.
+ * du modele, et ne saisit jamais un identifiant. Calcul pur ; seul le prix indicatif d'un modele de texte
+ * vient de BlogAiPriceTable (prix du jour), qui ne lit la base que quand on lui demande un prix.
  */
 final readonly class BlogAiModelCatalog
 {
@@ -21,6 +22,7 @@ final readonly class BlogAiModelCatalog
     public function __construct(
         private array $textModels,
         private array $imageModels,
+        private ?BlogAiPriceTable $prices = null,
     ) {}
 
     /** Ce que le modele coute vraiment, en pour cent du catalogue, quand on l'a mesure ; nul sinon. */
@@ -127,8 +129,10 @@ final readonly class BlogAiModelCatalog
                 $label .= ' ('.$model['provider'].')';
             }
 
-            if (isset($model['input'], $model['output'])) {
-                $label .= ' · '.$this->dollars((int) $model['input']).' / '.$this->dollars((int) $model['output']);
+            $price = $setting === self::IMAGE_SETTING ? null : ($this->prices?->for((string) $id) ?? (isset($model['input'], $model['output']) ? ['input' => (float) $model['input'], 'output' => (float) $model['output']] : null));
+
+            if ($price !== null) {
+                $label .= ' · '.$this->dollars($price['input']).' / '.$this->dollars($price['output']);
             }
 
             $options[(string) $id] = $label;
@@ -153,9 +157,11 @@ final readonly class BlogAiModelCatalog
         return $setting === self::IMAGE_SETTING ? $this->imageModels : $this->textModels;
     }
 
-    /** « 2 $ », « 0,10 $ », « 7,50 $ » a partir de cents. */
-    private function dollars(int $cents): string
+    /** « 2 $ », « 0,10 $ », « 7,50 $ » a partir de cents (arrondis au cent). */
+    private function dollars(float $cents): string
     {
+        $cents = (int) round($cents);
+
         return number_format($cents / 100, $cents % 100 === 0 ? 0 : 2, ',', ' ').' $';
     }
 }

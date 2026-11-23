@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Blog\Generation\Health;
 
 use App\Data\Blog\Generation\BlogAiSettings;
+use App\Data\Blog\Generation\Health\BlogGenerationHealth;
 use App\Exceptions\Blog\BlogEditorialException;
 use App\Exceptions\Blog\BlogHealthCheckException;
 use App\Repositories\Blog\BlogGenerationProgressRepository;
@@ -21,20 +22,26 @@ use Throwable;
  * - La reference des regles europeennes a-t-elle passe sa date de relecture ?
  * - La file des generations a-t-elle cesse d'avancer ?
  * - Chez OpenRouter : la cle est-elle acceptee, sa limite approche-t-elle, chaque modele choisi est-il encore
- *   propose, par un fournisseur qui accepte la sortie structuree et la reflexion, a un prix proche du
- *   catalogue, et le modele du sujet lit-il les images (controle des photos) ? Les modeles du catalogue sont-ils
- *   encore listes, et l'un d'eux va-t-il etre retire ?
+ *   propose, par un fournisseur qui accepte la sortie structuree et la reflexion, et le modele du sujet lit-il
+ *   les images (controle des photos) ? Les modeles du catalogue sont-ils encore listes, et l'un d'eux va-t-il
+ *   etre retire ?
  * - Pixabay repond-il avec la cle du site ?
+ *
+ * Elle releve aussi le prix du jour de chaque modele de texte du catalogue chez son fournisseur le moins cher,
+ * que l'estimation emploie a la place du tableau de config/blog.php (decision du 23/11).
  *
  * Rend les problemes en messages techniques (anglais), un par probleme. Une panne d'un service pendant la
  * verification est elle-meme un probleme : la verification ne leve jamais.
  */
 final readonly class BlogGenerationHealthCheck
 {
+    /** Un prix du jour plus de 5 fois plus haut ou plus bas que le tableau n'est pas cru. */
+    private const PLAUSIBLE_PRICE_FACTOR = 5;
+
     /**
      * @param  array<string, array{input: int|float, output: int|float}>  $textCatalog  blog.ai.models
      * @param  array<string, mixed>  $imageCatalog  blog.ai.image_models
-     * @param  array{price_drift_percent: int, key_remaining_percent: int, expiry_warning_days: int, stalled_after_minutes: int}  $thresholds  blog.ai.health
+     * @param  array{key_remaining_percent: int, expiry_warning_days: int, stalled_after_minutes: int}  $thresholds  blog.ai.health
      * @param  array{checked_on: string, review_by: string}  $rulesReference  blog.ai.rules_reference
      */
     public function __construct(
@@ -50,17 +57,17 @@ final readonly class BlogGenerationHealthCheck
         private array $rulesReference,
     ) {}
 
-    /** @return list<string> */
-    public function problems(): array
+    public function run(): BlogGenerationHealth
     {
         $now = CarbonImmutable::now();
         $problems = [...$this->rulesReference($now), ...$this->queue($now)];
+        $prices = [];
 
-        if ($this->pipeline !== 'editorial') {
-            return $problems;
+        if ($this->pipeline === 'editorial') {
+            $problems = [...$problems, ...$this->openRouter($now, $prices), ...$this->pixabay()];
         }
 
-        return [...$problems, ...$this->openRouter($now), ...$this->pixabay()];
+        return new BlogGenerationHealth($now, $problems, $prices);
     }
 
     /** @return list<string> */
@@ -84,8 +91,12 @@ final readonly class BlogGenerationHealthCheck
             : [];
     }
 
-    /** @return list<string> */
-    private function openRouter(CarbonImmutable $now): array
+    /**
+     * @param  array<string, array{input: float, output: float}>  $prices  rempli au fil des modeles lus, meme si la
+     *                                                                     lecture s'arrete en route
+     * @return list<string>
+     */
+    private function openRouter(CarbonImmutable $now, array &$prices): array
     {
         if (blank($this->openRouterKey)) {
             return ['OPENROUTER_API_KEY is empty: no model can be called.'];
@@ -95,7 +106,7 @@ final readonly class BlogGenerationHealthCheck
             $problems = $this->key();
             $settings = $this->settings->current();
 
-            return [...$problems, ...$this->chosenTextModels($settings), ...$this->listedModels($settings, $now)];
+            return [...$problems, ...$this->textModels($settings, $prices), ...$this->listedModels($settings, $now)];
         } catch (BlogHealthCheckException $e) {
             return [...($problems ?? []), $e->getMessage()];
         }
@@ -118,13 +129,16 @@ final readonly class BlogGenerationHealthCheck
     }
 
     /**
-     * Chaque modele de texte choisi, une fois meme s'il sert a plusieurs etapes.
+     * Chaque modele de texte du catalogue et chaque modele choisi, une fois meme s'il sert a plusieurs etapes :
+     * son prix du jour, et pour un modele choisi, ce qui l'empecherait de servir. Un modele du catalogue qui
+     * n'est plus propose est signale par listedModels().
      *
+     * @param  array<string, array{input: float, output: float}>  $prices
      * @return list<string>
      *
      * @throws BlogHealthCheckException
      */
-    private function chosenTextModels(BlogAiSettings $settings): array
+    private function textModels(BlogAiSettings $settings, array &$prices): array
     {
         $roles = [];
 
@@ -134,11 +148,32 @@ final readonly class BlogGenerationHealthCheck
             }
         }
 
+        foreach (array_keys($this->textCatalog) as $modelId) {
+            $roles[$modelId] ??= [];
+        }
+
         $problems = [];
 
         foreach ($roles as $modelId => $modelRoles) {
-            $usedFor = implode(', ', $modelRoles);
+            $modelId = (string) $modelId;
             $offer = $this->openRouter->offer($modelId);
+
+            if ($offer !== null && $offer->inputCentsPerMillion !== null && $offer->outputCentsPerMillion !== null) {
+                $price = ['input' => $offer->inputCentsPerMillion, 'output' => $offer->outputCentsPerMillion];
+                $implausible = $this->implausiblePrice($modelId, $price);
+
+                if ($implausible === null) {
+                    $prices[$modelId] = $price;
+                } else {
+                    $problems[] = $implausible;
+                }
+            }
+
+            if ($modelRoles === []) {
+                continue;
+            }
+
+            $usedFor = implode(', ', $modelRoles);
 
             if ($offer === null) {
                 $problems[] = "Model [{$modelId}] chosen for [{$usedFor}] is no longer offered by OpenRouter.";
@@ -153,20 +188,37 @@ final readonly class BlogGenerationHealthCheck
             if (in_array('topic', $modelRoles, true) && ! $offer->acceptsImages) {
                 $problems[] = "Model [{$modelId}] chosen for [topic] does not read images, so stock photos cannot be checked.";
             }
+        }
 
-            $catalog = $this->textCatalog[$modelId] ?? null;
-            $drift = 1 + $this->thresholds['price_drift_percent'] / 100;
+        return $problems;
+    }
 
-            if ($catalog !== null && $offer->inputCentsPerMillion !== null && $offer->outputCentsPerMillion !== null
-                && ($offer->inputCentsPerMillion > $catalog['input'] * $drift || $offer->outputCentsPerMillion > $catalog['output'] * $drift)) {
-                $problems[] = sprintf(
-                    'The cheapest provider of [%s] now charges %s/%s cents per million tokens, the catalog (config/blog.php) says %s/%s.',
-                    $modelId, $offer->inputCentsPerMillion, $offer->outputCentsPerMillion, $catalog['input'], $catalog['output'],
+    /**
+     * Un prix du jour trop loin de celui du tableau pour etre cru (OpenRouter a change d'unite, ou de modele sous
+     * le meme nom) : il n'entre pas dans l'estimation, qui garde le tableau, et le probleme part au rapport.
+     *
+     * @param  array{input: float, output: float}  $price
+     */
+    private function implausiblePrice(string $modelId, array $price): ?string
+    {
+        $catalog = $this->textCatalog[$modelId] ?? null;
+
+        if (! isset($catalog['input'], $catalog['output'])) {
+            return null;
+        }
+
+        foreach (['input', 'output'] as $side) {
+            $ratio = $catalog[$side] > 0 ? $price[$side] / $catalog[$side] : 1;
+
+            if ($ratio > self::PLAUSIBLE_PRICE_FACTOR || $ratio < 1 / self::PLAUSIBLE_PRICE_FACTOR) {
+                return sprintf(
+                    'The cheapest provider of [%s] charges %s/%s cents per million tokens, too far from the catalog (config/blog.php, %s/%s) to be trusted. The estimate keeps the catalog price.',
+                    $modelId, $price['input'], $price['output'], $catalog['input'], $catalog['output'],
                 );
             }
         }
 
-        return $problems;
+        return null;
     }
 
     /**

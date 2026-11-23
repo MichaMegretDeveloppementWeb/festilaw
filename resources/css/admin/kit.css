@@ -46,4 +46,29 @@
     .ui-pagination {
         padding-inline: 0;
     }
+
+    /* Notifications centrees en haut de l'ecran (demande de Micha du 23/11/2026). Le kit ne propose que les
+       quatre coins : la mise en page pose son conteneur en haut a droite (position top-right), recentre ici.
+       Chaque notification entre par le haut au lieu de glisser depuis la droite. */
+    .ui-toast {
+        left: 0;
+        right: 0;
+        width: max-content;
+        max-width: calc(100vw - 2rem);
+        margin-inline: auto;
+    }
+
+    .ui-toast .ui\:translate-x-full {
+        --tw-translate-x: 0;
+        --tw-translate-y: -0.75rem;
+    }
+
+    /* Sur un grand ecran (plus de 950 px de haut), une notification garde une hauteur minimale, pour ne pas
+       paraitre perdue, son contenu centre en hauteur. */
+    @media (min-height: 950px) {
+        .ui-toast > div {
+            min-height: 4rem;
+            align-items: center;
+        }
+    }
 }

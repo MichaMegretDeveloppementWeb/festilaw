@@ -306,7 +306,7 @@ it('tells the page when the generation it shows changes state', function () {
 
 // --- Fenetre de lancement -------------------------------------------------------------------------
 
-it('renders the launch button without any query, and reads the settings and the spend of the month only when the window opens', function () {
+it('renders the launch button without any query, and reads the settings, the spend of the month and the prices of the day only when the window opens', function () {
     BlogAi::saveSettings(['image_mode' => 'generated', 'max_images' => 3, 'effort' => 'high']);
 
     DB::enableQueryLog();
@@ -325,7 +325,8 @@ it('renders the launch button without any query, and reads the settings and the 
         ->call('prepare')
         ->assertSet('imageMode', 'none');
 
-    expect(count(DB::getQueryLog()))->toBe(2);
+    // Reglages, depense du mois, et prix du jour des modeles pour l'estimation (decision du 23/11).
+    expect(count(DB::getQueryLog()))->toBe(3);
 });
 
 it('opens a launch window wide enough for its fields', function () {
@@ -789,7 +790,7 @@ it('says a generation cannot be found', function () {
 
 // --- Reglages --------------------------------------------------------------------------------------
 
-it('opens the settings on their current values, in 2 queries with the spend of the month', function () {
+it('opens the settings on their current values, in 3 queries with the spend of the month and the prices of the day', function () {
     BlogAi::saveSettings([
         'enabled' => true, 'period_count' => 2, 'period_unit' => 'month', 'monthly_spend_cap_cents' => 2_550,
         'notification_email' => 'owner@example.com',
@@ -798,7 +799,7 @@ it('opens the settings on their current values, in 2 queries with the spend of t
     DB::enableQueryLog();
     $settings = Livewire::test(GenerationSettings::class);
 
-    expect(count(DB::getQueryLog()))->toBe(2);
+    expect(count(DB::getQueryLog()))->toBe(3);
     $settings->assertSet('enabled', true)
         ->assertSet('periodCount', '2')
         ->assertSet('periodUnit', 'month')
@@ -934,7 +935,7 @@ it('shows the estimated cost of an article and its safety stop in the settings, 
     $settings = Livewire::test(GenerationSettings::class)
         ->assertSee('Coût estimé d\'un article')
         ->assertSeeHtml('data-forecast-range')
-        ->assertSee('Estimation tirée des articles déjà générés. Le coût réel peut en sortir.')
+        ->assertSee('Ceci est une estimation. Le coût réel peut varier.')
         ->assertSeeHtml('data-forecast-stop')
         ->assertDontSee('Plafond de dépense par article');
 

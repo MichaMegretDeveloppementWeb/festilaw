@@ -5,17 +5,16 @@ declare(strict_types=1);
 namespace App\Services\Blog\Generation;
 
 /**
- * Cout de repli d'un appel a un modele, quand le fournisseur n'a pas renvoye le cout reel : jetons multiplies
- * par la table de tarifs de config/blog.php (cents de dollar par million de jetons), plus les recherches
- * web. Calcul pur, en entiers ; le resultat est en millioniemes de dollar. Un modele absent de la table ne
- * coute que ses recherches : le cout est de toute facon marque « estime ». Sert aussi a la reservation : ce
- * qu'un appel peut couter au plus, verifie contre l'arret de securite avant de l'envoyer.
+ * Le cout des jetons d'un appel a un modele, au prix du jour de BlogAiPriceTable (cents de dollar par million de
+ * jetons), plus les recherches web ; le resultat est en millioniemes de dollar. Sert au cout de repli quand le
+ * fournisseur n'a pas renvoye le cout reel (un modele sans prix ne coute alors que ses recherches, et le cout
+ * est de toute facon marque « estime »), a l'estimation d'un article, et a la reservation : ce qu'un appel peut
+ * couter au plus, verifie contre l'arret de securite avant de l'envoyer.
  */
 final readonly class BlogAiCostEstimator
 {
-    /** @param  array<string, array{input: int, output: int}>  $prices */
     public function __construct(
-        private array $prices,
+        private BlogAiPriceTable $prices,
         private int $webSearchMicrousd,
     ) {}
 
@@ -26,17 +25,16 @@ final readonly class BlogAiCostEstimator
 
     /**
      * Ce qu'un appel peut couter au plus, a reserver avant de l'envoyer : la part des jetons au prix reel du
-     * modele, en pour cent du catalogue, plus les recherches. Un modele absent de la table est compte au prix du
-     * plus cher de la table.
+     * modele, en pour cent de son prix, plus les recherches. Un modele sans prix est compte au prix du plus cher.
      */
     public function reserveMicrousd(?string $model, int $inputTokens, int $outputTokens, int $webSearches, int $marginPercent): int
     {
-        $model = isset($this->prices[(string) $model]) ? $model : $this->mostExpensive();
+        $model = $this->prices->for($model) !== null ? $model : $this->mostExpensive();
 
         return intdiv($this->tokensMicrousd($model, $inputTokens, $outputTokens) * max(100, $marginPercent), 100) + $webSearches * $this->webSearchMicrousd;
     }
 
-    /** Les jetons au prix du catalogue, un modele absent de la table compte comme le plus cher. */
+    /** Les jetons au prix du jour, un modele sans prix compte comme le plus cher. */
     public function catalogMicrousd(?string $model, int $inputTokens, int $outputTokens): int
     {
         return $this->reserveMicrousd($model, $inputTokens, $outputTokens, 0, 100);
@@ -49,15 +47,16 @@ final readonly class BlogAiCostEstimator
 
     private function tokensMicrousd(?string $model, int $inputTokens, int $outputTokens): int
     {
-        $price = $this->prices[(string) $model] ?? ['input' => 0, 'output' => 0];
+        $price = $this->prices->for($model) ?? ['input' => 0.0, 'output' => 0.0];
 
-        // 1 cent par million de jetons = 0,01 millionieme de dollar par jeton.
-        return intdiv($inputTokens * (int) $price['input'] + $outputTokens * (int) $price['output'], 100);
+        // 1 cent par million de jetons = 0,01 millionieme de dollar par jeton. Un prix du jour peut avoir des
+        // decimales : arrondi par defaut, comme la division entiere des prix ronds du tableau.
+        return (int) floor(($inputTokens * $price['input'] + $outputTokens * $price['output']) / 100);
     }
 
     private function mostExpensive(): ?string
     {
-        $costs = array_map(static fn (array $price): int => (int) $price['input'] + (int) $price['output'], $this->prices);
+        $costs = array_map(static fn (array $price): float => $price['input'] + $price['output'], $this->prices->all());
         arsort($costs);
 
         return array_key_first($costs);

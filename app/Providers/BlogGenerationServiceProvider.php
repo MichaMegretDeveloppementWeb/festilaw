@@ -16,11 +16,13 @@ use App\Data\Blog\Generation\ArticleLengthRules;
 use App\Data\Blog\Generation\Bench\BlogBenchPlan;
 use App\Data\Blog\Generation\GenerationSafetyStop;
 use App\Exceptions\Blog\BlogGenerationException;
+use App\Repositories\Blog\BlogGenerationHealthRepository;
 use App\Services\Admin\Blog\Generation\BlogGenerationOverviewService;
 use App\Services\Blog\Generation\Bench\BlogBenchFileStorage;
 use App\Services\Blog\Generation\Bench\BlogBenchStepRunner;
 use App\Services\Blog\Generation\BlogAiCostEstimator;
 use App\Services\Blog\Generation\BlogAiModelCatalog;
+use App\Services\Blog\Generation\BlogAiPriceTable;
 use App\Services\Blog\Generation\BlogAiSettingsService;
 use App\Services\Blog\Generation\BlogEffortLevels;
 use App\Services\Blog\Generation\BlogGenerationAlertService;
@@ -88,7 +90,13 @@ final class BlogGenerationServiceProvider extends ServiceProvider
         $this->app->when(BlogGenerationAlertService::class)->needs('$techEmail')->giveConfig('festilaw.tech_alert_email');
         $this->app->when(BlogGenerationAlertService::class)->needs('$fallbackEmail')->giveConfig('festilaw.notification_email');
 
-        $this->app->when(BlogAiCostEstimator::class)->needs('$prices')->giveConfig('blog.ai.models');
+        // Prix du jour releves chaque matin, le tableau de config/blog.php en secours (decision du 23/11) ; lus une
+        // fois par requete ou par commande, au premier prix demande.
+        $this->app->scoped(BlogAiPriceTable::class, static fn (Application $app): BlogAiPriceTable => new BlogAiPriceTable(
+            $app->make(BlogGenerationHealthRepository::class),
+            (array) config('blog.ai.models'),
+            (int) config('blog.ai.health.prices_valid_days'),
+        ));
 
         $this->app->when(BlogAgentCaller::class)->needs('$provider')->giveConfig('blog.ai.provider');
         $this->app->when(BlogEffortLevels::class)->needs('$levels')->giveConfig('blog.ai.effort.levels');
