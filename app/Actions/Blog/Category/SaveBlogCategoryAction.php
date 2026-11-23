@@ -44,7 +44,7 @@ final readonly class SaveBlogCategoryAction
 
         try {
             return DB::transaction(function () use ($data, $names): BlogCategory {
-                $category = $this->lockOrCreate($data->categoryId);
+                $category = $this->lockOrCreate($data->categoryId, $data->generationId);
 
                 foreach ($this->locales as $locale) {
                     $existing = $category->translationFor($locale);
@@ -69,11 +69,12 @@ final readonly class SaveBlogCategoryAction
         }
     }
 
-    private function lockOrCreate(?int $categoryId): BlogCategory
+    private function lockOrCreate(?int $categoryId, ?int $generationId): BlogCategory
     {
         if ($categoryId === null) {
             $category = BlogCategory::query()->create([
                 'position' => ((int) BlogCategory::query()->max('position')) + 1,
+                'generation_id' => $generationId,
             ]);
 
             return $category->setRelation('translations', $category->newCollection());

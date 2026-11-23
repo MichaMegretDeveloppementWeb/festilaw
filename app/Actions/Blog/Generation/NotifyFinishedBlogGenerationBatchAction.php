@@ -88,6 +88,7 @@ final readonly class NotifyFinishedBlogGenerationBatchAction
             'draftUrl' => $generation->blog_post_id === null ? null : $this->url->route('admin.blog.posts.edit', ['post' => $generation->blog_post_id]),
             'excerpt' => $drafts[$generation->blog_post_id]['excerpt'] ?? null,
             'sources' => $drafts[$generation->blog_post_id]['sources'] ?? null,
+            'newCategory' => $drafts[$generation->blog_post_id]['newCategory'] ?? null,
         ])->values()->all();
 
         try {

@@ -31,6 +31,11 @@ use Carbon\CarbonImmutable;
  * Les sources citees (`source_ids`) sont celles affichees sous l'article : trois au plus, cinq quand le
  * redacteur dit pourquoi (decision de Micha du 18/11, les articles 77 a 80 en affichaient jusqu'a 13). Au-dela,
  * l'etape garde les mieux classees sans nouvel appel, et note les autres au journal.
+ *
+ * La categorie : une categorie existante, ou le nom anglais d'une categorie nouvelle quand aucune ne convient
+ * au theme de l'article ou que le blog n'en a pas encore (decision de Micha du 23/11 : Laetitia lancera ses
+ * premieres generations avant d'avoir cree une categorie). Un nom deja porte par une categorie la reprend. Au-dela
+ * de `maxCategories` categories, la creation est fermee, pour que le menu du blog ne s'emiette pas.
  */
 final class WritingStep extends EditorialStep
 {
@@ -38,6 +43,9 @@ final class WritingStep extends EditorialStep
 
     /** L'appui d'une affirmation tiree de la fiche des regles de l'UE, qui n'a pas d'identifiant de fait. */
     public const RULES_BASIS = 'RULES';
+
+    /** Le nom d'une categorie proposee par le redacteur : quelques mots, borne a cette longueur. */
+    private const MAX_CATEGORY_NAME = 60;
 
     public function __construct(
         BlogAgentCaller $caller,
@@ -47,6 +55,7 @@ final class WritingStep extends EditorialStep
         private readonly ArticleLengthRules $lengthRules,
         private readonly int $maxSources = 3,
         private readonly int $maxJustifiedSources = 5,
+        private readonly int $maxCategories = 12,
     ) {
         parent::__construct($caller, $prompts);
     }
@@ -73,6 +82,7 @@ final class WritingStep extends EditorialStep
         $images = GenerationImageOptions::fromPayload($context->payload) ?? GenerationImageOptions::fromSettings($context->settings);
         $maxInline = $images->mode === BlogAiImageMode::None ? 0 : max(0, $images->maxImages - 1);
         $categories = $this->blog->categories();
+        $canCreateCategory = count($categories) < $this->maxCategories;
         $posts = $this->blog->publishedPosts();
         $prompt = implode("\n\n", [
             // La date du jour situe les regles datees de la reference (controle du 20/11).
@@ -80,7 +90,7 @@ final class WritingStep extends EditorialStep
             $this->block('Topic', $topic),
             $this->block('Research file', ['sources' => $research['sources'] ?? [], 'facts' => $research['facts'], 'notes' => $research['notes'] ?? '']),
             $this->block('Instructions from the editor', $context->instructions ?? 'None.'),
-            $this->block('Categories', $categories ?: 'No category yet. Set category_id to null.'),
+            $this->block('Categories', $this->categoriesBlock($categories, $canCreateCategory)),
             $this->block('Published articles you can link to (festilaw:post/ID) or suggest as related', $posts ?: 'None yet.'),
             $this->block('Pages you can link to', array_map(static fn (string $key): string => "festilaw:page/{$key}", array_keys(BlogInternalLinkResolver::PAGES))),
             $this->block('Inline images allowed', (string) $maxInline),
@@ -94,7 +104,8 @@ final class WritingStep extends EditorialStep
         $agent = new WriterAgent($instructions, $length->acceptedMax);
         $allowed = [
             'sources' => array_column($research['sources'] ?? [], 'url', 'id'),
-            'categories' => array_column($categories, 'id'),
+            'categories' => array_column($categories, 'id', 'name'),
+            'new_category' => $canCreateCategory,
             'posts' => array_column($posts, 'id'),
             'max_inline' => $maxInline,
             'kind' => $topic['kind'] ?? 'evergreen',
@@ -132,6 +143,7 @@ final class WritingStep extends EditorialStep
                 'extra_sources_reason' => $reason === '' ? null : $reason,
                 'claims' => $draft['claims'],
                 'category_id' => $draft['category_id'],
+                'new_category' => $draft['new_category'],
                 'related_post_ids' => $draft['related_post_ids'],
                 'featured_image' => $draft['featured_image'],
                 'inline_images' => $draft['inline_images'],
@@ -179,8 +191,8 @@ final class WritingStep extends EditorialStep
      * La reponse du redacteur, nettoyee, et la liste de ce qui ne respecte pas les consignes.
      *
      * @param  array<string, mixed>  $answer
-     * @param  array{sources: array<string, string>, categories: list<int>, posts: list<int>, max_inline: int, kind: string, length: GenerationLength|null, facts: list<string>}  $allowed
-     * @return array{article: EditorialArticle, source_ids: list<string>, claims: list<array{statement: string, basis: list<string>}>, category_id: int|null, related_post_ids: list<int>, featured_image: array<string, string>, inline_images: list<array<string, mixed>>, problems: list<string>}
+     * @param  array{sources: array<string, string>, categories: array<string, int>, new_category: bool, posts: list<int>, max_inline: int, kind: string, length: GenerationLength|null, facts: list<string>}  $allowed
+     * @return array{article: EditorialArticle, source_ids: list<string>, claims: list<array{statement: string, basis: list<string>}>, category_id: int|null, new_category: string|null, related_post_ids: list<int>, featured_image: array<string, string>, inline_images: list<array<string, mixed>>, problems: list<string>}
      */
     private function draft(array $answer, array $allowed): array
     {
@@ -188,7 +200,7 @@ final class WritingStep extends EditorialStep
         $problems = [];
 
         $sourceIds = array_values(array_intersect(array_filter($this->items($answer, 'source_ids'), is_string(...)), array_keys($allowed['sources'])));
-        $categoryId = is_int($answer['category_id'] ?? null) && in_array($answer['category_id'], $allowed['categories'], true) ? $answer['category_id'] : null;
+        [$categoryId, $newCategory] = $this->category($answer, $allowed);
         $related = array_values(array_slice(array_unique(array_intersect(array_filter($this->items($answer, 'related_post_ids'), is_int(...)), $allowed['posts'])), 0, 3));
         $featured = is_array($answer['featured_image'] ?? null) ? array_map(static fn ($value): string => is_string($value) ? trim($value) : '', $answer['featured_image']) : [];
         $inline = array_values(array_filter($this->items($answer, 'inline_images'), static fn ($image): bool => is_array($image) && is_int($image['number'] ?? null)));
@@ -277,11 +289,65 @@ final class WritingStep extends EditorialStep
             'source_ids' => $sourceIds,
             'claims' => $claims,
             'category_id' => $categoryId,
+            'new_category' => $newCategory,
             'related_post_ids' => $related,
             'featured_image' => $featured,
             'inline_images' => array_values(array_filter($inline, static fn (array $image): bool => in_array($image['number'], $placeholders, true))),
             'problems' => array_values(array_unique($problems)),
         ];
+    }
+
+    /**
+     * Les categories que le redacteur peut choisir, avec leur nombre d'articles pour qu'il reprenne volontiers
+     * une categorie existante, et ce qu'il peut faire quand aucune ne convient.
+     *
+     * @param  list<array{id: int, name: string, articles: int}>  $categories
+     * @return list<array{id: int, name: string, articles: int}>|string
+     */
+    private function categoriesBlock(array $categories, bool $canCreate): array|string
+    {
+        if ($categories === []) {
+            return 'No category yet. Set category_id to null and name a new one in new_category.';
+        }
+
+        return $canCreate ? $categories : [...$categories, 'No new category can be created: choose the closest one and leave new_category empty.'];
+    }
+
+    /**
+     * La categorie retenue : un identifiant de la liste l'emporte. A defaut, le nom propose, nettoye et borne,
+     * reprend la categorie qui porte deja ce nom (sans tenir compte de la casse), ou devient une categorie
+     * nouvelle quand la creation est ouverte. Sinon, pas de categorie : Laetitia en choisira une.
+     *
+     * @param  array<string, mixed>  $answer
+     * @param  array{categories: array<string, int>, new_category: bool}  $allowed
+     * @return array{0: int|null, 1: string|null}
+     */
+    private function category(array $answer, array $allowed): array
+    {
+        if (is_int($answer['category_id'] ?? null) && in_array($answer['category_id'], $allowed['categories'], true)) {
+            return [$answer['category_id'], null];
+        }
+
+        $name = trim((string) preg_replace('/\s+/u', ' ', $this->text($answer, 'new_category')), " \t\"'.,;:!?«»“”");
+
+        if ($name === '') {
+            return [null, null];
+        }
+
+        $name = mb_strlen($name) > self::MAX_CATEGORY_NAME ? rtrim(mb_substr($name, 0, self::MAX_CATEGORY_NAME)) : $name;
+        $named = [];
+
+        foreach ($allowed['categories'] as $categoryName => $id) {
+            $named[mb_strtolower((string) $categoryName)] ??= $id;
+        }
+
+        $existing = $named[mb_strtolower($name)] ?? null;
+
+        if ($existing !== null) {
+            return [$existing, null];
+        }
+
+        return $allowed['new_category'] ? [null, mb_strtoupper(mb_substr($name, 0, 1)).mb_substr($name, 1)] : [null, null];
     }
 
     /**

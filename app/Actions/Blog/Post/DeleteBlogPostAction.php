@@ -8,6 +8,7 @@ use App\Actions\Blog\Image\DeleteBlogImageAction;
 use App\Enums\Blog\BlogPostOrigin;
 use App\Models\BlogImage;
 use App\Models\BlogPost;
+use App\Repositories\Blog\BlogGeneratedCategoryRepository;
 use App\Repositories\Blog\BlogGenerationTopicRepository;
 use App\Services\Blog\Slug\BlogPostSlugAssigner;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +21,8 @@ use Throwable;
  * etrangeres). Ses images sont supprimees ensuite, apres la transaction, au mieux : celle qui
  * resisterait reste orpheline et la purge planifiee la reprendra. Un article genere par IA emporte son
  * sujet : il est marque refuse et ne sera plus propose. Les liens des autres articles vers lui sont
- * retires, leur texte reste (decision de Micha du 20/11).
+ * retires, leur texte reste (decision de Micha du 20/11). La categorie que sa generation avait creee pour lui
+ * part avec lui si plus aucun article ne l'emploie (decision du 23/11).
  */
 final readonly class DeleteBlogPostAction
 {
@@ -29,6 +31,7 @@ final readonly class DeleteBlogPostAction
         private DeleteBlogImageAction $deleteImage,
         private BlogGenerationTopicRepository $topics,
         private DetachLinksToBlogPostAction $detachLinks,
+        private BlogGeneratedCategoryRepository $categories,
     ) {}
 
     /**
@@ -53,6 +56,10 @@ final readonly class DeleteBlogPostAction
             $this->detachLinks->execute($post->id);
             $this->slugs->entomb($post);
             $post->delete();
+
+            if ($post->blog_category_id !== null && $post->generation_id !== null) {
+                $this->categories->deleteIfUnusedCreatedBy($post->blog_category_id, $post->generation_id);
+            }
 
             return $imageIds;
         });

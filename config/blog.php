@@ -454,6 +454,14 @@ return [
         'consecutive_failures_alert' => 3,
 
         /*
+         | Categories creees par la generation (decision de Micha du 23/11) : quand aucune categorie ne convient au
+         | theme d'un article, ou que le blog n'en a pas encore, la redaction en propose une nouvelle. Au-dela de ce
+         | nombre de categories, la creation est fermee et la redaction choisit la plus proche, pour que le menu du
+         | blog ne s'emiette pas au fil des annees.
+         */
+        'max_categories' => 12,
+
+        /*
          | Verification quotidienne des services de la generation (festilaw:blog-health-check, controle du
          | 20/11), sans aucun appel a un modele. Chaque probleme est journalise en erreur, donc repris par le
          | rapport d'erreurs du matin tant qu'il dure. Elle releve aussi le prix du jour de chaque modele de texte

@@ -17,7 +17,7 @@ use Illuminate\Mail\Mailables\Envelope;
  *
  * Pour un brouillon cree, la ligne donne aussi son extrait (anglais) et le nombre de sources citees.
  *
- * @phpstan-type GenerationRow array{subject: string, outcome: string, succeeded: bool, failed: bool, cost: string, url: string, draftUrl: string|null, excerpt?: string|null, sources?: int|null}
+ * @phpstan-type GenerationRow array{subject: string, outcome: string, succeeded: bool, failed: bool, cost: string, url: string, draftUrl: string|null, excerpt?: string|null, sources?: int|null, newCategory?: string|null}
  */
 final class BlogGenerationBatchFinished extends Mailable
 {

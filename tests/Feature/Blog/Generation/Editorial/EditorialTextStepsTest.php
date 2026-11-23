@@ -362,6 +362,40 @@ it('writes the English article from the research file, with sources, category an
     WriterAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Platforms en') && $prompt->contains('Label en') && $prompt->contains('The GPSR applies since 13 December 2024.'));
 });
 
+it('asks for a new category when the blog has none yet, and keeps the name it proposes, cleaned', function () {
+    WriterAgent::fake([Fixtures::writerAnswer(['category_id' => null, 'new_category' => '  "product   safety".'])])->preventStrayPrompts();
+
+    $result = app(WritingStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic(), 'research' => Fixtures::research()]));
+
+    expect($result->output['category_id'])->toBeNull()
+        ->and($result->output['new_category'])->toBe('Product safety');
+    WriterAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('No category yet. Set category_id to null and name a new one in new_category.'));
+});
+
+it('takes back the category that already bears the proposed name, and ignores an unknown category', function () {
+    $category = BlogContent::category('platforms');
+    WriterAgent::fake([Fixtures::writerAnswer(['category_id' => 9_999, 'new_category' => 'PLATFORMS EN'])])->preventStrayPrompts();
+
+    $result = app(WritingStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic(), 'research' => Fixtures::research()]));
+
+    expect($result->output['category_id'])->toBe($category->id)
+        ->and($result->output['new_category'])->toBeNull();
+    // Le redacteur voit combien d'articles chaque categorie porte, pour reprendre volontiers l'existante.
+    WriterAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('"articles": 0'));
+});
+
+it('creates no new category once the blog has as many as allowed, so that its menu does not crumble', function () {
+    config()->set('blog.ai.max_categories', 1);
+    BlogContent::category('platforms');
+    WriterAgent::fake([Fixtures::writerAnswer(['category_id' => null, 'new_category' => 'Marketplaces'])])->preventStrayPrompts();
+
+    $result = app(WritingStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic(), 'research' => Fixtures::research()]));
+
+    expect($result->output['category_id'])->toBeNull()
+        ->and($result->output['new_category'])->toBeNull();
+    WriterAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('No new category can be created'));
+});
+
 it('shows three sources under the article, official first, and five at most when the writer says why', function (?string $reason, array $shown, array $setAside) {
     // Decision de Micha du 18/11 : les articles 77 a 80 affichaient jusqu'a 13 sources, trois suffisent.
     $research = Fixtures::research();
@@ -679,8 +713,25 @@ it('writes the French version with the same links and images, and the image desc
         ->and($result->output['article']['title'])->toBe('Ajouter un opérateur économique sur Etsy')
         ->and($result->output['image_alts'])->toBe(['0' => 'Un colis sur un établi', '1' => 'Une étiquette sur un carton'])
         ->and($result->output['number_warnings'])->toBe([])
+        ->and($result->output['category_name'])->toBeNull()
         ->and($result->output['signals'])->toHaveKey('phrases');
-    TranslatorAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('A parcel on a workbench'));
+    TranslatorAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('A parcel on a workbench') && ! $prompt->contains('New category'));
+});
+
+it('names in each language the new category that the writer proposed', function () {
+    TranslatorAgent::fake([[
+        ...Fixtures::article(['title' => 'Ajouter un opérateur économique sur Etsy']),
+        'category_name' => 'Sécurité des produits',
+        'report_fr' => 'x',
+    ]])->preventStrayPrompts();
+
+    $result = app()->make(TranslationStep::class, ['locale' => 'fr'])->execute(Fixtures::context([
+        'writing' => [...Fixtures::writingOutput(), 'new_category' => 'Product safety'],
+        'style' => Fixtures::articleOutput(),
+    ]));
+
+    expect($result->output['category_name'])->toBe('Sécurité des produits');
+    TranslatorAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('New category') && $prompt->contains('Product safety'));
 });
 
 it('sends the French sentences that still show signs back once, and keeps that second pass when links and images are intact', function () {

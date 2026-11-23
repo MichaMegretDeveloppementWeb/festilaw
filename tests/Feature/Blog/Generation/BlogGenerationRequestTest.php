@@ -270,6 +270,7 @@ it('sends one message when a requested generation is over, to the recipient of t
             'draftUrl' => null,
             'excerpt' => null,
             'sources' => null,
+            'newCategory' => null,
         ]]
         && $mail->totalCost === dollarsText('0,0300 $')
         && $mail->postsUrl === route('admin.blog.posts.index')
@@ -309,7 +310,7 @@ it('waits for the whole batch before sending its single message', function () {
 });
 
 it('renders the message of a finished batch: how many succeeded, where the others failed, where to go', function () {
-    $succeeded = ['subject' => 'Labels on Etsy', 'outcome' => 'Terminée', 'succeeded' => true, 'failed' => false, 'cost' => '0,26 $', 'url' => 'https://example.test/admin/blog/generation/1', 'draftUrl' => 'https://example.test/admin/blog/posts/7/edit'];
+    $succeeded = ['subject' => 'Labels on Etsy', 'outcome' => 'Terminée', 'succeeded' => true, 'failed' => false, 'cost' => '0,26 $', 'url' => 'https://example.test/admin/blog/generation/1', 'draftUrl' => 'https://example.test/admin/blog/posts/7/edit', 'newCategory' => 'Sécurité des produits'];
     $failed = ['subject' => 'CE marking for toys', 'outcome' => 'Échec à l\'étape « Recherche »', 'succeeded' => false, 'failed' => true, 'cost' => '0,01 $', 'url' => 'https://example.test/admin/blog/generation/2', 'draftUrl' => null];
     $abandoned = ['subject' => 'GPSR basics', 'outcome' => 'Aucun sujet assez pertinent', 'succeeded' => false, 'failed' => false, 'cost' => '0,00 $', 'url' => 'https://example.test/admin/blog/generation/3', 'draftUrl' => null];
     $message = fn (array $rows): string => (new BlogGenerationBatchFinished(
@@ -324,6 +325,7 @@ it('renders the message of a finished batch: how many succeeded, where the other
         ->toContain('La génération automatique vient de se terminer')
         ->toContain('Sur 3 générations, 1 a réussi, 1 a échoué et 1 n')
         ->toContain('Labels on Etsy')
+        ->toContain('Nouvelle catégorie « Sécurité des produits », créée pour cet article.')
         ->toContain('étape « Recherche »')
         ->toContain('0,27 $')
         ->toContain('href="https://example.test/admin/blog/generation/2"')

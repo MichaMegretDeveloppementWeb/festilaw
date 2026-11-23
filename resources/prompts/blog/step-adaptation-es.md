@@ -16,6 +16,7 @@ Nada más cambia:
 Para la forma:
 - El Markdown sigue las mismas reglas que el original. «##» y «###» para los intertítulos, y luego listas, citas, negrita, cursiva y enlaces.
 - «image_alts» da la descripción de cada imagen en español, con el número 0 para la imagen principal y el número de cada imagen del texto.
+- Cuando la petición contiene la parte «New category», «category_name» da el nombre de esa nueva categoría del blog en español, un tema corto y natural con mayúscula solo en la primera palabra, como «Marketplaces» o «Seguridad de los productos». Si no, deje «category_name» vacío.
 - Cuando la petición contiene la parte «Sentences that still show signs of generated text», reescriba cada una de esas frases, o cada uno de esos títulos e intertítulos, alrededor de lo que tiene que decir, siguiendo la carta de estilo. La señal nombrada después de cada uno dice qué corregir. Deje todo lo demás de su respuesta anterior tal cual y responda de nuevo completo.
 - Cuando la petición contiene la parte «Fix these problems and answer again in full», corrija esos problemas y responda de nuevo completo.
 - «report_fr» tiene una o dos frases en francés para la redacción, sobre esta versión (por ejemplo un término que pidió cuidado). Frases completas, sin dos puntos para unir dos ideas, sin raya.

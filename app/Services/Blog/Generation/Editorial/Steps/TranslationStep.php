@@ -85,10 +85,13 @@ final class TranslationStep extends EditorialStep
             $this->prompts->get('lexicon-'.$this->locale),
             $this->prompts->get('step-adaptation-'.$this->locale),
         ]), $this->translatedWords($context));
-        $prompt = implode("\n\n", [
+        $newCategory = is_string($writing['new_category'] ?? null) && $writing['new_category'] !== '' ? $writing['new_category'] : null;
+        $prompt = implode("\n\n", array_filter([
             $this->block('Article', $source->forPrompt()),
             $this->block('Image descriptions', array_values(array_filter($images, static fn (array $image): bool => $image['description'] !== ''))),
-        ]);
+            // Une categorie que la redaction a proposee pour l'article : son nom dans cette langue (decision du 23/11).
+            $newCategory === null ? null : $this->block('New category', $newCategory),
+        ]));
 
         $reply = $this->ask($context, $agent, $prompt);
         $usage = $reply->usage;
@@ -137,11 +140,14 @@ final class TranslationStep extends EditorialStep
             }
         }
 
+        $categoryName = $newCategory === null ? '' : $this->text($reply->structured(), 'category_name');
+
         return GenerationStepResult::continue(
             [
                 'locale' => $this->locale,
                 'article' => $translated->toArray(),
                 'image_alts' => $alts,
+                'category_name' => $categoryName === '' ? null : $this->typography->apply(mb_substr($categoryName, 0, 60), $this->locale),
                 'number_warnings' => array_values(array_filter(
                     $this->guard->differences($source->text(), $translated->text()),
                     static fn (string $difference): bool => str_starts_with($difference, 'numbers'),

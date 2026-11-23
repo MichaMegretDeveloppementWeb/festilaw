@@ -32,6 +32,7 @@ final class TranslatorAgent extends BlogAgent implements HasStructuredOutput
                 'number' => $schema->integer()->description('0 for the main image, then the number of each inline image.')->required(),
                 'alt' => $schema->string()->required(),
             ])),
+            'category_name' => $schema->string()->description('The name of the new category given in the request, in the target language. Empty when the request gives none.')->nullable(),
             'report_fr' => $schema->string()->required(),
         ];
     }

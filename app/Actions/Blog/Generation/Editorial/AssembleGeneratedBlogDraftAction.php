@@ -4,21 +4,27 @@ declare(strict_types=1);
 
 namespace App\Actions\Blog\Generation\Editorial;
 
+use App\Actions\Blog\Category\SaveBlogCategoryAction;
 use App\Actions\Blog\Post\SaveBlogPostAction;
 use App\Contracts\Blog\Generation\GenerationStep;
+use App\Data\Blog\BlogCategoryTranslationData;
 use App\Data\Blog\BlogPostTranslationData;
 use App\Data\Blog\BlogSourceData;
 use App\Data\Blog\Generation\EditorialArticle;
 use App\Data\Blog\Generation\GenerationFindings;
 use App\Data\Blog\Generation\GenerationStepContext;
 use App\Data\Blog\Generation\GenerationStepResult;
+use App\Data\Blog\SaveBlogCategoryData;
 use App\Data\Blog\SaveBlogPostData;
 use App\Enums\Blog\BlogPostOrigin;
 use App\Exceptions\Blog\BlogEditorialException;
+use App\Models\BlogCategory;
+use App\Repositories\Blog\BlogGeneratedCategoryRepository;
 use App\Repositories\Blog\BlogGeneratedDraftRepository;
 use App\Services\Blog\Generation\Editorial\BlogInternalLinkResolver;
 use App\Services\Blog\Generation\Editorial\EditorialDocumentBuilder;
 use App\Services\Blog\Generation\Editorial\EditorialMarkdown;
+use Illuminate\Support\Facades\DB;
 use Throwable;
 
 /**
@@ -27,6 +33,10 @@ use Throwable;
  * Markdown converti en document, images placees a leurs emplacements, slugs produits depuis les titres,
  * sources du dossier, categorie, articles associes, image principale. Le brouillon est marque IA et lie a sa
  * generation.
+ *
+ * Quand la redaction a propose une categorie nouvelle, elle est creee ici avec ses trois noms (le nom anglais
+ * remplace un nom traduit manquant) et marquee comme creee par cette generation, dans la meme transaction que le
+ * brouillon : un echec ne laisse aucune categorie orpheline. Une categorie qui porte deja ce nom est reprise.
  *
  * Rejouable : si la generation a deja son brouillon (etape rejouee apres un verrou perdu ou une erreur
  * survenue apres l'enregistrement), il est rendu tel quel, sans second brouillon. Le second controle des
@@ -39,7 +49,9 @@ final readonly class AssembleGeneratedBlogDraftAction implements GenerationStep
 
     public function __construct(
         private SaveBlogPostAction $savePost,
+        private SaveBlogCategoryAction $saveCategory,
         private BlogGeneratedDraftRepository $drafts,
+        private BlogGeneratedCategoryRepository $categories,
         private BlogInternalLinkResolver $links,
         private EditorialDocumentBuilder $documents,
     ) {}
@@ -88,10 +100,11 @@ final readonly class AssembleGeneratedBlogDraftAction implements GenerationStep
             );
         }
 
-        $data = new SaveBlogPostData(
+        $newCategory = is_string($writing['new_category'] ?? null) && $writing['new_category'] !== '' ? $writing['new_category'] : null;
+        $data = fn (?int $categoryId): SaveBlogPostData => new SaveBlogPostData(
             postId: null,
             translations: $translations,
-            categoryId: is_int($writing['category_id'] ?? null) ? $writing['category_id'] : null,
+            categoryId: $categoryId,
             featuredImageId: $images[0] ?? null,
             relatedPostIds: array_values(array_filter($writing['related_post_ids'] ?? [], is_int(...))),
             sources: $this->sources($context),
@@ -99,23 +112,61 @@ final readonly class AssembleGeneratedBlogDraftAction implements GenerationStep
             generationId: $context->generationId,
         );
 
+        $created = null;
+
         try {
-            $postId = $this->savePost->execute($data)->id;
+            $postId = DB::transaction(function () use ($context, $writing, $newCategory, $data, &$created): int {
+                $categoryId = is_int($writing['category_id'] ?? null) ? $writing['category_id'] : null;
+
+                if ($categoryId === null && $newCategory !== null) {
+                    $categoryId = $this->categories->idNamed($newCategory);
+
+                    if ($categoryId === null) {
+                        $category = $this->createCategory($newCategory, $context);
+                        $categoryId = $category->id;
+                        $created = $category->translationFor('fr')->name ?? $newCategory;
+                    }
+                }
+
+                return $this->savePost->execute($data($categoryId))->id;
+            });
         } catch (Throwable $e) {
             // Deux passages en meme temps : l'autre a cree le brouillon, on le reprend.
             $postId = $this->drafts->postIdForGeneration($context->generationId) ?? throw $e;
+            $created = null;
         }
 
-        return $this->ready($postId, $context);
+        return $this->ready($postId, $context, $created);
     }
 
-    private function ready(int $postId, GenerationStepContext $context): GenerationStepResult
+    /** La categorie proposee par la redaction, avec ses noms traduits par les etapes de traduction. */
+    private function createCategory(string $name, GenerationStepContext $context): BlogCategory
+    {
+        $names = ['en' => $name];
+
+        foreach (['fr' => 'translation_fr', 'es' => 'translation_es'] as $locale => $step) {
+            $translated = $context->output($step)['category_name'] ?? null;
+            $names[$locale] = is_string($translated) && trim($translated) !== '' ? $translated : $name;
+        }
+
+        return $this->saveCategory->execute(new SaveBlogCategoryData(
+            categoryId: null,
+            translations: array_map(static fn (string $text): BlogCategoryTranslationData => new BlogCategoryTranslationData(name: $text), $names),
+            generationId: $context->generationId,
+        ));
+    }
+
+    private function ready(int $postId, GenerationStepContext $context, ?string $newCategory = null): GenerationStepResult
     {
         $hasMainImage = collect($context->output('images')['images'] ?? [])->contains(fn (array $image): bool => (int) $image['number'] === 0);
         $summary = __('Le brouillon est prêt à relire, dans les trois langues.');
 
+        if ($newCategory !== null) {
+            $summary .= ' '.__('Nouvelle catégorie « :name » créée pour cet article.', ['name' => $newCategory]);
+        }
+
         return GenerationStepResult::continue(
-            ['post_id' => $postId],
+            ['post_id' => $postId, 'new_category' => $newCategory],
             summary: $hasMainImage ? $summary : $summary.' '.__('Il lui manque une image principale, à ajouter avant de publier.'),
             findings: new GenerationFindings(postId: $postId),
         );

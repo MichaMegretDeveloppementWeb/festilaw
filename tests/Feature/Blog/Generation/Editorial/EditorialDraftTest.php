@@ -24,11 +24,14 @@ use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogGenerationType;
 use App\Exceptions\Blog\BlogAiProviderException;
 use App\Exceptions\Blog\BlogEditorialException;
+use App\Exceptions\Blog\BlogImageException;
 use App\Mail\BlogGenerationBatchFinished;
 use App\Mail\BlogMonthlySpendWarning;
+use App\Models\BlogCategory;
 use App\Models\BlogGeneration;
 use App\Models\BlogImage;
 use App\Models\BlogPost;
+use App\Repositories\Blog\BlogGeneratedDraftRepository;
 use App\Services\Blog\Generation\BlogAiModelCatalog;
 use App\Services\Blog\Generation\Editorial\Steps\StyleStep;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -331,6 +334,88 @@ it('assembles a draft in the three languages through the same path as the back-o
         ->and($translations['en']->content_html)->toContain('href="/#quiz"')->not->toContain('[[image')
         ->and($result->findings->postId)->toBe($post->id)
         ->and($result->summary)->toBe('Le brouillon est prêt à relire, dans les trois langues.');
+});
+
+/** Ce que l'assemblage recoit quand la redaction a propose une categorie nouvelle, nommee en francais seulement. */
+function outputsWithNewCategory(string $name = 'Product safety'): array
+{
+    $outputs = textOutputs();
+    $outputs['writing'] = [...$outputs['writing'], 'category_id' => null, 'new_category' => $name];
+    $outputs['translation_fr']['category_name'] = 'Sécurité des produits';
+    $outputs['translation_es']['category_name'] = null;
+    $outputs['images'] = app(GenerateBlogDraftImagesAction::class)->execute(Fixtures::context($outputs))->output;
+
+    return $outputs;
+}
+
+it('creates the category the writer proposed, in the three languages, marked as created by the generation, and says so', function () {
+    fakePixabay();
+    $generation = BlogGeneration::factory()->running()->create();
+    $context = new GenerationStepContext($generation->id, BlogGenerationType::Article, null, null, Fixtures::context()->settings, outputsWithNewCategory(), [], 1);
+
+    $result = app(AssembleGeneratedBlogDraftAction::class)->execute($context);
+
+    $post = BlogPost::query()->findOrFail($result->output['post_id']);
+    $category = BlogCategory::query()->with('translations')->findOrFail($post->blog_category_id);
+    expect($category->generation_id)->toBe($generation->id)
+        ->and($category->translationFor('en')->name)->toBe('Product safety')
+        ->and($category->translationFor('fr')->name)->toBe('Sécurité des produits')
+        ->and($category->translationFor('fr')->slug)->toBe('securite-des-produits')
+        // Sans nom espagnol, le nom anglais le remplace : Laetitia pourra le renommer.
+        ->and($category->translationFor('es')->name)->toBe('Product safety')
+        ->and($result->summary)->toBe('Le brouillon est prêt à relire, dans les trois langues. Nouvelle catégorie « Sécurité des produits » créée pour cet article.')
+        ->and(app(BlogGeneratedDraftRepository::class)->summariesOf([$post->id])[$post->id]['newCategory'])->toBe('Sécurité des produits');
+
+    // Rejouee, l'etape rend le meme brouillon, sans seconde categorie.
+    app(AssembleGeneratedBlogDraftAction::class)->execute($context);
+    expect(BlogCategory::query()->count())->toBe(1);
+});
+
+it('takes back a category of the same name created in the meantime instead of a second one', function () {
+    fakePixabay();
+    $existing = BlogContent::category('safety');
+    $generation = BlogGeneration::factory()->running()->create();
+    $context = new GenerationStepContext($generation->id, BlogGenerationType::Article, null, null, Fixtures::context()->settings, outputsWithNewCategory('SAFETY EN'), [], 1);
+
+    $result = app(AssembleGeneratedBlogDraftAction::class)->execute($context);
+
+    expect(BlogPost::query()->findOrFail($result->output['post_id'])->blog_category_id)->toBe($existing->id)
+        ->and(BlogCategory::query()->count())->toBe(1)
+        ->and($result->summary)->toBe('Le brouillon est prêt à relire, dans les trois langues.');
+});
+
+it('leaves no category behind when the draft cannot be saved', function () {
+    fakePixabay();
+    $generation = BlogGeneration::factory()->running()->create();
+    $outputs = outputsWithNewCategory();
+    $outputs['images'] = ['images' => [['number' => 0, 'image_id' => 999_999]]];
+    $context = new GenerationStepContext($generation->id, BlogGenerationType::Article, null, null, Fixtures::context()->settings, $outputs, [], 1);
+
+    expect(fn () => app(AssembleGeneratedBlogDraftAction::class)->execute($context))->toThrow(BlogImageException::class)
+        ->and(BlogCategory::query()->count())->toBe(0)
+        ->and(BlogPost::query()->count())->toBe(0);
+});
+
+it('deletes with an AI draft the category its generation created for it, once no other article uses it, never a category created by hand', function () {
+    $generation = BlogGeneration::factory()->create();
+    $created = BlogCategory::factory()->withTranslations()->create(['generation_id' => $generation->id]);
+    $byHand = BlogCategory::factory()->withTranslations()->create();
+    $draft = BlogPost::factory()->fromAi()->create(['generation_id' => $generation->id, 'blog_category_id' => $created->id]);
+    $other = BlogPost::factory()->fromAi()->create(['generation_id' => BlogGeneration::factory()->create()->id, 'blog_category_id' => $byHand->id]);
+
+    app(DeleteBlogPostAction::class)->execute($draft->id);
+    app(DeleteBlogPostAction::class)->execute($other->id);
+
+    expect(BlogCategory::query()->pluck('id')->all())->toBe([$byHand->id]);
+
+    // Employee aussi par un autre article, la categorie creee par la generation reste.
+    $kept = BlogCategory::factory()->withTranslations()->create(['generation_id' => $generation->id]);
+    $secondDraft = BlogPost::factory()->fromAi()->create(['generation_id' => $generation->id, 'blog_category_id' => $kept->id]);
+    BlogPost::factory()->create(['blog_category_id' => $kept->id]);
+
+    app(DeleteBlogPostAction::class)->execute($secondDraft->id);
+
+    expect(BlogCategory::query()->whereKey($kept->id)->exists())->toBeTrue();
 });
 
 it('hands back the draft it already created when the step runs again, without a second draft', function () {

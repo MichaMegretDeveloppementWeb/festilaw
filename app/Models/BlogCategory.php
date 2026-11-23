@@ -20,12 +20,14 @@ class BlogCategory extends Model
 
     protected $fillable = [
         'position',
+        'generation_id',
     ];
 
     protected function casts(): array
     {
         return [
             'position' => 'integer',
+            'generation_id' => 'integer',
         ];
     }
 

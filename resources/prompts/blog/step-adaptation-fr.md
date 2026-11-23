@@ -16,6 +16,7 @@ Rien d'autre ne change :
 Pour la forme :
 - Le Markdown suit les mêmes règles que l'original. « ## » et « ### » pour les intertitres, puis listes, citations, gras, italique et liens.
 - « image_alts » donne la description de chaque image en français, avec le numéro 0 pour l'image principale et le numéro de chaque image du texte.
+- Quand la demande contient la partie « New category », « category_name » donne le nom de cette nouvelle catégorie du blog en français, un thème court et naturel avec une majuscule au premier mot seulement, comme « Places de marché » ou « Sécurité des produits ». Sinon, laissez « category_name » vide.
 - Quand la demande contient la partie « Sentences that still show signs of generated text », récrivez chacune de ces phrases, ou chacun de ces titres et intertitres, autour de ce qu'il doit dire, en suivant la charte. Le signe nommé après chacun dit quoi corriger. Laissez tout le reste de votre réponse précédente tel quel, puis répondez de nouveau en entier.
 - Quand la demande contient la partie « Fix these problems and answer again in full », corrigez ces problèmes et répondez de nouveau en entier.
 - « report_fr » tient en une ou deux phrases en français pour la rédaction, sur cette version (par exemple un terme qui a demandé du soin). Phrases complètes, sans deux-points pour relier deux idées, sans tiret.

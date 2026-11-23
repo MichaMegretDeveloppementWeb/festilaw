@@ -39,7 +39,8 @@ final class WriterAgent extends BlogAgent implements HasStructuredOutput
             ]))->description('Every legal or factual statement of the article, each with its basis.')->required(),
             'source_ids' => $schema->array()->items($schema->string())->description('The sources shown under the article, three most credible, official first.')->required(),
             'extra_sources_reason' => $schema->string()->description('Why a fourth or fifth source is needed. Empty otherwise.')->nullable(),
-            'category_id' => $schema->integer()->nullable(),
+            'category_id' => $schema->integer()->description('The id of the category that fits the main theme of the article. Null when none fits.')->nullable(),
+            'new_category' => $schema->string()->description('Only when no category fits or there is none yet: the English name of a new broad, lasting theme. Empty otherwise.')->nullable(),
             'related_post_ids' => $schema->array()->items($schema->integer()),
             'featured_image' => $image($schema)->required(),
             'inline_images' => $schema->array()->items($schema->object([

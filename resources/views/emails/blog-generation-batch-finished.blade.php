@@ -23,6 +23,9 @@
                 @if ($row['sources'] ?? null)
                     <span style="color:#8a8f9c;">{{ trans_choice('{1} Une source citée.|[2,*] :count sources citées.', $row['sources'], ['count' => $row['sources']]) }}</span><br>
                 @endif
+                @if ($row['newCategory'] ?? null)
+                    <span style="color:#4a5568;">{{ __('Nouvelle catégorie « :name », créée pour cet article. Vous pouvez la renommer dans les catégories du blog.', ['name' => $row['newCategory']]) }}</span><br>
+                @endif
                 @if ($row['draftUrl'])
                     <a href="{{ $row['draftUrl'] }}" style="color:#0B1E45;">Ouvrir le brouillon</a>
                     <span style="color:#8a8f9c;"> · </span>

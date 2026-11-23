@@ -84,6 +84,7 @@ final class BlogGenerationServiceProvider extends ServiceProvider
         $this->app->when(TranslationStep::class)->needs('$maxFlaggedSentences')->giveConfig('blog.ai.style.max_flagged_sentences');
         $this->app->when(WritingStep::class)->needs('$maxSources')->giveConfig('blog.ai.displayed_sources.max');
         $this->app->when(WritingStep::class)->needs('$maxJustifiedSources')->giveConfig('blog.ai.displayed_sources.max_justified');
+        $this->app->when(WritingStep::class)->needs('$maxCategories')->giveConfig('blog.ai.max_categories');
         $this->app->when(ProcessNextBlogGenerationAction::class)->needs('$claimSeconds')->giveConfig('blog.ai.step.lock_margin_seconds');
 
         $this->app->when(BlogGenerationAlertService::class)->needs('$failuresThreshold')->giveConfig('blog.ai.consecutive_failures_alert');
