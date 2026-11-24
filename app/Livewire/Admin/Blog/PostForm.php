@@ -127,6 +127,15 @@ class PostForm extends Component
     /** La liste des articles a proposer comme articles lies est ouverte : elle n'est lue que dans ce cas. */
     public bool $pickingRelated = false;
 
+    /**
+     * Les articles lies tels que la fenetre de choix les tient, en cours de choix : l'article ne les recoit qu'a
+     * « Terminé » (applyRelated), et les perd si la fenetre se ferme autrement (Micha, 24/11/2026).
+     *
+     * @var list<int>
+     */
+    #[Locked]
+    public array $relatedDraftIds = [];
+
     /** Charge a l'ouverture seulement : n'existe que pendant la premiere requete (jamais serialise). */
     private ?BlogPostFormOpening $opening = null;
 
@@ -581,42 +590,73 @@ class PostForm extends Component
         return $descriptions;
     }
 
-    /** Ouvre la liste des articles a proposer comme articles lies. */
+    /** Ouvre la liste des articles a proposer comme articles lies, sur une copie des articles lies de l'article. */
     public function openRelatedPicker(): void
     {
         $this->pickingRelated = true;
+        $this->relatedDraftIds = $this->relatedIds;
     }
 
+    /** La fenetre se ferme sans « Terminé » : ce qui y a ete choisi est abandonne. */
     public function closeRelatedPicker(): void
     {
         $this->pickingRelated = false;
+        $this->relatedDraftIds = [];
     }
 
     /**
-     * Ajoute un article lie a la suite des autres (pris en compte a l'enregistrement). La fenetre de
-     * choix reste ouverte : on peut en ajouter plusieurs de suite, et c'est sa fermeture qui cesse de
-     * faire lire la liste.
+     * « Terminé » : l'article recoit les articles lies choisis dans la fenetre (pris en compte a l'enregistrement).
+     *
+     * @return bool vrai si la liste a change, pour que le formulaire se sache modifie
+     */
+    public function applyRelated(): bool
+    {
+        $changed = $this->pickingRelated && $this->relatedDraftIds !== $this->relatedIds;
+
+        if ($this->pickingRelated) {
+            $this->relatedIds = $this->relatedDraftIds;
+        }
+
+        $this->closeRelatedPicker();
+
+        return $changed;
+    }
+
+    /**
+     * Ajoute un article lie a la suite des autres, dans la fenetre de choix seulement. Elle reste ouverte : on peut
+     * en ajouter plusieurs de suite, et l'article ne les recoit qu'a « Terminé ».
      */
     public function addRelated(int|string $postId): void
     {
         $postId = (int) $postId;
 
-        if ($postId <= 0 || $postId === $this->postId || in_array($postId, $this->relatedIds, true)) {
+        if (! $this->pickingRelated || $postId <= 0 || $postId === $this->postId || in_array($postId, $this->relatedDraftIds, true)) {
             return;
         }
 
-        if (count($this->relatedIds) >= SaveBlogPostAction::MAX_RELATED_POSTS) {
+        if (count($this->relatedDraftIds) >= SaveBlogPostAction::MAX_RELATED_POSTS) {
             return;
         }
 
-        $this->relatedIds[] = $postId;
+        $this->relatedDraftIds[] = $postId;
     }
 
+    /**
+     * Retire un article lie. Dans la fenetre de choix, de la seule selection en cours ; dans la section de la page
+     * (croix d'une ligne), de l'article directement.
+     */
     public function removeRelated(int|string $postId): void
     {
         $postId = (int) $postId;
+        $without = static fn (array $ids): array => array_values(array_filter($ids, static fn (int $id): bool => $id !== $postId));
 
-        $this->relatedIds = array_values(array_filter($this->relatedIds, static fn (int $id): bool => $id !== $postId));
+        if ($this->pickingRelated) {
+            $this->relatedDraftIds = $without($this->relatedDraftIds);
+
+            return;
+        }
+
+        $this->relatedIds = $without($this->relatedIds);
     }
 
     /** Appele par wire:sort : identifiant de l'article lie deplace et sa nouvelle place (a partir de 0). */
@@ -759,12 +799,13 @@ class PostForm extends Component
         $categoryOptions = [];
         $related = [];
         $relatedCandidates = [];
+        $relatedChosen = [];
 
         try {
             $categoryOptions = $form->categoryOptions();
 
             if ($this->pickingRelated) {
-                $relatedCandidates = $form->relatedCandidates(array_values(array_filter([...$this->relatedIds, $this->postId])));
+                $relatedCandidates = $form->relatedCandidates(array_values(array_filter([...$this->relatedDraftIds, $this->postId])));
             }
 
             if ($this->postId === null) {
@@ -779,6 +820,11 @@ class PostForm extends Component
                 } else {
                     $this->resetErrorBag('post-load-failed');
                 }
+            }
+
+            // La selection en cours dans la fenetre : lue seulement quand elle differe de celle de l'article.
+            if ($this->pickingRelated) {
+                $relatedChosen = $this->relatedDraftIds === $this->relatedIds ? $related : $form->related($this->relatedDraftIds);
             }
         } catch (Throwable $e) {
             Log::error('Unexpected error while loading the admin blog post form.', ['post_id' => $this->postId, 'exception' => $e]);
@@ -800,6 +846,7 @@ class PostForm extends Component
                 : null,
             'related' => $related,
             'relatedCandidates' => $relatedCandidates,
+            'relatedChosen' => $relatedChosen,
             'relatedLimit' => SaveBlogPostAction::MAX_RELATED_POSTS,
             'sourceLimit' => self::MAX_SOURCES,
             'relatedCandidateLimit' => BlogPostFormService::RELATED_CANDIDATES,

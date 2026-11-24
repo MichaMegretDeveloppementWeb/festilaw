@@ -133,10 +133,11 @@ final readonly class BlogPostFormService
 
     /**
      * Articles a proposer comme articles lies : tous statuts, les plus recents d'abord, hors ceux
-     * deja choisis et l'article lui-meme. Le libelle dit le statut de ce qui n'est pas publie.
+     * deja choisis et l'article lui-meme. Le libelle dit le statut de ce qui n'est pas publie. La categorie
+     * sert au filtre de la fenetre de choix (Micha, 24/11/2026).
      *
      * @param  list<int>  $excludedIds
-     * @return array<int, string> identifiant => libelle
+     * @return list<array{id: int, label: string, category: ?int}>
      */
     public function relatedCandidates(array $excludedIds): array
     {
@@ -146,7 +147,11 @@ final readonly class BlogPostFormService
             $status = BlogPostStatus::from($row->status);
             $title = $row->title ?? __('Sans titre');
 
-            $options[$row->id] = $status === BlogPostStatus::Published ? $title : $title.' · '.$status->label();
+            $options[] = [
+                'id' => $row->id,
+                'label' => $status === BlogPostStatus::Published ? $title : $title.' · '.$status->label(),
+                'category' => $row->category_id,
+            ];
         }
 
         return $options;

@@ -78,19 +78,23 @@
 </x-ui::modal>
 
 {{-- Articles lies. En haut, ceux deja choisis, en pastilles courtes qu'une croix retire : Micha devait fermer la
-     fenetre pour les voir (19/11). Dessous, les articles a lier : la liste n'est lue par le serveur que pendant
-     que la fenetre est ouverte ($pickingRelated), et la recherche filtre dans le navigateur. Un clic ajoute
-     l'article, la fenetre reste ouverte pour en ajouter d'autres. Ajouter ou retirer agit aussitot sur la
-     section « Articles liés » de l'article, qui s'enregistre avec lui. --}}
+     fenetre pour les voir (19/11). Dessous, les articles a lier, du plus recent au plus ancien : la liste n'est lue
+     par le serveur que pendant que la fenetre est ouverte ($pickingRelated), et la recherche comme le filtre par
+     categorie trient dans le navigateur. Un clic ajoute l'article, la fenetre reste ouverte pour en ajouter d'autres.
+     Tout se fait sur une copie : la section « Articles liés » de l'article ne change qu'a « Terminé », et une
+     fenetre fermee autrement abandonne ses changements (Micha, 24/11/2026). --}}
+@php
+    $chosen = $pickingRelated ? $relatedChosen : $related;
+@endphp
 <x-ui::modal name="post-related" :title="__('Articles liés')">
     <div data-no-dirty>
-        @if ($related !== [])
+        @if ($chosen !== [])
             <ul class="mb-4 flex flex-wrap gap-1.5" data-related-chosen>
-                @foreach ($related as $item)
+                @foreach ($chosen as $item)
                     <li wire:key="related-chosen-{{ $item['id'] }}"
                         class="inline-flex max-w-[14rem] items-center gap-1 rounded-full bg-elevated py-0.5 pl-2.5 pr-1 text-[12px] font-medium text-primary">
                         <span @class(['truncate', 'italic text-muted' => ! $item['title']]) title="{{ $item['title'] }}">{{ $item['title'] ?? __('Sans titre') }}</span>
-                        <button type="button" x-on:click="dirty = true; $wire.removeRelated({{ $item['id'] }})"
+                        <button type="button" x-on:click="$wire.removeRelated({{ $item['id'] }})"
                             class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-gray-200 hover:text-primary dark:hover:bg-gray-700"
                             aria-label="{{ __('Retirer :title des articles liés', ['title' => $item['title'] ?? __('cet article')]) }}" title="{{ __('Retirer') }}">
                             <x-ui::icon name="x-mark" class="h-3 w-3" stroke-width="2" />
@@ -102,21 +106,32 @@
 
         @if (! $pickingRelated)
             <div class="flex justify-center py-8"><x-ui::spinner size="lg" /></div>
-        @elseif (count($related) >= $relatedLimit)
+        @elseif (count($chosen) >= $relatedLimit)
             <p class="text-[13px] text-secondary">{{ __('Un article garde :count articles liés au plus.', ['count' => $relatedLimit]) }}</p>
         @elseif ($relatedCandidates === [])
             <p class="text-[13px] text-secondary">{{ __('Aucun autre article à proposer.') }}</p>
         @else
-            <x-ui::search-input id="related-search" x-model="relatedQuery" :placeholder="__('Rechercher un titre')"
-                aria-label="{{ __('Rechercher un article à lier') }}" />
+            <div class="flex flex-col gap-2 sm:flex-row">
+                <div class="min-w-0 flex-1">
+                    <x-ui::search-input id="related-search" x-model="relatedQuery" :placeholder="__('Rechercher un titre')"
+                        aria-label="{{ __('Rechercher un article à lier') }}" />
+                </div>
+                @if ($categoryOptions !== [])
+                    <div class="sm:w-52" data-related-category-filter>
+                        <x-ui::select id="related-category" x-model="relatedCategory" :options="['' => __('Toutes les catégories')] + $categoryOptions"
+                            aria-label="{{ __('Filtrer par catégorie') }}" />
+                    </div>
+                @endif
+            </div>
 
             <x-ui::scroll-area maxHeight="20rem" class="mt-3">
                 <ul data-related-candidates>
-                    @foreach ($relatedCandidates as $id => $label)
-                        <li wire:key="related-candidate-{{ $id }}" x-show="matchesQuery(@js($label), relatedQuery)">
-                            <button type="button" x-on:click="dirty = true; $wire.addRelated({{ $id }})"
+                    @foreach ($relatedCandidates as $candidate)
+                        <li wire:key="related-candidate-{{ $candidate['id'] }}" data-related-candidate="{{ $candidate['id'] }}" data-category="{{ $candidate['category'] }}"
+                            x-show="matchesQuery(@js($candidate['label']), relatedQuery) && (relatedCategory === '' || relatedCategory === @js((string) $candidate['category']))">
+                            <button type="button" x-on:click="$wire.addRelated({{ $candidate['id'] }})"
                                 class="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-[13px] text-primary transition-colors hover:bg-elevated">
-                                <span class="min-w-0 truncate">{{ $label }}</span>
+                                <span class="min-w-0 truncate">{{ $candidate['label'] }}</span>
                                 <span class="flex shrink-0 items-center gap-1 text-[12px] font-medium text-secondary"><x-ui::icon name="plus" class="h-3.5 w-3.5" /> {{ __('Ajouter') }}</span>
                             </button>
                         </li>
@@ -131,8 +146,9 @@
     </div>
 
     <x-slot:footer>
-        <span class="mr-auto text-[12px] tabular-nums text-muted">{{ trans_choice('{0} Aucun article lié|{1} :count article lié sur :limit|[2,*] :count articles liés sur :limit', count($related), ['count' => count($related), 'limit' => $relatedLimit]) }}</span>
-        <x-ui::button x-on:click="$dispatch('ui-close-modal', 'post-related')">{{ __('Terminé') }}</x-ui::button>
+        <span class="mr-auto text-[12px] tabular-nums text-muted">{{ trans_choice('{0} Aucun article lié|{1} :count article lié sur :limit|[2,*] :count articles liés sur :limit', count($chosen), ['count' => count($chosen), 'limit' => $relatedLimit]) }}</span>
+        <x-ui::button variant="ghost" x-on:click="$dispatch('ui-close-modal', 'post-related')">{{ __('Annuler') }}</x-ui::button>
+        <x-ui::button x-on:click="applyRelatedChoice()" data-apply-related>{{ __('Terminé') }}</x-ui::button>
     </x-slot:footer>
 </x-ui::modal>
 

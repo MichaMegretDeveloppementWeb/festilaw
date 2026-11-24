@@ -62,7 +62,7 @@ final readonly class AdminBlogPostFormRepository
      * Articles lies choisis, dans leur ordre, avec leur titre francais (a defaut anglais) et leur
      * statut. 1 requete.
      *
-     * @return list<object{id: int, title: ?string, status: string}>
+     * @return list<object{id: int, title: ?string, status: string, category_id: ?int}>
      */
     public function listRelated(int $postId): array
     {
@@ -80,7 +80,7 @@ final readonly class AdminBlogPostFormRepository
      * n'existe plus est absent du resultat. 1 requete (aucune pour une liste vide).
      *
      * @param  list<int>  $postIds
-     * @return list<object{id: int, title: ?string, status: string}>
+     * @return list<object{id: int, title: ?string, status: string, category_id: ?int}>
      */
     public function listByIds(array $postIds): array
     {
@@ -110,7 +110,7 @@ final readonly class AdminBlogPostFormRepository
      * l'article lui-meme et ceux deja choisis. 1 requete.
      *
      * @param  list<int>  $excludedIds
-     * @return list<object{id: int, title: ?string, status: string}>
+     * @return list<object{id: int, title: ?string, status: string, category_id: ?int}>
      */
     public function listRelatedCandidates(array $excludedIds, string $search, int $limit): array
     {
@@ -124,13 +124,15 @@ final readonly class AdminBlogPostFormRepository
                         ->whereColumn('searched.blog_post_id', 'blog_posts.id')
                         ->where('searched.title', 'like', '%'.addcslashes($search, '%_\\').'%'),
                 ))
+                // Du plus recent au plus ancien : publie, a sa date de publication ; sinon, a sa creation (Micha, 24/11/2026).
+                ->orderByRaw('COALESCE(blog_posts.published_at, blog_posts.created_at) DESC')
                 ->orderByDesc('blog_posts.id')
                 ->limit($limit),
         );
     }
 
     /**
-     * @return list<object{id: int, title: ?string, status: string}>
+     * @return list<object{id: int, title: ?string, status: string, category_id: ?int}>
      */
     private function titled(Builder $query): array
     {
@@ -141,11 +143,12 @@ final readonly class AdminBlogPostFormRepository
         return $query
             ->leftJoin('blog_post_translations as fr', $translation('fr'))
             ->leftJoin('blog_post_translations as en', $translation('en'))
-            ->get(['blog_posts.id', 'blog_posts.status', 'fr.title as title_fr', 'en.title as title_en'])
+            ->get(['blog_posts.id', 'blog_posts.status', 'blog_posts.blog_category_id', 'fr.title as title_fr', 'en.title as title_en'])
             ->map(static fn (object $row): object => (object) [
                 'id' => (int) $row->id,
                 'title' => filled($row->title_fr) ? (string) $row->title_fr : (filled($row->title_en) ? (string) $row->title_en : null),
                 'status' => (string) $row->status,
+                'category_id' => $row->blog_category_id === null ? null : (int) $row->blog_category_id,
             ])
             ->all();
     }

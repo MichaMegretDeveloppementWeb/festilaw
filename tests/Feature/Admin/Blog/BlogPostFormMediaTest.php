@@ -12,6 +12,7 @@ use App\Models\BlogImage;
 use App\Models\BlogPost;
 use App\Models\User;
 use App\Services\Blog\Image\BlogImagePaths;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -353,9 +354,9 @@ describe('describing an image', function () {
 });
 
 describe('choosing the related articles', function () {
-    it('lists the other articles only while the list is open, whatever their status, in one query', function () {
+    it('lists the other articles only while the list is open, whatever their status, newest first, in one query', function () {
         $post = BlogContent::draft('pending');
-        $published = BlogContent::published('label');
+        $older = BlogContent::published('label', at: CarbonImmutable::now()->subMonth());
         $draft = BlogContent::draft('other');
         $chosen = BlogContent::published('candles');
         $post->relatedPosts()->attach($chosen->id, ['position' => 0]);
@@ -370,16 +371,63 @@ describe('choosing the related articles', function () {
         $form->call('openRelatedPicker');
 
         // Les 7 lectures d'un aller-retour (traduction et image demandee en cours comprises, controle du 20/11 et
-        // 24/11), plus celle de la liste a proposer.
+        // 24/11), plus celle de la liste a proposer. La selection de la fenetre est encore celle de l'article : elle
+        // ne se relit pas.
         expect(count(DB::getQueryLog()))->toBe(8);
         DB::disableQueryLog();
 
-        // Ni l'article lui-meme, ni celui deja choisi ; le statut de ce qui n'est pas publie est dit.
+        // Ni l'article lui-meme, ni celui deja choisi ; le statut de ce qui n'est pas publie est dit ; le plus
+        // recent d'abord, sans le dire (Micha, 24/11/2026).
         $form->assertSet('pickingRelated', true)
-            ->assertViewHas('relatedCandidates', [$draft->id => 'Other fr · Brouillon', $published->id => 'Label fr'])
+            ->assertViewHas('relatedCandidates', fn (array $candidates): bool => array_column($candidates, 'label', 'id') === [$draft->id => 'Other fr · Brouillon', $older->id => 'Label fr'])
             ->call('closeRelatedPicker')
             ->assertSet('pickingRelated', false)
             ->assertViewHas('relatedCandidates', []);
+    });
+
+    it('gives each article to propose its category, for the filter of the window', function () {
+        $post = BlogContent::draft('pending');
+        $rules = BlogContent::category('rules');
+        $inRules = BlogContent::published('label', $rules);
+
+        Livewire::test(PostForm::class, ['post' => $post->id])
+            ->call('openRelatedPicker')
+            ->assertViewHas('relatedCandidates', fn (array $candidates): bool => collect($candidates)->firstWhere('id', $inRules->id)['category'] === $rules->id)
+            ->assertSeeHtml('data-related-category-filter')
+            ->assertSee('Toutes les catégories');
+    });
+
+    it('changes the related articles of the page only when the window is closed with Terminé', function () {
+        // Retour de Micha du 24/11 : deux articles lies, la fenetre ouverte, les deux retires et trois ajoutes ; la
+        // page ne bouge pas avant « Terminé », puis montre les trois. Fermee autrement, la fenetre n'a rien change.
+        $post = BlogContent::draft('pending');
+        [$first, $second] = [BlogContent::published('label'), BlogContent::draft('other')];
+        $added = BlogContent::seedPublished(3);
+        $post->relatedPosts()->attach([$first->id => ['position' => 0], $second->id => ['position' => 1]]);
+
+        $form = Livewire::test(PostForm::class, ['post' => $post->id])
+            ->call('openRelatedPicker')
+            ->call('removeRelated', $first->id)
+            ->call('removeRelated', $second->id);
+
+        foreach ($added as $id) {
+            $form->call('addRelated', $id);
+        }
+
+        $form->assertSet('relatedIds', [$first->id, $second->id])
+            ->assertViewHas('related', fn (array $related): bool => array_column($related, 'id') === [$first->id, $second->id]);
+
+        $form->call('closeRelatedPicker')->assertSet('relatedIds', [$first->id, $second->id]);
+
+        $form->call('openRelatedPicker')->call('removeRelated', $first->id)->call('removeRelated', $second->id);
+
+        foreach ($added as $id) {
+            $form->call('addRelated', $id);
+        }
+
+        expect($form->call('applyRelated')->get('relatedIds'))->toBe($added);
+        $form->assertSet('pickingRelated', false)
+            ->assertViewHas('related', fn (array $related): bool => array_column($related, 'id') === $added);
     });
 
     it('adds, removes and reorders the related articles, and saves their order', function () {
@@ -401,12 +449,15 @@ describe('choosing the related articles', function () {
             ->call('addRelated', $first->id)
             ->call('addRelated', $post->id)
             ->call('addRelated', 'abc')
+            ->assertSet('relatedDraftIds', [$first->id, $second->id, $third->id])
+            ->call('applyRelated')
             ->assertSet('relatedIds', [$first->id, $second->id, $third->id])
             // L'ecran suit l'etat du formulaire, avant tout enregistrement.
             ->assertViewHas('related', fn (array $related): bool => $titles($related) === ['Label fr', 'Other fr', 'Candles fr'])
             ->call('reorderRelated', $third->id, 0)
             ->assertSet('relatedIds', [$third->id, $first->id, $second->id])
             ->call('reorderRelated', 999, 0)
+            // La croix d'une ligne de la page retire l'article directement.
             ->call('removeRelated', $first->id)
             ->assertSet('relatedIds', [$third->id, $second->id])
             ->call('save', BlogContent::contentsOf($post))
@@ -443,11 +494,15 @@ describe('choosing the related articles', function () {
         $post = BlogContent::draft('pending');
         $ids = BlogContent::seedPublished(7);
 
-        $form = Livewire::test(PostForm::class, ['post' => $post->id]);
+        $form = Livewire::test(PostForm::class, ['post' => $post->id])->call('openRelatedPicker');
 
         foreach ($ids as $id) {
             $form->call('addRelated', $id);
         }
+
+        $form->assertCount('relatedDraftIds', 6)
+            ->assertSee('Un article garde 6 articles liés au plus.')
+            ->call('applyRelated');
 
         // Le bouton d'ajout disparait (le titre de la fenetre, lui, reste dans la page).
         $form->assertCount('relatedIds', 6)
@@ -465,9 +520,11 @@ describe('choosing the related articles', function () {
 
         // Creation : seulement les categories.
         expect(count(DB::getQueryLog()))->toBe(1);
+
+        $form->call('openRelatedPicker')->call('addRelated', $label->id);
         DB::flushQueryLog();
 
-        $form->call('addRelated', $label->id);
+        $form->call('applyRelated');
 
         // Les categories, et les articles lies choisis.
         expect(count(DB::getQueryLog()))->toBe(2);

@@ -66,6 +66,7 @@ const blogPostForm = (config) => ({
     categoryForm: { names: { en: '', fr: '', es: '' }, errors: {}, saving: false },
     // Ce qui est tape dans la recherche de la fenetre des articles a lier.
     relatedQuery: '',
+    relatedCategory: '',
     // Change a chaque mouvement du curseur : la barre d'outils relit l'etat des boutons.
     pulse: 0,
     settingsOpen: false,
@@ -626,8 +627,19 @@ const blogPostForm = (config) => ({
     // Ouvre la fenetre des articles a lier tout de suite ; la liste arrive avec la reponse du serveur.
     openRelated() {
         this.relatedQuery = '';
+        this.relatedCategory = '';
         this.$dispatch('ui-open-modal', 'post-related');
         this.$wire.openRelatedPicker();
+    },
+
+    // « Terminé » : l'article recoit les articles lies choisis dans la fenetre, puis elle se ferme. Le formulaire
+    // ne se dit modifie que si la liste a vraiment change.
+    async applyRelatedChoice() {
+        if (await this.$wire.applyRelated()) {
+            this.dirty = true;
+        }
+
+        this.$dispatch('ui-close-modal', 'post-related');
     },
 
     // Recherche dans les titres sans tenir compte de la casse ni des accents.
