@@ -250,7 +250,7 @@
     <x-ui::modal name="unpublish-post" variant="confirm" :title="$isPublished ? __('Dépublier cet article ?') : __('Annuler la programmation ?')">
         @if ($isPublished)
             <p>{{ __('Il ne sera plus visible sur le site et repassera en brouillon. Vous pourrez le publier de nouveau, à la même adresse.') }}</p>
-            <p>{{ __('Les liens vers cet article dans les autres articles seront retirés, et leur texte restera.') }}</p>
+            <p>{{ __('Les liens vers cet article dans les autres articles seront retirés.') }}</p>
         @else
             <p>{{ __('L\'article repassera en brouillon et ne sera pas publié à la date prévue.') }}</p>
         @endif
@@ -288,7 +288,7 @@
             <p>{{ __('Il est publié : ses adresses répondront ensuite que la page n\'existe plus.') }}</p>
         @endif
         <p>{{ __('La suppression est définitive, dans les trois langues.') }}</p>
-        <p>{{ __('Les liens vers cet article dans les autres articles seront retirés, et leur texte restera.') }}</p>
+        <p>{{ __('Les liens vers cet article dans les autres articles seront retirés.') }}</p>
 
         <x-slot:actions>
             <x-ui::button variant="ghost" x-on:click="$dispatch('ui-close-modal', 'delete-post')">{{ __('Annuler') }}</x-ui::button>

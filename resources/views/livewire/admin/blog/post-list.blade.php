@@ -155,7 +155,7 @@
             <p class="font-medium text-primary" x-text="pending.title"></p>
             <p x-show="pending.published">{{ __('Il est publié : ses adresses répondront ensuite que la page n\'existe plus.') }}</p>
             <p>{{ __('La suppression est définitive.') }}</p>
-            <p>{{ __('Les liens vers cet article dans les autres articles seront retirés, et leur texte restera.') }}</p>
+            <p>{{ __('Les liens vers cet article dans les autres articles seront retirés.') }}</p>
 
             <x-slot:actions>
                 <x-ui::button variant="ghost" x-on:click="$dispatch('ui-close-modal', 'delete-post')">{{ __('Annuler') }}</x-ui::button>
