@@ -105,7 +105,7 @@
                 <x-admin.blog.language-tabs :locales="$locales" />
 
                 @foreach ($locales as $locale => $language)
-                    <div x-show="tab === '{{ $locale }}'" @if ($locale !== 'en') x-cloak @endif role="tabpanel" class="space-y-6 pt-8">
+                    <div x-show="tab === '{{ $locale }}'" @if ($locale !== 'en') x-cloak @endif role="tabpanel" class="space-y-8 pt-8">
                         @include('livewire.admin.blog.post-form.language', ['locale' => $locale, 'language' => $language])
                     </div>
                 @endforeach

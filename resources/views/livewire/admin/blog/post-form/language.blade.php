@@ -25,7 +25,7 @@
         @unless ($errors->has('texts.'.$locale.'.excerpt'))
             <p class="pt-1 text-[12px] text-muted">{{ __('Deux phrases au plus. Affiché sur les cartes du blog et sous le titre de l\'article.') }}</p>
         @endunless
-        <div class="ml-auto">
+        <div class="ml-auto shrink-0">
             @include('livewire.admin.blog.post-form.translate-field', ['locale' => $locale, 'field' => 'excerpt', 'locales' => $locales])
         </div>
     </div>

@@ -10,7 +10,7 @@
     <x-ui::dropdown width="w-56" align="right">
         <x-slot:trigger>
             <button type="button" aria-haspopup="menu" x-bind:disabled="translation.pending !== null"
-                class="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[12px] font-medium text-secondary transition-colors hover:bg-elevated hover:text-primary disabled:cursor-not-allowed disabled:opacity-50">
+                class="inline-flex items-center gap-1 whitespace-nowrap rounded-md px-1.5 py-1 text-[12px] font-medium text-secondary transition-colors hover:bg-elevated hover:text-primary disabled:cursor-not-allowed disabled:opacity-50">
                 <template x-if="translation.pending === '{{ $locale }}' && translation.field === '{{ $field }}'">
                     <span class="inline-flex items-center gap-1"><x-ui::spinner size="sm" /> {{ __('Traduction en cours…') }}</span>
                 </template>
