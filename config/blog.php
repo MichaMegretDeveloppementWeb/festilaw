@@ -310,15 +310,15 @@ return [
         'effort' => [
             'levels' => [
                 'low' => [
-                    'reasoning' => ['default' => 'medium', 'topic' => 'low', 'research' => 'low', 'photo_check' => 'low'],
+                    'reasoning' => ['default' => 'medium', 'topic' => 'low', 'research' => 'low', 'photo_check' => 'low', 'image_brief' => 'low'],
                     'searches' => ['topic_scan' => 2, 'research_notes' => 3, 'fact_search' => 3],
                 ],
                 'medium' => [
-                    'reasoning' => ['default' => 'high', 'topic' => 'medium', 'research' => 'medium', 'photo_check' => 'medium'],
+                    'reasoning' => ['default' => 'high', 'topic' => 'medium', 'research' => 'medium', 'photo_check' => 'medium', 'image_brief' => 'low'],
                     'searches' => ['topic_scan' => 4, 'research_notes' => 10, 'fact_search' => 8],
                 ],
                 'high' => [
-                    'reasoning' => ['default' => 'high', 'photo_check' => 'medium'],
+                    'reasoning' => ['default' => 'high', 'photo_check' => 'medium', 'image_brief' => 'low'],
                     'searches' => ['topic_scan' => 6, 'research_notes' => 18, 'fact_search' => 15],
                 ],
             ],
@@ -399,6 +399,8 @@ return [
                 'version_check_fr' => ['setting' => 'verification', 'input' => 2_200, 'input_per_1000_words' => 3_300, 'output' => 1_000, 'reasoning' => ['low' => [300, 2_000], 'medium' => [750, 5_000], 'high' => [1_200, 8_000]], 'calls' => [1, 1]],
                 'version_check_es' => ['setting' => 'verification', 'input' => 2_200, 'input_per_1000_words' => 3_300, 'output' => 1_000, 'reasoning' => ['low' => [300, 2_000], 'medium' => [750, 5_000], 'high' => [1_200, 8_000]], 'calls' => [1, 1]],
                 'photo_check' => ['setting' => 'topic', 'input' => 1_500, 'output' => 150, 'reasoning' => ['low' => [0, 300], 'medium' => [0, 750]], 'calls' => [1, 4], 'stock_photos' => true],
+                // Description de l'image principale demandee depuis un article (type `image`, 24/11/2026), avant sa recherche ou sa creation.
+                'image_brief' => ['setting' => 'topic', 'input' => 2_500, 'output' => 350, 'reasoning' => ['low' => [0, 800], 'medium' => [0, 1_500], 'high' => [0, 1_500]], 'calls' => [1, 2], 'only_when_asked' => true],
                 'translation_es' => ['setting' => 'translation', 'input' => 7_700, 'input_per_1000_words' => 1_500, 'output_per_1000_words' => 1_750, 'reasoning' => ['low' => [1_000, 5_000], 'medium' => [2_500, 12_500], 'high' => [4_000, 20_000]], 'calls' => [2, 2]],
             ],
         ],

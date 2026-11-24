@@ -36,12 +36,14 @@ final readonly class StockPhotoChecker
     /**
      * @param  string  $photoPath  la photo telechargee, regardee telle qu'elle serait rangee
      * @param  array<string, mixed>  $request  l'image voulue par la redaction (description, requete)
+     * @param  array<string, mixed>  $article  le sujet de l'article (titre, angle, lecteur) : celui du choix du sujet pour
+     *                                         un article genere, le titre et l'extrait pour une demande d'image
      * @param  GenerationUsage  $spent  ce que l'etape des images a deja depense, pour l'arret de securite
      *
      * @throws BlogAiProviderException
      * @throws BlogEditorialException quand aucun modele n'est regle pour le choix du sujet
      */
-    public function check(string $photoPath, array $request, GenerationStepContext $context, GenerationUsage $spent): StockPhotoVerdict
+    public function check(string $photoPath, array $request, array $article, GenerationStepContext $context, GenerationUsage $spent): StockPhotoVerdict
     {
         $model = (string) $context->settings->modelFor(self::MODEL_SETTING);
 
@@ -49,9 +51,8 @@ final readonly class StockPhotoChecker
             throw BlogEditorialException::noModel(self::STEP, self::MODEL_SETTING);
         }
 
-        $topic = (array) ($context->output('topic') ?? []);
         $prompt = implode("\n\n", [
-            "## Article\n\n".json_encode(array_intersect_key($topic, array_flip(['title', 'angle', 'reader'])), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            "## Article\n\n".json_encode(array_intersect_key($article, array_flip(['title', 'angle', 'reader'])), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             "## Image the writer wanted\n\n".trim((string) ($request['description'] ?? '')),
         ]);
 

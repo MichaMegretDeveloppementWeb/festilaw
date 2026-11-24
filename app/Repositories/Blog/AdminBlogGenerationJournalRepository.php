@@ -21,7 +21,7 @@ use Illuminate\Support\Collection;
 final readonly class AdminBlogGenerationJournalRepository
 {
     private const LIST_COLUMNS = [
-        'blog_generations.id', 'blog_generations.trigger', 'blog_generations.status', 'blog_generations.outcome_reason',
+        'blog_generations.id', 'blog_generations.type', 'blog_generations.trigger', 'blog_generations.status', 'blog_generations.outcome_reason',
         'blog_generations.topic_title', 'blog_generations.topic_hint', 'blog_generations.blog_post_id',
         'blog_generations.cost_microusd', 'blog_generations.started_at', 'blog_generations.finished_at',
         'blog_generations.created_at', 'post_texts.title as post_title',

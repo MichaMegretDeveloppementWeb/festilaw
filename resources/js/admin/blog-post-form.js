@@ -73,6 +73,9 @@ const blogPostForm = (config) => ({
     // champ demande, ou null pour toute la langue ; `pending`, la langue en attente de sa traduction (le
     // bouton le dit), ou null.
     translation: { from: null, to: null, field: null, pending: null },
+    // Image principale demandee depuis l'article (24/11/2026) : `pending`, la source en cours (« stock » ou
+    // « generated »), ou null ; `candidate`, l'image trouvee montree avant de remplacer l'actuelle.
+    imageSearch: { pending: null, candidate: null },
     wide: window.matchMedia(WIDE).matches,
 
     ...slugField,
@@ -707,6 +710,7 @@ const blogPostForm = (config) => ({
             from,
             to,
             field,
+            frenchTitle: this.text('fr', 'title'),
             source: {
                 title: this.text(from, 'title'),
                 excerpt: this.text(from, 'excerpt'),
@@ -743,6 +747,74 @@ const blogPostForm = (config) => ({
         if (field === null || field === 'title') {
             this.suggestSlug(locale);
         }
+    },
+
+    // --- Image principale trouvee depuis l'article ---------------------------------------------------------------
+
+    // « Image automatique » : la demande part avec les titres et extraits du formulaire, enregistres ou non, et
+    // l'image actuelle, pour en obtenir une autre. Le composant PostFeaturedImage la confie au worker.
+    askImage(mode) {
+        if (this.imageSearch.pending !== null || this.uploading !== null) {
+            return;
+        }
+
+        const locales = ['en', 'fr', 'es'];
+        this.imageSearch = { pending: mode, candidate: null };
+
+        Livewire.dispatch('request-featured-image', {
+            mode,
+            titles: Object.fromEntries(locales.map((locale) => [locale, this.text(locale, 'title')])),
+            excerpts: Object.fromEntries(locales.map((locale) => [locale, this.text(locale, 'excerpt')])),
+            currentImageId: this.$wire.featuredImageId ?? null,
+        });
+    },
+
+    // L'image est prete. Sans image actuelle, elle prend sa place ; sinon elle se montre d'abord, et l'actuelle
+    // reste tant qu'on ne choisit pas la nouvelle. Rien n'est enregistre avant l'article.
+    async imageFound({ imageId }) {
+        this.imageSearch.pending = null;
+        const hasCurrent = this.$wire.featuredImageId !== null && this.images[this.$wire.featuredImageId] !== undefined;
+
+        if (! hasCurrent) {
+            const image = await this.$wire.useFoundImage(imageId);
+
+            if (image) {
+                this.images[image.id] = image;
+                this.dirty = true;
+            }
+
+            return;
+        }
+
+        const image = await this.$wire.foundImage(imageId);
+
+        if (image) {
+            this.images[image.id] = image;
+            this.imageSearch.candidate = image;
+            this.$dispatch('ui-open-modal', 'use-found-image');
+        }
+    },
+
+    async useCandidateImage() {
+        const candidate = this.imageSearch.candidate;
+        this.$dispatch('ui-close-modal', 'use-found-image');
+
+        if (! candidate) {
+            return;
+        }
+
+        const image = await this.$wire.useFoundImage(candidate.id);
+        this.imageSearch.candidate = null;
+
+        if (image) {
+            this.images[image.id] = image;
+            this.dirty = true;
+        }
+    },
+
+    keepCurrentImage() {
+        this.imageSearch.candidate = null;
+        this.$dispatch('ui-close-modal', 'use-found-image');
     },
 
     save() {

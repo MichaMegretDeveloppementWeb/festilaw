@@ -32,6 +32,7 @@ final readonly class BlogGenerationLabels
             'version_check_fr' => __('Contrôle de la version française'),
             'version_check_es' => __('Contrôle de la version espagnole'),
             'images' => __('Images'),
+            'image_brief' => __('Description de l’image'),
             'assembly' => __('Assemblage du brouillon'),
             default => $key,
         };

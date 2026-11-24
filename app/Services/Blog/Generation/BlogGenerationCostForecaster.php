@@ -60,6 +60,24 @@ final readonly class BlogGenerationCostForecaster
             return $this->forecast($settings->models, $words, new GenerationImageOptions(BlogAiImageMode::None, 1), true, ['translation_fr'], GenerationEffort::fromPayload($payload) ?? $settings->effort);
         }
 
+        // Une image principale demandee depuis un article (24/11/2026) : sa description, puis le controle des photos
+        // de la banque ou le prix d'une image creee, une seule image.
+        if ($type === BlogGenerationType::Image) {
+            $mode = (GenerationImageOptions::fromPayload($payload) ?? new GenerationImageOptions(BlogAiImageMode::Stock, 1))->mode;
+            $forecast = $this->forecast($settings->models, 0, new GenerationImageOptions($mode, 1), true, ['image_brief', 'photo_check'], GenerationEffort::fromPayload($payload) ?? $settings->effort);
+
+            if ($mode !== BlogAiImageMode::Generated) {
+                return $forecast;
+            }
+
+            // L'image n'est demandee que si sa reserve tient sous l'arret de securite, le double du haut de l'estimation.
+            // Pour une demande qui ne porte que cette image, le haut compte donc la reserve au lieu du prix mesure.
+            $model = (string) ($settings->models[BlogAiModelCatalog::IMAGE_SETTING] ?? '');
+            [, $priceHigh] = $this->models->imagePriceMicrousd($model);
+
+            return new GenerationCostForecast($forecast->lowMicrousd, $forecast->highMicrousd - $priceHigh + max($priceHigh, $this->models->imageReserveMicrousd($model)));
+        }
+
         return $this->forSettings($settings, GenerationLength::wordsFromPayload($payload), GenerationImageOptions::fromPayload($payload), $topicImposed, GenerationEffort::fromPayload($payload));
     }
 
@@ -78,7 +96,9 @@ final readonly class BlogGenerationCostForecaster
         $high = 0;
 
         foreach ($this->profile as $step => $profile) {
-            if (($step === 'topic_scan' && $topicImposed) || ($onlySteps !== null && ! in_array($step, $onlySteps, true))) {
+            // Une etape propre a une autre sorte de generation (description d'une image demandee) ne compte que nommee.
+            if (($step === 'topic_scan' && $topicImposed) || ($onlySteps !== null && ! in_array($step, $onlySteps, true))
+                || ($onlySteps === null && ($profile['only_when_asked'] ?? false))) {
                 continue;
             }
 

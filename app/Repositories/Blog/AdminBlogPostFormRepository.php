@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repositories\Blog;
 
+use App\Models\BlogImage;
 use App\Models\BlogPost;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\JoinClause;
@@ -141,5 +142,14 @@ final readonly class AdminBlogPostFormRepository
                 'status' => (string) $row->status,
             ])
             ->all();
+    }
+
+    /**
+     * Une image trouvee ou creee depuis l'article (24/11/2026) : de quoi montrer son apercu et dire a quel article
+     * elle appartient deja, s'il y en a un. 1 requete.
+     */
+    public function findImage(int $imageId): ?BlogImage
+    {
+        return BlogImage::query()->select(['id', 'blog_post_id', 'uuid', 'basename', 'variants', 'width', 'height', 'crop', 'alt'])->find($imageId);
     }
 }

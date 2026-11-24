@@ -28,7 +28,7 @@ Images:
 
 - Describe the main image in "featured_image".
 - If an image inside the text would genuinely help the reader, place it on its own line with `[[image:1]]`, `[[image:2]]`... and describe it in "inline_images" with the same number. Never more than the number of inline images allowed below. Zero is fine.
-- An image shows no identifiable real person, no logo or brand, and no text inside the image. "search_query" is two or three English words naming the main subject only, such as "wooden toy" or "packing parcels": a stock search mixes up longer queries, and a setting word like "workbench" brings back tools. "generation_prompt" describes the image for an image generator, in one or two sentences.
+- An image shows no identifiable real person, no logo or brand, and no text inside the image. "search_query" is two or three English words naming the main subject only, such as "wooden toy" or "packing parcels": a stock search mixes up longer queries, and a setting word like "workbench" brings back tools. A shop word ("shelf", "store", "supermarket") brings back aisles full of brands. The query never names the article's topic (a label, an identifier, a rule, a document), which stock banks almost never show: it names a product a small maker sells or a scene of their work. "generation_prompt" describes the image for an image generator, in one or two sentences.
 
 Other fields:
 

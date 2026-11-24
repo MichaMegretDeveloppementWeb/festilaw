@@ -10,6 +10,7 @@ use App\Data\Admin\Blog\BlogPostFormView;
 use App\Data\Blog\BlogReadinessIssue;
 use App\Enums\Blog\BlogPostOrigin;
 use App\Enums\Blog\BlogPostStatus;
+use App\Exceptions\Blog\BlogImageException;
 use App\Models\BlogImage;
 use App\Models\BlogPost;
 use App\Repositories\Blog\AdminBlogCategoryRepository;
@@ -146,6 +147,25 @@ final readonly class BlogPostFormService
         }
 
         return $options;
+    }
+
+    /**
+     * L'image trouvee ou creee depuis l'article (24/11/2026), telle que le formulaire la garde, si elle est encore
+     * libre ou deja a cet article.
+     *
+     * @return array{id: int, url: ?string, alt: array<string, string>, source: ?string, crop: ?array<string, int>}
+     *
+     * @throws BlogImageException quand l'image n'existe plus ou appartient a un autre article
+     */
+    public function usableImageSummary(int $imageId, ?int $postId): array
+    {
+        $image = $this->posts->findImage($imageId) ?? throw BlogImageException::notFound($imageId);
+
+        if ($image->blog_post_id !== null && $image->blog_post_id !== $postId) {
+            throw BlogImageException::notUsableByPost($imageId);
+        }
+
+        return $this->imageSummary($image);
     }
 
     /**

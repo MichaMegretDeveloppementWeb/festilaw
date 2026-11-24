@@ -481,6 +481,44 @@ class PostForm extends Component
         $this->featuredImageId = null;
     }
 
+    /**
+     * L'image principale trouvee ou creee depuis l'article (PostFeaturedImage, 24/11/2026), pour la montrer avant de
+     * la poser quand l'article en a deja une. Rien ne change dans le formulaire.
+     *
+     * @return array{id: int, url: ?string, alt: array<string, string>, source: ?string, crop: ?array<string, int>}|null
+     */
+    public function foundImage(int $imageId, BlogPostFormService $form): ?array
+    {
+        try {
+            return $form->usableImageSummary($imageId, $this->postId);
+        } catch (BaseAppException $e) {
+            Log::log($e->logLevel(), $e->getMessage(), ['exception' => $e]);
+            $this->dispatch('ui-toast', type: 'error', title: $e->getUserMessage());
+        } catch (Throwable $e) {
+            $this->reportAdminError($e, 'Admin read found blog image');
+        }
+
+        return null;
+    }
+
+    /**
+     * Pose l'image principale trouvee ou creee depuis l'article. L'identifiant est verrouille : c'est le serveur qui
+     * le pose, apres avoir verifie que l'image est libre ou deja a cet article. L'enregistrement de l'article la
+     * rattache ; l'image remplacee part au menage de la nuit.
+     *
+     * @return array{id: int, url: ?string, alt: array<string, string>, source: ?string, crop: ?array<string, int>}|null
+     */
+    public function useFoundImage(int $imageId, BlogPostFormService $form): ?array
+    {
+        $summary = $this->foundImage($imageId, $form);
+
+        if ($summary !== null) {
+            $this->featuredImageId = $imageId;
+        }
+
+        return $summary;
+    }
+
     /** Retire l'image de partage : les reseaux sociaux reprendront l'image principale. */
     public function removeShareImage(): void
     {

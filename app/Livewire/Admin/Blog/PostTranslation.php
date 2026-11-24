@@ -70,9 +70,10 @@ class PostTranslation extends Component
     /**
      * @param  array<string, mixed>  $source  textes et document de la langue de depart, tels que dans le formulaire
      * @param  string|null  $field  un seul champ a traduire, ou nul pour toute la langue (Micha, 24/11/2026)
+     * @param  string  $frenchTitle  le titre francais du formulaire, qui nomme la demande dans l'historique
      */
     #[On('request-post-translation')]
-    public function request(string $from, string $to, array $source, RequestBlogTranslationAction $requestTranslation, ?string $field = null): void
+    public function request(string $from, string $to, array $source, RequestBlogTranslationAction $requestTranslation, ?string $field = null, string $frenchTitle = ''): void
     {
         if ($this->generationId !== null) {
             return;
@@ -90,6 +91,7 @@ class PostTranslation extends Component
                 postId: $this->postId,
                 requestedBy: auth()->id(),
                 field: $field,
+                frenchTitle: $frenchTitle,
             ));
             $this->target = $to;
             $this->waitingSince = now()->getTimestamp();

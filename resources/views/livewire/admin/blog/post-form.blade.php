@@ -45,6 +45,9 @@
     x-on:blog-post-saved.window="dirty = false"
     x-on:post-translation-ready.window="translationReady($event.detail)"
     x-on:post-translation-failed.window="translation.pending = null; translation.field = null"
+    x-on:featured-image-ready.window="imageFound($event.detail)"
+    x-on:featured-image-failed.window="imageSearch.pending = null"
+    x-on:featured-image-pending.window="imageSearch.pending = $event.detail.mode"
     x-on:keydown.escape.window="settingsOpen = false"
     x-on:ui-modal-closed.window="modalClosed($event.detail)"
     x-on:post-category-create="openCategory($event.detail.name)"
@@ -105,7 +108,7 @@
                 <x-admin.blog.language-tabs :locales="$locales" />
 
                 @foreach ($locales as $locale => $language)
-                    <div x-show="tab === '{{ $locale }}'" @if ($locale !== 'en') x-cloak @endif role="tabpanel" class="space-y-8 pt-8">
+                    <div x-show="tab === '{{ $locale }}'" @if ($locale !== 'en') x-cloak @endif role="tabpanel" class="space-y-10 pt-8">
                         @include('livewire.admin.blog.post-form.language', ['locale' => $locale, 'language' => $language])
                     </div>
                 @endforeach
@@ -121,6 +124,7 @@
     @include('livewire.admin.blog.post-form.dialogs')
 
     <livewire:admin.blog.post-translation :post-id="$postId" />
+    <livewire:admin.blog.post-featured-image :post-id="$postId" />
 
     @assets
         @vite('resources/js/admin/blog-post-form.js')

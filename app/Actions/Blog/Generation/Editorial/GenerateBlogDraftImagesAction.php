@@ -15,6 +15,7 @@ use App\Data\Blog\StoreBlogImageData;
 use App\Enums\Blog\BlogImageCreditSource;
 use App\Enums\Blog\BlogImageUsage;
 use App\Enums\Blog\Generation\BlogAiImageMode;
+use App\Enums\Blog\Generation\BlogGenerationType;
 use App\Exceptions\BaseAppException;
 use App\Exceptions\Blog\BlogAiProviderException;
 use App\Exceptions\Blog\BlogEditorialException;
@@ -92,17 +93,30 @@ final readonly class GenerateBlogDraftImagesAction implements GenerationStep
             return GenerationStepResult::continue(['mode' => 'none', 'images' => [], 'warnings' => []], summary: __('Aucune image n\'était demandée pour cet article.'));
         }
 
-        $writing = $context->output('writing');
+        // Une demande d'image principale (type `image`, demande de Micha du 24/11/2026) lit tout dans la description de
+        // l'etape precedente ; un article genere, dans la redaction, le choix du sujet et les versions.
+        $imageRequest = $context->type === BlogGenerationType::Image;
+        $brief = $imageRequest ? $context->output('image_brief') : $context->output('writing');
 
-        if (! is_array($writing['featured_image'] ?? null)) {
-            throw BlogEditorialException::missingInput($this->key(), 'the image descriptions of the writer');
+        if (! is_array($brief['featured_image'] ?? null)) {
+            throw BlogEditorialException::missingInput($this->key(), $imageRequest ? 'the image brief' : 'the image descriptions of the writer');
         }
 
-        $requests = [0 => $writing['featured_image']];
+        $requests = [0 => $brief['featured_image']];
 
-        foreach (array_slice($writing['inline_images'] ?? [], 0, max(0, $options->maxImages - 1)) as $image) {
+        foreach ($imageRequest ? [] : array_slice($brief['inline_images'] ?? [], 0, max(0, $options->maxImages - 1)) as $image) {
             $requests[(int) $image['number']] = $image;
         }
+
+        $subject = [
+            'article' => $imageRequest
+                ? (array) ($brief['article'] ?? [])
+                : array_intersect_key($context->output('topic'), array_flip(['title', 'angle', 'reader'])),
+            // A defaut de photo pour la recherche de l'image principale, les mots-cles du sujet de l'article.
+            'fallback_query' => $imageRequest ? '' : implode(' ', array_slice($context->output('topic')['keywords'] ?? [], 0, 2)),
+            // La photo de l'image actuelle n'est pas reprise : une nouvelle demande en veut une autre.
+            'skip_pages' => array_values(array_filter([(string) ($context->payload['image_request']['current_credit_url'] ?? '')])),
+        ];
 
         $model = $options->mode === BlogAiImageMode::Generated ? (string) $context->settings->modelFor(BlogAiModelCatalog::IMAGE_SETTING) : null;
         $usage = new GenerationUsage(model: $model);
@@ -124,7 +138,7 @@ final readonly class GenerateBlogDraftImagesAction implements GenerationStep
                 continue;
             }
 
-            $alt = array_filter([
+            $alt = $imageRequest ? array_filter((array) ($brief['alt'] ?? []), filled(...)) : array_filter([
                 'en' => trim((string) ($request['description'] ?? '')),
                 'fr' => $context->output('translation_fr')['image_alts'][(string) $number] ?? null,
                 'es' => $context->output('translation_es')['image_alts'][(string) $number] ?? null,
@@ -132,7 +146,7 @@ final readonly class GenerateBlogDraftImagesAction implements GenerationStep
 
             try {
                 $stored = $options->mode === BlogAiImageMode::Stock
-                    ? $this->fromStock($request, $number, $context, $usage, $usedStockIds)
+                    ? $this->fromStock($request, $number, $context, $usage, $usedStockIds, $subject)
                     : $this->generated($request, $number, $alt, (string) $model);
             } catch (BlogAiProviderException $e) {
                 if ($e->creditExhausted) {
@@ -186,17 +200,18 @@ final readonly class GenerateBlogDraftImagesAction implements GenerationStep
      * @param  array<string, mixed>  $request
      * @param  GenerationUsage  $spent  ce que l'etape a deja depense, pour l'arret de securite
      * @param  list<string>  $usedStockIds
+     * @param  array{article: array<string, mixed>, fallback_query: string, skip_pages: list<string>}  $subject  le sujet que
+     *                                                                                                           le controle lit, la recherche de secours de l'image principale et les photos a ne pas reprendre
      * @return array{image: BlogImage|null, usage: GenerationUsage, cause?: string}
      *
      * @throws BlogAiProviderException quand le credit est epuise, avec le cout des controles deja faits
      */
-    private function fromStock(array $request, int $number, GenerationStepContext $context, GenerationUsage $spent, array &$usedStockIds): array
+    private function fromStock(array $request, int $number, GenerationStepContext $context, GenerationUsage $spent, array &$usedStockIds, array $subject): array
     {
         [$minWidth, $minHeight] = $number === 0 ? [$this->featuredMinWidth, $this->featuredMinHeight] : [self::CONTENT_MIN_WIDTH, self::CONTENT_MIN_HEIGHT];
         $queries = array_values(array_unique(array_filter([
             trim((string) ($request['search_query'] ?? '')),
-            // A defaut, pour l'image principale, les mots-cles du sujet.
-            $number === 0 ? implode(' ', array_slice($context->output('topic')['keywords'] ?? [], 0, 2)) : '',
+            $number === 0 ? $subject['fallback_query'] : '',
         ])));
         $checks = GenerationUsage::none();
         $cause = self::CAUSE_NONE_FIT;
@@ -212,7 +227,7 @@ final readonly class GenerateBlogDraftImagesAction implements GenerationStep
             }
 
             $candidates = collect($found)
-                ->reject(fn ($image): bool => in_array($image->id, $usedStockIds, true))
+                ->reject(fn ($image): bool => in_array($image->id, $usedStockIds, true) || in_array($image->pageUrl, $subject['skip_pages'], true))
                 ->take($this->photoChecks);
 
             foreach ($candidates as $candidate) {
@@ -230,7 +245,7 @@ final readonly class GenerateBlogDraftImagesAction implements GenerationStep
                 $downloaded++;
 
                 try {
-                    $verdict = $this->checker->check($path, $request, $context, $spent->plus($checks));
+                    $verdict = $this->checker->check($path, $request, $subject['article'], $context, $spent->plus($checks));
                     $checks = $checks->plus($verdict->usage);
 
                     if (! $verdict->fits) {

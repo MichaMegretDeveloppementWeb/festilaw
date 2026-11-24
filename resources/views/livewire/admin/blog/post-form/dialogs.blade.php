@@ -282,6 +282,23 @@
     </x-slot:actions>
 </x-ui::modal>
 
+{{-- Image principale trouvee ou creee depuis l'article alors qu'il en a deja une (demande de Micha du 24/11/2026) :
+     la nouvelle se montre avant de remplacer l'actuelle. Une image ecartee part au menage de la nuit. --}}
+<x-ui::modal name="use-found-image" :title="__('Utiliser cette image ?')">
+    <template x-if="imageSearch.candidate">
+        <div>
+            <img x-bind:src="imageSearch.candidate.url" x-bind:alt="imageSearch.candidate.alt.fr" class="aspect-video w-full rounded-lg bg-elevated object-cover">
+            <p class="mt-2 text-[13px] text-secondary" x-text="imageSearch.candidate.alt.fr"></p>
+        </div>
+    </template>
+    <p class="mt-3 text-[13px] text-muted">{{ __("Elle remplacera l'image principale actuelle. Rien n'est enregistré tant que vous n'enregistrez pas l'article.") }}</p>
+
+    <x-slot:footer>
+        <x-ui::button variant="ghost" x-on:click="keepCurrentImage()">{{ __("Garder l'actuelle") }}</x-ui::button>
+        <x-ui::button x-on:click="useCandidateImage()" data-use-found-image>{{ __('Utiliser cette image') }}</x-ui::button>
+    </x-slot:footer>
+</x-ui::modal>
+
 @if ($postId !== null)
     <x-ui::modal name="delete-post" variant="confirm" :title="__('Supprimer cet article ?')">
         @if ($isPublished)

@@ -10,6 +10,7 @@ use App\Contracts\Blog\Generation\GenerationPipeline;
 use App\Enums\Blog\Generation\BlogGenerationType;
 use App\Services\Blog\Generation\Editorial\Steps\AssistedTranslationStep;
 use App\Services\Blog\Generation\Editorial\Steps\FactSearchStep;
+use App\Services\Blog\Generation\Editorial\Steps\FeaturedImageBriefStep;
 use App\Services\Blog\Generation\Editorial\Steps\ResearchNotesStep;
 use App\Services\Blog\Generation\Editorial\Steps\ResearchStep;
 use App\Services\Blog\Generation\Editorial\Steps\StyleStep;
@@ -28,7 +29,8 @@ use Illuminate\Contracts\Container\Container;
  * brouillon. Chaque recherche web est une etape a elle seule : enregistree des qu'elle finit, elle n'est
  * jamais refaite par un nouvel essai de l'etape qui la met en forme. Les etapes de texte
  * sont des Services ; les images et l'assemblage, qui ecrivent, sont des Actions. La traduction assistee d'un
- * article ecrit a la main (type `translation`) tient en une etape.
+ * article ecrit a la main (type `translation`) tient en une etape. Une image principale demandee depuis un article
+ * (type `image`, 24/11/2026) en tient deux : sa description, puis l'etape des images.
  */
 final readonly class EditorialGenerationPipeline implements GenerationPipeline
 {
@@ -54,6 +56,10 @@ final readonly class EditorialGenerationPipeline implements GenerationPipeline
                 $this->container->make(AssembleGeneratedBlogDraftAction::class),
             ],
             BlogGenerationType::Translation => [$this->container->make(AssistedTranslationStep::class)],
+            BlogGenerationType::Image => [
+                $this->container->make(FeaturedImageBriefStep::class),
+                $this->container->make(GenerateBlogDraftImagesAction::class),
+            ],
         };
     }
 }

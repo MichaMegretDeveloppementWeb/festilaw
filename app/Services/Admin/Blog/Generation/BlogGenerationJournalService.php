@@ -61,6 +61,7 @@ final readonly class BlogGenerationJournalService
         return $generations->map(fn (BlogGeneration $generation): BlogGenerationJournalRow => new BlogGenerationJournalRow(
             id: $generation->id,
             createdAt: $generation->created_at->toImmutable(),
+            type: $generation->type,
             trigger: $generation->trigger,
             status: $generation->status,
             // Une generation arretee le dit deja par sa pastille : « arretee avant la fin » n'ajouterait rien a la ligne.

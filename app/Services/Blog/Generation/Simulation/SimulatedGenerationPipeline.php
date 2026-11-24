@@ -17,6 +17,7 @@ final readonly class SimulatedGenerationPipeline implements GenerationPipeline
     private const STEPS = [
         'article' => ['topic', 'research', 'writing', 'verification', 'style', 'translation_fr', 'translation_es', 'images', 'assembly'],
         'translation' => ['translation'],
+        'image' => ['image_brief', 'images'],
     ];
 
     public function __construct(

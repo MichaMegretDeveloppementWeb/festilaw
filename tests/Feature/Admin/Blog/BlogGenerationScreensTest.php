@@ -7,6 +7,7 @@ use App\Enums\Blog\Generation\BlogAiPeriodUnit;
 use App\Enums\Blog\Generation\BlogEffortLevel;
 use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
+use App\Enums\Blog\Generation\BlogGenerationType;
 use App\Livewire\Admin\Blog\GenerationActivity;
 use App\Livewire\Admin\Blog\GenerationDashboard;
 use App\Livewire\Admin\Blog\GenerationDetail;
@@ -587,6 +588,19 @@ it('shows the history as rows like the overview, with the duration and small ico
         ->toContain('aria-label="Relancer"')
         ->toContain('aria-label="Arrêter"')
         ->toContain('ui-tooltip');
+});
+
+it('marks each generation of the history with its kind, an article, a translation or an image asked from an article', function () {
+    // Retour de Micha du 24/11 : reperer d'un coup d'oeil une demande d'image parmi les articles.
+    BlogGeneration::factory()->completed()->create();
+    BlogGeneration::factory()->completed()->create(['type' => BlogGenerationType::Translation]);
+    BlogGeneration::factory()->completed()->create(['type' => BlogGenerationType::Image]);
+
+    Livewire::test(GenerationHistory::class)
+        ->assertSeeHtml('data-generation-type="article"')
+        ->assertSeeHtml('data-generation-type="translation"')
+        ->assertSeeHtml('data-generation-type="image"')
+        ->assertSeeHtml('<span class="sr-only">Image</span>');
 });
 
 it('names a generation that created an article by the French title of the article, in the lists and on its page', function () {

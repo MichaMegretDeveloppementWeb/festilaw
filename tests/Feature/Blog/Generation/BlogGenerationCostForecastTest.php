@@ -108,7 +108,8 @@ it('brackets what each effort level cost with the recommended models, at the cal
     // coupe par la limite de 8 000 jetons relevee depuis (11,3 centimes). Faible n'a pas ete rejoue : hors
     // recherche des preuves, il reprend tel quel le Moyen du 19/11 (generations 94 et 95, photo prise sans
     // controle), et ses preuves restent estimees.
-    $steps = $withEvidence ? null : array_values(array_diff(array_keys(config('blog.ai.forecast.steps')), ['fact_search']));
+    // La description d'une image demandee depuis un article (24/11) n'est pas une etape d'article.
+    $steps = $withEvidence ? null : array_values(array_diff(array_keys(config('blog.ai.forecast.steps')), ['fact_search', 'image_brief']));
     $forecast = app(BlogGenerationCostForecaster::class)->forecast(config('blog.ai.defaults.models'), 1_000, new GenerationImageOptions($images, 1), topicImposed: true, onlySteps: $steps, effort: $effort);
 
     expect($forecast->lowMicrousd)->toBeLessThanOrEqual(min($realCosts))
@@ -119,6 +120,18 @@ it('brackets what each effort level cost with the recommended models, at the cal
     'Moyen' => [BlogEffortLevel::Medium, BlogAiImageMode::Stock, true, [224_840, 233_748]],
     'Eleve' => [BlogEffortLevel::High, BlogAiImageMode::Stock, true, [325_434]],
 ]);
+
+it('keeps the description of a requested image out of the estimate of an article', function () {
+    // Demande d'image depuis un article (24/11) : son etape ne compte que pour une demande d'image.
+    $forecaster = app(BlogGenerationCostForecaster::class);
+    $models = config('blog.ai.defaults.models');
+    $images = new GenerationImageOptions(BlogAiImageMode::Stock, 1);
+
+    $article = $forecaster->forecast($models, 1_000, $images);
+    $withBrief = $forecaster->forecast($models, 1_000, $images, onlySteps: array_keys(config('blog.ai.forecast.steps')));
+
+    expect($withBrief->highMicrousd)->toBeGreaterThan($article->highMicrousd);
+});
 
 it('counts one web search more than a limit above five at the top of the range, as OpenRouter let one pass', function () {
     // Etalonnage du 20/11 : 11 recherches pour 10, 9 pour 8, 19 pour 18, 16 pour 15.

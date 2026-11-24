@@ -4,13 +4,24 @@
      le lancement et la date ; a droite la duree, le cout, l'etat et l'action. L'action est un petit bouton a
      icone avec son info-bulle : les gros boutons prenaient la place, et la page de la generation garde les siens.
      $generation : BlogGenerationJournalRow. $stoppable : la liste propose d'arreter une generation en cours (la
-     portee porte `pending` et la fenetre « stop-generation »). --}}
+     portee porte `pending` et la fenetre « stop-generation »).
+     Une icone dit d'un coup d'oeil la sorte de generation, article, traduction ou image demandee depuis un
+     article (Micha, 24/11/2026). --}}
 @php
+    $typeIcon = match ($generation->type) {
+        App\Enums\Blog\Generation\BlogGenerationType::Article => 'document-text',
+        App\Enums\Blog\Generation\BlogGenerationType::Translation => 'language',
+        App\Enums\Blog\Generation\BlogGenerationType::Image => 'photo',
+    };
     $detailUrl = route('admin.blog.generation.show', ['generation' => $generation->id]);
     $iconButton = 'flex min-h-11 min-w-11 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface hover:text-primary disabled:opacity-50 sm:min-h-8 sm:min-w-8';
 @endphp
 <li wire:key="generation-{{ $generation->id }}" class="relative flex items-center gap-3 py-3.5 transition-colors hover:bg-elevated"
-    data-generation="{{ $generation->id }}" data-generation-status="{{ $generation->status->value }}">
+    data-generation="{{ $generation->id }}" data-generation-status="{{ $generation->status->value }}" data-generation-type="{{ $generation->type->value }}">
+    <span class="shrink-0 text-muted">
+        <x-ui::icon :name="$typeIcon" class="h-5 w-5" />
+        <span class="sr-only">{{ $generation->type->label() }}</span>
+    </span>
     <div class="min-w-0 flex-1">
         <a href="{{ $detailUrl }}" class="block truncate text-[14px] font-medium text-primary after:absolute after:inset-0">{{ $generation->subject ?? __('Sujet choisi par l\'IA') }}</a>
         <p class="mt-0.5 truncate text-[12px] text-muted">

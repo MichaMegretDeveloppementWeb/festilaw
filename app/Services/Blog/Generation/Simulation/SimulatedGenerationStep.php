@@ -29,6 +29,7 @@ final readonly class SimulatedGenerationStep implements GenerationStep
         'translation_fr' => 'translation',
         'translation_es' => 'translation',
         'images' => 'image',
+        'image_brief' => 'topic',
     ];
 
     /**
@@ -44,6 +45,7 @@ final readonly class SimulatedGenerationStep implements GenerationStep
         'translation_fr' => 'Compte rendu factice. Traduction en français, avec les termes du règlement dans leur version officielle.',
         'translation_es' => 'Compte rendu factice. Traduction en espagnol, avec les termes du règlement dans leur version officielle.',
         'images' => 'Compte rendu factice. Une image principale a été choisie pour illustrer le sujet.',
+        'image_brief' => "Compte rendu factice. L'image à trouver a été décrite.",
     ];
 
     public function __construct(

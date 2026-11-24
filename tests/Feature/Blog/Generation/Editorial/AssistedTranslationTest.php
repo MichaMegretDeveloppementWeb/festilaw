@@ -129,6 +129,18 @@ it('refuses a translation into the same language, from an unknown language, or o
     'nothing to translate' => ['fr', 'en', ' '],
 ]);
 
+it('names a translation after the French title of the form, as the articles are named in the history', function (string $frenchTitle, string $named) {
+    // Retour de Micha du 24/11 : on cherche une generation sous le titre francais de son article.
+    $id = app(RequestBlogTranslationAction::class)->execute(new RequestBlogTranslationData(
+        'en', 'es', 'Etsy labels', '', '', '', null, frenchTitle: $frenchTitle,
+    ));
+
+    expect(BlogGeneration::query()->findOrFail($id)->topic_hint)->toBe("Traduction en espagnol de « {$named} »");
+})->with([
+    'French title written' => ['Étiquettes sur Etsy', 'Étiquettes sur Etsy'],
+    'no French title yet' => [' ', 'Etsy labels'],
+]);
+
 it('still queues a translation above the spend cap of the month, which only warns', function () {
     BlogAi::saveSettings(['monthly_spend_cap_cents' => 100]);
     BlogGeneration::factory()->completed(2_000_000)->create();

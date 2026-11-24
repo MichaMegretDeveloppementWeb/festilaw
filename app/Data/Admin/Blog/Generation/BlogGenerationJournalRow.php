@@ -6,6 +6,7 @@ namespace App\Data\Admin\Blog\Generation;
 
 use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogGenerationTrigger;
+use App\Enums\Blog\Generation\BlogGenerationType;
 use Carbon\CarbonImmutable;
 
 /**
@@ -18,6 +19,7 @@ final readonly class BlogGenerationJournalRow
     public function __construct(
         public int $id,
         public CarbonImmutable $createdAt,
+        public BlogGenerationType $type,
         public BlogGenerationTrigger $trigger,
         public BlogGenerationStatus $status,
         public ?string $outcome,

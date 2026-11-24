@@ -62,6 +62,30 @@ final class BlogEditorialException extends BaseAppException
         ))->asRefusal();
     }
 
+    public static function nothingToIllustrate(): self
+    {
+        return (new self(
+            technicalMessage: 'Featured image request refused: the article has no title and no excerpt in any language.',
+            userMessage: __('Écrivez d\'abord le titre de l\'article, au moins dans une langue.'),
+        ))->asRefusal();
+    }
+
+    public static function noImageModelChosen(): self
+    {
+        return (new self(
+            technicalMessage: 'Featured image request refused: no image model is set in the generation settings.',
+            userMessage: __('Aucun modèle d\'image n\'est choisi dans les réglages de la génération.'),
+        ))->asRefusal();
+    }
+
+    public static function unsupportedImageRequest(string $mode): self
+    {
+        return new self(
+            technicalMessage: "Featured image request refused for the [{$mode}] mode.",
+            userMessage: __('Cette demande d\'image n\'est pas possible.'),
+        );
+    }
+
     public static function unsupportedTranslation(string $from, string $to): self
     {
         return new self(

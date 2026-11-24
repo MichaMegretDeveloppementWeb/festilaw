@@ -75,7 +75,10 @@ final readonly class RequestBlogTranslationAction
             throw BlogEditorialException::nothingToTranslate($data->from);
         }
 
-        $title = trim($data->title) !== '' ? trim($data->title) : __('article sans titre');
+        // Dans l'historique, la demande porte le titre francais, comme les articles (Micha, 24/11/2026), a defaut
+        // celui de la langue de depart.
+        $title = trim($data->frenchTitle) !== '' ? trim($data->frenchTitle) : trim($data->title);
+        $title = $title !== '' ? $title : __('article sans titre');
 
         return $this->queue->execute(new QueueBlogGenerationData(
             type: BlogGenerationType::Translation,

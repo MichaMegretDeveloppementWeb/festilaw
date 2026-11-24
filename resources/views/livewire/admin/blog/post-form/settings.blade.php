@@ -1,12 +1,15 @@
 {{-- Reglages communs aux trois langues : categorie, image principale, image de partage, articles lies.
      UN seul bloc, deux presentations : une colonne qui reste en vue sur ordinateur, une feuille qui monte
-     du bas de l'ecran sur telephone (ouverte par le bouton « Réglages » de la barre d'actions). --}}
+     du bas de l'ecran sur telephone (ouverte par le bouton « Réglages » de la barre d'actions).
+     Ouverte ou en colonne, elle n'a aucun deplacement (`translate-none`, et non `translate-y-0`) : un deplacement,
+     meme nul, fait d'elle le repere des elements en position fixe, et le menu du kit, place d'apres la fenetre,
+     s'ouvrait hors de l'ecran (menu « Image automatique », 24/11/2026). --}}
 <div x-show="settingsOpen" x-cloak x-transition.opacity x-on:click="settingsOpen = false" class="fixed inset-0 z-40 bg-gray-900/50 lg:hidden" aria-hidden="true"></div>
 
 <aside id="post-settings" aria-labelledby="post-settings-title"
     x-bind:data-open="settingsOpen.toString()"
     x-bind:inert="! wide && ! settingsOpen"
-    class="fixed inset-x-0 bottom-0 z-50 flex max-h-[85svh] translate-y-full flex-col rounded-t-2xl data-[open=true]:translate-y-0 bg-surface shadow-2xl transition-transform duration-200 ease-out lg:sticky lg:inset-x-auto lg:bottom-auto lg:top-6 lg:z-auto lg:max-h-[calc(100svh-7rem)] lg:translate-y-0 lg:rounded-none lg:border-l lg:border-default lg:bg-transparent lg:pl-8 lg:shadow-none lg:transition-none">
+    class="fixed inset-x-0 bottom-0 z-50 flex max-h-[85svh] translate-y-full flex-col rounded-t-2xl data-[open=true]:translate-none bg-surface shadow-2xl transition-transform duration-200 ease-out lg:sticky lg:inset-x-auto lg:bottom-auto lg:top-6 lg:z-auto lg:max-h-[calc(100svh-7rem)] lg:translate-none lg:rounded-none lg:border-l lg:border-default lg:bg-transparent lg:pl-8 lg:shadow-none lg:transition-none">
     <div class="flex shrink-0 items-center justify-between gap-3 border-b border-default px-5 py-3.5 lg:px-0 lg:pb-3 lg:pt-1">
         <div>
             <h2 id="post-settings-title" class="text-[15px] font-semibold leading-snug text-primary">{{ __('Réglages de l\'article') }}</h2>
@@ -19,7 +22,7 @@
     </div>
 
     {{-- Le contenu defile a l'interieur du panneau : sur ordinateur, il ne depasse jamais la hauteur de l'ecran. --}}
-    <div class="min-h-0 flex-1 overflow-y-auto p-5 lg:px-0 [&>*+*]:mt-6 [&>*+*]:border-t [&>*+*]:border-default [&>*+*]:pt-6">
+    <div class="min-h-0 flex-1 overflow-y-auto p-5 lg:px-0 [&>*+*]:mt-8 [&>*+*]:border-t [&>*+*]:border-default [&>*+*]:pt-8">
         {{-- Categorie. Une categorie qui manque se cree sans quitter l'article (decision de Micha du 19/11) : une
              action au bas de la liste, ou un bouton quand il n'en existe aucune, ouvre la fenetre « Nouvelle
              catégorie » (post-form/dialogs). L'action vit dans l'emplacement `action` de la vue du kit publiee

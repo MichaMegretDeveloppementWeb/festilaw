@@ -63,8 +63,9 @@ final readonly class NotifyFinishedBlogGenerationBatchAction
             return;
         }
 
-        // Une traduction assistee se suit dans le formulaire qui l'a demandee : pas d'e-mail.
-        if ($generations->every(static fn (BlogGeneration $generation): bool => $generation->outcome_reason === BlogGenerationOutcomeReason::CancelledByUser || $generation->type === BlogGenerationType::Translation)) {
+        // Une traduction assistee ou une image demandee depuis un article se suit dans le formulaire qui l'a demandee :
+        // pas d'e-mail.
+        if ($generations->every(static fn (BlogGeneration $generation): bool => $generation->outcome_reason === BlogGenerationOutcomeReason::CancelledByUser || in_array($generation->type, [BlogGenerationType::Translation, BlogGenerationType::Image], true))) {
             return;
         }
 
