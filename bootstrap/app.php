@@ -5,6 +5,7 @@ use App\Http\Middleware\EnsureProductionIsConfigured;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\SetLocaleFromPathPrefix;
+use App\Services\Analytics\AudienceMeasurementChoice;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -48,6 +49,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // ... et AVANT la resolution des liaisons de route : une page rendue des la liaison (ex. lien de
         // dossier expire, cf. DossierLinkInvalidException) doit deja etre dans la langue du visiteur.
         $middleware->prependToPriorityList(before: SubstituteBindings::class, prepend: SetLocale::class);
+
+        // Le refus de la mesure d'audience reste en clair (sa valeur, « 1 », ne dit rien) : il se lit ainsi sur
+        // toutes les routes, celle du collecteur comprise (AudienceMeasurementChoice).
+        $middleware->encryptCookies(except: [AudienceMeasurementChoice::COOKIE]);
 
         // Les webhooks providers (Stripe/SignWell) sont des POST externes : hors CSRF.
         $middleware->validateCsrfTokens(except: ['webhooks/*']);

@@ -1,4 +1,4 @@
-@props(['locale', 'prefix', 'source', 'published' => false])
+@props(['locale', 'prefix', 'source', 'published' => false, 'missing' => false])
 {{-- Adresse (slug) d'un article ou d'une categorie dans une langue. Elle suit le titre ou le nom tant
      qu'on ne l'a pas modifiee a la main.
      Sous le champ, une phrase fixe dit a quoi il sert, quel que soit son etat : une aide aiguille, elle ne
@@ -7,9 +7,9 @@
      n'en vient plus. Pour une page en ligne, la phrase sur les anciens liens repond a la seule inquietude qu'un
      changement d'adresse fait naitre.
      $prefix : debut du chemin public ("/fr/blog/") ; $source : "titre" ou "nom" ;
-     $published : la page est en ligne.
+     $published : la page est en ligne ; $missing : l'adresse manque pour publier (point ambre du libelle).
      Demande `resetSlug(langue)` dans la portee Alpine du formulaire (resources/js/admin/slug-field.js). --}}
-<x-ui::form-group :label="__('Adresse de la page')" for="slug-{{ $locale }}" :error="$errors->first('texts.'.$locale.'.slug')">
+<x-ui::form-group :label="__('Adresse de la page')" for="slug-{{ $locale }}" :data-missing="$missing ? 'slug' : null" :error="$errors->first('texts.'.$locale.'.slug')">
     <x-ui::input id="slug-{{ $locale }}" :prefix="$prefix" wire:model="texts.{{ $locale }}.slug"
         x-on:input="$wire.slugEdited.{{ $locale }} = true" :error="$errors->has('texts.'.$locale.'.slug')"
         autocomplete="off" autocapitalize="none" spellcheck="false" />

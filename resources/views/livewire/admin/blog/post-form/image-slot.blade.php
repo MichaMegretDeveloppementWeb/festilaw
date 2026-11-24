@@ -1,10 +1,11 @@
 {{-- Emplacement d'une image de l'article dans le panneau des reglages.
      $usage : 'featured' ou 'share' ; $property : la propriete du composant qui porte son identifiant ;
-     $label, $help ; $compact : l'emplacement vide tient sur une ligne (image facultative).
+     $label, $help ; $compact : l'emplacement vide tient sur une ligne (image facultative) ; $missing : l'image
+     manque pour publier (point ambre du libelle).
      L'apercu vient de la liste d'images que tient le navigateur (`images`) : une image qui vient d'etre
      envoyee s'affiche avant meme l'enregistrement de l'article. --}}
 <div>
-    <p class="mb-1.5 text-[13px] font-medium text-gray-700 dark:text-gray-300">{{ $label }}</p>
+    <p class="mb-1.5 text-[13px] font-medium text-gray-700 dark:text-gray-300" @if ($missing ?? false) data-missing="{{ $usage }}_image" @endif>{{ $label }}</p>
 
     <template x-if="images[$wire.{{ $property }}]">
         <div>

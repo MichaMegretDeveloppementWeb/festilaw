@@ -1,7 +1,7 @@
 {{-- Privacy Policy (EN, version de reference) · texte fourni par Festilaw le 29/09/2026. Corrections : liens
      cliquables, listes (destinataires, durees de conservation) ; reformulations validees par Festilaw le 04/10/2026
      (espace client sans compte, Stripe et Google destinataires, transferts vers les Etats-Unis, champs du formulaire de contact). --}}
-<p class="legal__updated">Last updated: 20 November 2026</p>
+<p class="legal__updated">Last updated: 24 November 2026</p>
 
 <h2>1. Data controller</h2>
 <p>The controller of your personal data is Festilaw B.V., a private limited company incorporated under Dutch law, with its registered office in Nijmegen, Spoorstraat 30A, 6511 AN Nijmegen, the Netherlands, registered with the Netherlands Chamber of Commerce (KvK) under number 77058720.</p>
@@ -14,7 +14,7 @@
 <p><strong>Client area and electronic signature.</strong> Our clients can access, through a secure client area, the documents they have sent us. For this purpose, clients access their file through a secure personal link sent by email, without an account or password; we process the contact person's name and email address, connection data and the documents made available in the client area. Contracts and certain documents are signed electronically; the electronic signature service records the signatories' names, email addresses, IP addresses and the time-stamped audit trail of the signature. This processing is necessary for the performance of the contract concluded with your company (Article 6(1)(b)) and for our legitimate interest in providing our clients' representatives with secure access to their documents (Article 6(1)(f)).</p>
 <p><strong>Regulatory obligations.</strong> As the responsible economic operator within the meaning of Article 16 of Regulation (EU) 2023/988 and Article 4 of Regulation (EU) 2019/1020, Festilaw B.V. is required to retain certain documents and to cooperate with market surveillance authorities. Personal data contained in these documents are processed on the basis of these legal obligations (Article 6(1)(c)). The same applies to Dutch accounting and tax obligations.</p>
 <p><strong>Website operation and security.</strong> Our hosting provider records technical connection data (IP address, date and time, pages visited, browser type) necessary for the operation and security of the website. This processing is based on our legitimate interest in ensuring the availability and security of the website (Article 6(1)(f)).</p>
-<p><strong>Audience measurement.</strong> To understand how our website is used and to improve it, we measure the pages viewed, the buttons used and the steps of our offer pages (eligibility quiz, opening of a file, signature, payment). This measurement is carried out by a tool installed on our own servers, and no data is shared with any third party. The IP address is truncated before it is stored, and these data are not used to identify you. This processing is based on our legitimate interest in measuring and improving the audience of our website (Article 6(1)(f)).</p>
+<p><strong>Audience measurement.</strong> To understand how our website is used and to improve it, we measure the pages viewed, the buttons used and the steps of our offer pages (eligibility quiz, opening of a file, signature, payment). This measurement is carried out by a tool installed on our own servers, and no data is shared with any third party. The IP address is truncated before it is stored, and these data are not used to identify you. A cookie recognises your browser from one visit to the next, and you can refuse this measurement at any time (section 8). This processing is based on our legitimate interest in measuring and improving the audience of our website (Article 6(1)(f)).</p>
 <p>We do not carry out any automated decision-making or profiling.</p>
 
 <h2>3. Recipients</h2>
@@ -54,7 +54,13 @@
 <p>Festilaw B.V. implements appropriate technical and organisational measures to protect your data against loss, unauthorised access or disclosure, including encryption of connections to the website (HTTPS), access to the client area through unique, secure personal links, and restricting access to those who need it.</p>
 
 <h2>8. Cookies</h2>
-<p>This website uses no advertising or third-party cookies. It uses a session cookie, required for the website and the client area to function, which also links the pages viewed during the same visit for the audience measurement described in section 2. These uses do not require your consent.</p>
+<p>This website uses no advertising or third-party cookies. It uses two cookies of its own.</p>
+<ul>
+    <li>A session cookie, required for the website and the client area to function.</li>
+    <li>An audience measurement cookie, named fa_vid, which recognises your browser from one visit to the next for the measurement described in section 2. It only holds a random identifier, is used only for the statistics of this website and is shared with no one. It lasts 13 months at most, and a later visit does not extend it.</li>
+</ul>
+<p>These uses do not require your consent. You can nevertheless refuse the audience measurement with the button below. Your browser then keeps this choice in a cookie for 13 months, and none of your visits is measured any more.</p>
+<x-web.audience-measurement-choice />
 
 <h2>9. Changes</h2>
 <p>We may amend this policy to reflect changes in our processing activities or in the applicable regulations. The date of the latest update is shown at the top of this document.</p>

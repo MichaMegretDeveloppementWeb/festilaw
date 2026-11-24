@@ -14,6 +14,8 @@
 @import 'tailwindcss' source(none);
 /* Allure du texte dans l'editeur d'article (quelques regles, sans effet sur les autres ecrans). */
 @import './admin/blog-editor.css';
+/* Formulaire d'article : le point ambre des champs qui manquent pour publier. */
+@import './admin/blog-form.css';
 /* Retouches de composants du kit (alertes sans bordure, titre de page plus grand). */
 @import './admin/kit.css';
 /* Couleurs de l'IA (degrade des tokens et de l'icone etincelle). */

@@ -3,12 +3,12 @@
 
 <div class="relative">
     <x-admin.blog.char-count field="$wire.texts.{{ $locale }}.title" :recommended="60" />
-    <x-ui::form-group :label="__('Titre')" for="title-{{ $locale }}" :error="$errors->first('texts.'.$locale.'.title')">
+    <x-ui::form-group :label="__('Titre')" for="title-{{ $locale }}" :data-missing="$view?->isMissing('title', $locale) ? 'title' : null" :error="$errors->first('texts.'.$locale.'.title')">
         <x-ui::input id="title-{{ $locale }}" wire:model="texts.{{ $locale }}.title" x-on:blur="suggestSlug('{{ $locale }}')" :error="$errors->has('texts.'.$locale.'.title')" />
     </x-ui::form-group>
 </div>
 
-<x-admin.blog.address-field :locale="$locale" :prefix="$addressPrefixes[$locale]" source="titre" :published="$isPublished" />
+<x-admin.blog.address-field :locale="$locale" :prefix="$addressPrefixes[$locale]" source="titre" :published="$isPublished" :missing="(bool) $view?->isMissing('slug', $locale)" />
 
 <div class="relative">
     <x-admin.blog.char-count field="$wire.texts.{{ $locale }}.excerpt" :recommended="160" />

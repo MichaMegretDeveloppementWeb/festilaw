@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Repositories\Blog;
 
-use App\Models\BlogGenerationStep;
 use App\Models\BlogPost;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\JoinClause;
@@ -30,7 +29,6 @@ final readonly class AdminBlogPostFormRepository
     {
         return BlogPost::query()
             ->select(self::POST_COLUMNS)
-            ->addSelect(['writing_model' => $this->writingModel()])
             ->with([
                 'translations:id,blog_post_id,locale,title,slug,excerpt,content,meta_title,meta_description,word_count',
                 self::IMAGE_COLUMNS,
@@ -46,25 +44,11 @@ final readonly class AdminBlogPostFormRepository
     {
         return BlogPost::query()
             ->select(self::POST_COLUMNS)
-            ->addSelect(['writing_model' => $this->writingModel()])
             ->with([
                 'translations:id,blog_post_id,locale,title,slug,excerpt,meta_description,word_count',
                 self::IMAGE_COLUMNS,
             ])
             ->find($postId);
-    }
-
-    /**
-     * Le modele qui a redige un article genere, lu dans l'etape de redaction de sa generation : une
-     * sous-requete de la meme requete, aucune requete de plus. Nul pour un article ecrit a la main.
-     */
-    private function writingModel(): Builder
-    {
-        return BlogGenerationStep::query()->toBase()
-            ->select('model')
-            ->whereColumn('blog_generation_id', 'blog_posts.generation_id')
-            ->where('step', 'writing')
-            ->limit(1);
     }
 
     /**

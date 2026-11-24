@@ -26,7 +26,7 @@
              (resources/views/vendor/ui/components/combobox.blade.php) : elle lit la recherche tapee. --}}
         @if ($categoryOptions === [])
             <div>
-                <p class="mb-1.5 text-[13px] font-medium text-gray-700 dark:text-gray-300">{{ __('Catégorie') }}</p>
+                <p class="mb-1.5 text-[13px] font-medium text-gray-700 dark:text-gray-300" @if ($view?->isMissing('category')) data-missing="category" @endif>{{ __('Catégorie') }}</p>
                 <p class="text-[13px] text-secondary">{{ __('Aucune catégorie n\'existe encore.') }}</p>
                 <p class="mt-1 text-[12px] text-muted">{{ __('Le brouillon peut être enregistré sans catégorie, mais il en faudra une pour publier.') }}</p>
                 <x-ui::button variant="secondary" size="compact" class="mt-2" data-create-category x-on:click="openCategory()">
@@ -34,7 +34,7 @@
                 </x-ui::button>
             </div>
         @else
-            <x-ui::form-group :label="__('Catégorie')" for="category-id" :error="$errors->first('categoryId')">
+            <x-ui::form-group :label="__('Catégorie')" for="category-id" :data-missing="$view?->isMissing('category') ? 'category' : null" :error="$errors->first('categoryId')">
                 <x-ui::combobox id="category-id" wire:model="categoryId" :options="$categoryOptions" :error="$errors->has('categoryId')"
                     :placeholder="__('Choisir une catégorie')" :search-placeholder="__('Rechercher une catégorie')" :empty="__('Aucune catégorie ne correspond')">
                     <x-slot:action>
@@ -62,6 +62,7 @@
             'usage' => 'featured',
             'property' => 'featuredImageId',
             'label' => __('Image principale'),
+            'missing' => (bool) $view?->isMissing('featured_image'),
             'help' => __('En haut de l’article et sur sa carte. JPEG, PNG ou WebP, au moins :width × :height pixels, :megabytes Mo au plus.', $imageLimits),
         ])
 

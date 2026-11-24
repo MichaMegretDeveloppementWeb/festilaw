@@ -31,19 +31,19 @@
 
     /* Un tableau part du bord du titre de la page, et son texte aussi (decision de Micha du 19/11) : la premiere
        et la derniere colonne perdent leur marge exterieure, que le kit leur donne pour un tableau pose dans une
-       carte. Le back-office n'a plus de carte, tous ses tableaux sont sur la page blanche. */
-    .ui-table-cell:first-child,
-    .ui-table-header-cell:first-child {
+       carte. Seulement sur nos ecrans en page blanche : ceux de Falcon Analytics (surface pleine) posent leurs
+       tableaux dans une boite arrondie qui coupe ce qui la touche, et la premiere lettre y etait rognee
+       (remarque de Micha du 24/11). */
+    [data-surface='plain'] :is(.ui-table-cell, .ui-table-header-cell):first-child {
         padding-inline-start: 0;
     }
 
-    .ui-table-cell:last-child,
-    .ui-table-header-cell:last-child {
+    [data-surface='plain'] :is(.ui-table-cell, .ui-table-header-cell):last-child {
         padding-inline-end: 0;
     }
 
     /* La pagination sous un tableau suit le meme bord, pour la meme raison. */
-    .ui-pagination {
+    [data-surface='plain'] .ui-pagination {
         padding-inline: 0;
     }
 

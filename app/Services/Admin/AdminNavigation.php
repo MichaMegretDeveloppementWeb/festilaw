@@ -15,7 +15,7 @@ use Illuminate\Support\Str;
  * mobile et barre laterale) a partir de cette liste. Calcul pur, aucune requete.
  *
  * Un ecran seul a sa ligne et son icone ; un espace de plusieurs pages est une section repliable, comme
- * sur Chouchoute-toi (demande de Micha du 20/11). Audience et Marketing sont les ecrans de Falcon
+ * sur Chouchoute-toi (demande de Micha du 20/11). Analytics (nomme Audience jusqu'au 24/11) et Marketing sont les ecrans de Falcon
  * Analytics : leurs noms de routes sont fixes, seules leurs adresses se reglent.
  */
 final readonly class AdminNavigation
@@ -48,7 +48,7 @@ final readonly class AdminNavigation
                 [__('Catégories'), 'admin.blog.categories.index', ['admin.blog.categories.*']],
                 [__('Génération IA'), 'admin.blog.generation.index', ['admin.blog.generation.*']],
             ]),
-            $this->section('audience', __('Audience'), 'chart-pie', $is('analytics.admin.*') && ! $is('analytics.admin.marketing.*'), $is, [
+            $this->section('audience', __('Analytics'), 'chart-pie', $is('analytics.admin.*') && ! $is('analytics.admin.marketing.*'), $is, [
                 [__('Vue d\'ensemble'), 'analytics.admin.overview', ['analytics.admin.overview']],
                 [__('Temps réel'), 'analytics.admin.realtime', ['analytics.admin.realtime']],
                 [__('Visiteurs'), 'analytics.admin.visitors', ['analytics.admin.visitors*']],

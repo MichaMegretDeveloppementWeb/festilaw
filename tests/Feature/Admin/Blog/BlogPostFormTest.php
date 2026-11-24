@@ -473,7 +473,8 @@ it('shows a banner on an article proposed by the AI', function () {
     Livewire::test(PostForm::class)->assertDontSee('Article généré par IA');
 });
 
-it('names the model that wrote a generated article and links to its generation, without an extra query', function () {
+it('says a generated article was written by the AI, without naming a model, and links to its generation', function () {
+    // Plusieurs modeles travaillent sur un article : le bandeau n'en nomme aucun (Micha, 24/11).
     $generation = BlogGeneration::factory()->completed()->create();
     BlogGenerationStep::factory()->for($generation, 'generation')->named('writing', 3)->completed()->create(['model' => 'anthropic/claude-sonnet-5.5']);
     $post = BlogContent::draft('machine');
@@ -481,8 +482,27 @@ it('names the model that wrote a generated article and links to its generation, 
     $name = app(BlogAiModelCatalog::class)->name('anthropic/claude-sonnet-5.5');
 
     Livewire::test(PostForm::class, ['post' => $post->id])
-        ->assertSee("Ce brouillon a été rédigé par {$name}.")
+        ->assertSee('Ce brouillon a été généré par l\'IA. Relisez-le et corrigez-le avant de le publier.')
+        ->assertDontSee($name)
         ->assertSeeHtml('href="'.route('admin.blog.generation.show', ['generation' => $generation->id]).'"');
+});
+
+it('marks with an amber dot the label of each field that blocks publishing, and nothing on a ready article', function () {
+    // Demande de Micha du 24/11 : la pastille « points a completer » ne disait pas ou chercher.
+    $post = BlogContent::draft('machine');
+    $post->update(['featured_image_id' => null, 'blog_category_id' => null]);
+    $post->translations()->where('locale', 'es')->delete();
+
+    $html = Livewire::test(PostForm::class, ['post' => $post->id])->html();
+
+    expect(substr_count($html, 'data-missing="featured_image"'))->toBe(1)
+        ->and(substr_count($html, 'data-missing="category"'))->toBe(1)
+        // Seule la version espagnole manque : un seul titre, une seule adresse, un seul contenu marques.
+        ->and(substr_count($html, 'data-missing="title"'))->toBe(1)
+        ->and(substr_count($html, 'data-missing="slug"'))->toBe(1)
+        ->and(substr_count($html, 'data-missing="content"'))->toBe(1);
+
+    expect(Livewire::test(PostForm::class, ['post' => BlogContent::draft('ready')->id])->html())->not->toContain('data-missing=');
 });
 
 it('shows the public path in front of the address, and explains the two Google fields', function () {

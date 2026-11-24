@@ -52,10 +52,12 @@
 
         <x-ui::sidebar.frame>
             <x-slot:bar>
-                <x-ui::sidebar brand="Festilaw">
+                {{-- Le logo de Festilaw en petit, puis « Administration » (demande de Micha du 24/11). --}}
+                <x-ui::sidebar :brand="__('Administration')">
                     <x-slot:logo>
-                        <a href="{{ route('admin.submissions.index') }}" aria-label="{{ __('Festilaw, back-office') }}"
-                            class="admin-brand-logo flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-900 text-sm font-bold text-white dark:bg-white dark:text-gray-900">F</a>
+                        <a href="{{ route('admin.submissions.index') }}" aria-label="{{ __('Festilaw, administration') }}" class="admin-brand-logo block h-8 w-8 shrink-0">
+                            <img src="{{ asset('images/logo-festilaw-272.webp') }}" alt="" width="32" height="32" class="h-8 w-8 rounded-full">
+                        </a>
                     </x-slot:logo>
 
                     <x-ui::sidebar.group>
@@ -120,10 +122,10 @@
     {{-- Connexion : une carte au milieu de l'ecran, sans menu. --}}
     <body class="flex min-h-full items-center justify-center px-4 py-12 text-primary antialiased">
         <div class="w-full max-w-sm">
-            <div class="mb-8 flex items-center justify-center gap-2">
-                <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-900 text-base font-bold text-white dark:bg-white dark:text-gray-900">F</span>
-                <span class="text-lg font-semibold tracking-tight text-primary">Festilaw</span>
-                <span class="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary dark:bg-gray-800">Admin</span>
+            {{-- La meme marque que la barre laterale : le logo, puis « Administration ». --}}
+            <div class="mb-8 flex items-center justify-center gap-3">
+                <img src="{{ asset('images/logo-festilaw-272.webp') }}" alt="Festilaw" width="40" height="40" class="h-10 w-10 rounded-full">
+                <span class="text-lg font-semibold tracking-tight text-primary">{{ __('Administration') }}</span>
             </div>
 
             <x-ui::card>

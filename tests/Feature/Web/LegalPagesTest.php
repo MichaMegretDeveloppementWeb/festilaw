@@ -56,19 +56,19 @@ it('describes in the privacy policy how the site really works (reformulations va
         'website or shop URL',
         'secure personal link sent by email, without an account or password',
         'and our email service provider, Resend, are established in the United States',
-        'Last updated: 20 November 2026',
+        'Last updated: 24 November 2026',
     ], ['login credentials', 'company name, position', 'password-protected', 'log in to the client area', 'Client area accounts']],
     'fr' => ['fr', [
         'adresse de votre site ou de votre boutique',
         'sans compte ni mot de passe',
         'et notre prestataire d\'envoi d\'e-mails, Resend, sont établis aux États-Unis',
-        'Dernière mise à jour : 20 novembre 2026',
+        'Dernière mise à jour : 24 novembre 2026',
     ], ['identifiants de connexion', 'nom de société et fonction', 'protégé par mot de passe', 'Comptes de l\'espace client']],
     'es' => ['es', [
         'la dirección de su sitio web o tienda',
         'sin cuenta ni contraseña',
         'y nuestro proveedor de servicios de correo electrónico, Resend, están establecidos en Estados Unidos',
-        'Última actualización: 20 de noviembre de 2026',
+        'Última actualización: 24 de noviembre de 2026',
     ], ['credenciales de acceso', 'nombre de la empresa, cargo', 'protegido mediante contraseña', 'Cuentas del área de cliente']],
 ]);
 

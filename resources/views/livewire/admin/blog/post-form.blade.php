@@ -70,14 +70,13 @@
             <x-ui::alert type="error" class="mb-6" :title="__('L\'article n\'a pas été enregistré')">{{ $message }}</x-ui::alert>
         @enderror
 
-        {{-- Article genere : le modele qui l'a redige et le lien vers sa generation (etapes, sources consultees).
-             Les doutes de la verification y sont montres en entier, comme sur la page de la generation, car le lien
-             de l'e-mail mene droit ici (decision de Micha du 23/11). Ils ne bloquent pas la publication. --}}
+        {{-- Article genere : le lien vers sa generation (etapes, modeles, sources consultees). Aucun nom de modele
+             ici, plusieurs y ont travaille (Micha, 24/11). Les doutes de la verification y sont montres en entier,
+             comme sur la page de la generation, car le lien de l'e-mail mene droit ici (decision de Micha du 23/11).
+             Ils ne bloquent pas la publication. --}}
         @if ($view?->origin === \App\Enums\Blog\BlogPostOrigin::Ai)
             <x-ui::alert type="info" class="mb-6" :title="__('Article généré par IA')" data-generated-banner>
-                {{ $view->writingModel
-                    ? __('Ce brouillon a été rédigé par :model. Relisez-le et corrigez-le avant de le publier.', ['model' => $view->writingModel])
-                    : __('Ce brouillon a été proposé par l\'IA. Relisez-le et corrigez-le avant de le publier.') }}
+                {{ __('Ce brouillon a été généré par l\'IA. Relisez-le et corrigez-le avant de le publier.') }}
                 @if ($view->generationId)
                     <a href="{{ route('admin.blog.generation.show', ['generation' => $view->generationId]) }}" class="font-medium underline underline-offset-2" data-generation-link>{{ __('Voir la génération') }}</a>
                 @endif

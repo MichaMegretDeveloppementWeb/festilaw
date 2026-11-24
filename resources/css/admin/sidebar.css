@@ -8,20 +8,21 @@
  */
 
 @layer components {
-    /* En clair, la ligne courante en encre et texte blanc, le survol teinte de corail. En sombre, la ligne
-       courante en corail et texte encre : un texte blanc sur corail manque de contraste. */
+    /* En clair, la ligne courante en encre et texte blanc. En sombre, la ligne courante en corail et texte
+       encre : un texte blanc sur corail manque de contraste. Le survol est gris dans les deux themes : le corail
+       est la couleur du site public, pas celle du back-office (Micha, 24/11). Les filets entre les lignes, un
+       peu plus marques que ceux du kit, se lisent sans peser (meme jour). */
     :root {
         --admin-sidebar-action: #0e1326;
         --admin-sidebar-on-action: #fff;
-        --admin-sidebar-ink: #0e1326;
-        --admin-sidebar-soft: color-mix(in oklab, #fe776a 14%, transparent);
+        --admin-sidebar-ink: var(--ui-text-primary);
+        --admin-sidebar-soft: color-mix(in oklab, var(--ui-text-primary) 6%, transparent);
+        --admin-sidebar-line: color-mix(in oklab, var(--ui-border) 55%, var(--ui-border-subtle));
     }
 
     .dark {
         --admin-sidebar-action: #fe776a;
         --admin-sidebar-on-action: #0e1326;
-        --admin-sidebar-ink: color-mix(in oklab, #fe776a 55%, white);
-        --admin-sidebar-soft: color-mix(in oklab, #fe776a 18%, transparent);
     }
 
     /* Le menu se tient sur l'axe de ses icones, a 31 pixels du bord : le milieu de la barre repliee, les
@@ -54,7 +55,7 @@
         min-height: 48px;
         padding: 13px 22px;
         border-radius: 0;
-        border-bottom: 1px solid var(--ui-border-subtle);
+        border-bottom: 1px solid var(--admin-sidebar-line);
         color: var(--ui-text-secondary);
     }
 
@@ -108,7 +109,7 @@
         padding: 0;
         column-gap: 0;
         border-radius: 0;
-        border-bottom: 1px solid var(--ui-border-subtle);
+        border-bottom: 1px solid var(--admin-sidebar-line);
         color: var(--ui-text-secondary);
         font-weight: 400;
     }
@@ -160,7 +161,7 @@
         margin: 0;
         padding: 0;
         border: 0;
-        border-bottom: 1px solid var(--ui-border-subtle);
+        border-bottom: 1px solid var(--admin-sidebar-line);
     }
 
     .ui-sidebar-submenu > li {
@@ -189,7 +190,7 @@
         bottom: 0;
         left: 52px;
         height: 1px;
-        background: var(--ui-border-subtle);
+        background: var(--admin-sidebar-line);
     }
 
     .ui-sidebar-submenu .ui-sidebar-collapsible > .ui-sidebar-gap {
@@ -211,7 +212,7 @@
         }
 
         .ui-sidebar-frame:not([data-ui-sidebar]) .ui-sidebar .ui-sidebar-collapsible {
-            border-bottom-color: var(--ui-border-subtle);
+            border-bottom-color: var(--admin-sidebar-line);
         }
 
         .ui-sidebar-frame:not([data-ui-sidebar]) .ui-sidebar .ui-sidebar-badge {
@@ -229,7 +230,7 @@
     }
 
     .ui-sidebar-frame[data-ui-sidebar='collapsed'] .ui-sidebar .ui-sidebar-collapsible {
-        border-bottom-color: var(--ui-border-subtle);
+        border-bottom-color: var(--admin-sidebar-line);
     }
 
     .ui-sidebar-frame[data-ui-sidebar='collapsed'] .ui-sidebar .ui-sidebar-badge {
@@ -253,7 +254,7 @@
     .ui-sidebar-panel-title {
         margin-bottom: 4px;
         padding: 4px 12px 10px;
-        border-bottom: 1px solid var(--ui-border-subtle);
+        border-bottom: 1px solid var(--admin-sidebar-line);
         font-size: 14px;
         color: var(--ui-text-primary);
         text-transform: none;
@@ -330,7 +331,7 @@
         }
 
         .ui-sidebar-frame[data-ui-sidebar='expanded']:not([data-admin-sidebar-over]) .ui-sidebar .ui-sidebar-collapsible {
-            border-bottom-color: var(--ui-border-subtle);
+            border-bottom-color: var(--admin-sidebar-line);
         }
 
         .ui-sidebar-frame[data-ui-sidebar='expanded']:not([data-admin-sidebar-over]) .ui-sidebar .ui-sidebar-badge {

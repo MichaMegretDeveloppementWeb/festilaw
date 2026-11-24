@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\Blog\BlogImageSourceController;
 use App\Http\Controllers\Admin\Blog\BlogPostPreviewController;
 use App\Http\Controllers\Admin\LogoutController;
 use App\Http\Controllers\SitemapController;
+use App\Http\Controllers\Web\AudienceMeasurementController;
 use App\Http\Controllers\Web\Funnel\GetStartedController;
 use App\Http\Controllers\Web\Funnel\PaymentReturnController;
 use App\Http\Controllers\Web\Funnel\ProController;
@@ -65,6 +66,12 @@ Route::post('/webhooks/signature', SignatureWebhookController::class)->name('web
  | session, recharge la page courante. Les pages publiques, elles, ont un lien direct par langue.
  */
 Route::get('/language/{locale}', SwitchLocaleController::class)->name('locale.switch');
+
+/*
+ | Refus (ou nouvel accord) de la mesure d'audience, depuis la politique de confidentialite (decision de Micha
+ | du 24/11/2026) : un cookie, puis retour au meme passage de la politique, dans la langue du bouton.
+ */
+Route::post('/audience-measurement', AudienceMeasurementController::class)->name('audience-measurement');
 
 /*
  | Espace public indexable : une adresse par langue (routes/localized.php). La langue par defaut garde

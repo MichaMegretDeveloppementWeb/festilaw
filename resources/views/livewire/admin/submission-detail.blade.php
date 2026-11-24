@@ -145,10 +145,11 @@
             @endphp
             <x-admin.section :title="$isContact ? __('Coordonnées') : __('Client')" data-dossier-client>
                 <div class="pt-5">
+                    {{-- Le nom du client en plus grand que ses coordonnees (Micha, 24/11), sous le titre de section. --}}
                     @unless ($isContact)
-                        <p class="text-[15px] font-semibold text-primary">{{ $submission->company_name ?: __('Entreprise non renseignée') }}</p>
+                        <p class="text-[17px] font-semibold leading-6 text-primary">{{ $submission->company_name ?: __('Entreprise non renseignée') }}</p>
                     @endunless
-                    <p @class(['text-[14px]', 'mt-0.5 text-secondary' => ! $isContact, 'font-semibold text-primary' => $isContact])>{{ $personName ?? __('Nom non renseigné') }}</p>
+                    <p @class(['mt-0.5 text-[15px] text-secondary' => ! $isContact, 'text-[17px] font-semibold leading-6 text-primary' => $isContact])>{{ $personName ?? __('Nom non renseigné') }}</p>
 
                     <ul class="mt-4 space-y-2.5 text-[14px]" data-contact-lines>
                         <li class="flex min-w-0 items-center gap-2.5">

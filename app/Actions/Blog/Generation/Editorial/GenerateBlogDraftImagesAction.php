@@ -200,6 +200,7 @@ final readonly class GenerateBlogDraftImagesAction implements GenerationStep
         ])));
         $checks = GenerationUsage::none();
         $cause = self::CAUSE_NONE_FIT;
+        $downloaded = 0;
 
         foreach ($queries as $query) {
             try {
@@ -225,6 +226,8 @@ final readonly class GenerateBlogDraftImagesAction implements GenerationStep
 
                     continue;
                 }
+
+                $downloaded++;
 
                 try {
                     $verdict = $this->checker->check($path, $request, $context, $spent->plus($checks));
@@ -261,6 +264,12 @@ final readonly class GenerateBlogDraftImagesAction implements GenerationStep
                     @unlink($path);
                 }
             }
+        }
+
+        // Aucune photo n'a pu etre telechargee : une panne de la banque, que le rapport du matin doit porter (le
+        // 24/11, Pixabay refusait chaque telechargement en HTTP 429, et seuls des avertissements le disaient).
+        if ($cause === self::CAUSE_BANK && $downloaded === 0) {
+            Log::error('Blog generation stock photos could not be downloaded.', ['generation' => $context->generationId, 'image' => $number]);
         }
 
         return ['image' => null, 'usage' => $checks, 'cause' => $cause];

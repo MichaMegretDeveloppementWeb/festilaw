@@ -102,7 +102,7 @@ it('describes the menu once, with a single active item per screen', function (st
     expect($menu['entries'])->toBe([
         'Dossiers', 'Prises de contact', 'Quiz', 'Tarifs',
         'Blog > Articles', 'Blog > Catégories', 'Blog > Génération IA',
-        'Audience > Vue d\'ensemble', 'Audience > Temps réel', 'Audience > Visiteurs', 'Audience > Sessions', 'Audience > Événements', 'Audience > Tunnels',
+        'Analytics > Vue d\'ensemble', 'Analytics > Temps réel', 'Analytics > Visiteurs', 'Analytics > Sessions', 'Analytics > Événements', 'Analytics > Tunnels',
         'Marketing > Vue d\'ensemble', 'Marketing > Campagnes', 'Marketing > Publicités',
     ])
         ->and($menu['active'])->toBe([$active])
@@ -117,9 +117,9 @@ it('describes the menu once, with a single active item per screen', function (st
     'category form' => ['admin.blog.categories.create', false, 'Blog > Catégories'],
     'generation settings' => ['admin.blog.generation.settings', false, 'Blog > Génération IA'],
     'generation detail' => ['admin.blog.generation.show', false, 'Blog > Génération IA'],
-    'audience overview' => ['analytics.admin.overview', false, 'Audience > Vue d\'ensemble'],
-    'one session of the audience' => ['analytics.admin.sessions.show', false, 'Audience > Sessions'],
-    'one visitor of the audience' => ['analytics.admin.visitors.show', false, 'Audience > Visiteurs'],
+    'audience overview' => ['analytics.admin.overview', false, 'Analytics > Vue d\'ensemble'],
+    'one session of the audience' => ['analytics.admin.sessions.show', false, 'Analytics > Sessions'],
+    'one visitor of the audience' => ['analytics.admin.visitors.show', false, 'Analytics > Visiteurs'],
     'marketing overview' => ['analytics.admin.marketing.dashboard', false, 'Marketing > Vue d\'ensemble'],
     'one campaign' => ['analytics.admin.marketing.campaigns.show', false, 'Marketing > Campagnes'],
     'one ad' => ['analytics.admin.marketing.ads.show', false, 'Marketing > Publicités'],
@@ -129,10 +129,10 @@ it('offers the integrations screen of the audience only once a Search Console cl
     $without = describedMenu(new AdminNavigation(app('url')), 'analytics.admin.integrations');
     $with = describedMenu(new AdminNavigation(app('url'), searchConsoleConfigured: true), 'analytics.admin.integrations');
 
-    expect($without['entries'])->not->toContain('Audience > Intégrations')
-        ->and($without['sections'])->toBe(['Audience'])
-        ->and($with['entries'])->toContain('Audience > Intégrations')
-        ->and($with['active'])->toBe(['Audience > Intégrations']);
+    expect($without['entries'])->not->toContain('Analytics > Intégrations')
+        ->and($without['sections'])->toBe(['Analytics'])
+        ->and($with['entries'])->toContain('Analytics > Intégrations')
+        ->and($with['active'])->toBe(['Analytics > Intégrations']);
 });
 
 it('never shows a doubly escaped apostrophe on a blog screen', function () {

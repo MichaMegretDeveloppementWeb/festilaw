@@ -151,6 +151,47 @@ it('takes a stock photo for the main image and one for the text, downloaded and 
     Http::assertSent(fn (Request $request): bool => str_starts_with($request->url(), 'https://pixabay.com/api/') && $request['safesearch'] === 'true' && $request['orientation'] === 'horizontal');
 });
 
+it('downloads a stock photo from the Pixabay CDN, which the hosting can reach, rather than the address Cloudflare limits', function () {
+    // Production, 24/11 : pixabay.com/get/ repondait 429 a l'hebergement, quelle que soit la requete ; le meme
+    // fichier en 1280 px se trouve a cote de l'apercu, sur cdn.pixabay.com.
+    $photo = file_get_contents(BlogImageFiles::jpeg(1280, 853));
+    Http::fake([
+        'https://pixabay.com/api/*' => Http::response(['hits' => [[
+            'id' => 2, 'pageURL' => 'https://pixabay.com/photos/parcel-2/', 'user' => 'Anna', 'imageWidth' => 4000, 'imageHeight' => 2667,
+            'previewURL' => 'https://cdn.pixabay.com/photo/2017/01/01/00/00/parcel-2_150.jpg',
+            'largeImageURL' => 'https://pixabay.com/get/parcel_1280.jpg',
+        ]]]),
+        'https://cdn.pixabay.com/*' => Http::response($photo, 200, ['Content-Type' => 'image/jpeg']),
+        'https://pixabay.com/get/*' => Http::response('Rate limit exceeded', 429),
+        '*' => Http::response('ok'),
+    ]);
+    PhotoCheckAgent::fake(fn (): array => photoVerdict(true))->preventStrayPrompts();
+
+    app(GenerateBlogDraftImagesAction::class)->execute(Fixtures::context(textOutputs()));
+
+    expect(BlogImage::query()->first()?->credit_author)->toBe('Anna');
+    Http::assertSent(fn (Request $request): bool => $request->url() === 'https://cdn.pixabay.com/photo/2017/01/01/00/00/parcel-2_1280.jpg');
+    Http::assertNotSent(fn (Request $request): bool => str_starts_with($request->url(), 'https://pixabay.com/get/'));
+});
+
+it('reports as an error, for the morning report, an image for which no stock photo could be downloaded', function () {
+    // Le 24/11, chaque telechargement repondait 429 et seuls des avertissements le disaient.
+    Log::spy();
+    Http::fake([
+        'https://pixabay.com/api/*' => Http::response(pixabayHits()),
+        'https://pixabay.com/get/*' => Http::response('Rate limit exceeded', 429),
+        '*' => Http::response('ok'),
+    ]);
+    PhotoCheckAgent::fake(fn (): array => photoVerdict(true))->preventStrayPrompts();
+
+    $result = app(GenerateBlogDraftImagesAction::class)->execute(Fixtures::context(textOutputs()));
+
+    expect(BlogImage::query()->count())->toBe(0)
+        ->and($result->summary)->toBe('La banque de photos n\'a pas répondu, aucune photo n\'a pu être choisie. Il manque l\'image principale, à ajouter avant de publier.');
+    Log::shouldHaveReceived('error')->with('Blog generation stock photos could not be downloaded.', Mockery::any())->twice();
+    PhotoCheckAgent::assertNeverPrompted();
+});
+
 it('shows each stock photo to the check with the article and the wanted image, and sets aside the ones that do not fit', function () {
     // Remarque de Micha du 20/11 : des outils sur un etabli illustraient un article sur les jouets.
     fakePixabay(checkAccepts: false);

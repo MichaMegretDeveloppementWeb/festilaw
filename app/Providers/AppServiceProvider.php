@@ -16,6 +16,7 @@ use App\Services\Admin\AdminNavigation;
 use App\Services\Admin\Blog\BlogCategoryAdminService;
 use App\Services\Admin\Blog\BlogPostFormService;
 use App\Services\Admin\Blog\BlogPostPreviewService;
+use App\Services\Analytics\AudienceMeasurementChoice;
 use App\Services\Analytics\FalconAudienceTracker;
 use App\Services\Billing\AnnualFeeProrator;
 use App\Services\Billing\PackPricingService;
@@ -39,6 +40,7 @@ use App\Services\Web\Blog\BlogCategoryPageService;
 use App\Services\Web\Blog\BlogHomeBlockService;
 use App\Services\Web\Blog\BlogHubPageWindow;
 use App\Services\Web\Blog\BlogNavigationService;
+use Falcon\Analytics\Facades\Analytics;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -196,6 +198,30 @@ class AppServiceProvider extends ServiceProvider
                 'lastRunAt' => $lastRunAt,
                 'stalled' => $health->isStalled(),
             ]);
+        });
+
+        $this->registerAudienceMeasurement();
+    }
+
+    /**
+     * Mesure d'audience (decision de Micha du 24/11/2026) : un navigateur est reconnu d'une visite a l'autre
+     * sans bandeau, par le cookie de Falcon Analytics (treize mois, jamais prolonge), et tout visiteur peut
+     * refuser d'etre compte depuis la politique de confidentialite. Un refus exclut le navigateur comme un
+     * compte du back-office connecte : rien n'est mesure, ni par le collecteur ni par le serveur. La regle
+     * d'exclusion du paquet (`identity.exclude_guards`) est reprise ici, car une regle ecrite la remplace.
+     */
+    private function registerAudienceMeasurement(): void
+    {
+        Analytics::consentUsing(static fn (): bool => true);
+
+        Analytics::excludeUsing(static function (): bool {
+            foreach ((array) config('analytics.identity.exclude_guards', []) as $guard) {
+                if (auth()->guard($guard)->check()) {
+                    return true;
+                }
+            }
+
+            return app(AudienceMeasurementChoice::class)->isRefused(request());
         });
     }
 }

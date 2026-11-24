@@ -18,6 +18,11 @@ use Throwable;
  * les seuls hotes de Pixabay, puis traitee et hebergee comme toute image du blog. Avec une cle gratuite, le
  * fichier fait 1280 px de cote au plus : la recherche ne garde que les photos dont ce fichier atteint la
  * taille demandee.
+ *
+ * Le fichier se telecharge depuis cdn.pixabay.com, ou Pixabay publie la meme photo en 1280 px a cote de
+ * l'apercu que la recherche renvoie. L'adresse `largeImageURL` (pixabay.com/get/…) ne sert que si l'apercu
+ * manque : depuis l'hebergement, Cloudflare la refuse (HTTP 429, « Rate limit exceeded ») quelle que soit la
+ * signature de la requete, l'adresse IP etant partagee (constate en production le 24/11/2026).
  */
 final readonly class PixabayStockImageProvider implements StockImageProvider
 {
@@ -25,7 +30,12 @@ final readonly class PixabayStockImageProvider implements StockImageProvider
 
     private const LARGE_SIDE = 1280;
 
-    private const DOWNLOAD_HOSTS = ['pixabay.com', 'cdn.pixabay.com'];
+    private const CDN_HOST = 'cdn.pixabay.com';
+
+    private const DOWNLOAD_HOSTS = ['pixabay.com', self::CDN_HOST];
+
+    /** La taille dans l'adresse d'un apercu, `…_150.jpg`. */
+    private const PREVIEW_SIZE = '/_150(\.(?:jpe?g|png|webp))$/i';
 
     private const MAX_DOWNLOAD_BYTES = 10 * 1024 * 1024;
 
@@ -72,7 +82,7 @@ final readonly class PixabayStockImageProvider implements StockImageProvider
         foreach ($hits as $hit) {
             $width = (int) ($hit['imageWidth'] ?? 0);
             $height = (int) ($hit['imageHeight'] ?? 0);
-            $url = (string) ($hit['largeImageURL'] ?? '');
+            $url = $this->downloadUrl($hit);
 
             if ($width <= 0 || $height <= 0 || $url === '') {
                 continue;
@@ -124,6 +134,23 @@ final readonly class PixabayStockImageProvider implements StockImageProvider
         if (! is_array($response->json('hits'))) {
             throw BlogEditorialException::imageSourceFailed('Pixabay answered without its list of photos');
         }
+    }
+
+    /**
+     * L'adresse du fichier en 1280 px : l'apercu de cdn.pixabay.com (`…_150.jpg`) avec sa taille remplacee, a
+     * defaut `largeImageURL`.
+     *
+     * @param  array<string, mixed>  $hit
+     */
+    private function downloadUrl(array $hit): string
+    {
+        $preview = (string) ($hit['previewURL'] ?? '');
+
+        if (parse_url($preview, PHP_URL_HOST) === self::CDN_HOST && preg_match(self::PREVIEW_SIZE, $preview) === 1) {
+            return (string) preg_replace(self::PREVIEW_SIZE, '_'.self::LARGE_SIDE.'$1', $preview);
+        }
+
+        return (string) ($hit['largeImageURL'] ?? '');
     }
 
     public function download(StockImage $image): string

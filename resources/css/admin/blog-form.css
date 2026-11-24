@@ -1,0 +1,24 @@
+/* Formulaire d'un article : un point ambre a cote du libelle de chaque champ qui manque pour publier, de la
+   couleur de la pastille « points a completer », pour que l'oeil sache ou chercher (demande de Micha du
+   24/11/2026). Le libelle porte `data-missing` quand il est le notre ; un champ du kit le porte sur son
+   groupe (`ui-form-group`), dont le libelle est le premier enfant. */
+@layer components {
+    [data-missing]:not(.ui-form-group)::after,
+    .ui-form-group[data-missing] > label::after {
+        content: '';
+        display: inline-block;
+        width: 7px;
+        height: 7px;
+        margin-inline-start: 6px;
+        border-radius: 9999px;
+        background: #f59e0b;
+        vertical-align: middle;
+        position: relative;
+        top: -1px;
+    }
+
+    .dark [data-missing]:not(.ui-form-group)::after,
+    .dark .ui-form-group[data-missing] > label::after {
+        background: #fbbf24;
+    }
+}
