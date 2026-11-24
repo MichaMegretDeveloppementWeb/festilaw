@@ -272,6 +272,16 @@
     </x-slot:actions>
 </x-ui::modal>
 
+{{-- Traduction d'un seul champ qui a deja du texte (demande de Micha du 24/11/2026). --}}
+<x-ui::modal name="translate-field" variant="confirm" :title="__('Remplacer ce champ ?')">
+    <p>{{ __("La traduction remplacera le texte déjà saisi dans ce champ, dans cette langue. Rien n'est enregistré tant que vous n'enregistrez pas l'article.") }}</p>
+
+    <x-slot:actions>
+        <x-ui::button variant="ghost" x-on:click="$dispatch('ui-close-modal', 'translate-field')">{{ __('Annuler') }}</x-ui::button>
+        <x-ui::button x-on:click="requestTranslation()" data-confirm-field-translation>{{ __('Traduire') }}</x-ui::button>
+    </x-slot:actions>
+</x-ui::modal>
+
 @if ($postId !== null)
     <x-ui::modal name="delete-post" variant="confirm" :title="__('Supprimer cet article ?')">
         @if ($isPublished)

@@ -19,6 +19,8 @@ use App\Services\Blog\Generation\Editorial\BlogPromptLibrary;
  * autre langue du blog, avec le contexte de l'entreprise, les regles d'ecriture et le lexique de la langue
  * visee. Memes liens et memes emplacements d'images que le texte de depart, sinon une demande de correction,
  * puis l'echec de l'etape. Le resultat reste au journal de l'etape ; le formulaire vient l'y chercher.
+ * Une demande peut ne porter que sur un champ (demande de Micha du 24/11/2026) : seul ce champ est rempli, et
+ * le modele laisse les autres vides.
  */
 final class AssistedTranslationStep extends EditorialStep
 {
@@ -49,7 +51,7 @@ final class AssistedTranslationStep extends EditorialStep
         $to = is_array($request) ? (string) ($request['to'] ?? '') : '';
         $source = EditorialArticle::fromArray(is_array($request['article'] ?? null) ? $request['article'] : []);
 
-        if (! isset(self::LANGUAGES[$from], self::LANGUAGES[$to]) || ($source->title === '' && $source->body === '')) {
+        if (! isset(self::LANGUAGES[$from], self::LANGUAGES[$to]) || trim($source->text()) === '') {
             throw BlogEditorialException::missingInput($this->key(), 'the text to translate');
         }
 
@@ -60,10 +62,13 @@ final class AssistedTranslationStep extends EditorialStep
             $to === 'en' ? null : $this->prompts->get('lexicon-'.$to),
             $this->prompts->render('step-translation', ['language' => self::LANGUAGES[$to]]),
         ])));
-        $prompt = implode("\n\n", [
+        $prompt = implode("\n\n", array_filter([
             $this->block('Language of the original', self::LANGUAGES[$from]),
+            is_string($request['field'] ?? null)
+                ? $this->block('Scope', 'Only one part of the article is given. Translate that part, and leave every other field empty.')
+                : null,
             $this->block('Article', $source->forPrompt()),
-        ]);
+        ]));
 
         $reply = $this->ask($context, $agent, $prompt);
         $usage = $reply->usage;

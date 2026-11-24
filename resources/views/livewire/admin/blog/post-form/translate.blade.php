@@ -1,21 +1,22 @@
 {{-- Traduction assistee d'une langue (tache 6.14), en tete de son onglet : un menu « Traduire depuis… » qui
      propose les autres langues deja redigees. Si la langue a deja du texte, une fenetre demande confirmation
      (translate-post, dans dialogs.blade.php). Pendant la traduction, le bouton le dit, sans rien deplacer.
+     Un peu moins haut que les boutons du kit (36 px au lieu de 44), a la demande de Micha du 24/11/2026.
      $locale, $locales (code => nom de la langue). --}}
 @php
     $fromLabels = ['en' => __('Depuis l\'anglais'), 'fr' => __('Depuis le français'), 'es' => __('Depuis l\'espagnol')];
 @endphp
 <div class="flex justify-end" data-translate="{{ $locale }}">
-    <template x-if="translation.pending === '{{ $locale }}'">
-        <x-ui::button variant="secondary" disabled data-translation-pending>
+    <template x-if="translation.pending === '{{ $locale }}' && translation.field === null">
+        <x-ui::button variant="secondary" size="compact" class="min-h-9" disabled data-translation-pending>
             <x-ui::spinner size="sm" />
             {{ __('Traduction en cours…') }}
         </x-ui::button>
     </template>
-    <template x-if="translation.pending !== '{{ $locale }}'">
+    <template x-if="! (translation.pending === '{{ $locale }}' && translation.field === null)">
         <x-ui::dropdown width="w-56">
             <x-slot:trigger>
-                <x-ui::button variant="secondary" aria-haspopup="menu" x-bind:disabled="translation.pending !== null" data-translate-menu>
+                <x-ui::button variant="secondary" size="compact" class="min-h-9" aria-haspopup="menu" x-bind:disabled="translation.pending !== null" data-translate-menu>
                     <x-ui::icon name="language" />
                     {{ __('Traduire depuis…') }}
                 </x-ui::button>

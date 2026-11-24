@@ -187,6 +187,50 @@ it('lets the form follow a translation, then hands back the texts and the docume
     Mail::assertNotSent(BlogGenerationBatchFinished::class);
 });
 
+it('translates one field alone, sending only that field, and hands it back for that field only', function () {
+    // Demande de Micha du 24/11 : apres une retouche ciblee, retraduire toute la langue couterait pour rien.
+    actingAs(User::factory()->create());
+
+    $component = Livewire::test(PostTranslation::class)
+        ->dispatch('request-post-translation', from: 'en', to: 'fr', field: 'excerpt', source: ['title' => 'Etsy labels', 'excerpt' => 'Short.', 'metaTitle' => 'Meta', 'metaDescription' => '', 'content' => richDocument()]);
+
+    $generation = BlogGeneration::query()->findOrFail($component->get('generationId'));
+    expect($generation->payload['translation']['field'])->toBe('excerpt')
+        ->and($generation->payload['translation']['article'])->toBe(['title' => '', 'excerpt' => 'Short.', 'meta_title' => '', 'meta_description' => '', 'body' => ''])
+        ->and($generation->payload['translation']['images'])->toBe([])
+        ->and($generation->topic_hint)->toBe('Traduction en français du champ « extrait » de « Etsy labels »');
+
+    app(ProcessNextBlogGenerationAction::class)->execute('worker-test');
+
+    $component->call('check')
+        ->assertDispatched('post-translation-ready', fn (string $event, array $params): bool => $params['field'] === 'excerpt'
+            && $params['locale'] === 'fr'
+            && $params['texts']['excerpt'] !== '');
+});
+
+it('refuses to translate an empty field, or a field it does not know', function (string $field, string $metaTitle) {
+    expect(fn () => app(RequestBlogTranslationAction::class)->execute(new RequestBlogTranslationData('en', 'fr', 'Etsy labels', '', $metaTitle, '', null, field: $field)))
+        ->toThrow(BlogEditorialException::class);
+    expect(BlogGeneration::query()->count())->toBe(0);
+})->with([
+    'empty field' => ['metaTitle', ''],
+    'unknown field' => ['slug', 'Meta'],
+]);
+
+it('translates a single field with the instruction to leave the other fields empty', function () {
+    TranslatorAgent::fake([[
+        'title' => '', 'excerpt' => 'Un extrait court.', 'meta_title' => '', 'meta_description' => '', 'body_markdown' => '', 'report_fr' => 'Traduit.',
+    ]])->preventStrayPrompts();
+    $context = new GenerationStepContext(5, BlogGenerationType::Translation, null, null, app(BlogAiSettingsService::class)->current(), [], ['translation' => [
+        'from' => 'en', 'to' => 'fr', 'field' => 'excerpt', 'article' => ['title' => '', 'excerpt' => 'A short excerpt.', 'body' => ''], 'images' => [],
+    ]], 1);
+
+    $result = app(AssistedTranslationStep::class)->execute($context);
+
+    expect($result->output['article']['excerpt'])->toBe('Un extrait court.');
+    TranslatorAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Only one part of the article is given'));
+});
+
 it('tells the form when a translation fails, without any technical detail', function () {
     actingAs(User::factory()->create());
     config(['blog.ai.simulation.fail_step' => 'translation']);

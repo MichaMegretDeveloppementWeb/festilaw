@@ -79,16 +79,16 @@ final readonly class NotifyFinishedBlogGenerationBatchAction
         $drafts = $this->drafts->summariesOf($generations->pluck('blog_post_id')->filter()->map(static fn (mixed $id): int => (int) $id)->values()->all());
 
         $rows = $generations->map(fn (BlogGeneration $generation): array => [
-            'subject' => $this->labels->subject($generation->topic_title, $generation->topic_hint),
+            'subject' => $drafts[$generation->blog_post_id ?? 0]['title'] ?? $this->labels->subject($generation->topic_title, $generation->topic_hint),
             'outcome' => $this->labels->outcome($generation->outcome_reason, $failedSteps[$generation->id] ?? null) ?? $generation->status->label(),
             'succeeded' => $generation->status === BlogGenerationStatus::Completed,
             'failed' => $generation->status === BlogGenerationStatus::Failed,
             'cost' => $this->costs->dollars($generation->cost_microusd),
             'url' => $this->url->route('admin.blog.generation.show', ['generation' => $generation->id]),
             'draftUrl' => $generation->blog_post_id === null ? null : $this->url->route('admin.blog.posts.edit', ['post' => $generation->blog_post_id]),
-            'excerpt' => $drafts[$generation->blog_post_id]['excerpt'] ?? null,
-            'sources' => $drafts[$generation->blog_post_id]['sources'] ?? null,
-            'newCategory' => $drafts[$generation->blog_post_id]['newCategory'] ?? null,
+            'excerpt' => $drafts[$generation->blog_post_id ?? 0]['excerpt'] ?? null,
+            'sources' => $drafts[$generation->blog_post_id ?? 0]['sources'] ?? null,
+            'newCategory' => $drafts[$generation->blog_post_id ?? 0]['newCategory'] ?? null,
         ])->values()->all();
 
         try {

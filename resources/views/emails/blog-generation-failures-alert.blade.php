@@ -8,7 +8,7 @@
             <div style="font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
                 <strong style="color:#0B1E45;">{{ $row['subject'] }}</strong><br>
                 <span style="color:#b4532a;">{{ $row['outcome'] }}</span><br>
-                <a href="{{ $row['url'] }}" style="color:#0B1E45;">Voir cette génération</a>
+                <x-mail.link-button :url="$row['url']">Voir cette génération</x-mail.link-button>
             </div>
         </x-mail.panel>
     @endforeach

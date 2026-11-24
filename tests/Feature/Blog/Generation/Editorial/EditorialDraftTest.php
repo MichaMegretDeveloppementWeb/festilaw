@@ -596,10 +596,13 @@ it('runs the whole editorial pipeline through the worker and delivers a draft to
         ->and($post->generation_id)->toBe($generation->id)
         ->and($post->status)->toBe(BlogPostStatus::Draft)
         ->and($generation->steps()->where('step', 'topic')->value('summary'))->toBe('Sujet demandé par les vendeurs.');
-    // L'e-mail de fin de lot donne l'extrait du brouillon et le nombre de ses sources.
-    Mail::assertSent(BlogGenerationBatchFinished::class, fn (BlogGenerationBatchFinished $mail): bool => $mail->rows[0]['excerpt'] === Fixtures::article()['excerpt']
-        && $mail->rows[0]['sources'] === 2
-        && $mail->rows[0]['subject'] === 'Adding an economic operator on Etsy');
+    // L'e-mail de fin de lot donne le titre et l'extrait francais du brouillon, comme le back-office (Micha, 24/11),
+    // et le nombre de ses sources.
+    $french = $post->translations()->where('locale', 'fr')->sole();
+    expect($french->title)->toBe('Ajouter un opérateur économique sur Etsy');
+    Mail::assertSent(BlogGenerationBatchFinished::class, fn (BlogGenerationBatchFinished $mail): bool => $mail->rows[0]['subject'] === $french->title
+        && $mail->rows[0]['excerpt'] === $french->excerpt
+        && $mail->rows[0]['sources'] === 2);
 });
 
 it('stops by safety before a call that could pass twice the announced cost, without sending it', function () {

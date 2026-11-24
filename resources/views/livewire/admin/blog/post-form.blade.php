@@ -44,7 +44,7 @@
     x-on:change="touched($event)"
     x-on:blog-post-saved.window="dirty = false"
     x-on:post-translation-ready.window="translationReady($event.detail)"
-    x-on:post-translation-failed.window="translation.pending = null"
+    x-on:post-translation-failed.window="translation.pending = null; translation.field = null"
     x-on:keydown.escape.window="settingsOpen = false"
     x-on:ui-modal-closed.window="modalClosed($event.detail)"
     x-on:post-category-create="openCategory($event.detail.name)"

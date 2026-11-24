@@ -69,6 +69,7 @@ final readonly class BlogTranslationResultService
             (string) ($output['locale'] ?? $payload['translation']['to'] ?? ''),
             ['title' => $article->title, 'excerpt' => $article->excerpt, 'metaTitle' => $article->metaTitle, 'metaDescription' => $article->metaDescription],
             $this->documents->build($article->body, $images),
+            is_string($payload['translation']['field'] ?? null) ? $payload['translation']['field'] : null,
         );
     }
 }

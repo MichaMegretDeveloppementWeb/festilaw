@@ -1,9 +1,11 @@
-@props(['locale', 'prefix', 'titleFallback', 'descriptionFallback', 'spaced' => true])
+@props(['locale', 'prefix', 'titleFallback', 'descriptionFallback', 'spaced' => true, 'locales' => []])
 {{-- « Résultat dans Google » d'une langue, en section de la page (titre, phrase, filet) depuis le 19/11 : Micha
      ne la distinguait pas des champs de l'article. Ce que Google affichera, puis le titre et la description,
      l'un sous l'autre, avec leur longueur conseillee.
      $prefix : debut du chemin public ; $titleFallback, $descriptionFallback : ce que Google affiche quand
-     le champ reste vide (« le titre de l'article », « l'extrait ») ; $spaced : celui de <x-admin.section>.
+     le champ reste vide (« le titre de l'article », « l'extrait ») ; $spaced : celui de <x-admin.section> ;
+     $locales : les langues de l'article, pour le bouton qui traduit un champ seul (formulaire d'article
+     seulement, demande de Micha du 24/11/2026), vide pour une categorie.
      Demande `googleTitle(langue)` et `googleDescription(langue)` dans la portee Alpine du formulaire. --}}
 <x-admin.section {{ $attributes }} :spaced="$spaced" :title="__('Résultat dans Google')"
     :description="__('Titre et description affichés dans les résultats de Google. Si ces champs sont vides, :title et :description sont utilisés.', ['title' => $titleFallback, 'description' => $descriptionFallback])">
@@ -20,6 +22,11 @@
             <x-ui::form-group :label="__('Titre pour Google (facultatif)')" for="meta-title-{{ $locale }}" :error="$errors->first('texts.'.$locale.'.metaTitle')">
                 <x-ui::input id="meta-title-{{ $locale }}" wire:model="texts.{{ $locale }}.metaTitle" :error="$errors->has('texts.'.$locale.'.metaTitle')" />
             </x-ui::form-group>
+            @if ($locales !== [])
+                <div class="mt-1 flex justify-end">
+                    @include('livewire.admin.blog.post-form.translate-field', ['locale' => $locale, 'field' => 'metaTitle', 'locales' => $locales])
+                </div>
+            @endif
         </div>
 
         <div class="relative">
@@ -27,6 +34,11 @@
             <x-ui::form-group :label="__('Description pour Google (facultatif)')" for="meta-description-{{ $locale }}" :error="$errors->first('texts.'.$locale.'.metaDescription')">
                 <x-ui::textarea id="meta-description-{{ $locale }}" rows="3" wire:model="texts.{{ $locale }}.metaDescription" :error="$errors->has('texts.'.$locale.'.metaDescription')" />
             </x-ui::form-group>
+            @if ($locales !== [])
+                <div class="mt-1 flex justify-end">
+                    @include('livewire.admin.blog.post-form.translate-field', ['locale' => $locale, 'field' => 'metaDescription', 'locales' => $locales])
+                </div>
+            @endif
         </div>
     </div>
 </x-admin.section>

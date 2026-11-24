@@ -21,11 +21,12 @@ final class BlogGeneratedDraftRepository
     }
 
     /**
-     * Ce que l'e-mail de fin de lot dit d'un brouillon genere : son extrait anglais, le nombre de sources, et le
-     * nom francais de la categorie que sa generation a creee pour lui, s'il y en a une (decision du 23/11).
+     * Ce que l'e-mail de fin de lot dit d'un brouillon genere : son titre et son extrait francais, comme le
+     * back-office (demande de Micha du 24/11, l'anglais a defaut), le nombre de sources, et le nom francais de la
+     * categorie que sa generation a creee pour lui, s'il y en a une (decision du 23/11).
      *
      * @param  list<int>  $postIds
-     * @return array<int, array{excerpt: string|null, sources: int, newCategory: string|null}>
+     * @return array<int, array{title: string|null, excerpt: string|null, sources: int, newCategory: string|null}>
      */
     public function summariesOf(array $postIds): array
     {
@@ -36,15 +37,17 @@ final class BlogGeneratedDraftRepository
         $summaries = [];
         $rows = BlogPost::query()->toBase()
             ->leftJoin('blog_post_translations as en', static fn ($join) => $join->on('en.blog_post_id', '=', 'blog_posts.id')->where('en.locale', '=', 'en'))
+            ->leftJoin('blog_post_translations as fr', static fn ($join) => $join->on('fr.blog_post_id', '=', 'blog_posts.id')->where('fr.locale', '=', 'fr'))
             ->leftJoin('blog_categories as created', static fn ($join) => $join->on('created.id', '=', 'blog_posts.blog_category_id')->whereColumn('created.generation_id', 'blog_posts.generation_id'))
             ->leftJoin('blog_category_translations as created_fr', static fn ($join) => $join->on('created_fr.blog_category_id', '=', 'created.id')->where('created_fr.locale', '=', 'fr'))
             ->whereIn('blog_posts.id', $postIds)
-            ->get(['blog_posts.id', 'blog_posts.sources', 'en.excerpt', 'created_fr.name as new_category']);
+            ->get(['blog_posts.id', 'blog_posts.sources', 'fr.title as title_fr', 'fr.excerpt as excerpt_fr', 'en.excerpt as excerpt_en', 'created_fr.name as new_category']);
 
         foreach ($rows as $row) {
             $sources = is_string($row->sources) ? json_decode($row->sources, true) : null;
             $summaries[(int) $row->id] = [
-                'excerpt' => $row->excerpt ?: null,
+                'title' => $row->title_fr ?: null,
+                'excerpt' => ($row->excerpt_fr ?: $row->excerpt_en) ?: null,
                 'sources' => is_array($sources) ? count($sources) : 0,
                 'newCategory' => $row->new_category ?: null,
             ];

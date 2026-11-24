@@ -54,6 +54,14 @@ final class BlogEditorialException extends BaseAppException
         );
     }
 
+    public static function nothingToTranslateInField(string $from, string $field): self
+    {
+        return (new self(
+            technicalMessage: "Assisted translation refused: the [{$field}] field of the [{$from}] version is empty.",
+            userMessage: __('Ce champ est vide dans la langue de départ.'),
+        ))->asRefusal();
+    }
+
     public static function unsupportedTranslation(string $from, string $to): self
     {
         return new self(

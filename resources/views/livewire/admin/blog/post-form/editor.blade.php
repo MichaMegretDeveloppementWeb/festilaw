@@ -7,7 +7,12 @@
     $separator = '<span class="mx-1 h-5 w-px shrink-0 bg-gray-200 dark:bg-gray-700" aria-hidden="true"></span>';
 @endphp
 <div>
-    <p class="mb-1.5 text-[13px] font-medium text-gray-700 dark:text-gray-300" @if ($view?->isMissing('content', $locale)) data-missing="content" @endif>{{ __('Contenu') }}</p>
+    {{-- Le bouton qui traduit le contenu seul est au bout de cette ligne, pas sous l'editeur : sous un long texte,
+         on ne le trouverait plus (demande de Micha du 24/11/2026). --}}
+    <div class="mb-1.5 flex items-center justify-between gap-3">
+        <p class="text-[13px] font-medium text-gray-700 dark:text-gray-300" @if ($view?->isMissing('content', $locale)) data-missing="content" @endif>{{ __('Contenu') }}</p>
+        @include('livewire.admin.blog.post-form.translate-field', ['locale' => $locale, 'field' => 'content', 'locales' => $locales])
+    </div>
 
     {{-- Une bordure, pas un anneau interieur : la barre d'outils, qui reste en haut de l'ecran pendant qu'on
          fait defiler un long article, a son propre fond et couvrirait l'anneau. --}}

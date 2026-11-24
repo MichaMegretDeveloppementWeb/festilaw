@@ -68,7 +68,8 @@
         {{-- A partir de 640 px, la barre du bas porte deja « Voir la page » ou « Aperçu » : il ne reste ici
              que la suppression, en bouton. En dessous, la barre ne les a pas, et le menu les garde. --}}
         @if ($postId !== null)
-            <x-ui::button variant="secondary" class="ml-auto hidden sm:inline-flex" data-delete-post
+            {{-- Contour, texte et icone du meme rouge, sans fond plein (Micha, 24/11). Le kit n'a pas cette variante (seul `danger`, en rouge plein) : retouche locale de son anneau, a retirer le jour ou il la propose. --}}
+            <x-ui::button variant="secondary" class="ml-auto hidden text-red-600 ring-red-600 hover:bg-red-50 hover:text-red-700 hover:ring-red-700 sm:inline-flex dark:text-red-400 dark:ring-red-400 dark:hover:bg-red-500/10" data-delete-post
                 x-on:click="$dispatch('ui-open-modal', 'delete-post')">
                 <x-ui::icon name="trash" /> {{ __('Supprimer') }}
             </x-ui::button>

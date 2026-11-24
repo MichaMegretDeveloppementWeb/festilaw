@@ -6,7 +6,8 @@ namespace App\Data\Blog\Generation;
 
 /**
  * Ou en est une traduction assistee : en cours, prete (avec les textes et le document de la langue visee),
- * ou sans resultat (echec, arret, generation introuvable).
+ * ou sans resultat (echec, arret, generation introuvable). $field : le seul champ traduit, ou nul pour toute
+ * la langue ; le formulaire ne remplace alors que ce champ.
  */
 final readonly class BlogTranslationResult
 {
@@ -19,6 +20,7 @@ final readonly class BlogTranslationResult
         public ?string $locale = null,
         public ?array $texts = null,
         public ?array $content = null,
+        public ?string $field = null,
     ) {}
 
     public static function pending(): self
@@ -35,9 +37,9 @@ final readonly class BlogTranslationResult
      * @param  array{title: string, excerpt: string, metaTitle: string, metaDescription: string}  $texts
      * @param  array<string, mixed>  $content
      */
-    public static function ready(string $locale, array $texts, array $content): self
+    public static function ready(string $locale, array $texts, array $content, ?string $field = null): self
     {
-        return new self('ready', $locale, $texts, $content);
+        return new self('ready', $locale, $texts, $content, $field);
     }
 
     public function isPending(): bool

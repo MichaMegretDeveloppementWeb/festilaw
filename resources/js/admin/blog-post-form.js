@@ -69,9 +69,10 @@ const blogPostForm = (config) => ({
     // Change a chaque mouvement du curseur : la barre d'outils relit l'etat des boutons.
     pulse: 0,
     settingsOpen: false,
-    // Traduction assistee : la langue de depart et la langue visee de la demande en cours ; `pending`, la
-    // langue en attente de sa traduction (le bouton le dit), ou null.
-    translation: { from: null, to: null, pending: null },
+    // Traduction assistee : la langue de depart et la langue visee de la demande en cours ; `field`, le seul
+    // champ demande, ou null pour toute la langue ; `pending`, la langue en attente de sa traduction (le
+    // bouton le dit), ou null.
+    translation: { from: null, to: null, field: null, pending: null },
     wide: window.matchMedia(WIDE).matches,
 
     ...slugField,
@@ -667,13 +668,15 @@ const blogPostForm = (config) => ({
 
     // --- Traduction assistee ---------------------------------------------------------------------------
 
-    // « Traduire depuis… » dans l'onglet ouvert : la langue de l'onglet est remplie a partir de `from`. Si elle a
-    // deja du texte, une fenetre demande d'abord confirmation.
-    askTranslation(from) {
-        this.translation = { from, to: this.tab, pending: this.translation.pending };
+    // « Traduire depuis… » dans l'onglet ouvert : la langue de l'onglet est remplie a partir de `from`, en entier,
+    // ou seulement le champ `field` (bouton sous chaque champ, demande de Micha du 24/11/2026). Si ce qui sera
+    // remplace a deja du texte, une fenetre demande d'abord confirmation.
+    askTranslation(from, field = null) {
+        this.translation = { from, to: this.tab, field, pending: this.translation.pending };
+        const replacesText = field === null ? this.state(this.tab) !== 'empty' : this.fieldHasText(this.tab, field);
 
-        if (this.state(this.tab) !== 'empty') {
-            this.$dispatch('ui-open-modal', 'translate-post');
+        if (replacesText) {
+            this.$dispatch('ui-open-modal', field === null ? 'translate-post' : 'translate-field');
 
             return;
         }
@@ -681,21 +684,29 @@ const blogPostForm = (config) => ({
         this.requestTranslation();
     },
 
+    // Le champ a-t-il du texte dans cette langue ? Le contenu se lit dans l'editeur.
+    fieldHasText(locale, field) {
+        return field === 'content' ? this.hasContent(locale) : this.text(locale, field) !== '';
+    },
+
     // Le texte de depart part tel qu'il est dans le formulaire, enregistre ou non. Le composant de traduction
-    // le confie au worker, puis rend le resultat par l'evenement `post-translation-ready`.
+    // le confie au worker, puis rend le resultat par l'evenement `post-translation-ready`. Pour un seul champ,
+    // le serveur ne garde que lui.
     requestTranslation() {
-        const { from, to } = this.translation;
+        const { from, to, field } = this.translation;
 
         if (from === null || to === null || this.translation.pending !== null || this.contents === null) {
             return;
         }
 
         this.$dispatch('ui-close-modal', 'translate-post');
+        this.$dispatch('ui-close-modal', 'translate-field');
         this.translation.pending = to;
 
         Livewire.dispatch('request-post-translation', {
             from,
             to,
+            field,
             source: {
                 title: this.text(from, 'title'),
                 excerpt: this.text(from, 'excerpt'),
@@ -706,19 +717,32 @@ const blogPostForm = (config) => ({
         });
     },
 
-    // La traduction est prete : les champs et l'editeur de la langue sont remplis, rien n'est enregistre.
-    translationReady({ locale, texts, content }) {
+    // La traduction est prete : les champs et l'editeur de la langue sont remplis, rien n'est enregistre. Une
+    // traduction d'un seul champ ne remplace que lui ; l'adresse suit le titre traduit, sauf si elle a ete
+    // changee a la main.
+    translationReady({ locale, texts, content, field = null }) {
         this.translation.pending = null;
+        this.translation.field = null;
 
-        for (const [field, value] of Object.entries(texts ?? {})) {
-            this.$wire.texts[locale][field] = value ?? '';
+        if (field === null || field !== 'content') {
+            for (const [name, value] of Object.entries(texts ?? {})) {
+                if (field === null || name === field) {
+                    this.$wire.texts[locale][name] = value ?? '';
+                }
+            }
         }
 
-        this.contents[locale] = content;
-        editors.get(locale)?.commands.setContent(content);
-        this.contents[locale] = content;
+        if (field === null || field === 'content') {
+            this.contents[locale] = content;
+            editors.get(locale)?.commands.setContent(content);
+            this.contents[locale] = content;
+        }
+
         this.dirty = true;
-        this.suggestSlug(locale);
+
+        if (field === null || field === 'title') {
+            this.suggestSlug(locale);
+        }
     },
 
     save() {

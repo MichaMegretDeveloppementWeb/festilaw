@@ -69,9 +69,10 @@ class PostTranslation extends Component
 
     /**
      * @param  array<string, mixed>  $source  textes et document de la langue de depart, tels que dans le formulaire
+     * @param  string|null  $field  un seul champ a traduire, ou nul pour toute la langue (Micha, 24/11/2026)
      */
     #[On('request-post-translation')]
-    public function request(string $from, string $to, array $source, RequestBlogTranslationAction $requestTranslation): void
+    public function request(string $from, string $to, array $source, RequestBlogTranslationAction $requestTranslation, ?string $field = null): void
     {
         if ($this->generationId !== null) {
             return;
@@ -88,6 +89,7 @@ class PostTranslation extends Component
                 content: is_array($source['content'] ?? null) ? $source['content'] : null,
                 postId: $this->postId,
                 requestedBy: auth()->id(),
+                field: $field,
             ));
             $this->target = $to;
             $this->waitingSince = now()->getTimestamp();
@@ -141,7 +143,7 @@ class PostTranslation extends Component
             return;
         }
 
-        $this->dispatch('post-translation-ready', locale: $result->locale, texts: $result->texts, content: $result->content);
+        $this->dispatch('post-translation-ready', locale: $result->locale, texts: $result->texts, content: $result->content, field: $result->field);
         $this->dispatch('ui-toast', title: __('Traduction prête. Relisez-la, puis enregistrez l\'article.'), type: 'success');
     }
 

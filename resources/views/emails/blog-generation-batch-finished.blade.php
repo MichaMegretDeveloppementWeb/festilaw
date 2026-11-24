@@ -27,10 +27,9 @@
                     <span style="color:#4a5568;">{{ __('Nouvelle catégorie « :name », créée pour cet article. Vous pouvez la renommer dans les catégories du blog.', ['name' => $row['newCategory']]) }}</span><br>
                 @endif
                 @if ($row['draftUrl'])
-                    <a href="{{ $row['draftUrl'] }}" style="color:#0B1E45;">Ouvrir le brouillon</a>
-                    <span style="color:#8a8f9c;"> · </span>
+                    <x-mail.link-button :url="$row['draftUrl']">Ouvrir le brouillon</x-mail.link-button>
                 @endif
-                <a href="{{ $row['url'] }}" style="color:#0B1E45;">Voir cette génération</a>
+                <x-mail.link-button :url="$row['url']">Voir cette génération</x-mail.link-button>
             </div>
         </x-mail.panel>
     @endforeach
@@ -43,7 +42,7 @@
 
     @if ($succeeded > 0)
         <x-mail.button :url="$postsUrl">Ouvrir les articles</x-mail.button>
-        <x-mail.text><a href="{{ $generationsUrl }}" style="color:#0B1E45;">Ouvrir le journal des générations</a></x-mail.text>
+        <div style="margin:-12px 0 22px;"><x-mail.link-button :url="$generationsUrl">Ouvrir le journal des générations</x-mail.link-button></div>
     @else
         <x-mail.button :url="$generationsUrl">Ouvrir les générations</x-mail.button>
     @endif
