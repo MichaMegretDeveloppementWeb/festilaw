@@ -297,11 +297,10 @@ ensuite quoi lancer et quand) :
 > l'hébergeur.
 
 **Surveillance du cron.** Chaque minute, le cron note son passage
-(`festilaw:scheduler-heartbeat`, aussi lancée par `deploy.sh`). En bas de la barre
-latérale du back-office, « Tâches automatiques · il y a N min » doit rester sous
-2 minutes. Après 15 minutes sans passage, un bandeau rouge s'affiche dans le
-back-office et un e-mail part à `FESTILAW_TECH_ALERT_EMAIL` (à défaut, à l'adresse
-de notification), au plus toutes les 6 heures. Mettre dans le `.env` de prod
+(`festilaw:scheduler-heartbeat`, aussi lancée par `deploy.sh`). Après 15 minutes
+sans passage, une alerte rouge s'affiche en haut du back-office, et un e-mail part à
+`FESTILAW_TECH_ALERT_EMAIL` (à défaut, à l'adresse de notification), une seule fois
+par arrêt. C'est une visite du site qui le déclenche, puisque le cron ne tourne plus. Mettre dans le `.env` de prod
 l'adresse du prestataire technique, puis `php artisan config:cache`.
 
 **Pour tester les renouvellements sans attendre janvier**, il existe une commande
@@ -443,7 +442,7 @@ Actions manuelles (hors `.env`) :
 - [ ] Compte Stripe activé (société + IBAN)
 - [ ] Webhook Stripe créé (`https://festilaw.com/webhooks/payment/stripe`, 6 événements) → `whsec_`
 - [ ] Webhook SignWell confirmé (`https://festilaw.com/webhooks/signature`)
-- [ ] Cron `schedule:run` activé chez l'hébergeur (back-office : « Tâches automatiques · il y a 1 min »)
+- [ ] Cron `schedule:run` activé chez l'hébergeur (le back-office n'affiche aucune alerte d'arrêt des tâches automatiques)
 - [ ] `FESTILAW_TECH_ALERT_EMAIL` renseignée (alerte si le cron s'arrête)
 - [ ] Sauvegarde de la base avant migration
 - [ ] Déploiement : `composer install --no-dev`, `key:generate` (1re fois), `npm run build`, `migrate --force`, caches
@@ -504,7 +503,7 @@ publication) et la mesure d'audience Falcon Analytics. Elle se déploie par `dep
       `festilaw.com`.
 - [ ] `php artisan analytics:check` ne montre aucun point bloquant. Relancé une fois quelques pages ouvertes, sa
       ligne « Proxy » dit s'il faut déclarer un proxy.
-- [ ] Le back-office affiche les sections Blog, Audience et Marketing, et « Tâches automatiques · il y a 1 min ».
+- [ ] Le back-office affiche les sections Blog, Audience et Marketing, sans alerte d'arrêt des tâches automatiques.
 - [ ] La génération IA dit « Clé OpenRouter en place » dans son état du service.
 
 **À chaque déploiement suivant**, relancer `php artisan analytics:check`. La mesure échoue en silence, et un
