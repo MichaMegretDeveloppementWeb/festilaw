@@ -57,6 +57,13 @@
                     <x-ui::icon name="document-text" class="h-[18px] w-[18px]" />
                 </a>
             </x-ui::tooltip>
+        @elseif ($generation->sourcePostId)
+            {{-- Une demande d'image ou de traduction mene a l'article depuis lequel elle a ete faite (24/11/2026). --}}
+            <x-ui::tooltip :text="__('Ouvrir l\'article')">
+                <a href="{{ route('admin.blog.posts.edit', ['post' => $generation->sourcePostId]) }}" class="{{ $iconButton }}" aria-label="{{ __('Ouvrir l\'article') }}" data-open-source-post>
+                    <x-ui::icon name="document-text" class="h-[18px] w-[18px]" />
+                </a>
+            </x-ui::tooltip>
         @endif
     </div>
 </li>

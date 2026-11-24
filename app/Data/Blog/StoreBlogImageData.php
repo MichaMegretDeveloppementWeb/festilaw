@@ -18,6 +18,8 @@ final readonly class StoreBlogImageData
      * @param  string|null  $nameHint  texte dont tirer le nom du fichier (titre de l'article, description)
      * @param  BlogImageCrop|null  $crop  rectangle a garder, en pixels de l'image redressee (null : toute l'image)
      * @param  bool  $keepSource  garder la source non decoupee, pour pouvoir recadrer l'image plus tard
+     * @param  int|null  $generationId  la generation qui obtient cette image comme image principale (24/11/2026) :
+     *                                  elle reste alors a l'article de cette generation, meme remplacee
      */
     public function __construct(
         public string $path,
@@ -30,5 +32,6 @@ final readonly class StoreBlogImageData
         public ?string $creditLicense = null,
         public ?BlogImageCrop $crop = null,
         public bool $keepSource = false,
+        public ?int $generationId = null,
     ) {}
 }

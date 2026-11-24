@@ -6,10 +6,12 @@ namespace App\Actions\Blog\Post;
 
 use App\Data\Blog\NormalizedBlogContent;
 use App\Data\Blog\SaveBlogPostData;
+use App\Enums\Blog\Generation\BlogGenerationType;
 use App\Exceptions\BaseAppException;
 use App\Exceptions\Blog\BlogPostException;
 use App\Exceptions\Blog\BlogSlugException;
 use App\Models\BlogCategory;
+use App\Models\BlogGeneration;
 use App\Models\BlogPost;
 use App\Services\Blog\Content\BlogContentNormalizer;
 use App\Services\Blog\Content\BlogContentRenderer;
@@ -85,6 +87,16 @@ final readonly class SaveBlogPostAction
             'blog_category_id' => $data->categoryId,
             'sources' => $this->sources->clean($data->sources),
         ])->save();
+
+        // Les demandes faites avant la creation n'avaient pas d'article : il les recoit maintenant, avant le
+        // rattachement des images, qui en dependent (24/11/2026).
+        if ($data->postId === null && $data->requestIds !== []) {
+            BlogGeneration::query()
+                ->whereKey($data->requestIds)
+                ->whereIn('type', [BlogGenerationType::Image->value, BlogGenerationType::Translation->value])
+                ->whereNull('source_blog_post_id')
+                ->update(['source_blog_post_id' => $post->id]);
+        }
 
         $images = $this->images->sync($post, array_values(array_filter([
             $data->featuredImageId,

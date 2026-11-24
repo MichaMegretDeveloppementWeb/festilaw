@@ -114,8 +114,11 @@ final readonly class GenerateBlogDraftImagesAction implements GenerationStep
                 : array_intersect_key($context->output('topic'), array_flip(['title', 'angle', 'reader'])),
             // A defaut de photo pour la recherche de l'image principale, les mots-cles du sujet de l'article.
             'fallback_query' => $imageRequest ? '' : implode(' ', array_slice($context->output('topic')['keywords'] ?? [], 0, 2)),
-            // La photo de l'image actuelle n'est pas reprise : une nouvelle demande en veut une autre.
-            'skip_pages' => array_values(array_filter([(string) ($context->payload['image_request']['current_credit_url'] ?? '')])),
+            // Ni la photo de l'image actuelle ni celles deja obtenues pour l'article : une nouvelle demande en veut une autre.
+            'skip_pages' => array_values(array_unique(array_filter([
+                (string) ($context->payload['image_request']['current_credit_url'] ?? ''),
+                ...array_map(strval(...), (array) ($context->payload['image_request']['obtained_credit_urls'] ?? [])),
+            ]))),
         ];
 
         $model = $options->mode === BlogAiImageMode::Generated ? (string) $context->settings->modelFor(BlogAiModelCatalog::IMAGE_SETTING) : null;
@@ -147,7 +150,7 @@ final readonly class GenerateBlogDraftImagesAction implements GenerationStep
             try {
                 $stored = $options->mode === BlogAiImageMode::Stock
                     ? $this->fromStock($request, $number, $context, $usage, $usedStockIds, $subject)
-                    : $this->generated($request, $number, $alt, (string) $model);
+                    : $this->generated($request, $number, $alt, (string) $model, $context->generationId);
             } catch (BlogAiProviderException $e) {
                 if ($e->creditExhausted) {
                     throw $e;
@@ -264,6 +267,7 @@ final readonly class GenerateBlogDraftImagesAction implements GenerationStep
                         creditUrl: $candidate->pageUrl ?: null,
                         creditLicense: $candidate->license,
                         keepSource: $number !== 0,
+                        generationId: $number === 0 ? $context->generationId : null,
                     ));
 
                     return ['image' => $image, 'usage' => $checks];
@@ -295,7 +299,7 @@ final readonly class GenerateBlogDraftImagesAction implements GenerationStep
      * @param  array<string, string>  $alt
      * @return array{image: BlogImage, usage: GenerationUsage}
      */
-    private function generated(array $request, int $number, array $alt, string $model): array
+    private function generated(array $request, int $number, array $alt, string $model, int $generationId): array
     {
         $prompt = trim((string) ($request['generation_prompt'] ?? '')) ?: trim((string) ($request['description'] ?? ''));
         ['path' => $path, 'usage' => $usage] = $this->generator->generate($prompt, $model);
@@ -309,6 +313,7 @@ final readonly class GenerateBlogDraftImagesAction implements GenerationStep
                 creditSource: BlogImageCreditSource::Ai,
                 creditAuthor: $this->models->name($model),
                 keepSource: $number !== 0,
+                generationId: $number === 0 ? $generationId : null,
             ));
         } catch (Throwable $e) {
             // L'image a ete facturee : son cout reste au journal meme si elle n'est pas gardee.

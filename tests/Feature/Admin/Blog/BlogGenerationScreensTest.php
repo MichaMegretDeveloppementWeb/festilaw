@@ -603,6 +603,45 @@ it('marks each generation of the history with its kind, an article, a translatio
         ->assertSeeHtml('<span class="sr-only">Image</span>');
 });
 
+it('leads from a request made from an article back to that article, in the history and on its page', function () {
+    // Retour de Micha du 24/11 : depuis une demande d'image, on ne retrouvait pas l'article.
+    $post = BlogPost::factory()->create();
+    $request = BlogGeneration::factory()->completed()->create(['type' => BlogGenerationType::Image, 'source_blog_post_id' => $post->id]);
+    $articleUrl = route('admin.blog.posts.edit', ['post' => $post->id]);
+
+    Livewire::test(GenerationHistory::class)
+        ->assertSeeHtml('data-open-source-post')
+        ->assertSeeHtml($articleUrl);
+    Livewire::test(GenerationDetail::class, ['generation' => $request->id])
+        ->assertSee('Ouvrir l\'article')
+        ->assertSeeHtml($articleUrl);
+});
+
+it('shows on the page only what makes sense for its kind of generation', function (BlogGenerationType $type, bool $images, bool $length, string $headline) {
+    // Retour de Micha du 24/11 : une traduction n'a ni images ni longueur, une image demandee n'a pas de longueur, et
+    // une demande faite depuis un article ne parle ni de brouillon ni d'e-mail.
+    $generation = BlogGeneration::factory()->completed()->create(['type' => $type]);
+
+    $page = Livewire::test(GenerationDetail::class, ['generation' => $generation->id])
+        ->assertSee('Effort')
+        ->assertSee($headline);
+
+    expect(str_contains($page->html(), 'Longueur demandée'))->toBe($length)
+        ->and(str_contains($page->html(), '>Images<'))->toBe($images);
+})->with([
+    'an article' => [BlogGenerationType::Article, true, true, 'Génération terminée'],
+    'a translation' => [BlogGenerationType::Translation, false, false, 'Traduction prête'],
+    'an image that found nothing' => [BlogGenerationType::Image, true, false, 'Aucune image retenue'],
+]);
+
+it('tells a request still running that its result will come back in the article, not by e-mail', function () {
+    $request = BlogGeneration::factory()->running()->create(['type' => BlogGenerationType::Image]);
+
+    Livewire::test(GenerationDetail::class, ['generation' => $request->id])
+        ->assertSee('Le résultat vous sera remis dans l\'article')
+        ->assertDontSee('Un e-mail vous préviendra');
+});
+
 it('names a generation that created an article by the French title of the article, in the lists and on its page', function () {
     $post = BlogPost::factory()->withTranslations()->create();
     $post->translations()->where('locale', 'fr')->update(['title' => 'Bougies : les règles à connaître']);

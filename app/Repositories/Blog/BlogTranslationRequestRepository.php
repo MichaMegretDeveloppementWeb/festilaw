@@ -33,18 +33,20 @@ final class BlogTranslationRequestRepository
     }
 
     /**
-     * La traduction encore en attente ou en cours pour un article, la plus recente : le formulaire la retrouve
-     * apres un rechargement (controle du 20/11).
+     * La derniere traduction d'un article que le formulaire n'a pas encore recue : en cours, il l'attend de nouveau
+     * apres un rechargement (controle du 20/11) ; finie pendant l'absence, il la recoit au retour (Micha,
+     * 24/11/2026). Une traduction arretee a la main ne se remet pas.
      *
-     * @return object{id: int, payload: string|null}|null
+     * @return object{id: int, status: string, payload: string|null}|null
      */
-    public function activeForPost(int $postId): ?object
+    public function undeliveredForPost(int $postId): ?object
     {
         return BlogGeneration::query()->toBase()
             ->where('type', BlogGenerationType::Translation->value)
-            ->whereIn('status', BlogGenerationStatus::activeValues())
-            ->where('payload->translation->post_id', $postId)
+            ->where('source_blog_post_id', $postId)
+            ->whereNull('delivered_at')
+            ->where('status', '!=', BlogGenerationStatus::Cancelled->value)
             ->orderByDesc('id')
-            ->first(['id', 'payload']);
+            ->first(['id', 'status', 'payload']);
     }
 }

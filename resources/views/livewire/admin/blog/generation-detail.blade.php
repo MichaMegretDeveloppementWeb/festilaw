@@ -29,12 +29,18 @@
                 $running = $generation->runningStep();
                 $total = count($generation->steps);
                 $status = $generation->status;
+                $types = \App\Enums\Blog\Generation\BlogGenerationType::class;
+                // Une demande faite depuis un article (image, traduction) n'envoie pas d'e-mail : son resultat est remis
+                // dans l'article (Micha, 24/11/2026).
+                $isRequest = $generation->type !== $types::Article;
 
                 // Ce que la personne lit en premier : ou en est la generation, en quelques mots.
                 $headline = match (true) {
                     $status === $statuses::Queued => __('Génération demandée, démarrage dans quelques secondes.'),
                     $status === $statuses::Running => __('Étape :done sur :total', ['done' => min($total, $generation->completedSteps() + 1), 'total' => $total]).($running ? ', '.mb_strtolower($running->label) : ''),
                     $status === $statuses::Completed && $generation->postId !== null => __('Brouillon prêt à relire'),
+                    $status === $statuses::Completed && $generation->type === $types::Image => $generation->obtainedImage !== null ? __('Image obtenue') : __('Aucune image retenue'),
+                    $status === $statuses::Completed && $generation->type === $types::Translation => __('Traduction prête'),
                     $status === $statuses::Completed => __('Génération terminée'),
                     $status === $statuses::Cancelled => __('Génération arrêtée'),
                     default => $generation->outcome ?? $status->label(),
@@ -42,8 +48,11 @@
 
                 // La phrase qui suit : ce qui s'est passe et ce que la personne peut faire. Jamais la cause technique.
                 $explanation = match (true) {
+                    $generation->isActive() && $isRequest => __('Vous pouvez quitter cette page. Le résultat vous sera remis dans l\'article, à votre prochain passage.'),
                     $generation->isActive() => __('Vous pouvez quitter cette page. Un e-mail vous préviendra quand la génération sera terminée.'),
                     $status === $statuses::Completed && $generation->postId !== null => __('L\'article est enregistré en brouillon. Rien n\'est publié sans votre validation.'),
+                    $status === $statuses::Completed && $generation->type === $types::Image => $generation->obtainedImage !== null ? null : __('Vous pouvez en demander une autre depuis l\'article.'),
+                    $status === $statuses::Completed && $generation->type === $types::Translation => __('Elle remplit les champs de la langue visée dans l\'article. Relisez-la, puis enregistrez l\'article.'),
                     // Mode d'essai (aucun article cree), ou brouillon supprime depuis : on ne promet pas un brouillon qui n'existe pas.
                     $status === $statuses::Completed => __('Aucun brouillon n\'est rattaché à cette génération.'),
                     $status === $statuses::Cancelled => trim(($generation->outcome ?? '').' '.($generation->advice ?? '')),
@@ -58,7 +67,11 @@
                     default => 'text-secondary',
                 };
 
-                $hasActions = $generation->postId || $generation->isRetryable() || $generation->isActive();
+                $hasActions = $generation->postId || $generation->sourcePostId || $generation->isRetryable() || $generation->isActive();
+                // « La demande » ne montre que ce qui a un sens pour cette sorte de generation (Micha, 24/11/2026) :
+                // une traduction n'a ni images ni longueur, une image demandee n'a pas de longueur.
+                $showsImages = $generation->type !== $types::Translation;
+                $showsLength = $generation->type === $types::Article;
                 $reportIcons = ['topic' => 'light-bulb', 'research' => 'magnifying-glass', 'writing' => 'pencil-square'];
             @endphp
 
@@ -92,6 +105,10 @@
                                 <x-ui::button :href="route('admin.blog.posts.edit', ['post' => $generation->postId])">
                                     <x-ui::icon name="document-text" /> {{ __('Ouvrir le brouillon') }}
                                 </x-ui::button>
+                            @elseif ($generation->sourcePostId)
+                                <x-ui::button :href="route('admin.blog.posts.edit', ['post' => $generation->sourcePostId])" data-open-source-post>
+                                    <x-ui::icon name="document-text" /> {{ __('Ouvrir l\'article') }}
+                                </x-ui::button>
                             @endif
 
                             @if ($generation->isRetryable())
@@ -120,7 +137,7 @@
             {{-- 2. La demande d'origine : la meme forme, en plus discret (valeurs en 14 px). Le filet du titre de
                  section sert de bord haut a la bande. --}}
             <x-admin.section :title="__('La demande')" data-generation-request>
-                <x-admin.stats class="border-t-0" :columns="5">
+                <x-admin.stats class="border-t-0" :columns="3 + (int) $showsImages + (int) $showsLength">
                     <x-admin.stats.item icon="bolt" :label="__('Lancement')" size="sm">{{ $generation->trigger->label() }}</x-admin.stats.item>
                     <x-admin.stats.item icon="chat-bubble-left-ellipsis" :label="__('Sujet demandé')" size="sm">
                         @if ($generation->topicHint)
@@ -129,8 +146,12 @@
                             <span class="font-normal text-secondary">{{ __('Laissé au choix de l\'IA') }}</span>
                         @endif
                     </x-admin.stats.item>
-                    <x-admin.stats.item icon="photo" :label="__('Images')" size="sm">{{ $generation->images ?? '–' }}</x-admin.stats.item>
-                    <x-admin.stats.item icon="document-text" :label="__('Longueur demandée')" size="sm">{{ $generation->length ?? '–' }}</x-admin.stats.item>
+                    @if ($showsImages)
+                        <x-admin.stats.item icon="photo" :label="__('Images')" size="sm">{{ $generation->images ?? '–' }}</x-admin.stats.item>
+                    @endif
+                    @if ($showsLength)
+                        <x-admin.stats.item icon="document-text" :label="__('Longueur demandée')" size="sm">{{ $generation->length ?? '–' }}</x-admin.stats.item>
+                    @endif
                     <x-admin.stats.item icon="adjustments-horizontal" :label="__('Effort')" size="sm" data-generation-effort>{{ $generation->effort ?? '–' }}</x-admin.stats.item>
                 </x-admin.stats>
 
@@ -141,6 +162,16 @@
                     </div>
                 @endif
             </x-admin.section>
+
+            {{-- L'image qu'une demande d'image a obtenue (Micha, 24/11/2026), que l'article a gardee ou non. --}}
+            @if ($generation->obtainedImage !== null)
+                <x-admin.section :title="__('L\'image obtenue')" :description="$generation->sourcePostId ? __('Vous la retrouvez dans « Images déjà obtenues », sous l\'image principale de l\'article.') : null" data-obtained-image>
+                    <figure class="max-w-md">
+                        <img src="{{ $generation->obtainedImage['url'] }}" alt="{{ $generation->obtainedImage['alt'] }}" class="aspect-video w-full rounded-lg bg-elevated object-cover">
+                        <figcaption class="mt-2 text-[13px] leading-relaxed text-secondary">{{ $generation->obtainedImage['origin'] }}. {{ $generation->obtainedImage['alt'] }}</figcaption>
+                    </figure>
+                </x-admin.section>
+            @endif
 
             {{-- Les rares affirmations gardees sur lesquelles la verification a un doute (decision de Micha du 19/11).
                  Ce qu'elle a retire ou corrige ne s'affiche plus : c'est regle. Chaque point dit ou le trouver dans le

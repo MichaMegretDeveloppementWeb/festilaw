@@ -23,17 +23,22 @@ final readonly class BlogTranslationResultService
     ) {}
 
     /**
-     * La traduction encore en cours pour un article, avec sa langue visee, ou nulle.
+     * La derniere traduction d'un article que le formulaire n'a pas encore recue, avec sa langue visee et si elle
+     * est finie, ou nulle.
      *
-     * @return array{generation_id: int, locale: string}|null
+     * @return array{generation_id: int, locale: string, finished: bool}|null
      */
-    public function pendingForPost(int $postId): ?array
+    public function undeliveredForPost(int $postId): ?array
     {
-        $row = $this->requests->activeForPost($postId);
+        $row = $this->requests->undeliveredForPost($postId);
         $payload = is_string($row?->payload) ? json_decode($row->payload, true) : null;
         $locale = is_array($payload) ? (string) ($payload['translation']['to'] ?? '') : '';
 
-        return $row === null || $locale === '' ? null : ['generation_id' => (int) $row->id, 'locale' => $locale];
+        return $row === null || $locale === '' ? null : [
+            'generation_id' => (int) $row->id,
+            'locale' => $locale,
+            'finished' => BlogGenerationStatus::tryFrom((string) $row->status)?->isTerminal() ?? true,
+        ];
     }
 
     public function find(int $generationId): BlogTranslationResult

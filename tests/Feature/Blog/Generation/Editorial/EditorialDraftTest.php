@@ -63,6 +63,9 @@ beforeEach(function () {
     Http::preventStrayRequests();
     Fixtures::publicHosts();
     config(['services.pixabay.key' => 'test-key']);
+    // La generation du contexte des etapes (Fixtures::context) existe : l'image principale la retient (24/11/2026).
+    // Terminee et sans cout, elle n'entre ni dans la file ni dans la depense du mois.
+    BlogGeneration::factory()->completed(0)->create(['id' => Fixtures::GENERATION_ID]);
 });
 
 afterEach(fn () => BlogImageFiles::cleanup());

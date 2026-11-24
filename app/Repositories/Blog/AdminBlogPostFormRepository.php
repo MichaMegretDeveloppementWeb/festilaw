@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Repositories\Blog;
 
+use App\Models\BlogGeneration;
 use App\Models\BlogImage;
 use App\Models\BlogPost;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\JoinClause;
 
@@ -22,6 +25,9 @@ final readonly class AdminBlogPostFormRepository
     ];
 
     private const IMAGE_COLUMNS = 'images:id,blog_post_id,uuid,basename,variants,width,height,crop,alt';
+
+    /** Les images deja obtenues montrees au plus : de quoi revenir sur ses choix, sans charger tout un historique. */
+    public const OBTAINED_IMAGES = 24;
 
     /**
      * Ouverture du formulaire : l'article, ses textes AVEC leur contenu, ses images. 3 requetes.
@@ -146,10 +152,30 @@ final readonly class AdminBlogPostFormRepository
 
     /**
      * Une image trouvee ou creee depuis l'article (24/11/2026) : de quoi montrer son apercu et dire a quel article
-     * elle appartient deja, s'il y en a un. 1 requete.
+     * elle appartient deja, s'il y en a un, et pour quel article elle a ete obtenue (`obtained_for_post_id`). 1 requete.
      */
     public function findImage(int $imageId): ?BlogImage
     {
-        return BlogImage::query()->select(['id', 'blog_post_id', 'uuid', 'basename', 'variants', 'width', 'height', 'crop', 'alt'])->find($imageId);
+        return BlogImage::query()
+            ->select(['id', 'blog_post_id', 'uuid', 'basename', 'variants', 'width', 'height', 'crop', 'alt', 'credit_source'])
+            ->withObtainedForPost()
+            ->find($imageId);
+    }
+
+    /**
+     * Les images principales obtenues pour un article (Micha, 24/11/2026), par la generation qui l'a produit ou par
+     * « Image automatique » depuis lui, meme remplacees : la plus recente d'abord, au plus OBTAINED_IMAGES. 1 requete.
+     *
+     * @return Collection<int, BlogImage>
+     */
+    public function listObtainedImages(int $postId): Collection
+    {
+        return BlogImage::query()
+            ->select(['id', 'blog_post_id', 'uuid', 'basename', 'variants', 'width', 'height', 'crop', 'alt', 'credit_source', 'created_at'])
+            ->whereIn('generation_id', BlogGeneration::query()->select('id')
+                ->where(fn (EloquentBuilder $generation) => $generation->where('blog_post_id', $postId)->orWhere('source_blog_post_id', $postId)))
+            ->orderByDesc('id')
+            ->limit(self::OBTAINED_IMAGES)
+            ->get();
     }
 }

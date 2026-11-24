@@ -52,6 +52,7 @@ final readonly class StoreBlogImageAction
         try {
             return BlogImage::query()->create([
                 'uuid' => $uuid,
+                'generation_id' => $data->generationId,
                 'basename' => $basename,
                 'variants' => ['widths' => $processed->widths(), 'share' => $processed->share !== null, 'source' => $processed->source !== null],
                 'width' => $processed->width,

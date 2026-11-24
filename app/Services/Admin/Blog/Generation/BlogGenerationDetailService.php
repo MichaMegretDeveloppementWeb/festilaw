@@ -15,10 +15,14 @@ use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogGenerationStepStatus;
 use App\Enums\Blog\Generation\BlogGenerationTrigger;
+use App\Enums\Blog\Generation\BlogGenerationType;
 use App\Exceptions\Blog\BlogGenerationException;
 use App\Models\BlogGeneration;
 use App\Models\BlogGenerationStep;
 use App\Repositories\Blog\AdminBlogGenerationJournalRepository;
+use App\Repositories\Blog\AdminBlogPostFormRepository;
+use App\Services\Admin\Blog\BlogFeaturedImageResultService;
+use App\Services\Admin\Blog\BlogImagePreviewFactory;
 use App\Services\Blog\Generation\BlogAiCostFormatter;
 use App\Services\Blog\Generation\BlogAiModelCatalog;
 use App\Services\Blog\Generation\BlogGenerationLabels;
@@ -38,9 +42,12 @@ final readonly class BlogGenerationDetailService
 {
     private const ACTIVE_COLUMNS = [
         'id', 'type', 'trigger', 'status', 'outcome_reason', 'topic_title', 'topic_hint', 'instructions',
-        'blog_post_id', 'payload', 'cost_microusd', 'forecast_low_microusd', 'forecast_high_microusd', 'started_at',
+        'blog_post_id', 'source_blog_post_id', 'payload', 'cost_microusd', 'forecast_low_microusd', 'forecast_high_microusd', 'started_at',
         'finished_at', 'cancel_requested_at', 'created_at',
     ];
+
+    /** Largeur visee pour l'apercu de l'image obtenue par une demande d'image. */
+    private const IMAGE_PREVIEW_WIDTH = 768;
 
     private const STEP_COLUMNS = [
         'id', 'blog_generation_id', 'step', 'status', 'attempt', 'model', 'input_tokens', 'output_tokens',
@@ -55,6 +62,9 @@ final readonly class BlogGenerationDetailService
         private BlogAiCostFormatter $costs,
         private BlogAiModelCatalog $models,
         private BlogGenerationAttentionPointsService $attention,
+        private BlogFeaturedImageResultService $imageResults,
+        private AdminBlogPostFormRepository $images,
+        private BlogImagePreviewFactory $previews,
     ) {}
 
     /** La generation en cours, ou la prochaine a traiter s'il n'y en a pas en cours. */
@@ -109,7 +119,28 @@ final readonly class BlogGenerationDetailService
             report: $this->report($rows),
             steps: $keys->map(fn (string $key): BlogGenerationStepView => $this->stepView($key, $rows->get($key)))->all(),
             attentionPoints: $generation->status->isTerminal() ? $this->attention->of($generation->id) : [],
+            type: $generation->type,
+            sourcePostId: $generation->source_blog_post_id,
+            obtainedImage: $generation->type === BlogGenerationType::Image && $generation->status === BlogGenerationStatus::Completed ? $this->obtainedImage($generation->id) : null,
         );
+    }
+
+    /**
+     * L'image qu'une demande d'image terminee a obtenue, pour la montrer sur sa page (Micha, 24/11/2026). 2 requetes,
+     * pour une demande d'image seulement : sa sortie, puis l'image.
+     *
+     * @return array{url: ?string, alt: string, origin: string}|null
+     */
+    private function obtainedImage(int $generationId): ?array
+    {
+        $result = $this->imageResults->find($generationId);
+        $image = $result->isReady() ? $this->images->findImage((int) $result->imageId) : null;
+
+        return $image === null ? null : [
+            'url' => $this->previews->url($image, self::IMAGE_PREVIEW_WIDTH),
+            'alt' => $image->altFor('fr'),
+            'origin' => $image->credit_source->label(),
+        ];
     }
 
     /** Qui a lance la generation, et quand. Le nom n'est lu que pour l'ecran d'une generation. */

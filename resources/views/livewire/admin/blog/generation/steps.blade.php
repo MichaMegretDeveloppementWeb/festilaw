@@ -3,7 +3,8 @@
      droite sa duree et son cout (toujours dessous sur telephone, quelle que soit la longueur du titre, demande
      de Micha du 20/11), puis une ligne de donnees (modele, tokens, recherches web), puis son compte rendu en une
      ou deux phrases. Une etape en echec se reconnait a sa pastille et a son nombre d'essais ; sa
-     cause technique ne s'affiche pas (journal du serveur). --}}
+     cause technique ne s'affiche pas (journal du serveur). Une etape terminee a un rond vert plein et une coche
+     blanche, une etape en echec un rond rouge plein et une croix blanche (Micha, 24/11/2026). --}}
 @php
     $stepStatus = \App\Enums\Blog\Generation\BlogGenerationStepStatus::class;
 @endphp
@@ -17,9 +18,9 @@
 
             <span @class([
                 'relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full',
-                'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' => $step->status === $stepStatus::Completed,
+                'bg-emerald-600 text-white dark:bg-emerald-500' => $step->status === $stepStatus::Completed,
                 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400' => $step->status === $stepStatus::Running,
-                'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400' => $step->status === $stepStatus::Failed,
+                'bg-red-600 text-white dark:bg-red-500' => $step->status === $stepStatus::Failed,
                 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500' => $step->status === $stepStatus::Pending,
             ])>
                 @if ($step->status === $stepStatus::Completed)

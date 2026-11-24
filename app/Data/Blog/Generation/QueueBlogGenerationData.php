@@ -11,7 +11,8 @@ use App\Enums\Blog\Generation\BlogGenerationType;
  * Une demande de generation faite par une personne : le type, et ce qu'elle a eventuellement impose (sujet,
  * consignes, images, longueur, niveau d'effort). `payload` porte les donnees propres au type (l'article a
  * traduire, pour une traduction). `images`, `articleWords` et `effort` nuls : les valeurs par defaut des
- * reglages.
+ * reglages. `sourcePostId` : l'article depuis lequel une demande d'image ou de traduction est faite, nul pour une
+ * generation d'article ou un article pas encore enregistre (24/11/2026).
  */
 final readonly class QueueBlogGenerationData
 {
@@ -25,5 +26,6 @@ final readonly class QueueBlogGenerationData
         public ?GenerationImageOptions $images = null,
         public ?int $articleWords = null,
         public ?BlogEffortLevel $effort = null,
+        public ?int $sourcePostId = null,
     ) {}
 }

@@ -17,6 +17,9 @@ use App\Services\Blog\Generation\BlogAiSettingsService;
  */
 final class EditorialFixtures
 {
+    /** La generation du contexte des etapes, a creer en base quand une etape ecrit une ligne qui la designe. */
+    public const GENERATION_ID = 999_999;
+
     /**
      * Par defaut, la generation demande des photos de banque, deux images en tout (une dans le texte).
      *
@@ -28,7 +31,7 @@ final class EditorialFixtures
         $payload ??= ['images' => ['mode' => 'stock', 'max' => 2]];
 
         return new GenerationStepContext(
-            generationId: 999_999,
+            generationId: self::GENERATION_ID,
             type: BlogGenerationType::Article,
             topicHint: $topicHint,
             instructions: $instructions,

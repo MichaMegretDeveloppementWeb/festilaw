@@ -12,6 +12,7 @@ use App\Enums\Blog\Generation\BlogGenerationType;
 use App\Exceptions\Blog\BlogEditorialException;
 use App\Exceptions\Blog\BlogGenerationException;
 use App\Models\BlogImage;
+use App\Repositories\Blog\BlogImageRequestRepository;
 use App\Services\Blog\Generation\BlogAiModelCatalog;
 use App\Services\Blog\Generation\BlogAiSettingsService;
 
@@ -29,6 +30,7 @@ final readonly class RequestBlogFeaturedImageAction
     public function __construct(
         private QueueBlogGenerationAction $queue,
         private BlogAiSettingsService $settings,
+        private BlogImageRequestRepository $requests,
         private array $locales,
     ) {}
 
@@ -85,8 +87,12 @@ final readonly class RequestBlogFeaturedImageAction
                 'excerpt' => trim($data->excerpts[$locale] ?? ''),
                 'current_alt' => $current?->altFor('en') ?? '',
                 'current_credit_url' => (string) ($current->credit_url ?? ''),
+                // Les photos deja obtenues pour l'article ne sont pas reprises : une nouvelle demande en veut une autre,
+                // et la meme photo paraissait deux fois dans « Images déjà obtenues » (24/11/2026).
+                'obtained_credit_urls' => $data->postId === null ? [] : $this->requests->obtainedCreditUrls($data->postId),
             ]],
             images: new GenerationImageOptions($data->mode, 1),
+            sourcePostId: $data->postId,
         ));
     }
 }

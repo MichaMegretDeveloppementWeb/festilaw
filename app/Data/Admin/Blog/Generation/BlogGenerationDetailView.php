@@ -7,6 +7,7 @@ namespace App\Data\Admin\Blog\Generation;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Enums\Blog\Generation\BlogGenerationStepStatus;
 use App\Enums\Blog\Generation\BlogGenerationTrigger;
+use App\Enums\Blog\Generation\BlogGenerationType;
 
 /**
  * Une generation et ses etapes, pour son ecran et pour la tuile « En cours » de la vue d'ensemble.
@@ -24,6 +25,8 @@ final readonly class BlogGenerationDetailView
      * @param  list<array{key: string, label: string, text: string}>  $report  compte rendu de l'IA, point par point (`key` : l'etape qui l'a ecrit)
      * @param  list<BlogGenerationStepView>  $steps  dans l'ordre du pipeline
      * @param  list<array{where: string|null, statement: string, check: string}>  $attentionPoints  affirmations gardees sur lesquelles la verification a un doute, situees dans le brouillon francais (generation terminee)
+     * @param  int|null  $sourcePostId  l'article depuis lequel une demande d'image ou de traduction a ete faite (24/11/2026)
+     * @param  array{url: ?string, alt: string, origin: string}|null  $obtainedImage  l'image obtenue par une demande d'image terminee
      */
     public function __construct(
         public int $id,
@@ -47,6 +50,9 @@ final readonly class BlogGenerationDetailView
         public array $report,
         public array $steps,
         public array $attentionPoints = [],
+        public BlogGenerationType $type = BlogGenerationType::Article,
+        public ?int $sourcePostId = null,
+        public ?array $obtainedImage = null,
     ) {}
 
     public function isActive(): bool

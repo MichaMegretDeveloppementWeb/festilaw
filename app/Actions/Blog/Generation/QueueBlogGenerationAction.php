@@ -63,6 +63,7 @@ final readonly class QueueBlogGenerationAction
             'trigger' => BlogGenerationTrigger::Manual,
             'status' => BlogGenerationStatus::Queued,
             'requested_by' => $data->requestedBy,
+            'source_blog_post_id' => $data->sourcePostId,
             'batch_uuid' => (string) Str::uuid(),
             'topic_hint' => $topicHint !== '' ? $topicHint : null,
             'instructions' => $instructions !== '' ? $instructions : null,

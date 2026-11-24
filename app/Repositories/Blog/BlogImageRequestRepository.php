@@ -9,6 +9,8 @@ use App\Enums\Blog\Generation\BlogGenerationStepStatus;
 use App\Enums\Blog\Generation\BlogGenerationType;
 use App\Models\BlogGeneration;
 use App\Models\BlogGenerationStep;
+use App\Models\BlogImage;
+use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Une image principale demandee depuis un article (24/11/2026), vue du formulaire qui l'a demandee : son statut,
@@ -34,18 +36,37 @@ final class BlogImageRequestRepository
     }
 
     /**
-     * La demande d'image encore en attente ou en cours pour un article, la plus recente : le formulaire la retrouve
-     * apres un rechargement.
+     * Les pages de la banque des photos deja obtenues pour un article (24/11/2026), pour qu'une nouvelle recherche ne
+     * reprenne pas l'une d'elles. 1 requete.
      *
-     * @return object{id: int, payload: string|null}|null
+     * @return list<string>
      */
-    public function activeForPost(int $postId): ?object
+    public function obtainedCreditUrls(int $postId): array
+    {
+        return BlogImage::query()
+            ->whereIn('generation_id', BlogGeneration::query()->select('id')
+                ->where(fn (Builder $generation) => $generation->where('blog_post_id', $postId)->orWhere('source_blog_post_id', $postId)))
+            ->whereNotNull('credit_url')
+            ->distinct()
+            ->pluck('credit_url')
+            ->all();
+    }
+
+    /**
+     * La derniere demande d'image d'un article que le formulaire n'a pas encore recue : en cours, il l'attend de
+     * nouveau apres un rechargement ; finie pendant l'absence, il la recoit au retour (Micha, 24/11/2026). Une
+     * demande arretee a la main ne se remet pas.
+     *
+     * @return object{id: int, status: string, payload: string|null}|null
+     */
+    public function undeliveredForPost(int $postId): ?object
     {
         return BlogGeneration::query()->toBase()
             ->where('type', BlogGenerationType::Image->value)
-            ->whereIn('status', BlogGenerationStatus::activeValues())
-            ->where('payload->image_request->post_id', $postId)
+            ->where('source_blog_post_id', $postId)
+            ->whereNull('delivered_at')
+            ->where('status', '!=', BlogGenerationStatus::Cancelled->value)
             ->orderByDesc('id')
-            ->first(['id', 'payload']);
+            ->first(['id', 'status', 'payload']);
     }
 }

@@ -18,6 +18,8 @@ final readonly class SaveBlogPostData
      * @param  list<BlogSourceData>  $sources
      * @param  BlogPostOrigin  $origin  pris en compte a la creation seulement
      * @param  int|null  $generationId  la generation qui cree ce brouillon, a la creation seulement (unique)
+     * @param  list<int>  $requestIds  demandes d'image ou de traduction faites depuis l'article avant son premier
+     *                                 enregistrement, a lui rattacher a la creation (24/11/2026)
      */
     public function __construct(
         public ?int $postId,
@@ -29,6 +31,7 @@ final readonly class SaveBlogPostData
         public array $sources = [],
         public BlogPostOrigin $origin = BlogPostOrigin::Manual,
         public ?int $generationId = null,
+        public array $requestIds = [],
     ) {}
 
     /** Textes de la langue demandee ; une langue absente equivaut a une langue vide. */

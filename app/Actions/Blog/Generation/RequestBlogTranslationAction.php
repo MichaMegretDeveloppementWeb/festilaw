@@ -28,6 +28,9 @@ final readonly class RequestBlogTranslationAction
     /** Nom de chaque langue, pour le libelle de la generation au journal. */
     private const LANGUAGES = ['en' => 'anglais', 'fr' => 'français', 'es' => 'espagnol'];
 
+    /** La langue de depart, telle que la dit le nom de la demande (« depuis l'anglais »). */
+    private const FROM = ['en' => 'l\'anglais', 'fr' => 'le français', 'es' => 'l\'espagnol'];
+
     /** Les champs qui se traduisent seuls, et leur nom au journal. */
     private const FIELDS = [
         'title' => 'titre',
@@ -77,14 +80,16 @@ final readonly class RequestBlogTranslationAction
 
         // Dans l'historique, la demande porte le titre francais, comme les articles (Micha, 24/11/2026), a defaut
         // celui de la langue de depart.
-        $title = trim($data->frenchTitle) !== '' ? trim($data->frenchTitle) : trim($data->title);
-        $title = $title !== '' ? $title : __('article sans titre');
+        // Le titre de la langue de depart, et cette langue dite (Micha, 24/11/2026) : c'est ce texte-la qui est
+        // traduit, et l'exception a la regle des titres en francais de l'historique.
+        $title = trim($data->title) !== '' ? trim($data->title) : __('article sans titre');
+        $names = ['language' => self::LANGUAGES[$data->to] ?? $data->to, 'title' => $title, 'from' => self::FROM[$data->from] ?? $data->from];
 
         return $this->queue->execute(new QueueBlogGenerationData(
             type: BlogGenerationType::Translation,
             topicHint: $data->field === null
-                ? __('Traduction en :language de « :title »', ['language' => self::LANGUAGES[$data->to] ?? $data->to, 'title' => $title])
-                : __('Traduction en :language du champ « :field » de « :title »', ['language' => self::LANGUAGES[$data->to] ?? $data->to, 'field' => self::FIELDS[$data->field], 'title' => $title]),
+                ? __('Traduction en :language de « :title », depuis :from', $names)
+                : __('Traduction en :language du champ « :field » de « :title », depuis :from', [...$names, 'field' => self::FIELDS[$data->field]]),
             requestedBy: $data->requestedBy,
             payload: ['translation' => [
                 'post_id' => $data->postId,
@@ -95,6 +100,7 @@ final readonly class RequestBlogTranslationAction
                 'images' => $images,
             ]],
             images: new GenerationImageOptions(BlogAiImageMode::None, 1),
+            sourcePostId: $data->postId,
         ));
     }
 }

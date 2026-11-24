@@ -34,5 +34,15 @@
                 <span class="mt-0.5 block text-[12px] text-muted">{{ __('L\'IA génère une image en rapport avec le thème de l\'article') }}</span>
             </span>
         </x-ui::dropdown-item>
+        {{-- Les images deja obtenues pour cet article, meme remplacees (Micha, 24/11/2026) : seulement s'il y en a. --}}
+        <div x-show="imageSearch.obtained.length > 0" x-cloak>
+            <x-ui::dropdown-item separator />
+            <x-ui::dropdown-item x-on:click="openObtainedImages()" data-obtained-images-open>
+                <span class="block py-0.5 text-left">
+                    <span class="block font-medium text-primary">{{ __('Images déjà obtenues') }} (<span x-text="imageSearch.obtained.length"></span>)</span>
+                    <span class="mt-0.5 block text-[12px] text-muted">{{ __('Reprendre une image trouvée ou générée pour cet article') }}</span>
+                </span>
+            </x-ui::dropdown-item>
+        </div>
     </x-ui::dropdown>
 </div>

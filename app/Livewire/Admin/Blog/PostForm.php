@@ -35,6 +35,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Locked;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Renderless;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
@@ -105,6 +106,15 @@ class PostForm extends Component
      */
     #[Locked]
     public array $attentionPoints = [];
+
+    /**
+     * Les demandes d'image ou de traduction faites depuis un article neuf, avant son premier enregistrement : il
+     * n'avait pas encore d'identifiant, son enregistrement les lui rattache (Micha, 24/11/2026).
+     *
+     * @var list<int>
+     */
+    #[Locked]
+    public array $requestsBeforeFirstSave = [];
 
     /**
      * Fichier d'image en cours d'envoi (image principale, de partage ou du texte). Il ne reste dans
@@ -502,9 +512,10 @@ class PostForm extends Component
     }
 
     /**
-     * Pose l'image principale trouvee ou creee depuis l'article. L'identifiant est verrouille : c'est le serveur qui
-     * le pose, apres avoir verifie que l'image est libre ou deja a cet article. L'enregistrement de l'article la
-     * rattache ; l'image remplacee part au menage de la nuit.
+     * Pose l'image principale trouvee ou creee depuis l'article, ou reprise dans « Images déjà obtenues ».
+     * L'identifiant est verrouille : c'est le serveur qui le pose, apres avoir verifie que l'image est libre ou deja a
+     * cet article, et qu'elle n'a pas ete obtenue pour un autre. L'enregistrement de l'article la rattache. Une image
+     * obtenue et remplacee reste a l'article ; une image deposee et remplacee part au menage de la nuit.
      *
      * @return array{id: int, url: ?string, alt: array<string, string>, source: ?string, crop: ?array<string, int>}|null
      */
@@ -517,6 +528,19 @@ class PostForm extends Component
         }
 
         return $summary;
+    }
+
+    /**
+     * Retient une demande d'image ou de traduction faite depuis l'article neuf (PostFeaturedImage, PostTranslation),
+     * pour la lui rattacher a son premier enregistrement. Sans rendu : rien ne change a l'ecran.
+     */
+    #[On('blog-request-queued')]
+    #[Renderless]
+    public function rememberRequest(int $generationId): void
+    {
+        if ($this->postId === null && ! in_array($generationId, $this->requestsBeforeFirstSave, true)) {
+            $this->requestsBeforeFirstSave[] = $generationId;
+        }
     }
 
     /** Retire l'image de partage : les reseaux sociaux reprendront l'image principale. */
@@ -769,7 +793,11 @@ class PostForm extends Component
             'initialContents' => $this->firstRender ? ($this->opening?->contents ?? array_fill_keys(array_keys(self::LOCALES), null)) : null,
             // Images de l'article (apercu et descriptions), remises une seule fois elles aussi : ensuite le
             // navigateur tient la liste a jour au fil des envois.
-            'initialImages' => $this->firstRender ? ($this->opening?->view->images ?? []) : null,
+            'initialImages' => $this->firstRender ? ($this->opening?->view->images ?? []) + array_column(array_column($this->opening?->obtainedImages ?? [], 'image'), null, 'id') : null,
+            // Les images deja obtenues pour l'article (24/11/2026), dans l'ordre, sans leur apercu deja remis ci-dessus.
+            'initialObtainedImages' => $this->firstRender
+                ? array_map(static fn (array $obtained): array => ['id' => $obtained['image']['id'], 'origin' => $obtained['origin'], 'date' => $obtained['date']], $this->opening?->obtainedImages ?? [])
+                : null,
             'related' => $related,
             'relatedCandidates' => $relatedCandidates,
             'relatedLimit' => SaveBlogPostAction::MAX_RELATED_POSTS,
@@ -818,6 +846,7 @@ class PostForm extends Component
                 static fn (array $source): BlogSourceData => new BlogSourceData((string) ($source['label'] ?? ''), (string) ($source['url'] ?? '')),
                 array_values($this->sources),
             ),
+            requestIds: $this->postId === null ? $this->requestsBeforeFirstSave : [],
         );
     }
 

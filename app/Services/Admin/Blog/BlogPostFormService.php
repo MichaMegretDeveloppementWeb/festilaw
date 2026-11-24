@@ -30,7 +30,9 @@ use App\Services\Web\Localization\LocalizedUrlGenerator;
  *   - articles a proposer comme articles lies : 1, seulement pendant que la liste est ouverte ;
  *   - traduction assistee encore en cours pour l'article : 1, lue par le composant PostTranslation a chaque
  *     montage (controle du 20/11) ;
- *   - points d'attention d'un brouillon genere : 1, a l'ouverture seulement (decision du 23/11).
+ *   - points d'attention d'un brouillon genere : 1, a l'ouverture seulement (decision du 23/11) ;
+ *   - images deja obtenues pour l'article : 1, a l'ouverture seulement (Micha, 24/11/2026) ; le navigateur tient
+ *     ensuite la liste a jour.
  */
 final readonly class BlogPostFormService
 {
@@ -102,6 +104,7 @@ final readonly class BlogPostFormService
             contents: $contents,
             // Le lien de l'e-mail mene droit ici : les doutes de la verification y sont montres aussi.
             attentionPoints: $post->origin === BlogPostOrigin::Ai && $post->generation_id !== null ? $this->attention->of($post->generation_id) : [],
+            obtainedImages: $this->obtainedImages($post->id),
         );
     }
 
@@ -151,7 +154,7 @@ final readonly class BlogPostFormService
 
     /**
      * L'image trouvee ou creee depuis l'article (24/11/2026), telle que le formulaire la garde, si elle est encore
-     * libre ou deja a cet article.
+     * libre ou deja a cet article, et qu'elle n'a pas ete obtenue pour un autre article (« Images déjà obtenues »).
      *
      * @return array{id: int, url: ?string, alt: array<string, string>, source: ?string, crop: ?array<string, int>}
      *
@@ -160,12 +163,28 @@ final readonly class BlogPostFormService
     public function usableImageSummary(int $imageId, ?int $postId): array
     {
         $image = $this->posts->findImage($imageId) ?? throw BlogImageException::notFound($imageId);
+        $obtainedFor = $image->getAttribute('obtained_for_post_id');
 
-        if ($image->blog_post_id !== null && $image->blog_post_id !== $postId) {
+        if (($image->blog_post_id !== null && $image->blog_post_id !== $postId)
+            || ($obtainedFor !== null && (int) $obtainedFor !== $postId)) {
             throw BlogImageException::notUsableByPost($imageId);
         }
 
         return $this->imageSummary($image);
+    }
+
+    /**
+     * Les images deja obtenues pour l'article, la plus recente d'abord : leur apercu, leur origine et leur date.
+     *
+     * @return list<array{image: array{id: int, url: ?string, alt: array<string, string>, source: ?string, crop: ?array<string, int>}, origin: string, date: string}>
+     */
+    private function obtainedImages(int $postId): array
+    {
+        return $this->posts->listObtainedImages($postId)->map(fn (BlogImage $image): array => [
+            'image' => $this->imageSummary($image),
+            'origin' => $image->credit_source->label(),
+            'date' => $image->created_at?->format('d/m/Y') ?? '',
+        ])->values()->all();
     }
 
     /**

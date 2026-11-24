@@ -58,6 +58,9 @@
     <div hidden data-blog-contents wire:ignore>{{ $initialContents === null ? 'null' : json_encode($initialContents, JSON_THROW_ON_ERROR) }}</div>
     {{-- Images de l'article (apercu et descriptions), remises une seule fois elles aussi. --}}
     <div hidden data-blog-images wire:ignore>{{ $initialImages === null ? 'null' : json_encode((object) $initialImages, JSON_THROW_ON_ERROR) }}</div>
+    {{-- Images deja obtenues pour l'article (origine et date), remises une seule fois : le navigateur y ajoute
+         celles qui arrivent pendant la seance. --}}
+    <div hidden data-blog-obtained-images wire:ignore>{{ $initialObtainedImages === null ? 'null' : json_encode($initialObtainedImages, JSON_THROW_ON_ERROR) }}</div>
     {{-- Un seul choix de fichier pour les trois usages (image principale, de partage, du texte). --}}
     <input type="file" x-ref="imagePicker" wire:ignore data-no-dirty class="sr-only" tabindex="-1" aria-hidden="true"
         accept="image/jpeg,image/png,image/webp" x-on:change="uploadImage($event)">

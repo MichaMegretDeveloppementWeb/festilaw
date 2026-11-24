@@ -12,13 +12,17 @@ use App\Enums\Blog\BlogImageCreditSource;
 use App\Enums\Blog\Generation\BlogAiImageMode;
 use App\Enums\Blog\Generation\BlogGenerationType;
 use App\Exceptions\Blog\BlogEditorialException;
+use App\Exceptions\Blog\BlogImageException;
 use App\Livewire\Admin\Blog\PostFeaturedImage;
 use App\Livewire\Admin\Blog\PostForm;
 use App\Mail\BlogGenerationBatchFinished;
 use App\Models\BlogGeneration;
 use App\Models\BlogImage;
+use App\Models\BlogPost;
 use App\Models\User;
 use App\Services\Admin\Blog\BlogFeaturedImageResultService;
+use App\Services\Admin\Blog\BlogPostFormService;
+use App\Services\Blog\Post\BlogPostImageSynchronizer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -138,7 +142,10 @@ it('finds another stock photo than the current one, credited and described, free
         ->and($image->credit_source)->toBe(BlogImageCreditSource::Stock)
         ->and($image->credit_author)->toBe('Anna')
         ->and($image->alt)->toBe(['en' => 'A wooden toy car on a table', 'fr' => 'Une petite voiture en bois sur une table', 'es' => 'Un coche de madera sobre una mesa'])
-        ->and($post->refresh()->featured_image_id)->toBe($current->id);
+        ->and($post->refresh()->featured_image_id)->toBe($current->id)
+        // La demande mene a son article, et l'image a sa demande : elle reste a l'article (24/11).
+        ->and(BlogGeneration::query()->findOrFail($id)->source_blog_post_id)->toBe($post->id)
+        ->and($image->generation_id)->toBe($id);
     // La photo actuelle n'est pas reprise, et la description demande une autre image.
     Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), 'tools-1'));
     ImageBriefAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Current main image') && $prompt->contains('Tools on a workbench'));
@@ -237,4 +244,117 @@ it('uses a found image as the main image of the form, attached when the article 
     $form->call('save', BlogContent::contentsOf($post));
     expect($free->refresh()->blog_post_id)->toBe($post->id)
         ->and($post->refresh()->featured_image_id)->toBe($free->id);
+});
+
+/*
+ | Retour de Micha du 24/11 : une image demandee puis laissee pendant une absence etait payee pour rien. La demande
+ | se remet au retour, et toute image obtenue pour un article lui reste, meme remplacee.
+ */
+
+/** Une image principale obtenue par une demande faite depuis `$post`, detachee (remplacee ou jamais posee). */
+function obtainedImageFor(BlogPost $post, BlogImageCreditSource $source = BlogImageCreditSource::Stock): BlogImage
+{
+    $request = BlogGeneration::factory()->completed()->create(['type' => BlogGenerationType::Image, 'source_blog_post_id' => $post->id]);
+
+    return BlogImage::factory()->create(['blog_post_id' => null, 'generation_id' => $request->id, 'credit_source' => $source]);
+}
+
+it('hands an image found while the editor was away over on return, once', function () {
+    actingAs(User::factory()->create());
+    $post = BlogContent::draft('label');
+    fakeImageBrief();
+    fakeStockBank();
+    $id = requestFeaturedImage('stock', postId: $post->id);
+    app(ProcessNextBlogGenerationAction::class)->execute('worker-test');
+    $imageId = app(BlogFeaturedImageResultService::class)->find($id)->imageId;
+
+    Livewire::test(PostFeaturedImage::class, ['postId' => $post->id])
+        ->assertDispatched('featured-image-ready', fn (string $event, array $params): bool => $params['imageId'] === $imageId && $params['origin'] === 'Banque d\'images');
+
+    expect(BlogGeneration::query()->findOrFail($id)->delivered_at)->not->toBeNull();
+    Livewire::test(PostFeaturedImage::class, ['postId' => $post->id])->assertNotDispatched('featured-image-ready');
+});
+
+it('says on return, once, that the bank had no photo that fits', function () {
+    actingAs(User::factory()->create());
+    $post = BlogContent::draft('label');
+    fakeImageBrief();
+    fakeStockBank(checkAccepts: false);
+    requestFeaturedImage('stock', postId: $post->id);
+    app(ProcessNextBlogGenerationAction::class)->execute('worker-test');
+
+    Livewire::test(PostFeaturedImage::class, ['postId' => $post->id])
+        ->assertDispatched('featured-image-failed')
+        ->assertDispatched('ui-toast', fn (string $event, array $params): bool => $params['type'] === 'warning');
+
+    Livewire::test(PostFeaturedImage::class, ['postId' => $post->id])->assertNotDispatched('ui-toast');
+});
+
+it('lists the images obtained for an article, newest first, even replaced, and never those of another article', function () {
+    $post = BlogContent::draft('label');
+    $byItsGeneration = BlogImage::factory()->create([
+        'blog_post_id' => null,
+        'credit_source' => BlogImageCreditSource::Stock,
+        'generation_id' => BlogGeneration::factory()->completed()->create(['blog_post_id' => $post->id])->id,
+    ]);
+    $requested = obtainedImageFor($post, BlogImageCreditSource::Ai);
+    obtainedImageFor(BlogContent::draft('other'));
+
+    $obtained = app(BlogPostFormService::class)->open($post->id)->obtainedImages;
+
+    expect(array_column(array_column($obtained, 'image'), 'id'))->toBe([$requested->id, $byItsGeneration->id])
+        ->and(array_column($obtained, 'origin'))->toBe(['Générée par IA', 'Banque d\'images']);
+});
+
+it('puts an obtained image back on its article, and refuses one obtained for another article, in the form and at save', function () {
+    actingAs(User::factory()->create());
+    $post = BlogContent::draft('label');
+    $mine = obtainedImageFor($post);
+    $other = BlogContent::draft('other');
+    $foreign = obtainedImageFor($other);
+
+    $form = Livewire::test(PostForm::class, ['post' => $post->id])
+        ->call('useFoundImage', $foreign->id)
+        ->assertSet('featuredImageId', $post->featured_image_id)
+        ->assertDispatched('ui-toast', fn (string $event, array $params): bool => $params['type'] === 'error');
+
+    $form->call('useFoundImage', $mine->id)->assertSet('featuredImageId', $mine->id);
+    $form->call('save', BlogContent::contentsOf($post));
+
+    expect($mine->refresh()->blog_post_id)->toBe($post->id)
+        ->and(fn () => app(BlogPostImageSynchronizer::class)->sync($other, [$mine->id]))->toThrow(BlogImageException::class);
+});
+
+it('links the requests made from a new article to it when it is first saved', function () {
+    actingAs(User::factory()->create());
+
+    // Le composant d'un article neuf signale sa demande au formulaire, qui la retient jusqu'a l'enregistrement.
+    $request = Livewire::test(PostFeaturedImage::class)
+        ->dispatch('request-featured-image', mode: 'stock', titles: ['fr' => 'Étiquettes'], excerpts: [])
+        ->assertDispatched('blog-request-queued');
+    $generationId = (int) $request->get('generationId');
+
+    Livewire::test(PostForm::class)
+        ->call('rememberRequest', $generationId)
+        ->set('texts.fr.title', 'Étiquettes des jouets')
+        ->call('save', ['en' => null, 'fr' => BlogContent::document('Bonjour.'), 'es' => null])
+        ->assertHasNoErrors();
+
+    expect(BlogGeneration::query()->findOrFail($generationId)->source_blog_post_id)->toBe(BlogPost::query()->sole()->id);
+});
+
+it('never takes back a photo already obtained for the article in a new search', function () {
+    // Vu le 24/11 : deux recherches avaient retenu la meme photo, montree deux fois dans « Images déjà obtenues ».
+    $post = BlogContent::draft('label');
+    $obtained = obtainedImageFor($post);
+    $obtained->update(['credit_url' => 'https://pixabay.com/photos/toy-2/']);
+    fakeImageBrief();
+    fakeStockBank();
+
+    $id = requestFeaturedImage('stock', postId: $post->id);
+    app(ProcessNextBlogGenerationAction::class)->execute('worker-test');
+
+    $image = BlogImage::query()->findOrFail(app(BlogFeaturedImageResultService::class)->find($id)->imageId);
+    expect($image->credit_url)->toBe('https://pixabay.com/photos/tools-1/');
+    Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), 'toy-2'));
 });

@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Livewire\Admin\Blog;
 
+use App\Actions\Blog\Generation\MarkBlogRequestDeliveredAction;
 use App\Actions\Blog\Generation\RequestBlogFeaturedImageAction;
 use App\Data\Blog\Generation\BlogFeaturedImageResult;
 use App\Data\Blog\Generation\RequestBlogFeaturedImageData;
+use App\Enums\Blog\BlogImageCreditSource;
 use App\Enums\Blog\Generation\BlogAiImageMode;
 use App\Exceptions\BaseAppException;
 use App\Livewire\Concerns\HandlesAdminErrors;
@@ -45,27 +47,39 @@ class PostFeaturedImage extends Component
     /** Au-dela, le formulaire cesse d'attendre : la demande continue, la page rechargee la retrouvera. */
     private const MAX_WAIT_SECONDS = 1200;
 
-    /** Une demande faite avant un rechargement de la page est retrouvee et attendue de nouveau. */
-    public function mount(BlogFeaturedImageResultService $results): void
+    /**
+     * Au retour sur l'article, la derniere demande que le formulaire n'a pas recue : encore en cours, elle est
+     * attendue de nouveau ; finie pendant l'absence, elle est remise tout de suite, une seule fois (Micha, 24/11/2026).
+     */
+    public function mount(BlogFeaturedImageResultService $results, MarkBlogRequestDeliveredAction $delivered): void
     {
         if ($this->postId === null) {
             return;
         }
 
         try {
-            $pending = $results->pendingForPost($this->postId);
+            $waiting = $results->undeliveredForPost($this->postId);
         } catch (Throwable $e) {
             $this->reportAdminError($e, 'blog featured image resume');
 
             return;
         }
 
-        if ($pending !== null) {
-            $this->generationId = $pending['generation_id'];
-            $this->mode = $pending['mode'];
-            $this->waitingSince = now()->getTimestamp();
-            $this->dispatch('featured-image-pending', mode: $this->mode);
+        if ($waiting === null) {
+            return;
         }
+
+        $this->generationId = $waiting['generation_id'];
+        $this->mode = $waiting['mode'];
+        $this->waitingSince = now()->getTimestamp();
+
+        if ($waiting['finished']) {
+            $this->check($results, $delivered);
+
+            return;
+        }
+
+        $this->dispatch('featured-image-pending', mode: $this->mode);
     }
 
     /**
@@ -93,6 +107,11 @@ class PostFeaturedImage extends Component
             ));
             $this->mode = $imageMode->value;
             $this->waitingSince = now()->getTimestamp();
+
+            // Un article neuf n'a pas encore d'identifiant : son premier enregistrement se rattachera la demande.
+            if ($this->postId === null) {
+                $this->dispatch('blog-request-queued', generationId: $this->generationId)->to(PostForm::class);
+            }
         } catch (BaseAppException $e) {
             Log::log($e->logLevel(), $e->getMessage(), ['exception' => $e]);
             $this->dispatch('ui-toast', title: $e->getUserMessage(), type: 'error');
@@ -103,8 +122,8 @@ class PostFeaturedImage extends Component
         }
     }
 
-    /** Releve regulier tant qu'une image est attendue, 20 minutes au plus. */
-    public function check(BlogFeaturedImageResultService $results): void
+    /** Releve regulier tant qu'une image est attendue, 20 minutes au plus. Un resultat rendu est marque recu. */
+    public function check(BlogFeaturedImageResultService $results, MarkBlogRequestDeliveredAction $delivered): void
     {
         if ($this->generationId === null) {
             return;
@@ -132,10 +151,13 @@ class PostFeaturedImage extends Component
             return;
         }
 
+        $this->markDelivered($delivered, (int) $this->generationId);
         $this->reset('generationId', 'mode', 'waitingSince');
 
         if ($result->isReady()) {
-            $this->dispatch('featured-image-ready', imageId: $result->imageId);
+            // L'origine et la date, pour ranger l'image dans « Images déjà obtenues » sans relire la base.
+            $origin = ($result->mode === BlogAiImageMode::Generated->value ? BlogImageCreditSource::Ai : BlogImageCreditSource::Stock)->label();
+            $this->dispatch('featured-image-ready', imageId: $result->imageId, origin: $origin, date: now()->format('d/m/Y'));
 
             return;
         }
@@ -152,5 +174,17 @@ class PostFeaturedImage extends Component
     public function render(): View
     {
         return view('livewire.admin.blog.post-featured-image');
+    }
+
+    /**
+     * Une panne en marquant la demande recue n'empeche pas de la rendre : elle serait au pire remise une seconde fois.
+     */
+    private function markDelivered(MarkBlogRequestDeliveredAction $delivered, int $generationId): void
+    {
+        try {
+            $delivered->execute($generationId);
+        } catch (Throwable $e) {
+            Log::error('Blog featured image request could not be marked delivered.', ['generation_id' => $generationId, 'exception' => $e]);
+        }
     }
 }

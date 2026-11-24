@@ -75,7 +75,7 @@ const blogPostForm = (config) => ({
     translation: { from: null, to: null, field: null, pending: null },
     // Image principale demandee depuis l'article (24/11/2026) : `pending`, la source en cours (« stock » ou
     // « generated »), ou null ; `candidate`, l'image trouvee montree avant de remplacer l'actuelle.
-    imageSearch: { pending: null, candidate: null },
+    imageSearch: { pending: null, candidate: null, obtained: [], picked: null },
     wide: window.matchMedia(WIDE).matches,
 
     ...slugField,
@@ -83,6 +83,7 @@ const blogPostForm = (config) => ({
     init() {
         this.contents = this.readContents();
         this.images = this.readJson('[data-blog-images]') ?? {};
+        this.imageSearch.obtained = this.readJson('[data-blog-obtained-images]') ?? [];
 
         this.$nextTick(() => this.mountEditor(this.tab));
         this.$watch('tab', (locale) => this.$nextTick(() => this.mountEditor(locale)));
@@ -710,7 +711,6 @@ const blogPostForm = (config) => ({
             from,
             to,
             field,
-            frenchTitle: this.text('fr', 'title'),
             source: {
                 title: this.text(from, 'title'),
                 excerpt: this.text(from, 'excerpt'),
@@ -759,7 +759,8 @@ const blogPostForm = (config) => ({
         }
 
         const locales = ['en', 'fr', 'es'];
-        this.imageSearch = { pending: mode, candidate: null };
+        this.imageSearch.pending = mode;
+        this.imageSearch.candidate = null;
 
         Livewire.dispatch('request-featured-image', {
             mode,
@@ -769,29 +770,57 @@ const blogPostForm = (config) => ({
         });
     },
 
-    // L'image est prete. Sans image actuelle, elle prend sa place ; sinon elle se montre d'abord, et l'actuelle
-    // reste tant qu'on ne choisit pas la nouvelle. Rien n'est enregistre avant l'article.
-    async imageFound({ imageId }) {
+    // L'image est prete, pendant la seance ou au retour sur l'article. Sans image actuelle, elle prend sa place ;
+    // sinon elle se montre d'abord, et l'actuelle reste tant qu'on ne choisit pas la nouvelle. Elle rejoint dans
+    // tous les cas « Images déjà obtenues ». Rien n'est enregistre avant l'article.
+    async imageFound({ imageId, origin, date }) {
         this.imageSearch.pending = null;
         const hasCurrent = this.$wire.featuredImageId !== null && this.images[this.$wire.featuredImageId] !== undefined;
+        const image = hasCurrent ? await this.$wire.foundImage(imageId) : await this.$wire.useFoundImage(imageId);
+
+        if (! image) {
+            return;
+        }
+
+        this.images[image.id] = image;
+        this.rememberObtained(image.id, origin, date);
 
         if (! hasCurrent) {
-            const image = await this.$wire.useFoundImage(imageId);
-
-            if (image) {
-                this.images[image.id] = image;
-                this.dirty = true;
-            }
+            this.dirty = true;
 
             return;
         }
 
-        const image = await this.$wire.foundImage(imageId);
+        this.imageSearch.candidate = image;
+        this.$dispatch('ui-open-modal', 'use-found-image');
+    },
+
+    rememberObtained(imageId, origin, date) {
+        if (! this.imageSearch.obtained.some((obtained) => obtained.id === imageId)) {
+            this.imageSearch.obtained.unshift({ id: imageId, origin, date });
+        }
+    },
+
+    // « Images déjà obtenues » : l'image en place est choisie d'avance, s'il s'agit de l'une d'elles.
+    openObtainedImages() {
+        const current = this.$wire.featuredImageId;
+        this.imageSearch.picked = this.imageSearch.obtained.some((obtained) => obtained.id === current) ? current : null;
+        this.$dispatch('ui-open-modal', 'obtained-images');
+    },
+
+    async useObtainedImage() {
+        const picked = this.imageSearch.picked;
+        this.$dispatch('ui-close-modal', 'obtained-images');
+
+        if (picked === null || picked === this.$wire.featuredImageId) {
+            return;
+        }
+
+        const image = await this.$wire.useFoundImage(picked);
 
         if (image) {
             this.images[image.id] = image;
-            this.imageSearch.candidate = image;
-            this.$dispatch('ui-open-modal', 'use-found-image');
+            this.dirty = true;
         }
     },
 

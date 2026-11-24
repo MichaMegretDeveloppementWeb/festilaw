@@ -11,6 +11,7 @@ use App\Exceptions\Blog\BlogEditorialException;
 use App\Livewire\Admin\Blog\PostTranslation;
 use App\Mail\BlogGenerationBatchFinished;
 use App\Models\BlogGeneration;
+use App\Models\BlogPost;
 use App\Models\User;
 use App\Services\Admin\Blog\BlogTranslationResultService;
 use App\Services\Blog\Content\BlogContentNormalizer;
@@ -113,7 +114,7 @@ it('queues the translation of the text in the form as a generation, without savi
     $generation = BlogGeneration::query()->findOrFail($id);
     expect($generation->type)->toBe(BlogGenerationType::Translation)
         ->and($generation->status)->toBe(BlogGenerationStatus::Queued)
-        ->and($generation->topic_hint)->toBe('Traduction en anglais de « Ajouter un opérateur économique »')
+        ->and($generation->topic_hint)->toBe('Traduction en anglais de « Ajouter un opérateur économique », depuis le français')
         ->and($generation->payload['translation']['from'])->toBe('fr')
         ->and($generation->payload['translation']['article']['body'])->toContain('[[image:1]]')
         ->and($generation->payload['translation']['images'][1])->toBe(['imageId' => 41, 'width' => 'medium', 'side' => 'left']);
@@ -129,16 +130,21 @@ it('refuses a translation into the same language, from an unknown language, or o
     'nothing to translate' => ['fr', 'en', ' '],
 ]);
 
-it('names a translation after the French title of the form, as the articles are named in the history', function (string $frenchTitle, string $named) {
-    // Retour de Micha du 24/11 : on cherche une generation sous le titre francais de son article.
+it('names a translation after the title it translates and the language it starts from, linked to its article', function (string $from, string $to, string $title, ?string $field, string $named) {
+    // Retour de Micha du 24/11 : le titre de la langue de depart, et cette langue dite, sont ce qui compte ici.
+    $post = BlogPost::factory()->create();
+
     $id = app(RequestBlogTranslationAction::class)->execute(new RequestBlogTranslationData(
-        'en', 'es', 'Etsy labels', '', '', '', null, frenchTitle: $frenchTitle,
+        $from, $to, $title, 'Un extrait.', '', '', null, postId: $post->id, field: $field,
     ));
 
-    expect(BlogGeneration::query()->findOrFail($id)->topic_hint)->toBe("Traduction en espagnol de « {$named} »");
+    $generation = BlogGeneration::query()->findOrFail($id);
+    expect($generation->topic_hint)->toBe($named)
+        ->and($generation->source_blog_post_id)->toBe($post->id)
+        ->and($generation->blog_post_id)->toBeNull();
 })->with([
-    'French title written' => ['Étiquettes sur Etsy', 'Étiquettes sur Etsy'],
-    'no French title yet' => [' ', 'Etsy labels'],
+    'the whole language from English' => ['en', 'es', 'Etsy labels', null, 'Traduction en espagnol de « Etsy labels », depuis l\'anglais'],
+    'one field from French' => ['fr', 'en', 'Étiquettes Etsy', 'title', 'Traduction en anglais du champ « titre » de « Étiquettes Etsy », depuis le français'],
 ]);
 
 it('still queues a translation above the spend cap of the month, which only warns', function () {
@@ -210,7 +216,7 @@ it('translates one field alone, sending only that field, and hands it back for t
     expect($generation->payload['translation']['field'])->toBe('excerpt')
         ->and($generation->payload['translation']['article'])->toBe(['title' => '', 'excerpt' => 'Short.', 'meta_title' => '', 'meta_description' => '', 'body' => ''])
         ->and($generation->payload['translation']['images'])->toBe([])
-        ->and($generation->topic_hint)->toBe('Traduction en français du champ « extrait » de « Etsy labels »');
+        ->and($generation->topic_hint)->toBe('Traduction en français du champ « extrait » de « Etsy labels », depuis l\'anglais');
 
     app(ProcessNextBlogGenerationAction::class)->execute('worker-test');
 
@@ -218,6 +224,20 @@ it('translates one field alone, sending only that field, and hands it back for t
         ->assertDispatched('post-translation-ready', fn (string $event, array $params): bool => $params['field'] === 'excerpt'
             && $params['locale'] === 'fr'
             && $params['texts']['excerpt'] !== '');
+});
+
+it('hands a translation finished while the editor was away over on return, once', function () {
+    // Retour de Micha du 24/11 : partir puis revenir ne doit pas perdre une traduction payee.
+    actingAs(User::factory()->create());
+    $post = BlogPost::factory()->create();
+    Livewire::test(PostTranslation::class, ['postId' => $post->id])
+        ->dispatch('request-post-translation', from: 'en', to: 'fr', field: 'excerpt', source: ['title' => 'Etsy labels', 'excerpt' => 'Short.', 'metaTitle' => '', 'metaDescription' => '', 'content' => null]);
+    app(ProcessNextBlogGenerationAction::class)->execute('worker-test');
+
+    Livewire::test(PostTranslation::class, ['postId' => $post->id])
+        ->assertDispatched('post-translation-ready', fn (string $event, array $params): bool => $params['locale'] === 'fr' && $params['field'] === 'excerpt');
+
+    Livewire::test(PostTranslation::class, ['postId' => $post->id])->assertNotDispatched('post-translation-ready');
 });
 
 it('refuses to translate an empty field, or a field it does not know', function (string $field, string $metaTitle) {

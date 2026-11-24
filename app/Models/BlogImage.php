@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Enums\Blog\BlogImageCreditSource;
 use Database\Factories\BlogImageFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,6 +24,7 @@ class BlogImage extends Model
     protected $fillable = [
         'uuid',
         'blog_post_id',
+        'generation_id',
         'basename',
         'variants',
         'width',
@@ -56,6 +58,22 @@ class BlogImage extends Model
     public function post(): BelongsTo
     {
         return $this->belongsTo(BlogPost::class, 'blog_post_id');
+    }
+
+    /**
+     * Ajoute `obtained_for_post_id` : l'article pour lequel la generation de l'image l'a obtenue, celui depuis lequel
+     * elle a ete demandee, a defaut celui qu'elle a produit (Micha, 24/11/2026). Une telle image ne sert qu'a cet
+     * article, meme detachee. Nul pour une image deposee, une image du texte, ou une demande faite depuis un article
+     * pas encore enregistre. Sous-requete, lue avec l'image.
+     *
+     * @param  Builder<BlogImage>  $query
+     */
+    public function scopeWithObtainedForPost(Builder $query): void
+    {
+        $query->addSelect(['obtained_for_post_id' => BlogGeneration::query()
+            ->selectRaw('COALESCE(source_blog_post_id, blog_post_id)')
+            ->whereColumn('blog_generations.id', 'blog_images.generation_id')
+            ->limit(1)]);
     }
 
     /**

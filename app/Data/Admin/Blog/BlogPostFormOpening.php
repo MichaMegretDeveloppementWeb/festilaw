@@ -15,11 +15,15 @@ final readonly class BlogPostFormOpening
      * @param  list<array{where: string|null, statement: string, check: string}>  $attentionPoints  les doutes de la
      *                                                                                              verification d'un
      *                                                                                              brouillon genere
+     * @param  list<array{image: array<string, mixed>, origin: string, date: string}>  $obtainedImages  les images deja
+     *                                                                                                  obtenues pour
+     *                                                                                                  l'article
      */
     public function __construct(
         public BlogPostFormState $state,
         public BlogPostFormView $view,
         public array $contents,
         public array $attentionPoints = [],
+        public array $obtainedImages = [],
     ) {}
 }

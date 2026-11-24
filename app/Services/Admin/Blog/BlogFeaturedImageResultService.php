@@ -18,16 +18,21 @@ final readonly class BlogFeaturedImageResultService
     public function __construct(private BlogImageRequestRepository $requests) {}
 
     /**
-     * La demande encore en cours pour un article, avec sa source (banque ou IA), ou nulle.
+     * La derniere demande d'un article que le formulaire n'a pas encore recue, avec sa source (banque ou IA) et si
+     * elle est finie, ou nulle.
      *
-     * @return array{generation_id: int, mode: string}|null
+     * @return array{generation_id: int, mode: string, finished: bool}|null
      */
-    public function pendingForPost(int $postId): ?array
+    public function undeliveredForPost(int $postId): ?array
     {
-        $row = $this->requests->activeForPost($postId);
+        $row = $this->requests->undeliveredForPost($postId);
         $payload = is_string($row?->payload) ? json_decode($row->payload, true) : null;
 
-        return $row === null ? null : ['generation_id' => (int) $row->id, 'mode' => (string) ($payload['images']['mode'] ?? 'stock')];
+        return $row === null ? null : [
+            'generation_id' => (int) $row->id,
+            'mode' => (string) ($payload['images']['mode'] ?? 'stock'),
+            'finished' => BlogGenerationStatus::tryFrom((string) $row->status)?->isTerminal() ?? true,
+        ];
     }
 
     public function find(int $generationId): BlogFeaturedImageResult

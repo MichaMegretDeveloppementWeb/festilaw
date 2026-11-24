@@ -15,7 +15,10 @@ use Carbon\CarbonImmutable;
  */
 final readonly class BlogGenerationJournalRow
 {
-    /** @param  string|null  $outcome  pourquoi il n'y a pas d'article, avec l'etape en cause (nul sinon) */
+    /**
+     * @param  string|null  $outcome  pourquoi il n'y a pas d'article, avec l'etape en cause (nul sinon)
+     * @param  int|null  $sourcePostId  l'article depuis lequel une demande d'image ou de traduction a ete faite (24/11/2026)
+     */
     public function __construct(
         public int $id,
         public CarbonImmutable $createdAt,
@@ -27,6 +30,7 @@ final readonly class BlogGenerationJournalRow
         public ?int $postId,
         public string $cost,
         public ?string $duration,
+        public ?int $sourcePostId = null,
     ) {}
 
     public function isRetryable(): bool

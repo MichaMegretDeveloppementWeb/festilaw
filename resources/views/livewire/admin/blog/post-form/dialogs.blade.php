@@ -283,7 +283,7 @@
 </x-ui::modal>
 
 {{-- Image principale trouvee ou creee depuis l'article alors qu'il en a deja une (demande de Micha du 24/11/2026) :
-     la nouvelle se montre avant de remplacer l'actuelle. Une image ecartee part au menage de la nuit. --}}
+     la nouvelle se montre avant de remplacer l'actuelle. Une image ecartee reste dans « Images déjà obtenues ». --}}
 <x-ui::modal name="use-found-image" :title="__('Utiliser cette image ?')">
     <template x-if="imageSearch.candidate">
         <div>
@@ -296,6 +296,34 @@
     <x-slot:footer>
         <x-ui::button variant="ghost" x-on:click="keepCurrentImage()">{{ __("Garder l'actuelle") }}</x-ui::button>
         <x-ui::button x-on:click="useCandidateImage()" data-use-found-image>{{ __('Utiliser cette image') }}</x-ui::button>
+    </x-slot:footer>
+</x-ui::modal>
+
+{{-- Images deja obtenues pour l'article (Micha, 24/11/2026) : l'image principale de sa generation et celles
+     d'« Image automatique », meme remplacees, la plus recente d'abord. Un clic choisit une vignette, « Utiliser cette
+     image » la pose. Rien n'est enregistre avant l'article. --}}
+<x-ui::modal name="obtained-images" :title="__('Images déjà obtenues')">
+    <p class="text-[13px] text-muted">{{ __("Les images trouvées ou générées pour cet article. Rien n'est enregistré tant que vous n'enregistrez pas l'article.") }}</p>
+    <ul class="mt-4 grid grid-cols-2 gap-3" data-obtained-images>
+        <template x-for="obtained in imageSearch.obtained" x-bind:key="obtained.id">
+            <li>
+                <button type="button" x-on:click="imageSearch.picked = obtained.id" x-bind:aria-pressed="(imageSearch.picked === obtained.id).toString()"
+                    x-bind:data-obtained-image="obtained.id"
+                    class="block w-full rounded-lg p-1 text-left transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                    x-bind:class="imageSearch.picked === obtained.id ? 'ring-2 ring-gray-900 dark:ring-white' : 'hover:ring-1 hover:ring-gray-300 dark:hover:ring-gray-600'">
+                    <span class="relative block">
+                        <img x-bind:src="images[obtained.id]?.url" x-bind:alt="images[obtained.id]?.alt?.fr ?? ''" class="aspect-video w-full rounded-md bg-elevated object-cover">
+                        <span x-show="obtained.id === $wire.featuredImageId" class="absolute left-1.5 top-1.5"><x-ui::badge>{{ __('Actuelle') }}</x-ui::badge></span>
+                    </span>
+                    <span class="mt-1.5 block px-0.5 text-[12px] text-secondary" x-text="obtained.origin + ', ' + obtained.date"></span>
+                </button>
+            </li>
+        </template>
+    </ul>
+
+    <x-slot:footer>
+        <x-ui::button variant="ghost" x-on:click="$dispatch('ui-close-modal', 'obtained-images')">{{ __('Annuler') }}</x-ui::button>
+        <x-ui::button x-on:click="useObtainedImage()" x-bind:disabled="imageSearch.picked === null || imageSearch.picked === $wire.featuredImageId" data-use-obtained-image>{{ __('Utiliser cette image') }}</x-ui::button>
     </x-slot:footer>
 </x-ui::modal>
 

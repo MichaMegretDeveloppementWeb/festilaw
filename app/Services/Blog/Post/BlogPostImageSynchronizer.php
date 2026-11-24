@@ -34,12 +34,15 @@ final readonly class BlogPostImageSynchronizer
 
         $images = $imageIds === []
             ? new Collection
-            : BlogImage::query()->whereKey($imageIds)->lockForUpdate()->get();
+            : BlogImage::query()->select('blog_images.*')->withObtainedForPost()->whereKey($imageIds)->lockForUpdate()->get();
 
         foreach ($imageIds as $imageId) {
             $image = $images->firstWhere('id', $imageId);
+            $obtainedFor = $image?->getAttribute('obtained_for_post_id');
 
-            if ($image === null || ($image->blog_post_id !== null && $image->blog_post_id !== $post->id)) {
+            // Une image obtenue pour un autre article (« Images déjà obtenues », 24/11/2026) ne sert qu'a lui.
+            if ($image === null || ($image->blog_post_id !== null && $image->blog_post_id !== $post->id)
+                || ($obtainedFor !== null && (int) $obtainedFor !== $post->id)) {
                 throw BlogImageException::notUsableByPost($imageId);
             }
         }

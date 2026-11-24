@@ -72,6 +72,7 @@ final readonly class BlogGenerationJournalService
             postId: $generation->blog_post_id,
             cost: $this->costs->dollars($generation->cost_microusd),
             duration: $generation->finished_at === null ? null : $this->presenter->elapsed($generation->started_at, $generation->finished_at),
+            sourcePostId: $generation->source_blog_post_id,
         ));
     }
 }

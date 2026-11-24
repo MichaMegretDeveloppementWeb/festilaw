@@ -8,8 +8,7 @@ namespace App\Data\Blog\Generation;
  * Une demande de traduction assistee depuis le formulaire d'article : la langue de depart, la langue a
  * remplir, et le texte de depart tel qu'il est dans le formulaire (y compris s'il n'est pas encore
  * enregistre). $field : un seul champ a traduire (title, excerpt, metaTitle, metaDescription, content),
- * ou nul pour toute la langue (demande de Micha du 24/11/2026). $frenchTitle : le titre francais du formulaire,
- * qui nomme la demande dans l'historique comme les articles (Micha, 24/11/2026), vide s'il n'est pas ecrit.
+ * ou nul pour toute la langue (demande de Micha du 24/11/2026).
  */
 final readonly class RequestBlogTranslationData
 {
@@ -25,6 +24,5 @@ final readonly class RequestBlogTranslationData
         public ?int $postId = null,
         public ?int $requestedBy = null,
         public ?string $field = null,
-        public string $frenchTitle = '',
     ) {}
 }

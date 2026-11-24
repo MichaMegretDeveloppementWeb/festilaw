@@ -4,6 +4,8 @@ use App\Actions\Blog\Image\StoreBlogImageAction;
 use App\Data\Blog\StoreBlogImageData;
 use App\Enums\Blog\BlogImageUsage;
 use App\Enums\Blog\BlogPostStatus;
+use App\Enums\Blog\Generation\BlogGenerationType;
+use App\Models\BlogGeneration;
 use App\Models\BlogImage;
 use App\Models\BlogPost;
 use App\Models\BlogPostTranslation;
@@ -144,6 +146,22 @@ describe('festilaw:blog-purge-orphan-images', function () {
         expect(BlogImage::query()->orderBy('id')->pluck('id')->all())->toBe([$recentOrphan->id, $attached->id])
             ->and(Storage::disk('public')->directories('blog'))->toHaveCount(2)
             ->and(Storage::disk('public')->exists("blog/{$oldOrphan->uuid}"))->toBeFalse();
+    });
+
+    it('keeps an image obtained for an article that still exists, even replaced, and lets it go once the article is deleted', function () {
+        // Retour de Micha du 24/11 : une image payee puis remplacee se reprend dans « Images déjà obtenues ».
+        $post = BlogPost::factory()->create();
+        $request = BlogGeneration::factory()->completed()->create(['type' => BlogGenerationType::Image, 'source_blog_post_id' => $post->id]);
+        $obtained = agedBlogImage(hours: 30);
+        DB::table('blog_images')->where('id', $obtained->id)->update(['generation_id' => $request->id]);
+        agedBlogImage(hours: 30);
+
+        $this->artisan('festilaw:blog-purge-orphan-images')->assertSuccessful();
+        expect(BlogImage::query()->pluck('id')->all())->toBe([$obtained->id]);
+
+        $post->delete();
+        $this->artisan('festilaw:blog-purge-orphan-images')->assertSuccessful();
+        expect(BlogImage::query()->count())->toBe(0);
     });
 
     it('removes old folders that have no row, and leaves recent ones alone', function () {
