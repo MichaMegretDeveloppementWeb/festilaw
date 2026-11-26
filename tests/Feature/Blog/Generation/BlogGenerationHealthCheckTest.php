@@ -6,11 +6,13 @@ use App\Data\Blog\Generation\Health\BlogGenerationHealth;
 use App\Enums\Blog\Generation\OpenRouterKeyCheck;
 use App\Livewire\Admin\Blog\GenerationDashboard;
 use App\Models\BlogGeneration;
+use App\Models\BlogPost;
 use App\Models\Setting;
 use App\Repositories\Blog\BlogGenerationHealthRepository;
 use App\Repositories\Blog\OpenRouterKeyRepository;
 use App\Services\Blog\Generation\BlogAiCostEstimator;
 use App\Services\Blog\Generation\BlogAiModelCatalog;
+use App\Services\Blog\Generation\BlogGenerationPlannerHeartbeat;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -262,6 +264,43 @@ it('does not take a generation that works for a stuck queue', function () {
     BlogGeneration::factory()->create(['updated_at' => now()->subHours(3)]);
     BlogGeneration::factory()->running()->create(['updated_at' => now()->subMinutes(10)]);
 
+    expect(healthProblems())->toBe([]);
+});
+
+it('reports an automatic generation planner that stopped running, and a batch that did not leave', function () {
+    // Constat du 26/11 : la planification n'avait jamais tourne en production, sans que rien le signale. Lundi
+    // 23/11/2026 a 9 h UTC ; le lot du lundi 7 h (heure de Paris, 6 h UTC) n'est pas parti.
+    config()->set('blog.ai.pipeline', 'simulated');
+    $this->travelTo('2026-11-23 09:00:00');
+    BlogAi::saveSettings(['enabled' => true, 'weekday' => 1, 'hour' => 7]);
+    BlogAi::startCalendarAt('2026-11-16 00:00:00');
+    app(BlogGenerationPlannerHeartbeat::class)->record(CarbonImmutable::parse('2026-11-23 06:30:00'));
+
+    expect(healthProblems())->toBe([
+        'The automatic generation planner (festilaw:blog-generation-schedule, every hour) has not run since 2026-11-23 06:30:00 UTC (more than 120 minutes).',
+        'The automatic generation batch due at 2026-11-23 06:00:00 UTC has not been queued (more than 120 minutes late).',
+    ]);
+});
+
+it('reports nothing about the automatic generation while it runs on time, is held by the pending drafts, or is off', function () {
+    config()->set('blog.ai.pipeline', 'simulated');
+    $this->travelTo('2026-11-23 09:00:00');
+    BlogAi::saveSettings(['enabled' => true, 'weekday' => 1, 'hour' => 7, 'pending_drafts_cap' => 1]);
+    BlogAi::startCalendarAt('2026-11-16 00:00:00');
+    app(BlogGenerationPlannerHeartbeat::class)->record(CarbonImmutable::parse('2026-11-23 09:00:00'));
+
+    // Le lot est parti a l'heure.
+    $launched = BlogGeneration::factory()->scheduled()->completed()->create(['created_at' => '2026-11-23 06:00:08']);
+    expect(healthProblems())->toBe([]);
+
+    // Le lot est retenu par la pause des brouillons : ce n'est pas un retard.
+    $launched->delete();
+    BlogPost::factory()->fromAi()->create();
+    expect(healthProblems())->toBe([]);
+
+    // Generation automatique eteinte : la planification peut se taire.
+    BlogAi::saveSettings(['enabled' => false]);
+    app(BlogGenerationPlannerHeartbeat::class)->record(CarbonImmutable::parse('2026-11-20 00:00:00'));
     expect(healthProblems())->toBe([]);
 });
 

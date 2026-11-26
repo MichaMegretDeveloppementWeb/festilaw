@@ -12,6 +12,9 @@ use App\Exceptions\Blog\BlogHealthCheckException;
 use App\Repositories\Blog\BlogGenerationProgressRepository;
 use App\Services\Blog\Generation\BlogAiModelCatalog;
 use App\Services\Blog\Generation\BlogAiSettingsService;
+use App\Services\Blog\Generation\BlogGenerationBudget;
+use App\Services\Blog\Generation\BlogGenerationCalendar;
+use App\Services\Blog\Generation\BlogGenerationPlannerHeartbeat;
 use App\Services\Blog\Generation\Editorial\Images\PixabayStockImageProvider;
 use Carbon\CarbonImmutable;
 use Throwable;
@@ -22,6 +25,9 @@ use Throwable;
  *
  * - La reference des regles europeennes a-t-elle passe sa date de relecture ?
  * - La file des generations a-t-elle cesse d'avancer ?
+ * - Generation automatique activee : la planification des lots tourne-t-elle encore chaque heure, et un lot du
+ *   depuis plus de deux heures est-il parti (constat du 26/11 : la planification n'avait jamais tourne en
+ *   production, sans que rien le signale) ? Un lot retenu par la pause des brouillons n'est pas en retard.
  * - Chez OpenRouter : la cle des reglages est-elle acceptee, expire-t-elle bientot (14 jours), sa limite
  *   approche-t-elle, chaque modele choisi est-il encore
  *   propose, par un fournisseur qui accepte la sortie structuree et la reflexion, et le modele du sujet lit-il
@@ -44,7 +50,7 @@ final readonly class BlogGenerationHealthCheck
      * @param  array<string, array{input: int|float, output: int|float}>  $textCatalog  blog.ai.models
      * @param  array<string, mixed>  $imageCatalog  blog.ai.image_models
      * @param  ?string  $openRouterKey  la cle enregistree dans les reglages, nulle s'il n'y en a pas
-     * @param  array{key_remaining_percent: int, key_expiry_warning_days: int, expiry_warning_days: int, stalled_after_minutes: int}  $thresholds  blog.ai.health
+     * @param  array{key_remaining_percent: int, key_expiry_warning_days: int, expiry_warning_days: int, stalled_after_minutes: int, planner_late_after_minutes: int}  $thresholds  blog.ai.health
      * @param  array{checked_on: string, review_by: string}  $rulesReference  blog.ai.rules_reference
      */
     public function __construct(
@@ -52,6 +58,9 @@ final readonly class BlogGenerationHealthCheck
         private PixabayStockImageProvider $pixabay,
         private BlogGenerationProgressRepository $progress,
         private BlogAiSettingsService $settings,
+        private BlogGenerationCalendar $calendar,
+        private BlogGenerationPlannerHeartbeat $plannerHeartbeat,
+        private BlogGenerationBudget $budget,
         private ?string $openRouterKey,
         private string $pipeline,
         private array $textCatalog,
@@ -63,7 +72,7 @@ final readonly class BlogGenerationHealthCheck
     public function run(): BlogGenerationHealth
     {
         $now = CarbonImmutable::now();
-        $problems = [...$this->rulesReference($now), ...$this->queue($now)];
+        $problems = [...$this->rulesReference($now), ...$this->queue($now), ...$this->automatic($now)];
         $prices = [];
         $key = null;
         $keyExpiresAt = null;
@@ -94,6 +103,32 @@ final readonly class BlogGenerationHealthCheck
         return $lastMove !== null && $lastMove->lessThan($now->subMinutes($minutes))
             ? ["The blog generation queue has not moved since {$lastMove->toDateTimeString()} UTC (more than {$minutes} minutes)."]
             : [];
+    }
+
+    /** @return list<string> */
+    private function automatic(CarbonImmutable $now): array
+    {
+        $settings = $this->settings->current();
+
+        if (! $settings->enabled) {
+            return [];
+        }
+
+        $minutes = $this->thresholds['planner_late_after_minutes'];
+        $problems = [];
+        $lastRun = $this->plannerHeartbeat->lastRunAt();
+
+        if ($lastRun !== null && $lastRun->lessThan($now->subMinutes($minutes))) {
+            $problems[] = "The automatic generation planner (festilaw:blog-generation-schedule, every hour) has not run since {$lastRun->toDateTimeString()} UTC (more than {$minutes} minutes).";
+        }
+
+        $late = $this->calendar->lateSlot($settings, $now, $minutes);
+
+        if ($late !== null && $this->budget->remainingDraftRoom($settings) > 0) {
+            $problems[] = "The automatic generation batch due at {$late->toDateTimeString()} UTC has not been queued (more than {$minutes} minutes late).";
+        }
+
+        return $problems;
     }
 
     /**

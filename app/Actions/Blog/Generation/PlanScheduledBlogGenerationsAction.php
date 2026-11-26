@@ -22,6 +22,7 @@ use App\Services\Blog\Generation\BlogAiSettingsService;
 use App\Services\Blog\Generation\BlogGenerationBudget;
 use App\Services\Blog\Generation\BlogGenerationCalendar;
 use App\Services\Blog\Generation\BlogGenerationCostForecaster;
+use App\Services\Blog\Generation\BlogGenerationPlannerHeartbeat;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Support\Facades\DB;
@@ -31,15 +32,18 @@ use Illuminate\Support\Str;
 use Throwable;
 
 /**
- * La generation automatique : une fois par periode, met en file un lot d'articles. Appelee chaque heure de 6 h
- * a 20 h (UTC) par la tache planifiee ; elle ne fait rien tant que la periode reglee n'est pas echue depuis le dernier lot
- * lance. Un lot du mais retenu est inscrit au journal (une ligne « non lancee », sans jamais repeter deux fois
- * de suite la meme raison), et sera lance des que la raison tombe. Une seule raison le retient : trop de
- * brouillons en attente. Le cout ne retient rien : chaque generation du lot garde son cout annonce et s'arrete
- * par securite au double de son haut. Le plafond du mois avertit seulement (decisions de Micha du 17/11 et du
- * 18/11).
+ * La generation automatique : a chaque creneau du calendrier (jour et heure choisis, BlogGenerationCalendar), met en
+ * file un lot d'articles. Appelee chaque heure pile, jour et nuit, par la tache planifiee ; elle ne fait rien tant
+ * qu'aucun creneau n'attend son lot. Chaque passage, essai a blanc excepte, laisse une trace que lit la
+ * verification quotidienne (BlogGenerationPlannerHeartbeat, constat du 26/11 : la planification n'avait jamais
+ * tourne en production sans que rien le signale).
  *
- * Rejouable : relancee le meme jour apres avoir lance un lot, elle ne trouve plus rien de du.
+ * Un lot du mais retenu est inscrit au journal (une ligne « non lancee », sans jamais repeter deux fois de suite la
+ * meme raison), et sera lance des que la raison tombe. Une seule raison le retient : trop de brouillons en attente.
+ * Le cout ne retient rien : chaque generation du lot garde son cout annonce et s'arrete par securite au double de
+ * son haut. Le plafond du mois avertit seulement (decisions de Micha du 17/11 et du 18/11).
+ *
+ * Rejouable : relancee apres avoir lance le lot d'un creneau, elle ne trouve plus rien de du avant le suivant.
  */
 final readonly class PlanScheduledBlogGenerationsAction
 {
@@ -50,22 +54,27 @@ final readonly class PlanScheduledBlogGenerationsAction
         private ScheduledBlogGenerationRepository $scheduled,
         private BlogGenerationCostForecaster $forecaster,
         private BlogGenerationCalendar $calendar,
+        private BlogGenerationPlannerHeartbeat $heartbeat,
         private UrlGenerator $url,
     ) {}
 
     /** @param  bool  $dryRun  dit ce qui serait fait, sans rien ecrire ni envoyer */
     public function execute(bool $dryRun = false): ScheduledGenerationPlan
     {
+        $now = CarbonImmutable::now();
+
+        if (! $dryRun) {
+            $this->heartbeat->record($now);
+        }
+
         $settings = $this->settings->current();
 
         if (! $settings->enabled) {
             return ScheduledGenerationPlan::disabled();
         }
 
-        $dueAt = $this->calendar->dueAt($settings);
-
-        if ($dueAt !== null && $dueAt->isFuture()) {
-            return ScheduledGenerationPlan::notDue($dueAt);
+        if ($this->calendar->dueSlot($settings, $now) === null) {
+            return ScheduledGenerationPlan::notDue($this->calendar->nextLaunchAt($settings, $now));
         }
 
         $this->pipeline->steps(BlogGenerationType::Article);

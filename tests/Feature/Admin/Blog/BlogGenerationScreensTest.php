@@ -841,9 +841,9 @@ it('says a generation cannot be found', function () {
 
 // --- Reglages --------------------------------------------------------------------------------------
 
-it('opens the settings on their current values, in 4 queries with the spend of the month, the prices of the day and the key', function () {
+it('opens the settings on their current values, in 5 queries with the spend of the month, the prices of the day, the key and the next batch', function () {
     BlogAi::saveSettings([
-        'enabled' => true, 'period_count' => 2, 'period_unit' => 'month', 'monthly_spend_cap_cents' => 2_550,
+        'enabled' => true, 'period_count' => 2, 'period_unit' => 'month', 'month_day' => 12, 'hour' => 8, 'monthly_spend_cap_cents' => 2_550,
         'notification_email' => 'owner@example.com',
     ]);
 
@@ -851,10 +851,14 @@ it('opens the settings on their current values, in 4 queries with the spend of t
     $settings = Livewire::test(GenerationSettings::class);
 
     // La section de la cle OpenRouter lit la cle et la derniere verification en une requete (decision du 23/11).
-    expect(count(DB::getQueryLog()))->toBe(4);
+    // La phrase du prochain lot relit les reglages enregistres, pour garder les dates d'un calendrier inchange.
+    expect(count(DB::getQueryLog()))->toBe(5);
     $settings->assertSet('enabled', true)
         ->assertSet('periodCount', '2')
         ->assertSet('periodUnit', 'month')
+        ->assertSet('monthDay', '12')
+        ->assertSet('hour', '8')
+        ->assertSee('Le prochain lot partira')
         ->assertSet('monthlySpendCap', '25.50')
         ->assertSet('notificationEmail', 'owner@example.com')
         // Moyen au depart (decision de Micha du 19/11).
@@ -1050,10 +1054,15 @@ it('keeps a saved model that left the list visible, so that another one gets cho
         ->assertHasErrors(['models.writing' => 'in']);
 });
 
-it('says when the next automatic article will come, without approximation, and leads straight to its settings', function (string $now, ?string $lastLaunch, string $expected) {
-    // Decisions de Micha du 23/11 : jamais « vers » ni « dans l'heure », et un lien vers la section des reglages.
+it('says the exact day and hour of the next automatic article, in the time of Paris, and leads straight to its settings', function (string $now, array $calendar, ?string $startsAt, ?string $lastLaunch, string $expected) {
+    // Decisions de Micha du 23/11 et du 26/11 : jamais « vers », le jour et l'heure exacts, et un lien vers la section
+    // des reglages. Le lundi 23/11/2026 a 10 h UTC, il est 11 h a Paris.
     $this->travelTo($now);
-    BlogAi::saveSettings(['enabled' => true, 'period_count' => 1, 'period_unit' => 'week']);
+    BlogAi::saveSettings(['enabled' => true, 'period_count' => 1, 'period_unit' => 'week', ...$calendar]);
+
+    if ($startsAt !== null) {
+        BlogAi::startCalendarAt($startsAt);
+    }
 
     if ($lastLaunch !== null) {
         BlogGeneration::factory()->scheduled()->completed()->create(['created_at' => $lastLaunch]);
@@ -1063,11 +1072,55 @@ it('says when the next automatic article will come, without approximation, and l
         ->assertSee($expected)
         ->assertSeeHtml(route('admin.blog.generation.settings').'#generation-automatique');
 })->with([
-    'never launched, during the day' => ['2026-11-23 11:49:00', null, 'Prochain article dans moins d\'une heure.'],
-    'never launched, before the first check of the day' => ['2026-11-23 03:10:00', null, 'Prochain article dans 3 heures.'],
-    'never launched, after the last check of the day' => ['2026-11-23 21:30:00', null, 'Prochain article demain.'],
-    'weekly, due in two days' => ['2026-11-23 10:00:00', '2026-11-18 09:00:00', 'Prochain article dans 2 jours.'],
-    'weekly, due later' => ['2026-11-23 10:00:00', '2026-11-22 09:00:00', 'Prochain article le 29/11.'],
+    'later today' => ['2026-11-23 10:00:00', ['weekday' => 1, 'hour' => 16], null, null, 'Prochain article aujourd\'hui à 16 h (heure de Paris).'],
+    'tomorrow' => ['2026-11-23 10:00:00', ['weekday' => 2, 'hour' => 9], null, null, 'Prochain article demain à 9 h (heure de Paris).'],
+    'later in the week' => ['2026-11-23 10:00:00', ['weekday' => 5, 'hour' => 9], null, null, 'Prochain article vendredi 27 novembre à 9 h (heure de Paris).'],
+    'the next year' => ['2026-12-28 10:00:00', ['weekday' => 1, 'hour' => 9], null, null, 'Prochain article lundi 4 janvier 2027 à 9 h (heure de Paris).'],
+    'the first of the month' => ['2026-11-26 10:00:00', ['weekday' => 2, 'hour' => 9], null, null, 'Prochain article mardi 1er décembre à 9 h (heure de Paris).'],
+    'due, at the next hour' => ['2026-11-23 10:00:00', ['weekday' => 1, 'hour' => 7], '2026-11-16 00:00:00', null, 'Prochain article dans moins d\'une heure.'],
+    'already launched for this week' => ['2026-11-23 10:00:00', ['weekday' => 1, 'hour' => 7], '2026-11-16 00:00:00', '2026-11-23 06:00:10', 'Prochain article lundi 30 novembre à 7 h (heure de Paris).'],
+]);
+
+it('lets the day and the hour of the automatic generation be chosen, and says when the next batch will leave before saving', function () {
+    $this->travelTo('2026-11-23 10:00:00');
+    BlogAi::saveSettings(['enabled' => true, 'period_count' => 1, 'period_unit' => 'week', 'weekday' => 1, 'hour' => 9]);
+
+    $settings = Livewire::test(GenerationSettings::class)
+        ->assertSet('weekday', '1')
+        ->assertSet('hour', '9')
+        ->assertSee('Le prochain lot partira lundi 30 novembre à 9 h (heure de Paris).')
+        ->set('weekday', '4')
+        ->set('hour', '18')
+        ->assertSee('Une fois les réglages enregistrés, le premier lot partira jeudi 26 novembre à 18 h (heure de Paris).')
+        ->set('periodUnit', 'month')
+        ->assertSee('Jour du mois')
+        ->set('monthDay', '5')
+        ->assertSee('Une fois les réglages enregistrés, le premier lot partira samedi 5 décembre à 18 h (heure de Paris).')
+        ->set('periodUnit', 'day')
+        ->assertDontSee('Jour du mois')
+        ->assertSee('Une fois les réglages enregistrés, le premier lot partira aujourd\'hui à 18 h (heure de Paris).')
+        ->set('periodUnit', 'week')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $saved = app(BlogAiSettingsService::class)->current();
+
+    expect($saved->weekday)->toBe(4)
+        ->and($saved->monthDay)->toBe(5)
+        ->and($saved->hour)->toBe(18)
+        ->and($saved->startsAt?->toDateTimeString())->toBe('2026-11-23 10:00:00');
+    $settings->assertSee('Le prochain lot partira jeudi 26 novembre à 18 h (heure de Paris).');
+});
+
+it('refuses a day or an hour outside the lists', function (string $field, string $value) {
+    Livewire::test(GenerationSettings::class)
+        ->set($field, $value)
+        ->call('save')
+        ->assertHasErrors([$field]);
+})->with([
+    'a weekday after Sunday' => ['weekday', '8'],
+    'the 29th of the month' => ['monthDay', '29'],
+    'an hour past 23' => ['hour', '24'],
 ]);
 
 it('announces no next article while the automatic generation is off or paused', function () {

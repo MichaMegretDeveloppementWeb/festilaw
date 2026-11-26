@@ -136,6 +136,26 @@ it('shows the report without sending it or moving the covered period on, in a dr
     expect(app(SettingRepository::class)->get(SendDailyErrorReportAction::COVERED_UNTIL_KEY))->toBeNull();
 });
 
+it('leaves a trace when it did its work, sent or with nothing to send, and none when it could not', function (string $log, bool $sendFails, ?string $techEmail, bool $dry, bool $done) {
+    // Remarque de Micha du 26/11 : « le rapport n'a pas tourne » ne doit jamais se confondre avec « il n'avait aucune
+    // erreur a envoyer ». La premiere trace vient de la migration qui a pose la surveillance : on part d'une trace ancienne.
+    app(SettingRepository::class)->put(SendDailyErrorReportAction::LAST_DONE_KEY, '2026-11-01T06:00:00+00:00');
+    config()->set('festilaw.tech_alert_email', $techEmail);
+    writeLogFile($this->logs, 'laravel-2026-11-20.log', $log);
+    $sendFails ? Mail::shouldReceive('to')->andThrow(new RuntimeException('Mail transport down.')) : Mail::fake();
+
+    $this->artisan('festilaw:error-report', $dry ? ['--dry' => true] : []);
+
+    expect(app(SettingRepository::class)->get(SendDailyErrorReportAction::LAST_DONE_KEY))
+        ->toBe($done ? '2026-11-21T06:00:00+00:00' : '2026-11-01T06:00:00+00:00');
+})->with([
+    'sent' => ["[2026-11-20 10:00:00] testing.ERROR: To report. \n", false, 'tech@example.com', false, true],
+    'nothing to send' => ["[2026-11-20 10:00:00] testing.WARNING: Only a warning. \n", false, 'tech@example.com', false, true],
+    'failed to send' => ["[2026-11-20 10:00:00] testing.ERROR: To report. \n", true, 'tech@example.com', false, false],
+    'no technical address' => ["[2026-11-20 10:00:00] testing.ERROR: To report. \n", false, null, false, false],
+    'dry run' => ["[2026-11-20 10:00:00] testing.ERROR: To report. \n", false, 'tech@example.com', true, false],
+]);
+
 it('reads at most the last seven days after a long stop', function () {
     app(SettingRepository::class)->put(SendDailyErrorReportAction::COVERED_UNTIL_KEY, '2026-10-01T06:00:00+00:00');
     writeLogFile($this->logs, 'laravel.log', implode("\n", [

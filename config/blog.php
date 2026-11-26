@@ -175,7 +175,21 @@ return [
             'article_words' => 1_000,
             'notification_email' => null,
             'effort' => 'medium',
+            // Calendrier de la generation automatique (decision de Micha du 26/11) : le jour de la semaine (1 = lundi)
+            // pour un rythme en semaines, le jour du mois (1 a 28, il existe chaque mois) pour un rythme en mois, et
+            // l'heure, a l'heure de `schedule_timezone`. `starts_at`, le moment d'ou le calendrier compte, n'a pas de
+            // valeur de depart : il se pose a l'enregistrement des reglages.
+            'weekday' => 2,
+            'month_day' => 1,
+            'hour' => 9,
         ],
+
+        /*
+         | Fuseau du jour et de l'heure de la generation automatique : « 9 h » veut dire 9 h pour Laetitia,
+         | changements d'heure compris. Le reste du back-office reste en UTC (decision de Micha du 05/10) ; le
+         | calendrier fait exception (accord du 26/11) et le dit toujours (« heure de Paris »).
+         */
+        'schedule_timezone' => 'Europe/Paris',
 
         /*
          | Longueur du texte d'un article, en mots du texte anglais (decision de Micha du 17/11 : de 400 a
@@ -477,6 +491,8 @@ return [
          | - `key_expiry_warning_days` : une cle OpenRouter qui expire dans moins de ces jours est signalee ;
          | - `expiry_warning_days` : un modele qu'OpenRouter retire dans moins de ces jours est signale ;
          | - `stalled_after_minutes` : une generation en attente ou en cours qui n'a pas bouge depuis ce temps.
+         | - `planner_late_after_minutes` : generation automatique activee, la planification (chaque heure) n'a pas
+         |   tourne depuis ce temps, ou un lot est du depuis ce temps sans etre parti ni retenu (constat du 26/11).
          */
         'health' => [
             'prices_valid_days' => 7,
@@ -484,6 +500,7 @@ return [
             'key_expiry_warning_days' => 14,
             'expiry_warning_days' => 30,
             'stalled_after_minutes' => 120,
+            'planner_late_after_minutes' => 120,
         ],
 
         /*

@@ -30,7 +30,7 @@ use Carbon\CarbonImmutable;
  *   7. dernieres generations
  *   8. etape en echec de ces generations
  * Sans aucune generation : 7 (la huitieme n'a rien a lire). Generation automatique activee et pas en pause :
- * une de plus pour la date du prochain lot (dernier lot lance), deux pour un rythme mensuel (premier lot).
+ * une de plus pour la date du prochain lot (dernier lot lance), quel que soit le rythme.
  */
 final readonly class BlogGenerationOverviewService
 {

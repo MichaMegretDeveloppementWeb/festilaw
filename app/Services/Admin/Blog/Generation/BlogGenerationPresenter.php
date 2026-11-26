@@ -20,9 +20,13 @@ use Carbon\CarbonImmutable;
  */
 final readonly class BlogGenerationPresenter
 {
+    /**
+     * @param  string  $scheduleTimezone  fuseau du calendrier de la generation automatique (blog.ai.schedule_timezone)
+     */
     public function __construct(
         private BlogAiCostFormatter $costs,
         private GenerationSafetyStop $safetyStop,
+        private string $scheduleTimezone,
     ) {}
 
     /**
@@ -116,25 +120,42 @@ final readonly class BlogGenerationPresenter
     }
 
     /**
-     * Quand partira le prochain lot automatique, dit sans approximation (decision de Micha du 23/11) : le jour
-     * meme « dans moins d'une heure » ou « dans 3 heures », le lendemain « demain », a deux ou trois jours « dans
-     * 2 jours », au-dela la date, « le 31/12 ». Les jours se comptent en dates UTC, comme toutes les heures du
-     * back-office.
+     * Quand partira le prochain lot automatique, dit sans approximation (decisions de Micha du 23/11 et du 26/11) :
+     * « dans moins d'une heure » quand il est du, sinon le jour et l'heure exacts du creneau, a l'heure de Paris
+     * (« Prochains articles mardi 2 décembre à 9 h (heure de Paris). »).
      */
     public function nextLaunch(CarbonImmutable $at, CarbonImmutable $now, int $articles): string
     {
-        $minutes = max(0, (int) floor(($at->getTimestamp() - $now->getTimestamp()) / 60));
-        $days = (int) $now->startOfDay()->diffInDays($at->startOfDay());
-
-        $when = match (true) {
-            $minutes < 60 => __('dans moins d\'une heure'),
-            $days === 0 => trans_choice('{1} dans une heure|[2,*] dans :count heures', (int) round($minutes / 60), ['count' => (int) round($minutes / 60)]),
-            $days === 1 => __('demain'),
-            $days <= 3 => __('dans :count jours', ['count' => $days]),
-            default => __('le :date', ['date' => $at->format($at->year === $now->year ? 'd/m' : 'd/m/Y')]),
-        };
+        $when = $at->getTimestamp() - $now->getTimestamp() < 3_600
+            ? __('dans moins d\'une heure')
+            : __(':moment (heure de Paris)', ['moment' => $this->slot($at, $now)]);
 
         return trans_choice('{1} Prochain article :when.|[2,*] Prochains articles :when.', $articles, ['when' => $when]);
+    }
+
+    /**
+     * Un creneau de la generation automatique, a l'heure de Paris : « aujourd'hui à 16 h », « demain à 9 h »,
+     * « mardi 2 décembre à 9 h », l'annee en plus quand elle change.
+     */
+    public function slot(CarbonImmutable $at, CarbonImmutable $now): string
+    {
+        $local = $at->setTimezone($this->scheduleTimezone)->locale('fr');
+        $today = $now->setTimezone($this->scheduleTimezone)->startOfDay();
+        $hour = __(':hour h', ['hour' => $local->format('G')]);
+
+        return match (true) {
+            $local->isSameDay($today) => __('aujourd\'hui à :hour', ['hour' => $hour]),
+            $local->isSameDay($today->addDay()) => __('demain à :hour', ['hour' => $hour]),
+            default => __(':day à :hour', [
+                'day' => trim(implode(' ', [
+                    $local->isoFormat('dddd'),
+                    $local->day === 1 ? __('1er') : (string) $local->day,
+                    $local->isoFormat('MMMM'),
+                    $local->year === $today->year ? '' : (string) $local->year,
+                ])),
+                'hour' => $hour,
+            ]),
+        };
     }
 
     /** « 45 s », « 2 min 05 s », « 1 h 03 min ». Nul quand la duree n'est pas connue. */

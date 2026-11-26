@@ -23,10 +23,17 @@ use Throwable;
  * La periode commence au repere du dernier rapport, et ce repere n'avance qu'apres un envoi reussi : un
  * envoi en echec est repris le lendemain avec les deux jours. Elle remonte au plus a sept jours (cron arrete
  * longtemps). Aucun repli vers l'adresse de la cliente, ce rapport est technique.
+ *
+ * Chaque passage qui a fait son travail (rapport envoye, ou rien a signaler) laisse une trace (`LAST_DONE_KEY`) :
+ * sans elle depuis plus de 26 heures, le site previent directement le prestataire (SchedulerHealthService). Le
+ * 26/11, ce rapport n'avait jamais tourne en production sans que personne le sache. La trace distingue « le
+ * rapport n'a pas tourne » de « il n'avait aucune erreur a envoyer » (remarque de Micha).
  */
 final readonly class SendDailyErrorReportAction
 {
     public const COVERED_UNTIL_KEY = 'system.error_report.covered_until';
+
+    public const LAST_DONE_KEY = 'system.error_report.last_done_at';
 
     private const DEFAULT_HOURS = 24;
 
@@ -49,6 +56,7 @@ final readonly class SendDailyErrorReportAction
 
         if ($summary->isEmpty()) {
             $this->settings->put(self::COVERED_UNTIL_KEY, $until->toIso8601String());
+            $this->markDone();
 
             return new DailyErrorReportResult(ErrorReportOutcome::NothingToReport, $summary);
         }
@@ -75,8 +83,14 @@ final readonly class SendDailyErrorReportAction
         }
 
         $this->settings->put(self::COVERED_UNTIL_KEY, $summary->until->toIso8601String());
+        $this->markDone();
 
         return new DailyErrorReportResult(ErrorReportOutcome::Sent, $summary);
+    }
+
+    private function markDone(): void
+    {
+        $this->settings->put(self::LAST_DONE_KEY, CarbonImmutable::now()->toIso8601String());
     }
 
     /**

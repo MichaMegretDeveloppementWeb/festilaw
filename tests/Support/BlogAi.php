@@ -8,6 +8,8 @@ use App\Actions\Blog\Generation\UpdateBlogAiSettingsAction;
 use App\Data\Blog\Generation\ArticleLengthRules;
 use App\Data\Blog\Generation\BlogAiSettings;
 use App\Repositories\Blog\OpenRouterKeyRepository;
+use App\Repositories\SettingRepository;
+use App\Services\Blog\Generation\BlogAiSettingsService;
 use Carbon\CarbonImmutable;
 
 /**
@@ -31,9 +33,22 @@ final class BlogAi
             app(ArticleLengthRules::class),
         );
 
-        app(UpdateBlogAiSettingsAction::class)->execute($settings);
+        return app(UpdateBlogAiSettingsAction::class)->execute($settings);
+    }
 
-        return $settings;
+    /**
+     * Fait partir le calendrier de la generation automatique d'un moment donne, comme si les reglages avaient ete
+     * enregistres alors : le premier creneau est celui qui suit ce moment.
+     */
+    public static function startCalendarAt(string $moment): void
+    {
+        $repository = app(SettingRepository::class);
+        $stored = json_decode((string) $repository->get(BlogAiSettingsService::KEY), true);
+
+        $repository->put(BlogAiSettingsService::KEY, (string) json_encode([
+            ...(is_array($stored) ? $stored : []),
+            'starts_at' => CarbonImmutable::parse($moment, 'UTC')->toIso8601String(),
+        ]));
     }
 
     /**

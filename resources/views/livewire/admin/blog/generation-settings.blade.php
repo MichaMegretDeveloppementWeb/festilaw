@@ -6,7 +6,7 @@
      action ne transforme jamais la page sous les yeux »). Chaque section garde son titre et sa phrase en haut, un
      filet, puis ses champs (<x-admin.section>). --}}
 @php
-    $rhythmFields = ['periodCount', 'periodUnit', 'articlesPerRun', 'pendingDraftsCap'];
+    $rhythmFields = ['periodCount', 'periodUnit', 'weekday', 'monthDay', 'hour', 'articlesPerRun', 'pendingDraftsCap'];
     $rhythmHasError = $errors->hasAny($rhythmFields);
 @endphp
 <div class="flex min-h-[calc(100svh-6.5rem)] flex-col sm:min-h-[calc(100svh-7.5rem)]">
@@ -86,7 +86,7 @@
         <x-admin.section id="generation-automatique" data-settings-section="automatic" :title="__('Génération automatique')"
             :description="__('L\'IA choisit un sujet et prépare des articles à intervalles réguliers, sans que vous ayez à les lancer. Elle reprend les modèles, la longueur et les images réglés plus haut.')">
             <div class="space-y-6 pt-6">
-                <x-ui::checkbox id="ai-enabled" wire:model="enabled" :label="__('Activer la génération automatique')"
+                <x-ui::checkbox id="ai-enabled" wire:model.live="enabled" :label="__('Activer la génération automatique')"
                     :description="__('Tant qu\'elle est désactivée, seuls vos lancements produisent des articles.')" />
 
                 {{-- Ces champs ne servent que si la generation automatique est activee (Micha, 19/11). Un champ en
@@ -98,14 +98,37 @@
                         </x-ui::form-group>
 
                         <x-ui::form-group :label="__('Tous les')" for="ai-period-count" :error="$errors->first('periodCount')">
-                            <x-ui::input type="number" min="1" max="12" id="ai-period-count" wire:model="periodCount" :error="$errors->has('periodCount')" />
+                            <x-ui::input type="number" min="1" max="12" id="ai-period-count" wire:model.live.debounce.400ms="periodCount" :error="$errors->has('periodCount')" />
                         </x-ui::form-group>
 
                         <x-ui::form-group :label="__('Unité')" for="ai-period-unit" :error="$errors->first('periodUnit')">
-                            <x-ui::select id="ai-period-unit" wire:model="periodUnit" :error="$errors->has('periodUnit')"
+                            <x-ui::select id="ai-period-unit" wire:model.live="periodUnit" :error="$errors->has('periodUnit')"
                                 :options="collect($periodUnits)->mapWithKeys(fn ($unit) => [$unit->value => $unit->label()])->all()" />
                         </x-ui::form-group>
                     </div>
+
+                    {{-- Le jour et l'heure du lot (decision de Micha du 26/11) : le jour de la semaine en semaines, le jour du
+                         mois en mois, rien en jours. L'heure est celle de Paris. La phrase dessous dit quand partira le
+                         prochain lot avec les valeurs a l'ecran, avant meme l'enregistrement. --}}
+                    <div class="grid grid-cols-1 gap-5 sm:grid-cols-3">
+                        @if ($periodUnit === 'week')
+                            <x-ui::form-group :label="__('Jour')" for="ai-weekday" :error="$errors->first('weekday')">
+                                <x-ui::select id="ai-weekday" wire:model.live="weekday" :error="$errors->has('weekday')" :options="$weekdays" />
+                            </x-ui::form-group>
+                        @elseif ($periodUnit === 'month')
+                            <x-ui::form-group :label="__('Jour du mois')" for="ai-month-day" :error="$errors->first('monthDay')"
+                                :hint="__('Du 1er au 28, pour qu\'il existe chaque mois.')">
+                                <x-ui::select id="ai-month-day" wire:model.live="monthDay" :error="$errors->has('monthDay')" :options="$monthDays" />
+                            </x-ui::form-group>
+                        @endif
+
+                        <x-ui::form-group :label="__('Heure')" for="ai-hour" :error="$errors->first('hour')"
+                            :hint="__('Heure de Paris, changements d\'heure compris.')">
+                            <x-ui::select id="ai-hour" wire:model.live="hour" :error="$errors->has('hour')" :options="$hours" />
+                        </x-ui::form-group>
+                    </div>
+
+                    <p class="min-h-5 text-[13px] text-secondary" data-next-batch>{{ $nextBatch }}</p>
 
                     <div class="grid grid-cols-1 gap-5 sm:grid-cols-3">
                         <x-ui::form-group :label="__('Brouillons en attente, au plus')" for="ai-pending-drafts-cap" :error="$errors->first('pendingDraftsCap')"

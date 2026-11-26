@@ -26,14 +26,6 @@ final readonly class ScheduledBlogGenerationRepository
         return $createdAt === null ? null : CarbonImmutable::parse($createdAt);
     }
 
-    /** Date du premier lot lance : son jour du mois tient le rythme mensuel (controle du 20/11). */
-    public function firstLaunchedAt(): ?CarbonImmutable
-    {
-        $createdAt = $this->launched()->min('created_at');
-
-        return $createdAt === null ? null : CarbonImmutable::parse($createdAt);
-    }
-
     /** @return Builder<BlogGeneration> les generations planifiees qui ont vraiment ete lancees */
     private function launched(): Builder
     {

@@ -17,7 +17,9 @@ use App\Services\Admin\Blog\Generation\BlogGenerationPresenter;
 use App\Services\Blog\Generation\BlogAiModelCatalog;
 use App\Services\Blog\Generation\BlogAiSettingsService;
 use App\Services\Blog\Generation\BlogGenerationBudget;
+use App\Services\Blog\Generation\BlogGenerationCalendar;
 use App\Services\Blog\Generation\BlogGenerationCostForecaster;
+use Carbon\CarbonImmutable;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Livewire\Attributes\Layout;
@@ -27,8 +29,8 @@ use Throwable;
 
 /**
  * Back-office : reglages de la generation par IA (modele par etape, longueur et images par defaut, budget,
- * destinataire, generation automatique). Aucune cle d'API ici : elle vit dans le fichier d'environnement, et ne
- * regarde pas la personne qui regle.
+ * destinataire, generation automatique). La cle OpenRouter a son propre bloc et son propre bouton
+ * (OpenRouterKeyForm, decision du 23/11).
  *
  * Un modele se choisit dans une liste fermee (BlogAiModelCatalog), jamais par saisie. La lecture passe par
  * BlogAiSettingsService, l'enregistrement par UpdateBlogAiSettingsAction. « Remettre les modeles recommandes »
@@ -38,6 +40,9 @@ use Throwable;
  * l'ecran, avant meme l'enregistrement, pour qu'on voie l'effet d'un changement de longueur, de modele ou de
  * plafond avant de le garder. Il n'y a plus de plafond par article (decision de Micha du 18/11) : l'estimation
  * annonce le cout, et la generation s'arrete par securite au double de son haut.
+ *
+ * La generation automatique suit un calendrier (decision de Micha du 26/11) : le jour (de la semaine ou du mois) et
+ * l'heure de Paris se choisissent ici, et une phrase dit quand partira le prochain lot avec les valeurs a l'ecran.
  */
 #[Layout('layouts.admin')]
 class GenerationSettings extends Component
@@ -50,6 +55,15 @@ class GenerationSettings extends Component
     public string $periodCount = '';
 
     public string $periodUnit = '';
+
+    /** Jour de la semaine du lot (1 = lundi), pour un rythme en semaines. */
+    public string $weekday = '';
+
+    /** Jour du mois du lot (1 a 28), pour un rythme en mois. */
+    public string $monthDay = '';
+
+    /** Heure du lot, a l'heure de Paris (0 a 23). */
+    public string $hour = '';
 
     public string $articlesPerRun = '';
 
@@ -100,6 +114,9 @@ class GenerationSettings extends Component
         $this->enabled = $current->enabled;
         $this->periodCount = (string) $current->periodCount;
         $this->periodUnit = $current->periodUnit->value;
+        $this->weekday = (string) $current->weekday;
+        $this->monthDay = (string) $current->monthDay;
+        $this->hour = (string) $current->hour;
         $this->articlesPerRun = (string) $current->articlesPerRun;
         $this->pendingDraftsCap = (string) $current->pendingDraftsCap;
         $this->monthlySpendCap = number_format($current->monthlySpendCapCents / 100, 2, '.', '');
@@ -116,6 +133,9 @@ class GenerationSettings extends Component
             'enabled' => ['boolean'],
             'periodCount' => ['required', 'integer', 'min:1', 'max:12'],
             'periodUnit' => ['required', Rule::enum(BlogAiPeriodUnit::class)],
+            'weekday' => ['required', 'integer', 'min:1', 'max:7'],
+            'monthDay' => ['required', 'integer', 'min:1', 'max:'.BlogAiSettings::LAST_MONTH_DAY],
+            'hour' => ['required', 'integer', 'min:0', 'max:23'],
             'articlesPerRun' => ['required', 'integer', 'min:1', 'max:10'],
             'pendingDraftsCap' => ['required', 'integer', 'min:1', 'max:50'],
             'monthlySpendCap' => ['required', 'numeric', 'min:1', 'max:10000'],
@@ -153,6 +173,9 @@ class GenerationSettings extends Component
             'periodCount.max' => __('La période ne peut pas dépasser 12.'),
             'periodUnit.required' => __('Choisissez l\'unité de la période.'),
             'periodUnit.enum' => __('Choisissez l\'unité de la période.'),
+            'weekday.*' => __('Choisissez le jour de la semaine.'),
+            'monthDay.*' => __('Choisissez un jour du mois, du 1er au 28.'),
+            'hour.*' => __('Choisissez l\'heure.'),
             'articlesPerRun.required' => __('Indiquez le nombre d\'articles.'),
             'articlesPerRun.integer' => __('Le nombre d\'articles est un nombre entier.'),
             'articlesPerRun.min' => __('Le nombre d\'articles est d\'au moins 1.'),
@@ -201,6 +224,10 @@ class GenerationSettings extends Component
                 notificationEmail: trim((string) $validated['notificationEmail']),
                 articleWords: (int) $validated['articleWords'],
                 effort: BlogEffortLevel::from((string) $validated['effort']),
+                weekday: (int) $validated['weekday'],
+                monthDay: (int) $validated['monthDay'],
+                hour: (int) $validated['hour'],
+                startsAt: null,
             ));
         } catch (Throwable $e) {
             $this->reportAdminError($e, 'Admin update blog AI settings');
@@ -227,6 +254,7 @@ class GenerationSettings extends Component
         ArticleLengthRules $length,
         BlogGenerationBudget $budget,
         BlogAiSettingsService $settings,
+        BlogGenerationCalendar $calendar,
     ): View {
         $view = view('livewire.admin.blog.generation-settings')->title(__('Réglages de la génération IA'))->layoutData(['surface' => 'plain']);
 
@@ -235,7 +263,10 @@ class GenerationSettings extends Component
         }
 
         try {
-            return $view->with($this->viewData($presenter, $catalog, $forecaster, $length, $budget, $settings));
+            return $view->with([
+                ...$this->viewData($presenter, $catalog, $forecaster, $length, $budget, $settings),
+                ...$this->calendarData($presenter, $settings, $calendar),
+            ]);
         } catch (Throwable $e) {
             $this->failedToLoad($e, 'the blog generation settings');
 
@@ -286,6 +317,60 @@ class GenerationSettings extends Component
             'effortLevels' => collect(BlogEffortLevel::cases())->mapWithKeys(fn (BlogEffortLevel $level): array => [$level->value => $level->label()])->all(),
             'imageCounts' => collect(range(1, BlogAiSettings::MAX_IMAGES))->mapWithKeys(fn (int $count): array => [(string) $count => $presenter->imageCountLabel($count)])->all(),
         ];
+    }
+
+    /**
+     * Les listes du jour et de l'heure, et la phrase du prochain lot avec les valeurs a l'ecran : elle tient compte
+     * des reglages enregistres (un calendrier qui ne change pas garde ses dates) et du dernier lot lance. Une ou
+     * deux requetes, seulement quand la generation automatique est cochee.
+     *
+     * @return array<string, mixed>
+     */
+    private function calendarData(BlogGenerationPresenter $presenter, BlogAiSettingsService $settings, BlogGenerationCalendar $calendar): array
+    {
+        $monday = CarbonImmutable::now()->locale('fr')->startOfWeek();
+        $weekdays = [];
+
+        foreach (range(1, 7) as $day) {
+            $weekdays[(string) $day] = ucfirst((string) $monday->addDays($day - 1)->dayName);
+        }
+
+        return [
+            'weekdays' => $weekdays,
+            'monthDays' => collect(range(1, BlogAiSettings::LAST_MONTH_DAY))->mapWithKeys(fn (int $day): array => [(string) $day => $day === 1 ? __('1er') : (string) $day])->all(),
+            'hours' => collect(range(0, 23))->mapWithKeys(fn (int $hour): array => [(string) $hour => __(':hour h', ['hour' => $hour])])->all(),
+            'nextBatch' => $this->nextBatch($presenter, $settings, $calendar),
+        ];
+    }
+
+    private function nextBatch(BlogGenerationPresenter $presenter, BlogAiSettingsService $settings, BlogGenerationCalendar $calendar): ?string
+    {
+        $unit = BlogAiPeriodUnit::tryFrom($this->periodUnit);
+        $count = self::whole($this->periodCount, 1, 12);
+        $weekday = self::whole($this->weekday, 1, 7);
+        $monthDay = self::whole($this->monthDay, 1, BlogAiSettings::LAST_MONTH_DAY);
+        $hour = self::whole($this->hour, 0, 23);
+
+        if (! $this->enabled || $unit === null || $count === null || $weekday === null || $monthDay === null || $hour === null) {
+            return null;
+        }
+
+        $now = CarbonImmutable::now();
+        $saved = $settings->current();
+        $onScreen = $saved->withAutomatic(true, $count, $unit, $weekday, $monthDay, $hour);
+        $moment = $presenter->slot($calendar->nextLaunchAt($onScreen->withCalendarFrom($saved, $now), $now), $now);
+
+        return $onScreen->keepsCalendarOf($saved)
+            ? __('Le prochain lot partira :moment (heure de Paris).', ['moment' => $moment])
+            : __('Une fois les réglages enregistrés, le premier lot partira :moment (heure de Paris).', ['moment' => $moment]);
+    }
+
+    /** Un nombre entier saisi dans ses bornes, ou nul. */
+    private static function whole(string $value, int $min, int $max): ?int
+    {
+        $number = filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => $min, 'max_range' => $max]]);
+
+        return $number === false ? null : $number;
     }
 
     /** Un montant saisi en dollars, ou nul tant que la saisie n'est pas un nombre positif. */

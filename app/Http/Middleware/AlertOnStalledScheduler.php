@@ -14,8 +14,8 @@ use function Illuminate\Support\defer;
 
 /**
  * En PRODUCTION, une visite (client, robot, back-office, webhook) verifie apres la reponse que les taches
- * automatiques tournent encore, et previent le prestataire technique si elles sont a l'arret : le cron ne
- * peut pas donner l'alerte lui-meme puisqu'il ne tourne plus. Apres la reponse (defer) : aucun delai pour
+ * automatiques tournent encore, et previent le prestataire technique si elles sont a l'arret, ou si le rapport
+ * d'erreurs du matin ne tourne plus : le cron ne peut pas donner l'alerte lui-meme quand c'est lui qui flanche. Apres la reponse (defer) : aucun delai pour
  * le visiteur. Best-effort : ne bloque ni ne fait echouer aucune requete. Hors prod : no-op.
  */
 final class AlertOnStalledScheduler
@@ -28,7 +28,7 @@ final class AlertOnStalledScheduler
             // always : une page 404 ou un webhook refuse comptent aussi comme visite.
             defer(function (): void {
                 try {
-                    $this->health->alertIfStalled();
+                    $this->health->alertIfStopped();
                 } catch (Throwable) {
                     // Surveillance best-effort : jamais d'erreur visible a cause d'elle.
                 }

@@ -1,6 +1,5 @@
 <?php
 
-use App\Services\Blog\Generation\BlogGenerationCalendar;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -88,14 +87,14 @@ Schedule::command('festilaw:blog-health-check')->dailyAt('05:45')->withoutOverla
 Schedule::command('festilaw:error-report')->dailyAt('06:00')->withoutOverlapping(30);
 
 /*
- | Blog, generation par IA : met en file le lot d'articles quand la periode reglee au back-office est echue.
- | Elle ne genere rien elle-meme (c'est le worker ci-dessous). Chaque heure de 6 h a 20 h (UTC) : rejouable, elle
- | ne lance qu'un lot par periode, et une heure manquee ne coute plus un jour (controle du 20/11).
+ | Blog, generation par IA : met en file le lot d'articles quand un creneau du calendrier regle au back-office
+ | (jour et heure choisis, a l'heure de Paris) est arrive. Elle ne genere rien elle-meme (c'est le worker
+ | ci-dessous). Chaque heure pile, jour et nuit, puisque l'heure du lot est choisie (26/11) : rejouable, elle ne
+ | lance qu'un lot par creneau, et une heure manquee rattrape le lot a l'heure suivante. Chaque passage laisse une
+ | trace que lit la verification quotidienne.
  */
 Schedule::command('festilaw:blog-generation-schedule')
     ->hourly()
-    // La fenetre vient du calendrier que lit aussi le tableau de bord, pour annoncer la date du prochain lot.
-    ->between(sprintf('%02d:00', BlogGenerationCalendar::FIRST_HOUR), sprintf('%02d:00', BlogGenerationCalendar::LAST_HOUR))
     ->withoutOverlapping(10);
 
 /*

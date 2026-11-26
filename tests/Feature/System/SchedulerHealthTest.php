@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Actions\System\SendDailyErrorReportAction;
 use App\Http\Middleware\AlertOnStalledScheduler;
+use App\Mail\ErrorReportMissingAlert;
 use App\Mail\SchedulerStalledAlert;
 use App\Models\User;
 use App\Repositories\SettingRepository;
@@ -77,6 +79,42 @@ it('alerts the technical contact once per stall, at the time of Paris, and again
     heartbeatMinutesAgo(20);
     $health->alertIfStalled();
     Mail::assertSent(SchedulerStalledAlert::class, 2);
+});
+
+it('alerts once when the morning report has done nothing for 26 hours, and again only after it came back', function () {
+    // Constat du 26/11 : le rapport d'erreurs n'avait jamais tourne en production, sans que personne le sache.
+    heartbeatMinutesAgo(1);
+    $health = app(SchedulerHealthService::class);
+    $reportDoneHoursAgo = fn (int $hours) => app(SettingRepository::class)
+        ->put(SendDailyErrorReportAction::LAST_DONE_KEY, now()->subHours($hours)->toIso8601String());
+
+    $reportDoneHoursAgo(25);
+    $health->alertIfStopped();
+    Mail::assertNothingSent();
+
+    $reportDoneHoursAgo(27);
+    $health->alertIfStopped();
+    $health->alertIfStopped();
+    Mail::assertSent(ErrorReportMissingAlert::class, 1);
+    Mail::assertSent(ErrorReportMissingAlert::class, fn (ErrorReportMissingAlert $mail) => $mail->hasTo('tech@example.com')
+        && str_contains($mail->render(), '04/10/2026 à 11:00</strong>, heure de Paris'));
+
+    // Le rapport reprend, puis s'arrete de nouveau : c'est un autre arret.
+    $this->travel(3)->days();
+    heartbeatMinutesAgo(1);
+    $reportDoneHoursAgo(30);
+    $health->alertIfStopped();
+    Mail::assertSent(ErrorReportMissingAlert::class, 2);
+});
+
+it('leaves the morning report out while the cron itself is stopped, the stalled tasks alert covering it', function () {
+    heartbeatMinutesAgo(20);
+    app(SettingRepository::class)->put(SendDailyErrorReportAction::LAST_DONE_KEY, now()->subHours(30)->toIso8601String());
+
+    app(SchedulerHealthService::class)->alertIfStopped();
+
+    Mail::assertSent(SchedulerStalledAlert::class, 1);
+    Mail::assertNotSent(ErrorReportMissingAlert::class);
 });
 
 it('sends nothing while the cron runs', function () {

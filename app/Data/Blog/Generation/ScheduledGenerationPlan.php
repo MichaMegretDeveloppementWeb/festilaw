@@ -8,14 +8,14 @@ use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use Carbon\CarbonImmutable;
 
 /**
- * Ce que la tache planifiee a decide pour aujourd'hui : rien (generation eteinte, ou periode pas encore
- * echue), un lot lance, ou un lot du mais retenu par le plafond de brouillons en attente.
+ * Ce que la tache planifiee a decide a ce passage : rien (generation eteinte, ou aucun creneau du, avec le moment
+ * du prochain lot), un lot lance, ou un lot du mais retenu par le plafond de brouillons en attente.
  */
 final readonly class ScheduledGenerationPlan
 {
     private function __construct(
         public bool $enabled,
-        public ?CarbonImmutable $dueAt,
+        public ?CarbonImmutable $nextLaunchAt,
         public int $launched,
         public ?BlogGenerationOutcomeReason $blockedBy,
     ) {}
@@ -25,9 +25,9 @@ final readonly class ScheduledGenerationPlan
         return new self(false, null, 0, null);
     }
 
-    public static function notDue(CarbonImmutable $dueAt): self
+    public static function notDue(CarbonImmutable $nextLaunchAt): self
     {
-        return new self(true, $dueAt, 0, null);
+        return new self(true, $nextLaunchAt, 0, null);
     }
 
     public static function launched(int $count): self

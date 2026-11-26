@@ -11,19 +11,19 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Generation automatique d'articles : chaque heure de 6 h a 20 h (UTC), regarde si un lot est du d'apres la periode reglee au
- * back-office, et le met en file (PlanScheduledBlogGenerationsAction). C'est le worker qui l'execute ; un
- * e-mail part quand tout le lot est termine.
+ * Generation automatique d'articles : chaque heure pile, regarde si un creneau du calendrier regle au back-office
+ * (jour et heure choisis) attend son lot, et le met en file (PlanScheduledBlogGenerationsAction). C'est le worker
+ * qui l'execute ; un e-mail part quand tout le lot est termine.
  *
- * Rejouable : relancee dans la meme periode, elle ne trouve plus rien de du. `--dry` dit ce qui serait fait sans
- * rien mettre en file ni envoyer.
+ * Rejouable : relancee apres le lot d'un creneau, elle ne trouve plus rien de du avant le suivant. `--dry` dit ce
+ * qui serait fait sans rien mettre en file ni envoyer, ni laisser la trace de passage.
  */
 final class ScheduleBlogGenerations extends Command
 {
     protected $signature = 'festilaw:blog-generation-schedule
         {--dry : Dit ce qui serait fait, sans rien mettre en file ni envoyer}';
 
-    protected $description = 'Met en file le lot d\'articles a generer quand la periode reglee au back-office est echue.';
+    protected $description = 'Met en file le lot d\'articles a generer quand un creneau du calendrier regle au back-office est arrive.';
 
     public function handle(PlanScheduledBlogGenerationsAction $plan): int
     {
@@ -37,7 +37,7 @@ final class ScheduleBlogGenerations extends Command
 
             return self::FAILURE;
         } catch (Throwable $e) {
-            Log::error('Scheduled blog generation planning failed; it will be retried tomorrow.', ['exception' => $e]);
+            Log::error('Scheduled blog generation planning failed; it will be retried at the next hour.', ['exception' => $e]);
             $this->error('La planification des generations a echoue (voir le journal).');
 
             return self::FAILURE;
@@ -51,8 +51,10 @@ final class ScheduleBlogGenerations extends Command
         } elseif ($result->blockedBy !== null) {
             $this->warn("{$prefix}Lot du mais non lance : {$result->blockedBy->value}.");
         } elseif ($dry) {
+            $next = $result->nextLaunchAt?->setTimezone((string) config('blog.ai.schedule_timezone'))->format('d/m/Y \a H:i');
+
             $this->info($result->enabled
-                ? "{$prefix}Aucun lot du avant le {$result->dueAt?->format('d/m/Y')}."
+                ? "{$prefix}Aucun lot du avant le {$next} (heure de Paris)."
                 : "{$prefix}Generation automatique desactivee.");
         }
 

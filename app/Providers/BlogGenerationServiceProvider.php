@@ -20,6 +20,7 @@ use App\Exceptions\Blog\BlogGenerationException;
 use App\Repositories\Blog\BlogGenerationHealthRepository;
 use App\Repositories\Blog\OpenRouterKeyRepository;
 use App\Services\Admin\Blog\Generation\BlogGenerationOverviewService;
+use App\Services\Admin\Blog\Generation\BlogGenerationPresenter;
 use App\Services\Admin\Blog\Generation\OpenRouterKeyStateService;
 use App\Services\Blog\Generation\Bench\BlogBenchFileStorage;
 use App\Services\Blog\Generation\Bench\BlogBenchStepRunner;
@@ -31,6 +32,7 @@ use App\Services\Blog\Generation\BlogEffortLevels;
 use App\Services\Blog\Generation\BlogGenerationAlertService;
 use App\Services\Blog\Generation\BlogGenerationBudget;
 use App\Services\Blog\Generation\BlogGenerationCostForecaster;
+use App\Services\Blog\Generation\BlogGenerationSlots;
 use App\Services\Blog\Generation\BlogGenerationStepRunner;
 use App\Services\Blog\Generation\Editorial\BlogAgentCaller;
 use App\Services\Blog\Generation\Editorial\BlogPromptLibrary;
@@ -77,6 +79,8 @@ final class BlogGenerationServiceProvider extends ServiceProvider
         $this->app->when(BlogAiModelCatalog::class)->needs('$textModels')->giveConfig('blog.ai.models');
         $this->app->when(BlogAiModelCatalog::class)->needs('$imageModels')->giveConfig('blog.ai.image_models');
         $this->app->when(BlogGenerationOverviewService::class)->needs('$rulesReviewBy')->giveConfig('blog.ai.rules_reference.review_by');
+        $this->app->when(BlogGenerationSlots::class)->needs('$timezone')->giveConfig('blog.ai.schedule_timezone');
+        $this->app->when(BlogGenerationPresenter::class)->needs('$scheduleTimezone')->giveConfig('blog.ai.schedule_timezone');
         $this->app->when(OpenRouterKeyStateService::class)->needs('$warningDays')->giveConfig('blog.ai.health.key_expiry_warning_days');
 
         $this->app->when(BlogGenerationStepRunner::class)->needs('$maxAttempts')->giveConfig('blog.ai.step.max_attempts');

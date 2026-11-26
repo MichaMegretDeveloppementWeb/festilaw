@@ -59,10 +59,13 @@ return [
 
     /*
      | Taches automatiques (cron unique `schedule:run` chaque minute) : au-dela de stale_after_minutes sans
-     | battement, elles sont a l'arret (bandeau du back-office + alerte e-mail, SchedulerHealthService).
+     | battement, elles sont a l'arret (bandeau du back-office + alerte e-mail, SchedulerHealthService). Au-dela de
+     | error_report_stale_hours sans rapport d'erreurs du matin mene a bien (envoye, ou rien a signaler), le
+     | prestataire est prevenu directement, puisque c'est ce rapport qui porte tout le reste (constat du 26/11).
      */
     'scheduler' => [
         'stale_after_minutes' => (int) env('FESTILAW_SCHEDULER_STALE_MINUTES', 15),
+        'error_report_stale_hours' => 26,
     ],
 
     /*
