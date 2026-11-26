@@ -15,7 +15,9 @@
         ['name' => __('Home'), 'url' => localized_route('home')],
         ['name' => __('Blog'), 'url' => localized_route('blog.index')],
     ];
-    $jsonLdNodes = $page->isEmpty() ? [] : [$collectionNode];
+    $jsonLdPageType = 'CollectionPage';
+    $jsonLdPage = ['mainEntity' => ['@id' => $blogNode['@id']]];
+    $jsonLdNodes = [$blogNode];
 @endphp
 
 @push('styles')

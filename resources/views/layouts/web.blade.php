@@ -16,8 +16,12 @@
     {{-- SEO de base. Chaque page surcharge via @section ; sinon, repli calque sur la page d'accueil.
          Les pages publiques ont une adresse par langue (anglais sans prefixe, /fr, /es) : chaque version
          est son propre canonical et declare ses equivalents (hreflang, x-default = anglais). --}}
-    <title>@yield('title', 'Festilaw · Your GPSR Responsible Person')</title>
-    <meta name="description" content="@yield('meta_description', 'Sell safely in the European market. Festilaw is your GPSR Responsible Person, with dedicated support from entrepreneurs for entrepreneurs.')">
+    @php
+        $defaultTitle = 'Festilaw · Your GPSR Responsible Person';
+        $defaultDescription = 'Sell safely in the European market. Festilaw is your GPSR Responsible Person, with dedicated support from entrepreneurs for entrepreneurs.';
+    @endphp
+    <title>@yield('title', $defaultTitle)</title>
+    <meta name="description" content="@yield('meta_description', $defaultDescription)">
     <meta name="robots" content="@yield('robots', 'index, follow')">
     {{-- Une page paginee (blog) fournit son canonical : url()->current() ignore ?page=N. --}}
     <link rel="canonical" href="@yield('canonical', url()->current())">
@@ -26,8 +30,8 @@
     {{-- Open Graph --}}
     <meta property="og:site_name" content="{{ config('app.name') }}">
     <meta property="og:type" content="@yield('og_type', 'website')">
-    <meta property="og:title" content="@yield('title', 'Festilaw · Your GPSR Responsible Person')">
-    <meta property="og:description" content="@yield('meta_description', 'Sell safely in the European market. Festilaw is your GPSR Responsible Person, with dedicated support from entrepreneurs for entrepreneurs.')">
+    <meta property="og:title" content="@yield('title', $defaultTitle)">
+    <meta property="og:description" content="@yield('meta_description', $defaultDescription)">
     <meta property="og:url" content="@yield('canonical', url()->current())">
     <meta property="og:image" content="@yield('og_image', asset('og-default.png'))">
     <meta property="og:image:width" content="1200">
@@ -37,29 +41,27 @@
 
     {{-- Twitter --}}
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="@yield('title', 'Festilaw · Your GPSR Responsible Person')">
-    <meta name="twitter:description" content="@yield('meta_description', 'Sell safely in the European market. Festilaw is your GPSR Responsible Person, with dedicated support from entrepreneurs for entrepreneurs.')">
+    <meta name="twitter:title" content="@yield('title', $defaultTitle)">
+    <meta name="twitter:description" content="@yield('meta_description', $defaultDescription)">
     <meta name="twitter:image" content="@yield('og_image', asset('og-default.png'))">
 
     {{-- Metas additionnelles poussees par la page --}}
     @stack('meta')
 
-    {{-- Donnees structurees : Organization + WebSite (global) + noeuds de la page + fil d'Ariane. --}}
-    @php
-        $seoNodes = $jsonLdNodes ?? [];
-        if (! empty($breadcrumbs ?? [])) {
-            $seoNodes[] = [
-                '@type' => 'BreadcrumbList',
-                'itemListElement' => array_map(fn ($b, $i) => [
-                    '@type' => 'ListItem',
-                    'position' => $i + 1,
-                    'name' => $b['name'],
-                    'item' => $b['url'],
-                ], $breadcrumbs, array_keys($breadcrumbs)),
-            ];
-        }
-    @endphp
-    <x-seo.json-ld :nodes="$seoNodes" />
+    {{-- Donnees structurees : un seul graphe, construit par StructuredDataGraphBuilder a partir de la page.
+         La vue definit $jsonLdPageType (WebPage par defaut), $jsonLdPage (proprietes de la page),
+         $breadcrumbs (fil d'Ariane affiche) et $jsonLdNodes (entites propres a la page). Une page noindex
+         ne garde que l'organisation et le site. --}}
+    <x-seo.json-ld
+        :url="$__env->yieldContent('canonical', url()->current())"
+        :name="$__env->yieldContent('title', $defaultTitle)"
+        :description="$__env->yieldContent('meta_description', $defaultDescription)"
+        :robots="$__env->yieldContent('robots', 'index, follow')"
+        :page-type="$jsonLdPageType ?? 'WebPage'"
+        :page="$jsonLdPage ?? []"
+        :breadcrumbs="$breadcrumbs ?? []"
+        :nodes="$jsonLdNodes ?? []"
+    />
 
     {{-- Polices auto-hebergees (declarations dans resources/css/web/base/fonts.css). --}}
     <link rel="preload" href="{{ asset('fonts/inter-latin-400-normal.woff2') }}" as="font" type="font/woff2" crossorigin>

@@ -4,54 +4,80 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Data\Web\Seo\SitemapEntry;
 use App\Services\Web\Blog\BlogSitemapService;
 use App\Services\Web\Localization\LocalizedUrlGenerator;
+use App\Services\Web\Seo\SitemapService;
+use Closure;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Vite;
 use Throwable;
 
+/**
+ * Le sitemap, decoupe comme celui d'un site WordPress : un index, puis un fichier pour les pages fixes,
+ * un pour les articles et un pour les categories. Chaque page y figure une fois par langue, avec ses
+ * equivalents dans les autres langues (hreflang). Les fichiers portent noindex : Google les lit sans les
+ * montrer dans ses resultats.
+ */
 final class SitemapController extends Controller
 {
-    /**
-     * Pages indexables (voir plan-du-site.md). Les tunnels et le back-office sont noindex.
-     *
-     * @var list<string>
-     */
-    private const INDEXABLE_ROUTES = [
-        'home',
-        'about',
-        'understand-gpsr',
-        'services',
-        'pricing',
-        'excluded-products',
-        'contact',
-    ];
+    private const STYLESHEET = 'resources/css/web/sitemap/index.css';
 
-    /**
-     * Chaque page figure une fois par langue, avec ses equivalents dans les autres langues (hreflang).
-     * Les pages du blog (hub, categories, articles publies) s'y ajoutent avec leur date de modification ;
-     * si leur lecture echoue, le sitemap des pages fixes est servi quand meme.
-     */
-    public function __invoke(LocalizedUrlGenerator $localizedUrls, BlogSitemapService $blog): Response
+    public function index(SitemapService $sitemap): Response
     {
-        $pages = array_map(
-            static fn (string $name): array => ['urls' => $localizedUrls->inAllLocales($name), 'lastmod' => null],
-            self::INDEXABLE_ROUTES,
-        );
+        return $this->xml('sitemap-index', ['files' => $sitemap->files()]);
+    }
 
+    public function pages(SitemapService $sitemap, LocalizedUrlGenerator $urls): Response
+    {
+        return $this->urlset($sitemap->pages(), $urls);
+    }
+
+    public function posts(BlogSitemapService $blog, LocalizedUrlGenerator $urls): Response
+    {
+        return $this->urlset($this->readBlog($blog->posts(...)), $urls);
+    }
+
+    public function categories(BlogSitemapService $blog, LocalizedUrlGenerator $urls): Response
+    {
+        return $this->urlset($this->readBlog($blog->categories(...)), $urls);
+    }
+
+    /**
+     * Un fichier du blog qui ne se lit pas repond 503 : Google reessaiera. Un fichier vide lui dirait a
+     * tort que les articles n'existent plus.
+     *
+     * @param  Closure(): list<SitemapEntry>  $read
+     * @return list<SitemapEntry>
+     */
+    private function readBlog(Closure $read): array
+    {
         try {
-            foreach ($blog->entries() as $entry) {
-                $pages[] = ['urls' => $entry->urls, 'lastmod' => $entry->lastmod];
-            }
+            return $read();
         } catch (Throwable $e) {
-            Log::error('Blog sitemap entries failed to load; serving the static pages only.', ['exception' => $e]);
-        }
+            Log::error('Blog sitemap file failed to load.', ['exception' => $e]);
 
+            abort(503);
+        }
+    }
+
+    /**
+     * @param  list<SitemapEntry>  $entries
+     */
+    private function urlset(array $entries, LocalizedUrlGenerator $urls): Response
+    {
+        return $this->xml('sitemap', ['entries' => $entries, 'defaultLocale' => $urls->defaultLocale()]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function xml(string $view, array $data): Response
+    {
         return response()
-            ->view('sitemap', [
-                'pages' => $pages,
-                'defaultLocale' => $localizedUrls->defaultLocale(),
-            ])
-            ->header('Content-Type', 'application/xml');
+            ->view($view, [...$data, 'stylesheet' => Vite::asset(self::STYLESHEET)])
+            ->header('Content-Type', 'application/xml; charset=UTF-8')
+            ->header('X-Robots-Tag', 'noindex');
     }
 }

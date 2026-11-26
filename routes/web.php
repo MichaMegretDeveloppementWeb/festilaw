@@ -44,11 +44,16 @@ use App\Livewire\Admin\SubmissionList;
 use Illuminate\Support\Facades\Route;
 
 /*
- | Fichiers SEO. Le sitemap liste les pages publiques dans chaque langue, avec leurs equivalents (hreflang).
+ | Fichiers SEO. Le sitemap liste les pages publiques dans chaque langue, avec leurs equivalents (hreflang) :
+ | un index (l'adresse declaree a la Search Console et dans robots.txt), puis un fichier pour les pages
+ | fixes, un pour les articles et un pour les categories du blog.
  | robots.txt est un fichier statique (public/robots.txt) servi directement par le serveur web,
  | sans PHP ni session : sa reponse ne peut pas varier selon le robot.
  */
-Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
+Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
+Route::get('/sitemap-pages.xml', [SitemapController::class, 'pages'])->name('sitemap.pages');
+Route::get('/sitemap-posts.xml', [SitemapController::class, 'posts'])->name('sitemap.posts');
+Route::get('/sitemap-categories.xml', [SitemapController::class, 'categories'])->name('sitemap.categories');
 
 // Persistance (anonyme) d'une reponse au quiz d'eligibilite, appelee en fin de quiz. Sous /api/* pour
 // que les erreurs de validation sortent en JSON (cf. shouldRenderJsonWhen dans bootstrap/app.php).

@@ -6,15 +6,41 @@ namespace App\Repositories\Blog;
 
 use App\Enums\Blog\BlogPostStatus;
 use App\Models\BlogCategoryTranslation;
+use App\Models\BlogPost;
 use App\Models\BlogPostTranslation;
 use Illuminate\Database\Query\Builder;
 
 /**
- * Lecture au service du sitemap : les adresses du blog, sans aucun contenu. Deux requetes, quel que
- * soit le nombre d'articles.
+ * Lecture au service du sitemap : les adresses du blog, sans aucun contenu. Une requete par fichier du
+ * sitemap, quel que soit le nombre d'articles.
  */
 final readonly class BlogSitemapRepository
 {
+    /**
+     * La date de modification la plus recente des articles publies (la date de publication quand le
+     * contenu n'a pas change depuis), et si l'un d'eux est range dans une categorie. Null quand aucun
+     * article n'est publie.
+     *
+     * @return array{latest_modification: string, has_category: bool}|null
+     */
+    public function publishedPostSummary(): ?array
+    {
+        $row = BlogPost::query()->toBase()
+            ->where('status', BlogPostStatus::Published->value)
+            ->selectRaw('MAX(COALESCE(content_updated_at, published_at)) AS latest_modification')
+            ->selectRaw('MAX(CASE WHEN blog_category_id IS NULL THEN 0 ELSE 1 END) AS has_category')
+            ->first();
+
+        if ($row === null || $row->latest_modification === null) {
+            return null;
+        }
+
+        return [
+            'latest_modification' => (string) $row->latest_modification,
+            'has_category' => (int) $row->has_category === 1,
+        ];
+    }
+
     /**
      * Le slug de chaque article publie dans chaque langue (une ligne par article et par langue), avec
      * ses dates, du plus recent au plus ancien.

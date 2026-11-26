@@ -38,12 +38,7 @@ final class BlogIndexController extends Controller
 
         return view('web.blog.index', [
             'page' => $page,
-            'collectionNode' => $structuredData->collection(
-                __('Festilaw blog'),
-                $page->url,
-                __('Practical guides and news on EU product safety rules for sellers outside the EU.'),
-                $locale,
-            ),
+            'blogNode' => $structuredData->blog($locale),
         ]);
     }
 }

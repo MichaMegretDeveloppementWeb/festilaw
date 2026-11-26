@@ -103,14 +103,24 @@ it('checks the blog link once per request, whatever the number of places that sh
     expect($count)->toBe(1);
 });
 
-it('reads the blog part of the sitemap in 2 queries', function () {
-    $entries = [];
+it('reads each blog part of the sitemap in a single query', function () {
+    $blog = app(BlogSitemapService::class);
+    $summary = null;
+    $posts = [];
+    $categories = [];
 
-    expect(blogQueryCount(function () use (&$entries) {
-        $entries = app(BlogSitemapService::class)->entries();
-    }))->toBe(2)
-        // Le hub, 2 categories et 300 articles.
-        ->and($entries)->toHaveCount(303);
+    expect(blogQueryCount(function () use ($blog, &$summary) {
+        $summary = $blog->summary();
+    }))->toBe(1)
+        ->and(blogQueryCount(function () use ($blog, &$posts) {
+            $posts = $blog->posts();
+        }))->toBe(1)
+        ->and(blogQueryCount(function () use ($blog, &$categories) {
+            $categories = $blog->categories();
+        }))->toBe(1)
+        ->and($summary?->hasCategories)->toBeTrue()
+        ->and($posts)->toHaveCount(300)
+        ->and($categories)->toHaveCount(2);
 });
 
 it('serves the whole pages within their plan plus the single blog link check', function (string $url, int $queries) {
@@ -126,5 +136,8 @@ it('serves the whole pages within their plan plus the single blog link check', f
     'hub, page 2' => ['/fr/blog?page=2', 5],
     'category' => ['/es/blog/categoria/platforms-es', 7],
     'article' => ['/blog/bulk-42-en', 7],
-    'sitemap' => ['/sitemap.xml', 2],
+    'sitemap index' => ['/sitemap.xml', 1],
+    'sitemap of the fixed pages' => ['/sitemap-pages.xml', 1],
+    'sitemap of the posts' => ['/sitemap-posts.xml', 1],
+    'sitemap of the categories' => ['/sitemap-categories.xml', 1],
 ]);

@@ -82,6 +82,9 @@ it('uses the bare production domain in canonical sitemap and organization data',
         ->and($organization['vatID'])->toBe('NL860886761B01')
         ->and($organization['address']['streetAddress'])->toBe('Spoorstraat 30A');
     get('https://festilaw.com/sitemap.xml')->assertOk()
+        ->assertSee('<loc>https://festilaw.com/sitemap-pages.xml</loc>', false)
+        ->assertDontSee('www.festilaw.com');
+    get('https://festilaw.com/sitemap-pages.xml')->assertOk()
         ->assertSee('<loc>https://festilaw.com/pricing</loc>', false)
         ->assertDontSee('www.festilaw.com');
 });

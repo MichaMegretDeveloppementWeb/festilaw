@@ -86,13 +86,20 @@ it('still serves the site, without the blog link nor the home block, when the bl
 
     get('/fr/pricing')->assertOk()->assertDontSee('href="'.url('/fr/blog').'"', false);
 
+    // L'index ne cite que les pages fixes, servies sans l'accueil du blog. Le fichier des articles repond 503 :
+    // vide, il dirait a Google que les articles n'existent plus.
     get('/sitemap.xml')->assertOk()
+        ->assertSee('<loc>'.url('/sitemap-pages.xml').'</loc>', false)
+        ->assertDontSee('sitemap-posts.xml', false);
+    get('/sitemap-pages.xml')->assertOk()
         ->assertSee('<loc>'.url('/pricing').'</loc>', false)
         ->assertDontSee('/blog', false);
+    get('/sitemap-posts.xml')->assertServiceUnavailable();
 
     Log::shouldHaveReceived('error')->withArgs(fn (string $message): bool => str_contains($message, 'Blog navigation check failed'));
     Log::shouldHaveReceived('error')->withArgs(fn (string $message): bool => str_contains($message, 'Home blog block failed'));
     Log::shouldHaveReceived('error')->withArgs(fn (string $message): bool => str_contains($message, 'Blog sitemap entries failed'));
+    Log::shouldHaveReceived('error')->withArgs(fn (string $message): bool => str_contains($message, 'Blog sitemap file failed'));
 
     Schema::rename('blog_posts_unavailable', 'blog_posts');
 });

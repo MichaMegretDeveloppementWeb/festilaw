@@ -14,7 +14,7 @@
         ['name' => __('Blog'), 'url' => localized_route('blog.index'), 'track' => 'Fil d\'Ariane, Blog'],
         ['name' => $page->name, 'url' => $page->pagination->url(1)],
     ];
-    $jsonLdNodes = [$collectionNode];
+    $jsonLdPageType = 'CollectionPage';
 @endphp
 
 @push('styles')

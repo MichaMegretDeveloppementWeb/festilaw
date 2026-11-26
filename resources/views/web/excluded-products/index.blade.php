@@ -8,14 +8,6 @@
         ['name' => __('Home'), 'url' => localized_route('home')],
         ['name' => __('Excluded products'), 'url' => localized_route('excluded-products')],
     ];
-    $jsonLdNodes = [
-        [
-            '@type' => 'WebPage',
-            'name' => __('Excluded products'),
-            'url' => localized_route('excluded-products'),
-            'description' => __('Product categories outside Festilaw scope, governed by separate EU frameworks.'),
-        ],
-    ];
 @endphp
 
 @push('styles')

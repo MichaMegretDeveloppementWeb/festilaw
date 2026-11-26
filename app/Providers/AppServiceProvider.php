@@ -40,6 +40,7 @@ use App\Services\Web\Blog\BlogCategoryPageService;
 use App\Services\Web\Blog\BlogHomeBlockService;
 use App\Services\Web\Blog\BlogHubPageWindow;
 use App\Services\Web\Blog\BlogNavigationService;
+use App\Services\Web\Seo\StructuredDataGraphBuilder;
 use Falcon\Analytics\Facades\Analytics;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
@@ -70,6 +71,18 @@ class AppServiceProvider extends ServiceProvider
 
         $this->registerErrorReportSettings();
         $this->registerBlogSettings();
+        $this->registerStructuredDataSettings();
+    }
+
+    /**
+     * Donnees structurees des pages publiques : le nom du site, l'adresse de contact publiee et les
+     * langues du site.
+     */
+    private function registerStructuredDataSettings(): void
+    {
+        $this->app->when(StructuredDataGraphBuilder::class)->needs('$siteName')->giveConfig('app.name');
+        $this->app->when(StructuredDataGraphBuilder::class)->needs('$contactEmail')->giveConfig('festilaw.contact_email');
+        $this->app->when(StructuredDataGraphBuilder::class)->needs('$locales')->giveConfig('festilaw.supported_locales');
     }
 
     /**

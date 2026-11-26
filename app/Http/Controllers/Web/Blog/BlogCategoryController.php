@@ -6,7 +6,6 @@ namespace App\Http\Controllers\Web\Blog;
 
 use App\Http\Controllers\Controller;
 use App\Services\Web\Blog\BlogCategoryPageService;
-use App\Services\Web\Blog\BlogStructuredDataBuilder;
 use App\Services\Web\Localization\LocalizedUrlGenerator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,7 +21,6 @@ final class BlogCategoryController extends Controller
         Request $request,
         string $slug,
         BlogCategoryPageService $categories,
-        BlogStructuredDataBuilder $structuredData,
         LocalizedUrlGenerator $urls,
     ): View|RedirectResponse {
         $locale = app()->getLocale();
@@ -42,9 +40,6 @@ final class BlogCategoryController extends Controller
 
         $urls->declareAlternates($page->alternates);
 
-        return view('web.blog.category', [
-            'page' => $page,
-            'collectionNode' => $structuredData->collection($page->name, $page->url, $page->metaDescription ?? $page->description, $locale),
-        ]);
+        return view('web.blog.category', ['page' => $page]);
     }
 }

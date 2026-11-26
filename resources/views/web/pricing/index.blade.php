@@ -3,6 +3,7 @@
 @section('title', __('Pricing · Simple, fair, transparent GPSR compliance'))
 @section('meta_description', __('Simple, fair and transparent GPSR pricing: one clear public rate with no hidden per-SKU fees. Creator, Pro and Scale plans.'))
 
+@inject('structuredData', 'App\Services\Web\Seo\StructuredDataGraphBuilder')
 @php
     $breadcrumbs = [
         ['name' => __('Home'), 'url' => localized_route('home')],
@@ -17,26 +18,9 @@
         ['q' => __('Is my data safe?'), 'track' => __('Is my data safe?', [], 'fr'), 'a' => __('Yes. We handle your data in line with the GDPR, use secure payment and secure document storage, and only collect what is needed to provide the service.')],
         ['q' => __('What if I still have questions before subscribing?'), 'track' => __('What if I still have questions before subscribing?', [], 'fr'), 'a' => __('You can reach us any time through our contact page, and tell us about your situation before you commit to a plan.')],
     ];
-    $jsonLdNodes = [
-        [
-            '@type' => 'Service',
-            'serviceType' => 'GPSR Responsible Person',
-            'provider' => ['@type' => 'Organization', 'name' => config('app.name')],
-            'areaServed' => 'EU',
-            'offers' => [
-                ['@type' => 'Offer', 'name' => 'Creator Pack', 'price' => (string) intdiv($creatorAnnualCents, 100), 'priceCurrency' => 'EUR'],
-                ['@type' => 'Offer', 'name' => 'Pro Pack', 'price' => (string) intdiv($proAnnualCents, 100), 'priceCurrency' => 'EUR'],
-            ],
-        ],
-        [
-            '@type' => 'FAQPage',
-            'mainEntity' => array_map(fn ($f) => [
-                '@type' => 'Question',
-                'name' => $f['q'],
-                'acceptedAnswer' => ['@type' => 'Answer', 'text' => $f['a']],
-            ], $faqItems),
-        ],
-    ];
+    $jsonLdPageType = 'FAQPage';
+    $jsonLdPage = ['mainEntity' => $structuredData->questions($faqItems)];
+    $jsonLdNodes = [$structuredData->service(['Creator Pack' => $creatorAnnualCents, 'Pro Pack' => $proAnnualCents])];
 @endphp
 
 @push('styles')

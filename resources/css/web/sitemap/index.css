@@ -1,0 +1,82 @@
+/* Sitemap ouvert dans un navigateur. Le fichier XML appelle cette feuille par sa ligne xml-stylesheet ; les
+   robots l'ignorent. Sans elle, Chrome affiche toutes les adresses collees, parce que les equivalents de
+   langue sont des balises HTML (xhtml:link). Une feuille XSL aurait donne un tableau cliquable, mais Chrome
+   retire XSLT a partir de novembre 2026 : une feuille CSS ne peut que mettre en page, sans liens.
+   Un titre, une phrase, puis une adresse par ligne, numerotee, avec sa date de modification. */
+@import '../base/tokens.css';
+
+urlset,
+sitemapindex {
+    display: flex;
+    flex-direction: column;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 48px 24px 64px;
+    background: #fff;
+    color: var(--color-ink);
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    counter-reset: entries;
+}
+
+/* Le titre, puis la phrase : deux pseudo-elements remontes en tete par order (::after suit les adresses
+   dans le document). */
+urlset::before,
+sitemapindex::before {
+    order: -2;
+    margin: 0 0 6px;
+    color: var(--color-blue);
+    font-size: 28px;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+urlset::after,
+sitemapindex::after {
+    order: -1;
+    margin: 0 0 24px;
+    color: var(--color-ink-soft);
+}
+
+urlset::before { content: "XML sitemap"; }
+urlset::after { content: "This file lists the pages of festilaw.com for search engines."; }
+sitemapindex::before { content: "XML sitemap index"; }
+sitemapindex::after { content: "This index lists the sitemap files of festilaw.com."; }
+
+url,
+sitemap {
+    display: grid;
+    grid-template-columns: 3em 1fr;
+    column-gap: 8px;
+    padding: 12px 0;
+    border-top: 1px solid var(--color-line);
+    counter-increment: entries;
+}
+
+url::before,
+sitemap::before {
+    grid-row: span 2;
+    color: var(--color-ink-soft);
+    font-variant-numeric: tabular-nums;
+    content: counter(entries);
+}
+
+loc {
+    grid-column: 2;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+}
+
+lastmod {
+    grid-column: 2;
+    color: var(--color-ink-soft);
+    font-size: 13px;
+}
+
+lastmod::before { content: "Last modified "; }
+
+/* Les equivalents de langue (xhtml:link) restent pour Google : affiches, ils repeteraient chaque adresse quatre
+   fois. Sans espace de noms declare, le selecteur vaut pour toute balise link, ce qui evite un @namespace qui
+   devrait preceder les regles de tokens.css une fois l'import mis a plat par Vite. */
+link { display: none; }

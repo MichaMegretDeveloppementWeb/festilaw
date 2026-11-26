@@ -129,6 +129,15 @@
     "src": "resources/css/web/services/index.css",
     "isEntry": true
   },
+  "resources/css/web/sitemap/index.css": {
+    "file": "assets/index-BZK_UFMs.css",
+    "name": "index",
+    "names": [
+      "index.css"
+    ],
+    "src": "resources/css/web/sitemap/index.css",
+    "isEntry": true
+  },
   "resources/css/web/understand-gpsr/index.css": {
     "file": "assets/index-fFprMQii.css",
     "name": "index",

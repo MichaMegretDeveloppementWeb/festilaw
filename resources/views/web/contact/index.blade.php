@@ -3,14 +3,10 @@
 @section('title', __('Contact · Festilaw'))
 @section('meta_description', __('Get in touch with Festilaw, your GPSR Responsible Person in the EU. From entrepreneurs, for entrepreneurs.'))
 
+@inject('structuredData', 'App\Services\Web\Seo\StructuredDataGraphBuilder')
 @php
-    $jsonLdNodes = [
-        [
-            '@type' => 'ContactPage',
-            'name' => __('Contact Festilaw'),
-            'url' => localized_route('contact'),
-        ],
-    ];
+    $jsonLdPageType = 'ContactPage';
+    $jsonLdPage = ['about' => $structuredData->organizationReference()];
 @endphp
 
 @push('styles')

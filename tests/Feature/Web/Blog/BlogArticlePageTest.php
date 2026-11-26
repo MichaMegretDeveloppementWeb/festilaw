@@ -72,7 +72,9 @@ it('declares the article to search engines and social networks', function () {
         ->and($article['dateModified'])->toBe('2026-11-02T09:00:00+00:00')
         ->and($article['inLanguage'])->toBe('en')
         ->and($article['articleSection'])->toBe('Rules en')
-        ->and($article['mainEntityOfPage']['@id'])->toBe(url('/blog/label-en'))
+        ->and($article['@id'])->toBe(url('/blog/label-en').'#article')
+        ->and($article['mainEntityOfPage'])->toBe(['@id' => url('/blog/label-en').'#webpage'])
+        ->and($article['isPartOf'])->toBe(['@id' => url('/blog').'#blog'])
         // L'auteur est nomme avec sa qualite, sans adresse : aucune page du site ne le presente.
         ->and($article['author'])->toBe(['@type' => 'Person', 'name' => 'Laëtitia Redonet', 'jobTitle' => 'EU Market Access & Compliance Advisor'])
         ->and($article['publisher'])->toBe(['@id' => url('/').'#organization'])

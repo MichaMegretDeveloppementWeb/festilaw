@@ -3,6 +3,7 @@
 @section('title', __('Understand the GPSR · Festilaw'))
 @section('meta_description', __('What the EU General Product Safety Regulation (GPSR) is, its three core pillars, who it applies to, and which products need specialized services.'))
 
+@inject('structuredData', 'App\Services\Web\Seo\StructuredDataGraphBuilder')
 @php
     $breadcrumbs = [
         ['name' => __('Home'), 'url' => localized_route('home')],
@@ -18,22 +19,8 @@
         ['q' => __('Responsible Person or Authorised Representative, what\'s the difference?'), 'track' => __('Responsible Person or Authorised Representative, what\'s the difference?', [], 'fr'), 'a' => __('Both are EU-based intermediaries, but they rest on different legal bases: the Authorised Representative applies to CE-marked and harmonised products, while the GPSR Responsible Person covers general consumer products under the GPSR. Festilaw helps you determine and cover what you need.')],
         ['q' => __('Which products does Festilaw not cover?'), 'track' => __('Which products does Festilaw not cover?', [], 'fr'), 'a' => __('We currently do not handle cosmetics, food and drinks, medical devices, chemicals, or tobacco. If your products fall into these categories, please get in touch.')],
     ];
-    $jsonLdNodes = [
-        [
-            '@type' => 'WebPage',
-            'name' => __('Understand the GPSR'),
-            'url' => localized_route('understand-gpsr'),
-            'description' => __('What the EU General Product Safety Regulation (GPSR) is, its three core pillars, who it applies to, and which products need specialized services.'),
-        ],
-        [
-            '@type' => 'FAQPage',
-            'mainEntity' => array_map(fn ($f) => [
-                '@type' => 'Question',
-                'name' => $f['q'],
-                'acceptedAnswer' => ['@type' => 'Answer', 'text' => $f['a']],
-            ], $faqItems),
-        ],
-    ];
+    $jsonLdPageType = 'FAQPage';
+    $jsonLdPage = ['mainEntity' => $structuredData->questions($faqItems)];
 @endphp
 
 @push('styles')

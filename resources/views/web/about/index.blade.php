@@ -3,19 +3,14 @@
 @section('title', __('About Festilaw · Your GPSR compliance partner'))
 @section('meta_description', __('Festilaw is a GPSR compliance partner for brands selling into Europe, built by entrepreneurs, for entrepreneurs.'))
 
+@inject('structuredData', 'App\Services\Web\Seo\StructuredDataGraphBuilder')
 @php
     $breadcrumbs = [
         ['name' => __('Home'), 'url' => localized_route('home')],
         ['name' => __('About'), 'url' => localized_route('about')],
     ];
-    $jsonLdNodes = [
-        [
-            '@type' => 'AboutPage',
-            'name' => __('About Festilaw'),
-            'url' => localized_route('about'),
-            'description' => __('Festilaw is a GPSR compliance partner for brands selling into Europe, built by entrepreneurs, for entrepreneurs.'),
-        ],
-    ];
+    $jsonLdPageType = 'AboutPage';
+    $jsonLdPage = ['about' => $structuredData->organizationReference()];
 @endphp
 
 @push('styles')

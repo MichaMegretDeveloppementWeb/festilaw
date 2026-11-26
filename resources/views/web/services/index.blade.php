@@ -3,21 +3,14 @@
 @section('title', __('Our Services · Festilaw GPSR compliance'))
 @section('meta_description', __('From compliance assessment to authority liaison and regulatory watch, Festilaw handles your full GPSR compliance as your EU Responsible Person.'))
 
+@inject('structuredData', 'App\Services\Web\Seo\StructuredDataGraphBuilder')
 @php
     $breadcrumbs = [
         ['name' => __('Home'), 'url' => localized_route('home')],
         ['name' => __('Our Services'), 'url' => localized_route('services')],
     ];
-    $jsonLdNodes = [
-        [
-            '@type' => 'Service',
-            'serviceType' => 'GPSR Responsible Person',
-            'name' => __('GPSR compliance services'),
-            'provider' => ['@type' => 'Organization', 'name' => config('app.name')],
-            'areaServed' => 'EU',
-            'url' => localized_route('services'),
-        ],
-    ];
+    $jsonLdPage = ['mainEntity' => $structuredData->serviceReference()];
+    $jsonLdNodes = [$structuredData->service()];
 @endphp
 
 @push('styles')

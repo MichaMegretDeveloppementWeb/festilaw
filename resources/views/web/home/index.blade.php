@@ -3,6 +3,11 @@
 @section('title', __('Festilaw · Your GPSR Responsible Person'))
 @section('meta_description', __('Sell safely in the European market. Festilaw is your GPSR Responsible Person, with dedicated support from entrepreneurs for entrepreneurs.'))
 
+@inject('structuredData', 'App\Services\Web\Seo\StructuredDataGraphBuilder')
+@php
+    $jsonLdPage = ['about' => $structuredData->organizationReference()];
+@endphp
+
 @push('meta')
     {{-- LCP mobile : le fond CSS garde son cadrage/parallax, mais se charge des le HTML. --}}
     <link rel="preload" as="image" href="{{ asset('images/home-transport-optimized.avif') }}" type="image/avif" fetchpriority="high">

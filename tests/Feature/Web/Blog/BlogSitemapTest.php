@@ -39,10 +39,13 @@ it('lists no blog address while nothing is published', function () {
     BlogContent::draft('pending', BlogContent::category('rules'));
     BlogContent::scheduled('later');
 
-    $entries = blogSitemapEntries(get('/sitemap.xml')->assertOk());
+    $pages = blogSitemapEntries(get('/sitemap-pages.xml')->assertOk());
 
-    expect($entries)->toHaveCount(21)
-        ->and(array_filter(array_keys($entries), fn (string $url): bool => str_contains($url, '/blog')))->toBe([]);
+    // 10 pages fixes (dont 3 legales) x 3 langues, sans l'accueil du blog.
+    expect($pages)->toHaveCount(30)
+        ->and(array_filter(array_keys($pages), fn (string $url): bool => str_contains($url, '/blog')))->toBe([])
+        ->and(blogSitemapEntries(get('/sitemap-posts.xml')->assertOk()))->toBe([])
+        ->and(blogSitemapEntries(get('/sitemap-categories.xml')->assertOk()))->toBe([]);
 });
 
 it('lists the hub, the categories with a published post and the published posts, in every language', function () {
@@ -54,17 +57,24 @@ it('lists the hub, the categories with a published post and the published posts,
     $label->update(['content_updated_at' => CarbonImmutable::parse('2026-11-10 08:00:00')]);
     $older = url('/blog/older-en');
 
-    $entries = blogSitemapEntries(get('/sitemap.xml')->assertOk());
+    $pages = blogSitemapEntries(get('/sitemap-pages.xml')->assertOk());
+    $categories = blogSitemapEntries(get('/sitemap-categories.xml')->assertOk());
+    $posts = blogSitemapEntries(get('/sitemap-posts.xml')->assertOk());
 
-    // 21 pages fixes + (hub + 2 categories + 2 articles) x 3 langues ; "older" a sa propre categorie
-    // (creee par la factory), "empty" n'a aucun article publie.
-    expect(array_keys($entries))->not->toContain(url('/blog/category/empty-en'))
-        ->and(array_keys($entries))->not->toContain(url('/blog/pending-en'))
-        ->and($entries[url('/fr/blog')])->toBe([
+    // L'accueil du blog rejoint les pages fixes. "older" a sa propre categorie (creee par la factory),
+    // "empty" n'a aucun article publie. Les articles vont du plus recent au plus ancien.
+    expect($pages)->toHaveCount(30 + 3)
+        ->and($categories)->toHaveCount(2 * 3)
+        ->and(array_keys($categories))->not->toContain(url('/blog/category/empty-en'))
+        ->and(array_keys($posts))->toBe([
+            url('/blog/label-en'), url('/fr/blog/label-fr'), url('/es/blog/label-es'),
+            url('/blog/older-en'), url('/fr/blog/older-fr'), url('/es/blog/older-es'),
+        ])
+        ->and($pages[url('/fr/blog')])->toBe([
             'lastmod' => '2026-11-10T08:00:00+00:00',
             'alternates' => ['en' => url('/blog'), 'fr' => url('/fr/blog'), 'es' => url('/es/blog'), 'x-default' => url('/blog')],
         ])
-        ->and($entries[url('/es/blog/categoria/rules-es')])->toBe([
+        ->and($categories[url('/es/blog/categoria/rules-es')])->toBe([
             'lastmod' => null,
             'alternates' => [
                 'en' => url('/blog/category/rules-en'),
@@ -73,7 +83,7 @@ it('lists the hub, the categories with a published post and the published posts,
                 'x-default' => url('/blog/category/rules-en'),
             ],
         ])
-        ->and($entries[url('/fr/blog/label-fr')])->toBe([
+        ->and($posts[url('/fr/blog/label-fr')])->toBe([
             'lastmod' => '2026-11-10T08:00:00+00:00',
             'alternates' => [
                 'en' => url('/blog/label-en'),
@@ -82,16 +92,20 @@ it('lists the hub, the categories with a published post and the published posts,
                 'x-default' => url('/blog/label-en'),
             ],
         ])
-        ->and($entries[$older]['lastmod'])->toBe('2026-10-01T09:00:00+00:00');
+        ->and($posts[$older]['lastmod'])->toBe('2026-10-01T09:00:00+00:00');
 });
 
 it('drops a post, and its category when it was the last one, as soon as it is unpublished', function () {
     $rules = BlogContent::category('rules');
     $post = BlogContent::published('label', $rules);
 
-    expect(blogSitemapEntries(get('/sitemap.xml')))->toHaveCount(21 + 9);
+    expect(blogSitemapEntries(get('/sitemap-pages.xml')))->toHaveCount(30 + 3)
+        ->and(blogSitemapEntries(get('/sitemap-posts.xml')))->toHaveCount(3)
+        ->and(blogSitemapEntries(get('/sitemap-categories.xml')))->toHaveCount(3);
 
     app(UnpublishBlogPostAction::class)->execute($post->id);
 
-    expect(blogSitemapEntries(get('/sitemap.xml')))->toHaveCount(21);
+    expect(blogSitemapEntries(get('/sitemap-pages.xml')))->toHaveCount(30)
+        ->and(blogSitemapEntries(get('/sitemap-posts.xml')))->toBe([])
+        ->and(blogSitemapEntries(get('/sitemap-categories.xml')))->toBe([]);
 });

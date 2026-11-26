@@ -5,15 +5,20 @@ declare(strict_types=1);
 namespace App\Services\Web\Blog;
 
 use App\Data\Web\Blog\BlogArticlePageData;
-use Illuminate\Contracts\Routing\UrlGenerator;
+use App\Services\Web\Localization\LocalizedUrlGenerator;
+use App\Services\Web\Seo\StructuredDataGraphBuilder;
 
 /**
- * Construit les donnees enrichies (schema.org) des pages du blog. Les noeuds rendus rejoignent le
- * graphe unique du layout (variable $jsonLdNodes) ; le fil d'Ariane est ajoute par le layout.
+ * Construit les entites schema.org propres au blog : le blog d'une langue et ses articles. Elles
+ * rejoignent le graphe unique du layout (variable $jsonLdNodes), qui y ajoute l'organisation, le site,
+ * la page et le fil d'Ariane ; elles citent ces elements par leur identifiant.
  */
 final readonly class BlogStructuredDataBuilder
 {
-    public function __construct(private UrlGenerator $url) {}
+    public function __construct(
+        private StructuredDataGraphBuilder $graph,
+        private LocalizedUrlGenerator $urls,
+    ) {}
 
     /**
      * @return array<string, mixed>
@@ -22,6 +27,7 @@ final readonly class BlogStructuredDataBuilder
     {
         return array_filter([
             '@type' => 'BlogPosting',
+            '@id' => $page->url.'#article',
             'headline' => $page->title,
             'description' => $page->metaDescription,
             'image' => $page->shareImageUrl === null ? null : [$page->shareImageUrl],
@@ -30,32 +36,33 @@ final readonly class BlogStructuredDataBuilder
             'inLanguage' => $locale,
             'articleSection' => $page->category?->name,
             'url' => $page->url,
-            'mainEntityOfPage' => ['@type' => 'WebPage', '@id' => $page->url],
+            'isPartOf' => $this->graph->blogReference($locale),
+            'mainEntityOfPage' => ['@id' => $page->url.'#webpage'],
             // Pas d'adresse pour l'auteur : aucune page du site ne le presente.
             'author' => [
                 '@type' => 'Person',
                 'name' => $page->author->name,
                 'jobTitle' => $page->author->jobTitle,
             ],
-            // L'organisation est deja declaree par le layout : on y renvoie par son identifiant.
-            'publisher' => ['@id' => $this->url->to('/').'#organization'],
+            'publisher' => $this->graph->organizationReference(),
         ], static fn (mixed $value): bool => $value !== null);
     }
 
     /**
-     * Page de liste (hub ou categorie).
+     * Le blog d'une langue, decrit sur son accueil : chaque article de cette langue en fait partie.
      *
      * @return array<string, mixed>
      */
-    public function collection(string $name, string $url, ?string $description, string $locale): array
+    public function blog(string $locale): array
     {
-        return array_filter([
-            '@type' => 'CollectionPage',
-            'name' => $name,
-            'description' => $description,
-            'url' => $url,
+        return [
+            '@type' => 'Blog',
+            ...$this->graph->blogReference($locale),
+            'name' => __('Festilaw blog'),
+            'description' => __('Practical guides and news on EU product safety rules for sellers outside the EU.'),
+            'url' => $this->urls->route('blog.index', [], $locale),
             'inLanguage' => $locale,
-            'isPartOf' => ['@type' => 'WebSite', 'url' => $this->url->to('/')],
-        ], static fn (mixed $value): bool => $value !== null);
+            'publisher' => $this->graph->organizationReference(),
+        ];
     }
 }

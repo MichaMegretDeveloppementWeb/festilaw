@@ -4,17 +4,18 @@ declare(strict_types=1);
 
 namespace App\Services\Web\Blog;
 
-use App\Data\Web\Blog\BlogSitemapEntry;
+use App\Data\Web\Blog\BlogSitemapSummary;
+use App\Data\Web\Seo\SitemapEntry;
 use App\Repositories\Blog\BlogSitemapRepository;
 use App\Services\Web\Localization\LocalizedUrlGenerator;
 use Carbon\CarbonImmutable;
 
 /**
- * Les pages du blog a declarer dans le sitemap : le hub, les categories qui ont un article publie, et
- * chaque article publie, avec leurs adresses dans chaque langue. Rien tant qu'aucun article n'est
- * publie (le hub n'est alors pas indexe).
+ * Les pages du blog a declarer dans le sitemap : chaque article publie, et les categories qui ont un
+ * article publie, avec leurs adresses dans chaque langue. Le resume dit a l'index et a la liste des
+ * pages s'il y a un blog a declarer (l'accueil du blog n'est indexe qu'a partir du premier article).
  *
- * Plan de requetes : 2 (slugs des articles, slugs des categories) ; 1 seule sans article publie.
+ * Plan de requetes : 1 par methode.
  */
 final readonly class BlogSitemapService
 {
@@ -24,48 +25,74 @@ final readonly class BlogSitemapService
     ) {}
 
     /**
-     * @return list<BlogSitemapEntry>
+     * Null tant qu'aucun article n'est publie.
      */
-    public function entries(): array
+    public function summary(): ?BlogSitemapSummary
     {
-        $postRows = $this->sitemap->publishedPostSlugs();
+        $row = $this->sitemap->publishedPostSummary();
 
-        if ($postRows === []) {
-            return [];
+        if ($row === null) {
+            return null;
         }
 
+        return new BlogSitemapSummary(
+            $this->w3cDate($row['latest_modification']),
+            $row['has_category'],
+        );
+    }
+
+    /**
+     * Les articles publies, du plus recent au plus ancien, avec leur date de derniere modification.
+     *
+     * @return list<SitemapEntry>
+     */
+    public function posts(): array
+    {
         $posts = [];
-        $latest = null;
 
-        foreach ($postRows as $row) {
-            $lastmod = CarbonImmutable::parse($row['content_updated_at'] ?? $row['published_at'], 'UTC');
-            $latest = $latest === null || $lastmod->greaterThan($latest) ? $lastmod : $latest;
-
-            $posts[$row['post_id']]['lastmod'] = $lastmod->toAtomString();
+        foreach ($this->sitemap->publishedPostSlugs() as $row) {
+            $posts[$row['post_id']]['lastmod'] = $this->w3cDate($row['content_updated_at'] ?? $row['published_at']);
             $posts[$row['post_id']]['urls'][$row['locale']] = $this->urls->route('blog.show', ['slug' => $row['slug']], $row['locale']);
         }
 
+        $entries = [];
+
+        foreach ($posts as $post) {
+            if ($this->isComplete($post['urls'])) {
+                $entries[] = new SitemapEntry($this->ordered($post['urls']), $post['lastmod']);
+            }
+        }
+
+        return $entries;
+    }
+
+    /**
+     * Les categories qui ont au moins un article publie, dans l'ordre du menu du blog.
+     *
+     * @return list<SitemapEntry>
+     */
+    public function categories(): array
+    {
         $categories = [];
 
         foreach ($this->sitemap->categorySlugsWithPublishedPosts() as $row) {
             $categories[$row['category_id']][$row['locale']] = $this->urls->route('blog.category', ['slug' => $row['slug']], $row['locale']);
         }
 
-        $entries = [new BlogSitemapEntry($this->urls->inAllLocales('blog.index'), $latest?->toAtomString())];
+        $entries = [];
 
         foreach ($categories as $urls) {
             if ($this->isComplete($urls)) {
-                $entries[] = new BlogSitemapEntry($this->ordered($urls));
-            }
-        }
-
-        foreach ($posts as $post) {
-            if ($this->isComplete($post['urls'])) {
-                $entries[] = new BlogSitemapEntry($this->ordered($post['urls']), $post['lastmod']);
+                $entries[] = new SitemapEntry($this->ordered($urls));
             }
         }
 
         return $entries;
+    }
+
+    private function w3cDate(string $date): string
+    {
+        return CarbonImmutable::parse($date, 'UTC')->toAtomString();
     }
 
     /**

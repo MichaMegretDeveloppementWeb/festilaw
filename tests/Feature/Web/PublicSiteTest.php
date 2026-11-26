@@ -98,7 +98,7 @@ it('renders the FAQ with FAQPage markup on Understand GPSR and Pricing', functio
 });
 
 it('serves a valid XML sitemap of the indexable pages in every language', function () {
-    $response = get('/sitemap.xml')->assertOk();
+    $response = get('/sitemap-pages.xml')->assertOk();
 
     expect($response->headers->get('Content-Type'))->toContain('xml');
 
@@ -106,10 +106,13 @@ it('serves a valid XML sitemap of the indexable pages in every language', functi
         ->assertSee('<loc>'.route('pricing').'</loc>', false)
         ->assertSee('<loc>'.route('fr.pricing').'</loc>', false)
         ->assertSee('<loc>'.route('es.home').'</loc>', false)
-        ->assertDontSee('/get-started', false)
-        ->assertDontSee('/legal-notice', false);
+        ->assertSee('<loc>'.route('legal-notice').'</loc>', false)
+        ->assertSee('<loc>'.route('fr.privacy-policy').'</loc>', false)
+        ->assertSee('<loc>'.route('es.terms').'</loc>', false)
+        ->assertDontSee('/get-started', false);
 
-    // 7 pages x 3 langues, chacune avec ses equivalents (hreflang) et l'anglais par defaut.
+    // 10 pages (dont les 3 pages legales) x 3 langues, chacune avec ses equivalents (hreflang) et
+    // l'anglais par defaut.
     $alternatesByAddress = [];
 
     foreach (simplexml_load_string($response->getContent())->url as $url) {
@@ -122,7 +125,7 @@ it('serves a valid XML sitemap of the indexable pages in every language', functi
         $alternatesByAddress[(string) $url->loc] = $alternates;
     }
 
-    expect($alternatesByAddress)->toHaveCount(21)
+    expect($alternatesByAddress)->toHaveCount(30)
         ->and($alternatesByAddress[route('fr.pricing')])->toBe([
             'en' => route('pricing'),
             'fr' => route('fr.pricing'),

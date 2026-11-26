@@ -39,6 +39,8 @@ export default defineConfig({
                 'resources/css/web/errors/index.css',
                 'resources/css/web/blog/index.css',
                 'resources/css/web/blog/article.css',
+                // Sitemap ouvert dans un navigateur (appelee par la ligne xml-stylesheet du fichier XML).
+                'resources/css/web/sitemap/index.css',
             ],
             refresh: true,
         }),
