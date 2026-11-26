@@ -77,7 +77,9 @@ it('describes each indexable page once, with its type, language, site and breadc
 it('links the site to Festilaw, declared first with its legal identity', function () {
     $graph = structuredGraph(get(localized_route('about', [], 'fr'))->assertOk());
 
-    expect($graph[0]['@id'])->toBe(url('/').'#organization')
+    // Une organisation, jamais un type d'entreprise juridique (LegalService designe un cabinet d'avocats).
+    expect($graph[0]['@type'])->toBe('Organization')
+        ->and($graph[0]['@id'])->toBe(url('/').'#organization')
         ->and($graph[0]['legalName'])->toBe('Festilaw B.V.')
         ->and($graph->firstWhere('@type', 'WebSite'))->toBe([
             '@type' => 'WebSite',
@@ -143,7 +145,7 @@ it('describes the blog of each language on its home, and each article as part of
 it('keeps only the organization and the site on a page kept out of search results', function (string $path) {
     $graph = structuredGraph(get($path));
 
-    expect($graph->pluck('@type')->all())->toBe([['Organization', 'LegalService'], 'WebSite']);
+    expect($graph->pluck('@type')->all())->toBe(['Organization', 'WebSite']);
 })->with([
     'subscription journey' => ['/get-started'],
     'blog without any post' => ['/blog'],

@@ -159,12 +159,15 @@ final readonly class StructuredDataGraphBuilder
     }
 
     /**
+     * Une organisation, sans type d'entreprise juridique : pour schema.org, LegalService designe un
+     * conseil juridique comme un cabinet d'avocats, ce que Festilaw n'est pas (decision de Micha du 26/11).
+     *
      * @return array<string, mixed>
      */
     private function organization(): array
     {
         return [
-            '@type' => ['Organization', 'LegalService'],
+            '@type' => 'Organization',
             '@id' => $this->root().'#organization',
             'name' => $this->siteName,
             'legalName' => 'Festilaw B.V.',
