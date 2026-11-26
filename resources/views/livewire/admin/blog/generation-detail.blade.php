@@ -42,7 +42,7 @@
                     $status === $statuses::Completed && $generation->type === $types::Image => $generation->obtainedImage !== null ? __('Image obtenue') : __('Aucune image retenue'),
                     $status === $statuses::Completed && $generation->type === $types::Translation => __('Traduction prête'),
                     $status === $statuses::Completed => __('Génération terminée'),
-                    $status === $statuses::Cancelled => __('Génération arrêtée'),
+                    $status === $statuses::Cancelled => __('Génération arrêtée manuellement'),
                     default => $generation->outcome ?? $status->label(),
                 };
 
@@ -112,7 +112,7 @@
                             @endif
 
                             @if ($generation->isRetryable())
-                                <x-ui::button wire:click="retry" :loading="true" target="retry"><x-ui::icon name="arrow-path" /> {{ __('Relancer') }}</x-ui::button>
+                                <x-ui::button wire:click="retry" :loading="true" target="retry" data-relaunch-generation><x-ui::icon name="arrow-path" /> {{ $generation->relaunchLabel() }}</x-ui::button>
                             @elseif ($generation->isActive())
                                 <x-ui::button variant="secondary" data-stop-generation x-on:click="$dispatch('ui-open-modal', 'stop-generation')"><x-ui::icon name="stop" /> {{ __('Arrêter') }}</x-ui::button>
                             @endif

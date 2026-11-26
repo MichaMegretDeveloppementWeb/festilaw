@@ -15,8 +15,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * Relance une generation en echec. Elle repart de l'etape qui a echoue : les etapes deja terminees sont
- * gardees telles quelles (ni refaites, ni repayees), les autres retrouvent tous leurs essais. La generation
+ * Relance une generation en echec, ou reprend une generation arretee a la main (demande de Micha du 26/11 : un
+ * clic par erreur ou un arret par prudence ne doit pas faire tout repayer). Elle repart de l'etape qui a echoue ou
+ * qui a ete coupee : les etapes deja terminees sont gardees telles quelles (ni refaites, ni repayees), les autres
+ * retrouvent tous leurs essais. Un appel coupe par l'arret a ete facture et se refait. La generation
  * devient son propre lot : un nouveau message partira quand elle se terminera. Ni le plafond du mois, qui ne
  * fait qu'avertir, ni le cout estime ne l'empechent : l'article a deja ete accepte, et la reservation de
  * chaque appel le protege.
@@ -33,7 +35,8 @@ final readonly class RetryBlogGenerationAction
         private BlogGenerationRequeueRepository $requeue,
     ) {}
 
-    public function execute(int $generationId): void
+    /** @return BlogGenerationStatus le statut d'ou elle repart (en echec : relancee ; arretee : reprise) */
+    public function execute(int $generationId): BlogGenerationStatus
     {
         $generation = BlogGeneration::query()->find($generationId, ['id', 'type', 'status', 'topic_hint', 'payload', 'forecast_low_microusd', 'forecast_high_microusd']);
 
@@ -41,7 +44,7 @@ final readonly class RetryBlogGenerationAction
             throw BlogGenerationException::notFound($generationId);
         }
 
-        if ($generation->status !== BlogGenerationStatus::Failed) {
+        if (! $generation->status->isRelaunchable()) {
             throw BlogGenerationException::notRetryable($generationId, $generation->status);
         }
 
@@ -56,7 +59,7 @@ final readonly class RetryBlogGenerationAction
             // Conditionnee au statut : deux clics rapproches ne relancent qu'une fois.
             BlogGeneration::query()
                 ->whereKey($generation->id)
-                ->where('status', BlogGenerationStatus::Failed->value)
+                ->whereIn('status', BlogGenerationStatus::relaunchableValues())
                 ->update([
                     'status' => BlogGenerationStatus::Queued->value,
                     'outcome_reason' => null,
@@ -66,6 +69,7 @@ final readonly class RetryBlogGenerationAction
                     'not_before' => null,
                     'lock_owner' => null,
                     'cancel_requested_at' => null,
+                    'cancel_requested_by' => null,
                     'batch_uuid' => (string) Str::uuid(),
                     'batch_notified_at' => null,
                     'payload' => json_encode($payload, JSON_THROW_ON_ERROR),
@@ -73,5 +77,7 @@ final readonly class RetryBlogGenerationAction
                     'forecast_high_microusd' => max($forecast->highMicrousd, (int) $generation->forecast_high_microusd),
                 ]);
         });
+
+        return $generation->status;
     }
 }

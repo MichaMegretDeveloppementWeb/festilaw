@@ -175,12 +175,13 @@ it('restarts a failed generation from the step that failed, keeping what was don
     Mail::assertSent(BlogGenerationBatchFinished::class, 1);
 });
 
-it('only restarts a generation that failed', function (string $state) {
+it('only restarts a generation that failed or was stopped by hand', function (string $state) {
+    // Depuis le 26/11, une generation arretee a la main se reprend (demande de Micha) ; le reste ne repart pas.
     $generation = BlogGeneration::factory()->{$state}()->create();
 
     expect(fn () => app(RetryBlogGenerationAction::class)->execute($generation->id))
         ->toThrow(BlogGenerationException::class);
-})->with(['completed', 'running', 'abandoned', 'cancelled']);
+})->with(['completed', 'running', 'abandoned']);
 
 it('restarts a failed generation above the monthly spend cap, which only warns', function () {
     BlogAi::saveSettings(['monthly_spend_cap_cents' => 100]);
@@ -215,7 +216,7 @@ it('still sends the message of a batch whose last waiting generation is stopped,
     Mail::assertSent(BlogGenerationBatchFinished::class, fn (BlogGenerationBatchFinished $mail): bool => count($mail->rows) === 2
         && $mail->rows[0]['succeeded'] === true
         && $mail->rows[0]['draftUrl'] === route('admin.blog.posts.edit', ['post' => $draft->id])
-        && $mail->rows[1]['outcome'] === 'Arrêtée avant la fin'
+        && $mail->rows[1]['outcome'] === 'Arrêtée manuellement'
         && $mail->rows[1]['url'] === route('admin.blog.generation.show', ['generation' => $waiting->id])
         && $mail->rows[1]['draftUrl'] === null
         && $mail->summary() === 'Sur 2 générations, 1 a réussi et 1 n\'a pas donné d\'article.');

@@ -25,7 +25,7 @@ final class BlogGenerationException extends BaseAppException
     {
         return (new self(
             technicalMessage: "Blog generation {$generationId} cannot be retried from status {$status->value}.",
-            userMessage: __('Seule une génération en échec peut être relancée.'),
+            userMessage: __('Seule une génération en échec ou arrêtée peut repartir.'),
         ))->asRefusal();
     }
 

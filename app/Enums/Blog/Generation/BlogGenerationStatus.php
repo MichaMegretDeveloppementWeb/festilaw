@@ -46,6 +46,21 @@ enum BlogGenerationStatus: string
      *
      * @return list<string>
      */
+    /**
+     * Une generation qui peut repartir de l'etape ou elle s'est arretee, sans refaire ni repayer les etapes
+     * terminees : en echec (« Relancer ») ou arretee a la main (« Reprendre », demande de Micha du 26/11).
+     */
+    public function isRelaunchable(): bool
+    {
+        return $this === self::Failed || $this === self::Cancelled;
+    }
+
+    /** @return list<string> */
+    public static function relaunchableValues(): array
+    {
+        return [self::Failed->value, self::Cancelled->value];
+    }
+
     public static function activeValues(): array
     {
         return [self::Queued->value, self::Running->value];

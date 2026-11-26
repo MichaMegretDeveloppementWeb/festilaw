@@ -38,8 +38,8 @@
     <x-admin.blog.generation-status :status="$generation->status" class="shrink-0" />
     <div class="relative z-10 flex shrink-0 items-center" data-generation-actions>
         @if ($generation->isRetryable())
-            <x-ui::tooltip :text="__('Relancer')">
-                <button type="button" class="{{ $iconButton }}" aria-label="{{ __('Relancer') }}" data-retry-generation
+            <x-ui::tooltip :text="$generation->relaunchLabel()">
+                <button type="button" class="{{ $iconButton }}" aria-label="{{ $generation->relaunchLabel() }}" data-retry-generation
                     wire:click="retry({{ $generation->id }})" wire:loading.attr="disabled" wire:target="retry({{ $generation->id }})">
                     <x-ui::icon name="arrow-path" class="h-[18px] w-[18px]" wire:loading.class="animate-spin" wire:target="retry({{ $generation->id }})" />
                 </button>

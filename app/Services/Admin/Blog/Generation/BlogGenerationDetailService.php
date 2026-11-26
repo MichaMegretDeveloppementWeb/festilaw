@@ -158,7 +158,8 @@ final readonly class BlogGenerationDetailService
 
     /**
      * Une generation arretee dit par qui, quand et apres quelle etape : « arretee » seul ne suffit pas a
-     * comprendre ce qui s'est passe.
+     * comprendre ce qui s'est passe. Le bouton « Arrêter » note toujours la personne connectee ; un arret sans
+     * personne vient d'une intervention technique (commande, script d'essai), et le dit (essai du 26/11).
      *
      * @param  Collection<int, string>  $keys  etapes, dans l'ordre du pipeline
      * @param  Collection<string, BlogGenerationStep>  $rows
@@ -182,8 +183,8 @@ final readonly class BlogGenerationDetailService
         return match (true) {
             filled($canceller) && $lastDone !== null => __('Arrêtée par :name le :date (UTC), après l\'étape « :step ».', $values),
             filled($canceller) => __('Arrêtée par :name le :date (UTC), avant sa première étape.', $values),
-            $lastDone !== null => __('Arrêtée le :date (UTC), après l\'étape « :step ».', $values),
-            default => __('Arrêtée le :date (UTC), avant sa première étape.', $values),
+            $lastDone !== null => __('Arrêtée par l\'assistance technique le :date (UTC), après l\'étape « :step ».', $values),
+            default => __('Arrêtée par l\'assistance technique le :date (UTC), avant sa première étape.', $values),
         };
     }
 

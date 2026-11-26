@@ -60,9 +60,16 @@ final readonly class BlogGenerationDetailView
         return ! $this->status->isTerminal();
     }
 
+    /** En echec, elle se relance ; arretee a la main, elle se reprend (demande de Micha du 26/11). */
     public function isRetryable(): bool
     {
-        return $this->status === BlogGenerationStatus::Failed;
+        return $this->status->isRelaunchable();
+    }
+
+    /** Le mot du bouton qui la fait repartir. */
+    public function relaunchLabel(): string
+    {
+        return $this->status === BlogGenerationStatus::Cancelled ? __('Reprendre') : __('Relancer');
     }
 
     public function completedSteps(): int

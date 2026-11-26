@@ -12,6 +12,8 @@ namespace App\Enums\Blog\Generation;
 enum BlogGenerationOutcomeReason: string
 {
     case NoRelevantTopic = 'no_relevant_topic';
+    /** Le sujet impose a la demande sort du domaine du blog (essai du 26/11 : « aucun sujet » pretait a confusion). */
+    case TopicOutOfScope = 'topic_out_of_scope';
     case DuplicateTopic = 'duplicate_topic';
     case InsufficientSources = 'insufficient_sources';
     case PendingDraftsCapReached = 'pending_drafts_cap_reached';
@@ -31,12 +33,13 @@ enum BlogGenerationOutcomeReason: string
     {
         return match ($this) {
             self::NoRelevantTopic => __('Aucun sujet assez pertinent'),
+            self::TopicOutOfScope => __('Sujet demandé hors du domaine du blog'),
             self::DuplicateTopic => __('Sujet déjà traité ou refusé'),
             self::InsufficientSources => __('Pas assez de sources fiables sur ce sujet'),
             self::PendingDraftsCapReached => __('Trop de brouillons générés en attente de relecture'),
             self::CreditExhausted => __('Crédit épuisé chez le fournisseur d\'IA'),
             self::StepFailed => __('Une étape a échoué après plusieurs essais'),
-            self::CancelledByUser => __('Arrêtée avant la fin'),
+            self::CancelledByUser => __('Arrêtée manuellement'),
             self::SafetyStop => __('Arrêtée par sécurité, coût bien au-delà de l\'estimation'),
             self::SafetyStopBeforeCall => __('Arrêtée par sécurité avant un appel trop coûteux'),
             self::AiKeyRejected => __('Clé du fournisseur d\'IA refusée'),

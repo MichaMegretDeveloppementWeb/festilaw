@@ -7,6 +7,7 @@ use App\Enums\Blog\Generation\BlogAiPeriodUnit;
 use App\Enums\Blog\Generation\BlogEffortLevel;
 use App\Enums\Blog\Generation\BlogGenerationOutcomeReason;
 use App\Enums\Blog\Generation\BlogGenerationStatus;
+use App\Enums\Blog\Generation\BlogGenerationStepStatus;
 use App\Enums\Blog\Generation\BlogGenerationType;
 use App\Livewire\Admin\Blog\GenerationActivity;
 use App\Livewire\Admin\Blog\GenerationDashboard;
@@ -210,9 +211,51 @@ it('restarts a failed generation from the overview', function () {
         ->assertDispatched('ui-toast', type: 'success', title: 'Génération relancée.')
         ->assertDispatched('blog-generation-changed')
         ->call('retry', $running->id)
-        ->assertDispatched('ui-toast', type: 'error', title: 'Seule une génération en échec peut être relancée.');
+        ->assertDispatched('ui-toast', type: 'error', title: 'Seule une génération en échec ou arrêtée peut repartir.');
 
     expect($failed->refresh()->status)->toBe(BlogGenerationStatus::Queued);
+});
+
+it('resumes a generation stopped by hand from the step it stopped at, without redoing or repaying the finished steps', function () {
+    // Demande de Micha du 26/11 : un clic par erreur sur « Arrêter », ou un arret par prudence, ne doit pas faire
+    // tout repayer.
+    actingAs(User::factory()->create(['name' => 'Alex Martin']));
+    $stopped = BlogGeneration::factory()->cancelled()->create([
+        'cancel_requested_at' => now(), 'cancel_requested_by' => auth()->id(), 'cost_microusd' => 30_000,
+    ]);
+    $done = BlogGenerationStep::factory()->for($stopped, 'generation')->named('topic', 1)->completed(12_000)->create();
+    $cut = BlogGenerationStep::factory()->for($stopped, 'generation')->named('research_notes', 2)->failed()->create();
+
+    Livewire::test(GenerationDetail::class, ['generation' => $stopped->id])
+        ->assertSee('Génération arrêtée manuellement')
+        ->assertSee('Vous pouvez la reprendre. Elle repartira de l\'étape où elle s\'est arrêtée, sans refaire ni repayer les étapes déjà terminées.')
+        ->assertSeeHtml('data-relaunch-generation')
+        ->assertSee('Reprendre')
+        ->call('retry')
+        ->assertDispatched('ui-toast', type: 'success', title: 'Génération reprise.');
+
+    $stopped->refresh();
+
+    expect($stopped->status)->toBe(BlogGenerationStatus::Queued)
+        ->and($stopped->outcome_reason)->toBeNull()
+        ->and($stopped->cancel_requested_at)->toBeNull()
+        ->and($stopped->cancel_requested_by)->toBeNull()
+        ->and($stopped->cost_microusd)->toBe(30_000)
+        ->and($done->refresh()->status)->toBe(BlogGenerationStepStatus::Completed)
+        ->and($done->cost_microusd)->toBe(12_000)
+        ->and($cut->refresh()->status)->toBe(BlogGenerationStepStatus::Pending);
+});
+
+it('offers to resume a stopped generation from the history, and to relaunch a failed one', function () {
+    $stopped = BlogGeneration::factory()->cancelled()->create();
+    $failed = BlogGeneration::factory()->failed()->create();
+
+    $html = Livewire::test(GenerationHistory::class)->html();
+
+    expect($html)->toContain('wire:click="retry('.$stopped->id.')"')
+        ->toContain('wire:click="retry('.$failed->id.')"')
+        ->toContain('aria-label="Reprendre"')
+        ->toContain('aria-label="Relancer"');
 });
 
 it('shows a load failure instead of the overview when the data cannot be read', function () {
@@ -781,17 +824,31 @@ it('says who stopped a generation, when, and after which step', function () {
         ->and($generation->cancel_requested_by)->toBe($user->id);
 
     // L'arret est immediat : l'ecran le dit aussitot, sans attendre de worker.
-    $detail->assertSee('Arrêtée par Alex Martin le '.$generation->cancel_requested_at->format('d/m/Y à H:i').' (UTC), après l\'étape « Dossier de faits ».')
+    // Remarque de Micha du 26/11 : « arrêtée » seul fait oublier que c'est un arret a la main.
+    $detail->assertSee('Génération arrêtée manuellement')
+        ->assertSee('Arrêtée par Alex Martin le '.$generation->cancel_requested_at->format('d/m/Y à H:i').' (UTC), après l\'étape « Dossier de faits ».')
         ->assertSee('Aucun article n\'a été créé.')
         ->assertDontSee('Arrêtée au back-office')
         ->assertDontSeeHtml('wire:poll');
 });
 
-it('says a generation was stopped before its first step, and stays sober when nobody is known', function () {
+it('says that an imposed topic fell outside the field of the blog, and what to do next', function () {
+    $generation = BlogGeneration::factory()->abandoned(BlogGenerationOutcomeReason::TopicOutOfScope)
+        ->create(['topic_hint' => 'La reproduction des pingouins en Afrique', 'started_at' => now()]);
+
+    Livewire::test(GenerationDetail::class, ['generation' => $generation->id])
+        ->assertSee('Sujet demandé hors du domaine du blog')
+        ->assertSee('Aucun article n\'a été créé, car le sujet demandé sort du domaine du blog.')
+        ->assertDontSee('Aucun sujet assez pertinent');
+});
+
+it('says a generation was stopped before its first step, and by the technical support when nobody is known', function () {
+    // Essai du 26/11 : « Arrêtée le … » sans auteur ressemblait a un arret inexplique. Le bouton note toujours la
+    // personne connectee ; un arret sans personne vient d'une intervention technique.
     $waiting = BlogGeneration::factory()->cancelled()->create(['cancel_requested_at' => now()]);
 
     Livewire::test(GenerationDetail::class, ['generation' => $waiting->id])
-        ->assertSee('Arrêtée le '.$waiting->cancel_requested_at->format('d/m/Y à H:i').' (UTC), avant sa première étape.')
+        ->assertSee('Arrêtée par l\'assistance technique le '.$waiting->cancel_requested_at->format('d/m/Y à H:i').' (UTC), avant sa première étape.')
         ->assertSee('Lancée à la main le');
 
     $scheduled = BlogGeneration::factory()->scheduled()->completed()->create();

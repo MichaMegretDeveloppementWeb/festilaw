@@ -126,6 +126,20 @@ it('writes nothing when no topic is relevant enough', function () {
         ->and($result->summary)->toBe('Rien de nouveau cette semaine.');
 });
 
+it('says that an imposed topic falls outside the field of the blog, instead of finding no topic', function (array $reply, string $summary) {
+    // Essai du 26/11 en local (« La reproduction des pingouins en Afrique ») : « Aucun sujet assez pertinent »
+    // pretait a confusion quand la personne avait donne un sujet.
+    TopicAgent::fake([['decision' => 'none', 'reason' => 'Wildlife biology is outside the field of the blog.', ...$reply]])->preventStrayPrompts();
+
+    $result = app(TopicStep::class)->execute(Fixtures::context(topicHint: 'La reproduction des pingouins en Afrique'));
+
+    expect($result->stopReason)->toBe(BlogGenerationOutcomeReason::TopicOutOfScope)
+        ->and($result->summary)->toBe($summary);
+})->with([
+    'with the explanation of the model' => [['report_fr' => 'Le sujet imposé sort du périmètre du blog.'], 'Le sujet imposé sort du périmètre du blog.'],
+    'without it' => [[], 'Le sujet demandé sort du domaine du blog, donc aucun article n\'a été écrit.'],
+]);
+
 it('turns down a topic that repeats a known title, even when the model did not see it', function () {
     $post = BlogContent::published('label');
     $post->translations()->where('locale', 'en')->update(['title' => 'How to add your economic operator on Etsy']);

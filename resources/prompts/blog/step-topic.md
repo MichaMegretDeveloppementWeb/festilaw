@@ -22,4 +22,4 @@ What to return:
 - "reader": who exactly the article is for.
 - "keywords": three to six search phrases a seller would type.
 - "reason": why this topic, in English.
-- "report_fr": one or two sentences in French for the editor, saying why this topic was chosen. Plain French, full sentences, no colon used to join two ideas, no dash, no technical words.
+- "report_fr": one or two sentences in French for the editor, saying why this topic was chosen. Plain French, full sentences, no colon used to join two ideas, no dash, no technical words. Name the regulation "GPSR", as sellers know it, and never "RGPD", which in French is the data protection regulation.

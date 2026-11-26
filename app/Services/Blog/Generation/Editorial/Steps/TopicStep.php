@@ -84,11 +84,15 @@ final class TopicStep extends EditorialStep
         }
 
         if ($decision === 'none') {
+            $imposed = filled($context->topicHint);
+
             return GenerationStepResult::stop(
-                BlogGenerationOutcomeReason::NoRelevantTopic,
+                $imposed ? BlogGenerationOutcomeReason::TopicOutOfScope : BlogGenerationOutcomeReason::NoRelevantTopic,
                 ['decision' => 'none', 'reason' => $this->text($answer, 'reason')],
                 $usage,
-                $this->report($reply, __('Aucun sujet assez pertinent n\'a été trouvé, donc aucun article n\'a été écrit.')),
+                $this->report($reply, $imposed
+                    ? __('Le sujet demandé sort du domaine du blog, donc aucun article n\'a été écrit.')
+                    : __('Aucun sujet assez pertinent n\'a été trouvé, donc aucun article n\'a été écrit.')),
             );
         }
 

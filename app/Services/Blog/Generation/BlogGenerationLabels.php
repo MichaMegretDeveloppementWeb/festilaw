@@ -72,6 +72,8 @@ final readonly class BlogGenerationLabels
     {
         return match ($reason) {
             null => null,
+            BlogGenerationOutcomeReason::CancelledByUser => __('Aucun article n\'a été créé. Vous pouvez la reprendre. Elle repartira de l\'étape où elle s\'est arrêtée, sans refaire ni repayer les étapes déjà terminées.'),
+            BlogGenerationOutcomeReason::TopicOutOfScope => __('Aucun article n\'a été créé, car le sujet demandé sort du domaine du blog. Le compte rendu du choix du sujet dit pourquoi. Vous pouvez lancer une autre génération, avec un sujet sur la sécurité des produits ou la vente dans l\'UE.'),
             BlogGenerationOutcomeReason::StepFailed => __('Aucun article n\'a été créé. Vous pouvez relancer la génération. Elle reprendra à l\'étape qui a échoué, sans refaire ni repayer les étapes terminées. Si l\'échec se répète, contactez l\'assistance technique.'),
             BlogGenerationOutcomeReason::CreditExhausted => __('Aucun article n\'a été créé. Rechargez le crédit du compte chez le fournisseur d\'IA, puis relancez la génération. Elle reprendra à l\'étape qui a échoué. Si l\'échec se répète, contactez l\'assistance technique.'),
             BlogGenerationOutcomeReason::SafetyStop => __('Aucun article n\'a été créé. La génération s\'est arrêtée par sécurité, car son coût allait dépasser le double du coût annoncé au lancement. Vous pouvez en lancer une autre. Si l\'arrêt se répète, contactez l\'assistance technique.'),

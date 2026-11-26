@@ -6,6 +6,7 @@ namespace App\Livewire\Concerns;
 
 use App\Actions\Blog\Generation\CancelBlogGenerationAction;
 use App\Actions\Blog\Generation\RetryBlogGenerationAction;
+use App\Enums\Blog\Generation\BlogGenerationStatus;
 use App\Exceptions\BaseAppException;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -23,7 +24,7 @@ trait CommandsBlogGenerations
     protected function relaunchGeneration(RetryBlogGenerationAction $retry, int $generationId): bool
     {
         try {
-            $retry->execute($generationId);
+            $from = $retry->execute($generationId);
         } catch (BaseAppException $e) {
             Log::log($e->logLevel(), $e->getMessage(), ['exception' => $e]);
             $this->dispatch('ui-toast', title: $e->getUserMessage(), type: 'error');
@@ -35,7 +36,7 @@ trait CommandsBlogGenerations
             return false;
         }
 
-        $this->dispatch('ui-toast', title: __('Génération relancée.'), type: 'success');
+        $this->dispatch('ui-toast', title: $from === BlogGenerationStatus::Cancelled ? __('Génération reprise.') : __('Génération relancée.'), type: 'success');
 
         return true;
     }
