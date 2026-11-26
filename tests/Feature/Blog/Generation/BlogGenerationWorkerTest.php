@@ -165,15 +165,17 @@ it('goes on by itself, one step at a time, when no newer worker shows up', funct
         ->and($pipeline->calls('assembly'))->toBe(1);
 });
 
-it('is run by the scheduler every minute, last, and the batch check every hour of the day', function () {
-    // Recette du CDC (point P1) : sans ces deux inscriptions, rien ne genere sur l'hebergement. Le worker ne rend
-    // pas la main, il doit rester la derniere tache. Le lot se controle chaque heure de 6 h a 20 h (controle du
-    // 20/11) : une heure manquee ne coute plus un jour.
+it('is run by the scheduler every minute, last and in the background, and the batch check every hour of the day', function () {
+    // Recette du CDC (point P1) : sans ces deux inscriptions, rien ne genere sur l'hebergement. Le lot se controle
+    // chaque heure de 6 h a 20 h (controle du 20/11) : une heure manquee ne coute plus un jour.
+    // Constat du 26/11 en production : Hostinger ne lance pas un passage du cron tant que le precedent tourne. Un
+    // worker au premier plan retenait chaque passage 90 secondes, et le cron ne tournait qu'une minute sur deux.
     $events = collect(app(Schedule::class)->events());
     $worker = $events->first(fn ($event): bool => str_contains((string) $event->command, 'festilaw:blog-generation-worker'));
     $batch = $events->first(fn ($event): bool => str_contains((string) $event->command, 'festilaw:blog-generation-schedule'));
 
     expect($worker?->expression)->toBe('* * * * *')
+        ->and($worker?->runInBackground)->toBeTrue()
         ->and($events->last())->toBe($worker)
         ->and($batch?->expression)->toBe('0 * * * *');
 });
