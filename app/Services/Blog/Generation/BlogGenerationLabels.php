@@ -26,6 +26,7 @@ final readonly class BlogGenerationLabels
             'fact_search' => __('Recherche des preuves'),
             'verification' => __('Vérification'),
             'style' => __('Relecture du style'),
+            'category' => __('Choix de la catégorie'),
             'translation' => __('Traduction'),
             'translation_fr' => __('Version française'),
             'translation_es' => __('Version espagnole'),

@@ -34,7 +34,8 @@ use Throwable;
  * sources du dossier, categorie, articles associes, image principale. Le brouillon est marque IA et lie a sa
  * generation.
  *
- * Quand la redaction a propose une categorie nouvelle, elle est creee ici avec ses trois noms (le nom anglais
+ * Quand l'etape du choix de la categorie (CategoryStep) en a propose une nouvelle, elle est creee ici avec ses
+ * trois noms (le nom anglais
  * remplace un nom traduit manquant) et marquee comme creee par cette generation, dans la meme transaction que le
  * brouillon : un echec ne laisse aucune categorie orpheline. Une categorie qui porte deja ce nom est reprise.
  *
@@ -100,7 +101,8 @@ final readonly class AssembleGeneratedBlogDraftAction implements GenerationStep
             );
         }
 
-        $newCategory = is_string($writing['new_category'] ?? null) && $writing['new_category'] !== '' ? $writing['new_category'] : null;
+        $category = $context->output('category');
+        $newCategory = is_string($category['new_category'] ?? null) && $category['new_category'] !== '' ? $category['new_category'] : null;
         $data = fn (?int $categoryId): SaveBlogPostData => new SaveBlogPostData(
             postId: null,
             translations: $translations,
@@ -115,8 +117,8 @@ final readonly class AssembleGeneratedBlogDraftAction implements GenerationStep
         $created = null;
 
         try {
-            $postId = DB::transaction(function () use ($context, $writing, $newCategory, $data, &$created): int {
-                $categoryId = is_int($writing['category_id'] ?? null) ? $writing['category_id'] : null;
+            $postId = DB::transaction(function () use ($context, $category, $newCategory, $data, &$created): int {
+                $categoryId = is_int($category['category_id'] ?? null) ? $category['category_id'] : null;
 
                 if ($categoryId === null && $newCategory !== null) {
                     $categoryId = $this->categories->idNamed($newCategory);
@@ -139,7 +141,7 @@ final readonly class AssembleGeneratedBlogDraftAction implements GenerationStep
         return $this->ready($postId, $context, $created);
     }
 
-    /** La categorie proposee par la redaction, avec ses noms traduits par les etapes de traduction. */
+    /** La categorie nouvelle proposee par CategoryStep, avec ses noms traduits par les etapes de traduction. */
     private function createCategory(string $name, GenerationStepContext $context): BlogCategory
     {
         $names = ['en' => $name];

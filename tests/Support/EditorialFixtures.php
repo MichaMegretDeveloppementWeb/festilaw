@@ -143,7 +143,6 @@ final class EditorialFixtures
                 ['statement' => 'Since 13 December 2024, every product you sell to the EU needs an economic operator.', 'basis' => ['F1']],
                 ['statement' => 'Etsy asks for it in the listing settings.', 'basis' => ['F2']],
             ],
-            'category_id' => null,
             'related_post_ids' => [],
             'featured_image' => ['description' => 'A parcel on a workbench', 'search_query' => 'parcel workbench', 'generation_prompt' => 'A parcel on a wooden workbench.'],
             'inline_images' => [['number' => 1, 'description' => 'A label on a box', 'search_query' => 'shipping label', 'generation_prompt' => 'A shipping label on a box.']],

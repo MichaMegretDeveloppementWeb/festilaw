@@ -360,57 +360,24 @@ it('stops when no official or professional source is left', function () {
 
 // --- Redaction
 
-it('writes the English article from the research file, with sources, category and related articles taken from the blog', function () {
+it('writes the English article from the research file, with sources and related articles taken from the blog, without its categories', function () {
     $category = BlogContent::category('platforms');
     $related = BlogContent::published('label', $category);
-    WriterAgent::fake([Fixtures::writerAnswer(['category_id' => $category->id, 'related_post_ids' => [$related->id, 9_999]])])->preventStrayPrompts();
+    WriterAgent::fake([Fixtures::writerAnswer(['related_post_ids' => [$related->id, 9_999]])])->preventStrayPrompts();
 
     $result = app(WritingStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic(), 'research' => Fixtures::research()]));
 
     expect($result->output['article']['title'])->toBe('Adding an economic operator on Etsy')
         ->and($result->output['article']['body'])->toBe(Fixtures::body())
         ->and($result->output['source_ids'])->toBe(['S1', 'S2'])
-        ->and($result->output['category_id'])->toBe($category->id)
+        ->and($result->output)->not->toHaveKeys(['category_id', 'new_category'])
         // Un article inconnu n'est jamais propose en lecture associee.
         ->and($result->output['related_post_ids'])->toBe([$related->id])
         ->and($result->output['inline_images'][0]['number'])->toBe(1)
         ->and($result->output['warnings'])->toBe([]);
-    WriterAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Platforms en') && $prompt->contains('Label en') && $prompt->contains('The GPSR applies since 13 December 2024.'));
-});
-
-it('asks for a new category when the blog has none yet, and keeps the name it proposes, cleaned', function () {
-    WriterAgent::fake([Fixtures::writerAnswer(['category_id' => null, 'new_category' => '  "product   safety".'])])->preventStrayPrompts();
-
-    $result = app(WritingStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic(), 'research' => Fixtures::research()]));
-
-    expect($result->output['category_id'])->toBeNull()
-        ->and($result->output['new_category'])->toBe('Product safety');
-    WriterAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('No category yet. Set category_id to null and name a new one in new_category.'));
-});
-
-it('takes back the category that already bears the proposed name, and ignores an unknown category', function () {
-    $category = BlogContent::category('platforms');
-    WriterAgent::fake([Fixtures::writerAnswer(['category_id' => 9_999, 'new_category' => 'PLATFORMS EN'])])->preventStrayPrompts();
-
-    $result = app(WritingStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic(), 'research' => Fixtures::research()]));
-
-    expect($result->output['category_id'])->toBe($category->id)
-        ->and($result->output['new_category'])->toBeNull();
-    // Le redacteur ne voit plus combien d'articles chaque categorie porte : ce nombre poussait a tout ranger dans
-    // la premiere categorie creee (constat de Micha du 27/11, une seule categorie apres trois articles).
-    WriterAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Platforms en') && ! $prompt->contains('"articles":'));
-});
-
-it('creates no new category once the blog has as many as allowed, so that its menu does not crumble', function () {
-    config()->set('blog.ai.max_categories', 1);
-    BlogContent::category('platforms');
-    WriterAgent::fake([Fixtures::writerAnswer(['category_id' => null, 'new_category' => 'Marketplaces'])])->preventStrayPrompts();
-
-    $result = app(WritingStep::class)->execute(Fixtures::context(['topic' => Fixtures::topic(), 'research' => Fixtures::research()]));
-
-    expect($result->output['category_id'])->toBeNull()
-        ->and($result->output['new_category'])->toBeNull();
-    WriterAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('No new category can be created'));
+    // La categorie se choisit apres la redaction, sans que le redacteur voie celles du blog (CategoryStepTest).
+    WriterAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Label en') && $prompt->contains('The GPSR applies since 13 December 2024.')
+        && ! $prompt->contains('Platforms en') && ! $prompt->contains('Categories'));
 });
 
 it('shows three sources under the article, official first, and five at most when the writer says why', function (?string $reason, array $shown, array $setAside) {
@@ -738,7 +705,7 @@ it('writes the French version with the same links and images, and the image desc
     TranslatorAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('A parcel on a workbench') && ! $prompt->contains('New category'));
 });
 
-it('names in each language the new category that the writer proposed', function () {
+it('names in each language the new category chosen for the article', function () {
     TranslatorAgent::fake([[
         ...Fixtures::article(['title' => 'Ajouter un opérateur économique sur Etsy']),
         'category_name' => 'Sécurité des produits',
@@ -746,8 +713,9 @@ it('names in each language the new category that the writer proposed', function 
     ]])->preventStrayPrompts();
 
     $result = app()->make(TranslationStep::class, ['locale' => 'fr'])->execute(Fixtures::context([
-        'writing' => [...Fixtures::writingOutput(), 'new_category' => 'Product safety'],
+        'writing' => Fixtures::writingOutput(),
         'style' => Fixtures::articleOutput(),
+        'category' => ['category_id' => null, 'new_category' => 'Product safety'],
     ]));
 
     expect($result->output['category_name'])->toBe('Sécurité des produits');

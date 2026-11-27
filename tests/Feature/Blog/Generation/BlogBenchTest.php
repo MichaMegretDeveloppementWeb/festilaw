@@ -180,7 +180,7 @@ it('splits the estimate into shared research and writing without losing a step',
 
     $whole = $forecaster->forecast($models, 1_000, $none, true);
     $shared = $forecaster->forecast($models, 1_000, $none, true, ['topic', 'research_notes', 'research']);
-    $writing = $forecaster->forecast($models, 1_000, $none, true, ['writing', 'fact_search', 'verification', 'style', 'translation_fr', 'version_check_fr', 'translation_es', 'version_check_es']);
+    $writing = $forecaster->forecast($models, 1_000, $none, true, ['writing', 'fact_search', 'verification', 'style', 'category', 'translation_fr', 'version_check_fr', 'translation_es', 'version_check_es']);
 
     expect([$shared->lowMicrousd + $writing->lowMicrousd, $shared->highMicrousd + $writing->highMicrousd])->toBe([$whole->lowMicrousd, $whole->highMicrousd])
         ->and($shared->lowMicrousd)->toBeGreaterThan(0)

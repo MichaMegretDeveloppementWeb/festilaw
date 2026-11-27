@@ -4,6 +4,8 @@ use App\Actions\Blog\Generation\Editorial\AssembleGeneratedBlogDraftAction;
 use App\Actions\Blog\Generation\Editorial\GenerateBlogDraftImagesAction;
 use App\Actions\Blog\Generation\ProcessNextBlogGenerationAction;
 use App\Actions\Blog\Post\DeleteBlogPostAction;
+use App\Ai\Agents\Blog\CategoryMatchingAgent;
+use App\Ai\Agents\Blog\CategoryNamingAgent;
 use App\Ai\Agents\Blog\FactCheckAgent;
 use App\Ai\Agents\Blog\PhotoCheckAgent;
 use App\Ai\Agents\Blog\ResearchAgent;
@@ -371,7 +373,8 @@ it('assembles a draft in the three languages through the same path as the back-o
     $related = BlogContent::published('label', $category);
     $generation = BlogGeneration::factory()->running()->create();
     $outputs = textOutputs();
-    $outputs['writing'] = [...$outputs['writing'], 'category_id' => $category->id, 'related_post_ids' => [$related->id]];
+    $outputs['writing'] = [...$outputs['writing'], 'related_post_ids' => [$related->id]];
+    $outputs['category'] = ['category_id' => $category->id, 'new_category' => null];
     $outputs['images'] = app(GenerateBlogDraftImagesAction::class)->execute(Fixtures::context($outputs))->output;
     $context = new GenerationStepContext($generation->id, BlogGenerationType::Article, null, null, Fixtures::context()->settings, $outputs, [], 1);
 
@@ -396,11 +399,11 @@ it('assembles a draft in the three languages through the same path as the back-o
         ->and($result->summary)->toBe('Le brouillon est prêt à relire, dans les trois langues.');
 });
 
-/** Ce que l'assemblage recoit quand la redaction a propose une categorie nouvelle, nommee en francais seulement. */
+/** Ce que l'assemblage recoit quand le choix de la categorie en a propose une nouvelle, nommee en francais seulement. */
 function outputsWithNewCategory(string $name = 'Product safety'): array
 {
     $outputs = textOutputs();
-    $outputs['writing'] = [...$outputs['writing'], 'category_id' => null, 'new_category' => $name];
+    $outputs['category'] = ['category_id' => null, 'new_category' => $name];
     $outputs['translation_fr']['category_name'] = 'Sécurité des produits';
     $outputs['translation_es']['category_name'] = null;
     $outputs['images'] = app(GenerateBlogDraftImagesAction::class)->execute(Fixtures::context($outputs))->output;
@@ -408,7 +411,7 @@ function outputsWithNewCategory(string $name = 'Product safety'): array
     return $outputs;
 }
 
-it('creates the category the writer proposed, in the three languages, marked as created by the generation, and says so', function () {
+it('creates the new category proposed for the article, in the three languages, marked as created by the generation, and says so', function () {
     fakePixabay();
     $generation = BlogGeneration::factory()->running()->create();
     $context = new GenerationStepContext($generation->id, BlogGenerationType::Article, null, null, Fixtures::context()->settings, outputsWithNewCategory(), [], 1);
@@ -577,6 +580,9 @@ function fakeWholeEditorialPipeline(): void
     WriterAgent::fake([Fixtures::writerAnswer(), Fixtures::writerAnswer()])->preventStrayPrompts();
     FactCheckAgent::fake([[...Fixtures::article(), 'removed_claims' => [], 'report_fr' => 'Tout est appuyé.']])->preventStrayPrompts();
     StyleAgent::fake([[...Fixtures::article(), 'report_fr' => 'Style relu.']])->preventStrayPrompts();
+    // Le blog n'a encore aucune categorie : le sujet nomme devient la categorie, sans comparaison.
+    CategoryNamingAgent::fake([['name' => 'Marketplaces', 'reason' => 'The article explains a field of the Etsy listing.']])->preventStrayPrompts();
+    CategoryMatchingAgent::fake()->preventStrayPrompts();
     VersionCheckAgent::fake([['corrections' => [], 'report_fr' => 'Version conforme.'], ['corrections' => [], 'report_fr' => 'Versión conforme.']])->preventStrayPrompts();
     TranslatorAgent::fake([
         [...Fixtures::article(['title' => 'Ajouter un opérateur économique sur Etsy', 'body_markdown' => $french]), 'image_alts' => [['number' => 0, 'alt' => 'Un colis']], 'report_fr' => 'Version française.'],
@@ -593,12 +599,15 @@ it('runs the whole editorial pipeline through the worker and delivers a draft to
     $generation->refresh();
     $post = BlogPost::query()->sole();
     expect($generation->status)->toBe(BlogGenerationStatus::Completed)
-        ->and($generation->steps()->pluck('step')->all())->toBe(['topic_scan', 'topic', 'research_notes', 'research', 'writing', 'fact_search', 'verification', 'style', 'translation_fr', 'version_check_fr', 'translation_es', 'version_check_es', 'images', 'assembly'])
+        ->and($generation->steps()->pluck('step')->all())->toBe(['topic_scan', 'topic', 'research_notes', 'research', 'writing', 'fact_search', 'verification', 'style', 'category', 'translation_fr', 'version_check_fr', 'translation_es', 'version_check_es', 'images', 'assembly'])
         ->and($generation->topic_title)->toBe('Adding an economic operator on Etsy')
         ->and($generation->blog_post_id)->toBe($post->id)
         ->and($post->generation_id)->toBe($generation->id)
         ->and($post->status)->toBe(BlogPostStatus::Draft)
-        ->and($generation->steps()->where('step', 'topic')->value('summary'))->toBe('Sujet demandé par les vendeurs.');
+        ->and($generation->steps()->where('step', 'topic')->value('summary'))->toBe('Sujet demandé par les vendeurs.')
+        ->and(BlogCategory::query()->sole()->translationFor('en')->name)->toBe('Marketplaces')
+        ->and($post->blog_category_id)->toBe(BlogCategory::query()->sole()->id);
+    CategoryMatchingAgent::assertNeverPrompted();
     // L'e-mail de fin de lot donne le titre et l'extrait francais du brouillon, comme le back-office (Micha, 24/11),
     // et le nombre de ses sources.
     $french = $post->translations()->where('locale', 'fr')->sole();

@@ -36,7 +36,10 @@ abstract class EditorialStep implements GenerationStep
 
     protected const META_DESCRIPTION_MAX_CHARACTERS = 176;
 
-    /** Le reglage de modele de chaque etape (la passe de style emploie le modele de la redaction). */
+    /**
+     * Le reglage de modele de chaque etape (la passe de style emploie le modele de la redaction, le choix de la
+     * categorie celui du choix du sujet).
+     */
     private const MODEL_SETTINGS = [
         'topic_scan' => 'topic',
         'topic' => 'topic',
@@ -46,6 +49,7 @@ abstract class EditorialStep implements GenerationStep
         'fact_search' => 'research',
         'verification' => 'verification',
         'style' => 'writing',
+        'category' => 'topic',
         'translation_en' => 'translation',
         'translation_fr' => 'translation',
         'translation_es' => 'translation',

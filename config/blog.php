@@ -324,15 +324,15 @@ return [
         'effort' => [
             'levels' => [
                 'low' => [
-                    'reasoning' => ['default' => 'medium', 'topic' => 'low', 'research' => 'low', 'photo_check' => 'low', 'image_brief' => 'low'],
+                    'reasoning' => ['default' => 'medium', 'topic' => 'low', 'research' => 'low', 'category' => 'low', 'photo_check' => 'low', 'image_brief' => 'low'],
                     'searches' => ['topic_scan' => 2, 'research_notes' => 3, 'fact_search' => 3],
                 ],
                 'medium' => [
-                    'reasoning' => ['default' => 'high', 'topic' => 'medium', 'research' => 'medium', 'photo_check' => 'medium', 'image_brief' => 'low'],
+                    'reasoning' => ['default' => 'high', 'topic' => 'medium', 'research' => 'medium', 'category' => 'medium', 'photo_check' => 'medium', 'image_brief' => 'low'],
                     'searches' => ['topic_scan' => 4, 'research_notes' => 10, 'fact_search' => 8],
                 ],
                 'high' => [
-                    'reasoning' => ['default' => 'high', 'photo_check' => 'medium', 'image_brief' => 'low'],
+                    'reasoning' => ['default' => 'high', 'category' => 'medium', 'photo_check' => 'medium', 'image_brief' => 'low'],
                     'searches' => ['topic_scan' => 6, 'research_notes' => 18, 'fact_search' => 15],
                 ],
             ],
@@ -409,6 +409,9 @@ return [
                 'fact_search' => ['setting' => 'research', 'input' => 3_000, 'input_per_1000_words' => 2_000, 'input_per_search' => 8_000, 'output' => 1_200, 'reasoning' => ['low' => [250, 600], 'medium' => [625, 1_500], 'high' => [1_000, 2_400]], 'calls' => [1, 1]],
                 'verification' => ['setting' => 'verification', 'input' => 6_700, 'input_per_1000_words' => 1_500, 'output_per_1000_words' => 1_680, 'reasoning' => ['low' => [300, 4_400], 'medium' => [750, 11_000], 'high' => [1_200, 17_600]], 'calls' => [1, 2]],
                 'style' => ['setting' => 'writing', 'input' => 5_700, 'input_per_1000_words' => 1_500, 'output_per_1000_words' => 1_350, 'reasoning' => ['low' => [400, 1_400], 'medium' => [1_000, 3_500], 'high' => [1_600, 5_600]], 'calls' => [2, 2]],
+                // Choix de la categorie (27/11) : le sujet nomme sans voir les categories, puis sa comparaison avec elles,
+                // qui n'a pas lieu quand le blog n'en a aucune ou qu'une porte deja ce nom. Deux petits appels au plus.
+                'category' => ['setting' => 'topic', 'input' => 1_200, 'output' => 80, 'reasoning' => ['low' => [0, 600], 'medium' => [0, 1_200], 'high' => [0, 1_200]], 'calls' => [1, 2]],
                 'translation_fr' => ['setting' => 'translation', 'input' => 8_300, 'input_per_1000_words' => 1_500, 'output_per_1000_words' => 1_800, 'reasoning' => ['low' => [1_000, 5_000], 'medium' => [2_500, 12_500], 'high' => [4_000, 20_000]], 'calls' => [2, 2]],
                 'version_check_fr' => ['setting' => 'verification', 'input' => 2_200, 'input_per_1000_words' => 3_300, 'output' => 1_000, 'reasoning' => ['low' => [300, 2_000], 'medium' => [750, 5_000], 'high' => [1_200, 8_000]], 'calls' => [1, 1]],
                 'version_check_es' => ['setting' => 'verification', 'input' => 2_200, 'input_per_1000_words' => 3_300, 'output' => 1_000, 'reasoning' => ['low' => [300, 2_000], 'medium' => [750, 5_000], 'high' => [1_200, 8_000]], 'calls' => [1, 1]],
@@ -475,10 +478,10 @@ return [
         'consecutive_failures_alert' => 3,
 
         /*
-         | Categories creees par la generation (decision de Micha du 23/11) : quand aucune categorie ne convient au
-         | theme d'un article, ou que le blog n'en a pas encore, la redaction en propose une nouvelle. Au-dela de ce
-         | nombre de categories, la creation est fermee et la redaction choisit la plus proche, pour que le menu du
-         | blog ne s'emiette pas au fil des annees.
+         | Categories creees par la generation (decision de Micha du 23/11) : quand aucune categorie ne traite le
+         | sujet d'un article, ou que le blog n'en a pas encore, l'etape du choix de la categorie en propose une
+         | nouvelle (en deux temps depuis le 27/11, CategoryStep). Au-dela de ce nombre de categories, la creation
+         | est fermee et l'etape choisit la plus proche, pour que le menu du blog ne s'emiette pas au fil des annees.
          */
         'max_categories' => 12,
 

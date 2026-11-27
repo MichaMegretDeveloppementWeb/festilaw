@@ -85,11 +85,12 @@ final class TranslationStep extends EditorialStep
             $this->prompts->get('lexicon-'.$this->locale),
             $this->prompts->get('step-adaptation-'.$this->locale),
         ]), $this->translatedWords($context));
-        $newCategory = is_string($writing['new_category'] ?? null) && $writing['new_category'] !== '' ? $writing['new_category'] : null;
+        $category = $context->output('category');
+        $newCategory = is_string($category['new_category'] ?? null) && $category['new_category'] !== '' ? $category['new_category'] : null;
         $prompt = implode("\n\n", array_filter([
             $this->block('Article', $source->forPrompt()),
             $this->block('Image descriptions', array_values(array_filter($images, static fn (array $image): bool => $image['description'] !== ''))),
-            // Une categorie que la redaction a proposee pour l'article : son nom dans cette langue (decision du 23/11).
+            // Une categorie nouvelle choisie pour l'article (CategoryStep) : son nom dans cette langue (decision du 23/11).
             $newCategory === null ? null : $this->block('New category', $newCategory),
         ]));
 

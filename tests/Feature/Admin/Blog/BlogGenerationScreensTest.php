@@ -327,7 +327,7 @@ it('follows the running generation in the tile, in 2 queries', function () {
     $tile = Livewire::test(GenerationActivity::class);
 
     expect(count(DB::getQueryLog()))->toBe(2);
-    $tile->assertSee('Étape 2 sur 9')
+    $tile->assertSee('Étape 2 sur 10')
         ->assertSee('Dossier de faits')
         ->assertSee('Suivre la génération')
         ->assertSeeHtml('data-generation-activity="running"');
@@ -793,7 +793,7 @@ it('shows a generation step by step, with its model, tokens and cost under each 
         ->assertSee('2 recherches web')
         ->assertSee('essai 3')
         ->assertSee('estimé')
-        ->assertSee('1 étape terminée sur 9')
+        ->assertSee('1 étape terminée sur 10')
         ->assertSee('Relancer')
         // Le compte rendu de l'IA, et celui de l'etape.
         ->assertSee('Compte rendu de l\'IA')
@@ -802,6 +802,17 @@ it('shows a generation step by step, with its model, tokens and cost under each 
         ->assertDontSee('Déclenchement')
         ->assertDontSeeHtml('ui-description-list')
         ->assertDontSeeHtml('wire:poll');
+});
+
+it('says in the report of the AI why the article went in its category', function () {
+    $generation = BlogGeneration::factory()->completed()->create();
+    BlogGenerationStep::factory()->for($generation, 'generation')->named('category', 6)->completed()->create([
+        'summary' => 'L\'IA a nommé le sujet de l\'article « Labelling », sans voir les catégories du blog.',
+    ]);
+
+    Livewire::test(GenerationDetail::class, ['generation' => $generation->id])
+        ->assertSeeInOrder(['Compte rendu de l\'IA', 'Pourquoi cette catégorie', 'L\'IA a nommé le sujet de l\'article « Labelling »'])
+        ->assertSee('Choix de la catégorie');
 });
 
 it('says who stopped a generation, when, and after which step', function () {
@@ -813,7 +824,7 @@ it('says who stopped a generation, when, and after which step', function () {
 
     $detail = Livewire::test(GenerationDetail::class, ['generation' => $generation->id])
         ->assertSeeHtml('wire:poll.2s')
-        ->assertSee('Étape 3 sur 9')
+        ->assertSee('Étape 3 sur 10')
         ->assertSee('Arrêter')
         ->call('cancel')
         ->assertDispatched('ui-toast', type: 'success', title: 'Génération arrêtée.');

@@ -201,6 +201,7 @@ final readonly class BlogGenerationDetailService
             'topic' => __('Pourquoi ce sujet'),
             'research' => __('Ce qui a été consulté'),
             'writing' => __('Comment l\'article a été traité'),
+            'category' => __('Pourquoi cette catégorie'),
         ];
         $report = [];
 
