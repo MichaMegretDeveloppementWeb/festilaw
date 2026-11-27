@@ -12,13 +12,13 @@ use Illuminate\Database\Query\JoinClause;
 
 /**
  * Ce que le redacteur d'un article genere doit connaitre du blog : les categories (nom anglais, a defaut
- * francais, et nombre d'articles, tous statuts) et les articles publies qu'il peut citer ou proposer en lecture associee (titre et extrait
+ * francais, sans leur nombre d'articles, qui poussait a tout ranger dans la premiere, constat du 27/11) et les articles publies qu'il peut citer ou proposer en lecture associee (titre et extrait
  * anglais). Une requete chacun, sans relire aucun contenu. La verification relit les articles que le texte
  * cite, pour garder la phrase qui les presente.
  */
 final class BlogEditorialContextRepository
 {
-    /** @return list<array{id: int, name: string, articles: int}> */
+    /** @return list<array{id: int, name: string}> */
     public function categories(): array
     {
         $translation = static fn (string $locale): callable => static function (JoinClause $join) use ($locale): void {
@@ -31,9 +31,8 @@ final class BlogEditorialContextRepository
             ->orderBy('blog_categories.position')
             ->orderBy('blog_categories.id')
             ->select(['blog_categories.id', 'en.name as name_en', 'fr.name as name_fr'])
-            ->selectSub(static fn (Builder $query) => $query->from('blog_posts')->selectRaw('count(*)')->whereColumn('blog_posts.blog_category_id', 'blog_categories.id'), 'articles')
             ->get()
-            ->map(static fn (object $row): array => ['id' => (int) $row->id, 'name' => (string) ($row->name_en ?: $row->name_fr), 'articles' => (int) $row->articles])
+            ->map(static fn (object $row): array => ['id' => (int) $row->id, 'name' => (string) ($row->name_en ?: $row->name_fr)])
             ->filter(static fn (array $category): bool => $category['name'] !== '')
             ->values()
             ->all();

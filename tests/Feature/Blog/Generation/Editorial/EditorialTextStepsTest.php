@@ -396,8 +396,9 @@ it('takes back the category that already bears the proposed name, and ignores an
 
     expect($result->output['category_id'])->toBe($category->id)
         ->and($result->output['new_category'])->toBeNull();
-    // Le redacteur voit combien d'articles chaque categorie porte, pour reprendre volontiers l'existante.
-    WriterAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('"articles": 0'));
+    // Le redacteur ne voit plus combien d'articles chaque categorie porte : ce nombre poussait a tout ranger dans
+    // la premiere categorie creee (constat de Micha du 27/11, une seule categorie apres trois articles).
+    WriterAgent::assertPrompted(fn ($prompt): bool => $prompt->contains('Platforms en') && ! $prompt->contains('"articles":'));
 });
 
 it('creates no new category once the blog has as many as allowed, so that its menu does not crumble', function () {

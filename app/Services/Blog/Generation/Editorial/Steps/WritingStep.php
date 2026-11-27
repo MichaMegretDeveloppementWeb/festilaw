@@ -32,8 +32,10 @@ use Carbon\CarbonImmutable;
  * redacteur dit pourquoi (decision de Micha du 18/11, les articles 77 a 80 en affichaient jusqu'a 13). Au-dela,
  * l'etape garde les mieux classees sans nouvel appel, et note les autres au journal.
  *
- * La categorie : une categorie existante, ou le nom anglais d'une categorie nouvelle quand aucune ne convient
- * au theme de l'article ou que le blog n'en a pas encore (decision de Micha du 23/11 : Laetitia lancera ses
+ * La categorie : une categorie existante, ou le nom anglais d'une categorie nouvelle quand aucune n'a pour sujet
+ * le sujet principal de l'article (un role, un type de produit, une obligation, un canal de vente ou les controles),
+ * jamais un theme que tout article partage, comme « Product information » (essais du 27/11 : sans cette regle, la
+ * premiere categorie large recevait tous les articles suivants) ou que le blog n'en a pas encore (decision de Micha du 23/11 : Laetitia lancera ses
  * premieres generations avant d'avoir cree une categorie). Un nom deja porte par une categorie la reprend. Au-dela
  * de `maxCategories` categories, la creation est fermee, pour que le menu du blog ne s'emiette pas.
  */
@@ -304,11 +306,12 @@ final class WritingStep extends EditorialStep
     }
 
     /**
-     * Les categories que le redacteur peut choisir, avec leur nombre d'articles pour qu'il reprenne volontiers
-     * une categorie existante, et ce qu'il peut faire quand aucune ne convient.
+     * Les categories que le redacteur peut choisir, et ce qu'il peut faire quand aucune ne nomme le theme de
+     * l'article. Sans leur nombre d'articles : il poussait a tout ranger dans la premiere categorie creee, et le
+     * blog n'en avait qu'une apres trois articles (constat de Micha du 27/11).
      *
-     * @param  list<array{id: int, name: string, articles: int}>  $categories
-     * @return list<array{id: int, name: string, articles: int}>|string
+     * @param  list<array{id: int, name: string}>  $categories
+     * @return list<array{id: int, name: string}>|string
      */
     private function categoriesBlock(array $categories, bool $canCreate): array|string
     {
