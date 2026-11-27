@@ -38,8 +38,8 @@ final readonly class BlogGenerationOverviewService
     public const LATEST = 5;
 
     /**
-     * Le planificateur relance un worker chaque minute : passe ce delai sans nouvelle inscription, plus
-     * aucun n'est a l'ecoute.
+     * En production, un worker demarre toutes les deux minutes (sa ligne de cron attend la fin du precedent,
+     * qui ecoute 90 secondes) : passe ce delai sans nouvelle inscription, plus aucun n'est a l'ecoute.
      */
     private const WORKER_SILENCE_SECONDS = 150;
 

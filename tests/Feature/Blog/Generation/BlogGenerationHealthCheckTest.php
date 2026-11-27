@@ -13,6 +13,7 @@ use App\Repositories\Blog\OpenRouterKeyRepository;
 use App\Services\Blog\Generation\BlogAiCostEstimator;
 use App\Services\Blog\Generation\BlogAiModelCatalog;
 use App\Services\Blog\Generation\BlogGenerationPlannerHeartbeat;
+use App\Services\Blog\Generation\BlogGenerationWorkerRegistry;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -265,6 +266,20 @@ it('does not take a generation that works for a stuck queue', function () {
     BlogGeneration::factory()->running()->create(['updated_at' => now()->subMinutes(10)]);
 
     expect(healthProblems())->toBe([]);
+});
+
+it('reports a worker that has not started for ten minutes, since in production it hangs on its own cron line', function () {
+    // Constat du 27/11 : le worker a sa propre ligne de cron. Retiree ou cassee, rien ne le dirait avant la
+    // premiere generation restee en attente.
+    fakeServices(healthyServices());
+    $workers = app(BlogGenerationWorkerRegistry::class);
+
+    $workers->register('worker-a');
+    $this->travel(9)->minutes();
+    expect(healthProblems())->toBe([]);
+
+    $this->travel(2)->minutes();
+    expect(healthProblems())->toBe(['No blog generation worker has started since 2026-11-21 05:45:00 UTC (more than 10 minutes). In production it runs from its own cron line (festilaw:blog-generation-worker, every minute).']);
 });
 
 it('reports an automatic generation planner that stopped running, and a batch that did not leave', function () {

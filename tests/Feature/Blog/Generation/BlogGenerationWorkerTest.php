@@ -165,19 +165,20 @@ it('goes on by itself, one step at a time, when no newer worker shows up', funct
         ->and($pipeline->calls('assembly'))->toBe(1);
 });
 
-it('is run by the scheduler every minute, last and in the background, and the batch check every hour of the day', function () {
-    // Recette du CDC (point P1) : sans ces deux inscriptions, rien ne genere sur l'hebergement. Le lot se controle
-    // chaque heure de 6 h a 20 h (controle du 20/11) : une heure manquee ne coute plus un jour.
-    // Constat du 26/11 en production : Hostinger ne lance pas un passage du cron tant que le precedent tourne. Un
-    // worker au premier plan retenait chaque passage 90 secondes, et le cron ne tournait qu'une minute sur deux.
+it('leaves the worker to its own cron line in production, runs it every minute in the background locally, and checks the batch every hour', function () {
+    // Recette du CDC (point P1) : sans ces inscriptions, rien ne genere. Constat du 27/11 en production : Hostinger
+    // attend aussi un worker lance en arriere-plan avant de relancer le cron, qui ne passait qu'une minute sur deux.
+    // En production, le worker a donc sa propre ligne de cron, et le planificateur ne le lance plus.
     $events = collect(app(Schedule::class)->events());
     $worker = $events->first(fn ($event): bool => str_contains((string) $event->command, 'festilaw:blog-generation-worker'));
     $batch = $events->first(fn ($event): bool => str_contains((string) $event->command, 'festilaw:blog-generation-schedule'));
 
     expect($worker?->expression)->toBe('* * * * *')
         ->and($worker?->runInBackground)->toBeTrue()
-        ->and($events->last())->toBe($worker)
-        ->and($batch?->expression)->toBe('0 * * * *');
+        ->and($worker?->runsInEnvironment('local'))->toBeTrue()
+        ->and($worker?->runsInEnvironment('production'))->toBeFalse()
+        ->and($batch?->expression)->toBe('0 * * * *')
+        ->and($batch?->runsInEnvironment('production'))->toBeTrue();
 });
 
 it('lets the scheduled tasks lock themselves for a bounded time, so a killed run never blocks them for a day', function () {

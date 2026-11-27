@@ -422,8 +422,10 @@ return [
         /*
          | Worker. Il cherche une generation a traiter toutes les `poll_seconds`. A vide, il s'arrete des
          | qu'un worker plus recent a pris le relais (verifie toutes les `handoff_check_seconds`), ou au
-         | bout de `idle_max_seconds` sans releve : le planificateur en relance un chaque minute, il y en a
-         | donc toujours un a l'ecoute.
+         | bout de `idle_max_seconds` sans releve. En production, sa propre ligne de cron le relance chaque
+         | minute, mais Hostinger attend la fin du precedent : le relais n'y a jamais lieu, chaque worker
+         | ecoute 90 secondes et le suivant part deux minutes apres lui. En local, le planificateur le
+         | relance chaque minute (routes/console.php).
          |
          | Aucun processus long : passe `max_lifetime_seconds` de vie, un worker qui traite une generation la
          | rend apres l'etape en cours, et le worker suivant, deja a l'ecoute, la reprend. Une generation de
@@ -493,6 +495,8 @@ return [
          | - `stalled_after_minutes` : une generation en attente ou en cours qui n'a pas bouge depuis ce temps.
          | - `planner_late_after_minutes` : generation automatique activee, la planification (chaque heure) n'a pas
          |   tourne depuis ce temps, ou un lot est du depuis ce temps sans etre parti ni retenu (constat du 26/11).
+         | - `worker_silent_after_minutes` : aucun worker n'a demarre depuis ce temps. Il en demarre un toutes les
+         |   deux minutes environ, et un peu plus pendant une generation (27/11).
          */
         'health' => [
             'prices_valid_days' => 7,
@@ -501,6 +505,7 @@ return [
             'expiry_warning_days' => 30,
             'stalled_after_minutes' => 120,
             'planner_late_after_minutes' => 120,
+            'worker_silent_after_minutes' => 10,
         ],
 
         /*

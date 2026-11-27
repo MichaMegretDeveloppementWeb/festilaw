@@ -99,14 +99,13 @@ Schedule::command('festilaw:blog-generation-schedule')
 
 /*
  | Blog, generation par IA : worker. Il reste a l'ecoute environ une minute (toutes les deux secondes : « une
- | generation a traiter ? ») et, s'il en prend une, le temps de la traiter. Le planificateur en relance un chaque
- | minute ; le precedent s'arrete quand le nouveau s'est inscrit, si bien qu'il y en a toujours un a l'ecoute. Pas
- | de withoutOverlapping : ce relais et le verrou de chaque generation (blog_generations.locked_until) en tiennent
- | lieu.
+ | generation a traiter ? ») et, s'il en prend une, le temps de la traiter. Pas de withoutOverlapping : le relais
+ | entre workers et le verrou de chaque generation (blog_generations.locked_until) en tiennent lieu.
  |
- | EN ARRIERE-PLAN, et en dernier (constat du 26/11 en production) : Hostinger ne lance pas un passage du cron
- | tant que le precedent tourne. Au premier plan, le worker retenait chaque `schedule:run` environ 90 secondes, le
- | cron ne passait qu'une minute sur deux, et aucune tache de l'heure pile (rapport d'erreurs, planification des
- | lots, purge RGPD, renouvellements) n'a tourne entre le 24 et le 26/11.
+ | EN LOCAL SEULEMENT. En production, le worker a sa propre ligne de cron dans hPanel, chaque minute (constat du
+ | 27/11). Hostinger ne lance pas un passage du cron tant que le precedent tourne, et il attend aussi un worker
+ | lance en arriere-plan : chaque `schedule:run` durait donc 90 secondes, le cron ne passait qu'une minute sur
+ | deux, et les taches des minutes impaires (purge RGPD de 3 h 15, verification des services de 5 h 45) n'ont pas
+ | tourne la nuit du 26 au 27/11. Avec sa ligne a lui, le worker ne retient plus que la sienne.
  */
-Schedule::command('festilaw:blog-generation-worker')->everyMinute()->runInBackground();
+Schedule::command('festilaw:blog-generation-worker')->everyMinute()->runInBackground()->environments(['local']);
